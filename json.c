@@ -93,6 +93,6 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error("misspelled false");
 		}
 
-		return new_object(JSON_TRUE, current);
+		return new_object(JSON_FALSE, current);
 	}
 }
