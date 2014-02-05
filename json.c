@@ -45,7 +45,7 @@ json_object *parse(FILE *f, json_object *current) {
 		return NULL;
 	}
 
-	while (isspace(c)) {
+	while (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
 		c = getc(f);
 		if (c == EOF) {
 			return NULL;
@@ -70,5 +70,29 @@ json_object *parse(FILE *f, json_object *current) {
 		}
 
 		return current->parent;
+	}
+
+	if (c == 'n') {
+		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
+			json_error("misspelled null");
+		}
+
+		return new_object(JSON_NULL, current);
+	}
+
+	if (c == 't') {
+		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
+			json_error("misspelled true");
+		}
+
+		return new_object(JSON_TRUE, current);
+	}
+
+	if (c == 'f') {
+		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
+			json_error("misspelled false");
+		}
+
+		return new_object(JSON_TRUE, current);
 	}
 }
