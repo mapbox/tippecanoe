@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 typedef enum json_type {
-	JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_OBJECT, JSON_NULL, JSON_TRUE, JSON_FALSE,
+	JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_HASH, JSON_NULL, JSON_TRUE, JSON_FALSE,
 } json_type;
 
 typedef struct json_array {
@@ -25,3 +26,49 @@ typedef struct json_object {
 	json_array *array;
 	json_hash *object;
 } json_object;
+
+json_object *new_object(json_type type, json_object *parent) {
+	json_object *o = malloc(sizeof(struct json_object));
+	o->type = type;
+	o->parent = parent;
+	return o;
+}
+
+static void json_error(char *s) {
+	fprintf(stderr, "%s\n", s);
+	exit(EXIT_FAILURE);
+}
+
+json_object *parse(FILE *f, json_object *current) {
+	int c = getc(f);
+	if (c == EOF) {
+		return NULL;
+	}
+
+	while (isspace(c)) {
+		c = getc(f);
+		if (c == EOF) {
+			return NULL;
+		}
+	}
+
+	if (c == '[') {
+		return parse(f, new_object(JSON_ARRAY, current));
+	} else if (c == ']') {
+		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
+			json_error("] without [");
+		}
+
+		return current->parent;
+	}
+
+	if (c == '{') {
+		return parse(f, new_object(JSON_HASH, current));
+	} else if (c == '}') {
+		if (current->parent == NULL || current->parent->type != JSON_HASH) {
+			json_error("} without {");
+		}
+
+		return current->parent;
+	}
+}
