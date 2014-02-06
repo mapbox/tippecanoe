@@ -106,24 +106,19 @@ json_object *json_parse(FILE *f, json_object *current, char **error) {
 	int current_is = 0;
 	int c;
 again:
-	c = getc(f);
-	if (c == EOF) {
-		if (current != NULL) {
-			// Close out open containers
-			return current->parent;
-		} else {
-			return NULL;
-		}
-	}
-
 	/////////////////////////// Whitespace
 
-	while (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+	do {
 		c = getc(f);
 		if (c == EOF) {
-			return NULL;
+			if (current != NULL) {
+				// Close out open containers
+				return current->parent;
+			} else {
+				return NULL;
+			}
 		}
-	}
+	} while (c == ' ' || c == '\t' || c == '\r' || c == '\n');
 
 	/////////////////////////// Arrays
 
