@@ -3,31 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
-
-typedef enum json_type {
-	JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_HASH, JSON_NULL, JSON_TRUE, JSON_FALSE,
-} json_type;
-
-typedef struct json_array {
-	struct json_object *object;
-	struct json_array *next;
-} json_array;
-
-typedef struct json_hash {
-	struct json_object *key;
-	struct json_object *value;
-	struct json_hash *next;
-} json_hash;
-
-typedef struct json_object {
-	json_type type;
-	struct json_object *parent;
-
-	char *string;
-	double number;
-	json_array *array;
-	json_hash *hash;
-} json_object;
+#include "jsonpull.h"
 
 static json_object *add_object(json_type type, json_object *parent) {
 	json_object *o = malloc(sizeof(struct json_object));
@@ -85,7 +61,7 @@ static void json_error(char *s, ...) {
 	exit(EXIT_FAILURE);
 }
 
-int peek(FILE *f) {
+static int peek(FILE *f) {
 	int c = getc(f);
 	ungetc(c, f);
 	return c;
@@ -317,81 +293,4 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	json_error("unrecognized character %c\n", c);
 	return NULL;
-}
-
-static void indent(int depth) {
-	int i;
-	for (i = 0; i < depth; i++) {
-		printf("    ");
-	}
-}
-
-void json_print(json_object *j, int depth) {
-	if (j == NULL) {
-		printf("NULL");
-	} else if (j->type == JSON_STRING) {
-		printf("\"%s\"", j->string);
-	} else if (j->type == JSON_NUMBER) {
-		printf("%f", j->number);
-	} else if (j->type == JSON_NULL) {
-		printf("null");
-	} else if (j->type == JSON_TRUE) {
-		printf("true");
-	} else if (j->type == JSON_FALSE) {
-		printf("false");
-	} else if (j->type == JSON_HASH) {
-		printf("{\n");
-		indent(depth + 1);
-
-		json_hash *h = j->hash;
-		while (h != NULL) {
-			json_print(h->key, depth + 1);
-			printf(" : ");
-			json_print(h->value, depth + 1);
-			if (h->next != NULL) {
-				printf(",\n");
-				indent(depth + 1);
-			}
-			h = h->next;
-		}
-		printf("\n");
-		indent(depth);
-		printf("}");
-	} else if (j->type == JSON_ARRAY) {
-		printf("[\n");
-		indent(depth + 1);
-
-		json_array *a = j->array;
-		while (a != NULL) {
-			json_print(a->object, depth + 1);
-			if (a->next != NULL) {
-				printf(",\n");
-				indent(depth + 1);
-			}
-			a = a->next;
-		}
-		printf("\n");
-		indent(depth);
-		printf("]");
-	} else {
-		printf("what type? %d", j->type);
-	}
-}
-
-int main() {
-	json_object *j = NULL;
-
-	while ((j = json_parse(stdin, j)) != NULL) {
-		json_object *g = json_hash_get(j, "type");
-		if (g != NULL && g->type == JSON_STRING && strcmp(g->string, "Feature") == 0) {
-			json_print(j, 0);
-			printf("\n");
-		}
-
-		if (j->parent == NULL) {
-			json_print(j, 0);
-			printf("\n");
-			j = NULL;
-		}
-	}
 }
