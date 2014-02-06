@@ -278,7 +278,22 @@ json_object *json_parse(FILE *f, json_object *current) {
 				} else if (c == 't') {
 					string_append(&val, '\t');
 				} else if (c == 'u') {
-					/* XXX */
+					char hex[5] = "aaaa";
+					int i;
+					for (i = 0; i < 4; i++) {
+						hex[i] = getc(f);
+					}
+					unsigned long ch = strtoul(hex, NULL, 16);
+					if (ch <= 0x7F) {
+						string_append(&val, ch);
+					} else if (ch <= 0x7FF) {
+						string_append(&val, 0xC0 | (ch >> 6));
+						string_append(&val, 0x80 | (ch & 0x3F));
+					} else {
+						string_append(&val, 0xE0 | (ch >> 12));
+						string_append(&val, 0x80 | ((ch >> 6) & 0x3F));
+						string_append(&val, 0x80 | (ch & 0x3F));
+					}
 				} else {
 					json_error("unknown string escape %c\n", c);
 				}
