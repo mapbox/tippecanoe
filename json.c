@@ -95,7 +95,7 @@ static void string_free(struct string *s) {
 	free(s->buf);
 }
 
-json_object *parse(FILE *f, json_object *current) {
+json_object *json_parse(FILE *f, json_object *current) {
 	int c = getc(f);
 	if (c == EOF) {
 		return NULL;
@@ -109,7 +109,7 @@ json_object *parse(FILE *f, json_object *current) {
 	}
 
 	if (c == '[') {
-		return parse(f, add_object(JSON_ARRAY, current));
+		return json_parse(f, add_object(JSON_ARRAY, current));
 	} else if (c == ']') {
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
 			json_error("] without [");
@@ -119,7 +119,7 @@ json_object *parse(FILE *f, json_object *current) {
 	}
 
 	if (c == '{') {
-		return parse(f, add_object(JSON_HASH, current));
+		return json_parse(f, add_object(JSON_HASH, current));
 	} else if (c == '}') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error("} without {");
@@ -159,7 +159,7 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error(", not in array or hash");
 		}
 
-		return parse(f, current);
+		return json_parse(f, current);
 	}
 
 	if (c == ':') {
@@ -170,7 +170,7 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error(": without key");
 		}
 
-		return parse(f, current);
+		return json_parse(f, current);
 	}
 
 	if (c == '-' || (c >= '0' && c <= '9')) {
@@ -264,4 +264,37 @@ json_object *parse(FILE *f, json_object *current) {
 	}
 
 	json_error("unrecognized character");
+}
+
+void json_print(json_object *j) {
+	if (j->type == JSON_STRING) {
+		printf("string: %s\n", j->string);
+	} else if (j->type == JSON_NUMBER) {
+		printf("number: %f\n", j->number);
+	} else if (j->type == JSON_NULL) {
+		printf("null\n");
+	} else if (j->type == JSON_TRUE) {
+		printf("true\n");
+	} else if (j->type == JSON_FALSE) {
+		printf("false\n");
+	} else if (j->type == JSON_HASH) {
+		printf("hash\n");
+	} else if (j->type == JSON_ARRAY) {
+		printf("array\n");
+	} else {
+		printf("what type? %d\n", j->type);
+	}
+}
+
+int main() {
+	json_object *j = NULL;
+
+	while ((j = json_parse(stdin, j)) != NULL) {
+		if (j->parent != NULL) {
+			printf("parent: ");
+			json_print(j->parent);
+		}
+		json_print(j);
+		printf("\n");
+	}
 }
