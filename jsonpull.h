@@ -15,5 +15,5 @@ typedef struct json_object {
 	int length;
 } json_object;
 
-json_object *json_parse(FILE *f, json_object *current);
+json_object *json_parse(FILE *f, json_object *current, char **error);
 json_object *json_hash_get(json_object *o, char *s);

@@ -77,13 +77,18 @@ void json_print(json_object *j, int depth) {
 
 void process(FILE *f) {
 	json_object *j = NULL;
+	char *error = NULL;
 
-	while ((j = json_parse(f, j)) != NULL) {
+	while ((j = json_parse(f, j, &error)) != NULL) {
 		if (j->parent == NULL) {
 			json_print(j, 0);
 			printf("\n");
 			j = NULL;
 		}
+	}
+
+	if (error != NULL) {
+		fprintf(stderr, "%s\n", error);
 	}
 }
 

@@ -5,17 +5,9 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
-static void json_error(char *s, ...) {
-	va_list ap;
-	va_start(ap, s);
-	vfprintf(stderr, s, ap);
-	va_end(ap);
-	exit(EXIT_FAILURE);
-}
-
 #define SIZE_FOR(i) (((i) + 31) & ~31)
 
-static json_object *add_object(json_type type, json_object *parent) {
+static json_object *add_object(json_type type, json_object *parent, char **error) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
 	o->parent = parent;
@@ -36,12 +28,13 @@ static json_object *add_object(json_type type, json_object *parent) {
 		if (parent->type == JSON_HASH) {
 			if (parent->length > 0 && parent->values[parent->length - 1] == NULL) {
 				// Hash has key but no value, so this is the value
+
 				parent->values[parent->length - 1] = o;
 			} else {
 				// No current hash, so this is a key
 
 				if (type != JSON_STRING) {
-					json_error("Hash key is not a string");
+					*error = "Hash key is not a string";
 				}
 
 				if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
@@ -109,13 +102,18 @@ static void string_free(struct string *s) {
 	free(s->buf);
 }
 
-json_object *json_parse(FILE *f, json_object *current) {
+json_object *json_parse(FILE *f, json_object *current, char **error) {
 	int current_is_container = 0;
 	int c;
 again:
 	c = getc(f);
 	if (c == EOF) {
-		return NULL;
+		if (current != NULL) {
+			// Close out open containers
+			return current->parent;
+		} else {
+			return NULL;
+		}
 	}
 
 	/////////////////////////// Whitespace
@@ -130,12 +128,13 @@ again:
 	/////////////////////////// Arrays
 
 	if (c == '[') {
-		current = add_object(JSON_ARRAY, current);
+		current = add_object(JSON_ARRAY, current, error);
 		current_is_container = 1;
 		goto again;
 	} else if (c == ']') {
 		if (current == NULL) {
-			json_error("] at top level");
+			*error = "Found ] at top level";
+			return NULL;
 		}
 
 		if (current_is_container) { // Empty array
@@ -143,7 +142,8 @@ again:
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
-			json_error("] without [\n");
+			*error = "Found ] without matching [";
+			return NULL;
 		}
 
 		return current->parent;
@@ -152,12 +152,13 @@ again:
 	/////////////////////////// Hashes
 
 	if (c == '{') {
-		current = add_object(JSON_HASH, current);
+		current = add_object(JSON_HASH, current, error);
 		current_is_container = 1;
 		goto again;
 	} else if (c == '}') {
 		if (current == NULL) {
-			json_error("} at top level");
+			*error = "Found } at top level";
+			return NULL;
 		}
 
 		if (current_is_container) { // Empty hash
@@ -165,10 +166,12 @@ again:
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			json_error("} without {\n");
+			*error = "Found } without matching {";
+			return NULL;
 		}
 		if (current->parent->length != 0 && current->parent->values[current->parent->length - 1] == NULL) {
-			json_error("} without hash value\n");
+			*error = "Found hash key without value";
+			return NULL;
 		}
 
 		return current->parent;
@@ -178,43 +181,46 @@ again:
 
 	if (c == 'n') {
 		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
-			json_error("misspelled null\n");
+			*error = "Found misspelling of null";
+			return NULL;
 		}
 
-		return add_object(JSON_NULL, current);
+		return add_object(JSON_NULL, current, error);
 	}
 
 	/////////////////////////// True
 
 	if (c == 't') {
 		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
-			json_error("misspelled true\n");
+			*error = "Found misspelling of true";
+			return NULL;
 		}
 
-		return add_object(JSON_TRUE, current);
+		return add_object(JSON_TRUE, current, error);
 	}
 
 	/////////////////////////// False
 
 	if (c == 'f') {
 		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
-			json_error("misspelled false\n");
+			*error = "Found misspelling of false";
+			return NULL;
 		}
 
-		return add_object(JSON_FALSE, current);
+		return add_object(JSON_FALSE, current, error);
 	}
 
 	/////////////////////////// Comma
 
 	if (c == ',') {
 		if (current == NULL) {
-			json_error("comma at top level");
+			*error = "Found comma at top level";
+			return NULL;
 		}
 
-		if (current->parent == NULL ||
-			(current->parent->type != JSON_ARRAY &&
-			 current->parent->type != JSON_HASH)) {
-			json_error(", not in array or hash\n");
+		if (current->parent == NULL || (current->parent->type != JSON_ARRAY && current->parent->type != JSON_HASH)) {
+			*error = "Found comma outside of array or hash";
+			return NULL;
 		}
 
 		current = current->parent;
@@ -226,14 +232,17 @@ again:
 
 	if (c == ':') {
 		if (current == NULL) {
-			json_error("colon at top level");
+			*error = "Found colon at top level";
+			return NULL;
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			json_error(": not in hash\n");
+			*error = "Found colon outside of hash";
+			return NULL;
 		}
 		if (current->parent->length == 0 || current->parent->keys[current->parent->length - 1] == NULL) {
-			json_error(": without key\n");
+			*error = "Found colon without a hash key";
+			return NULL;
 		}
 
 		current = current->parent;
@@ -290,7 +299,7 @@ again:
 			}
 		}
 
-		json_object *n = add_object(JSON_NUMBER, current);
+		json_object *n = add_object(JSON_NUMBER, current, error);
 		n->number = atof(val.buf);
 		string_free(&val);
 
@@ -343,19 +352,20 @@ again:
 						string_append(&val, 0x80 | (ch & 0x3F));
 					}
 				} else {
-					json_error("unknown string escape %c\n", c);
+					*error = "Found backslash followed by unknown character";
+					return NULL;
 				}
 			} else {
 				string_append(&val, c);
 			}
 		}
 
-		json_object *s = add_object(JSON_STRING, current);
+		json_object *s = add_object(JSON_STRING, current, error);
 		s->string = val.buf;
 
 		return s;
 	}
 
-	json_error("unrecognized character %c\n", c);
+	*error = "Found unexpected character";
 	return NULL;
 }
