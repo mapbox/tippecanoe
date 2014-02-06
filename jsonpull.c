@@ -110,7 +110,10 @@ static void string_free(struct string *s) {
 }
 
 json_object *json_parse(FILE *f, json_object *current) {
-	int c = getc(f);
+	int current_is_container = 0;
+	int c;
+again:
+	c = getc(f);
 	if (c == EOF) {
 		return NULL;
 	}
@@ -127,14 +130,16 @@ json_object *json_parse(FILE *f, json_object *current) {
 	/////////////////////////// Arrays
 
 	if (c == '[') {
-		return json_parse(f, add_object(JSON_ARRAY, current));
+		current = add_object(JSON_ARRAY, current);
+		current_is_container = 1;
+		goto again;
 	} else if (c == ']') {
 		if (current == NULL) {
 			json_error("] at top level");
 		}
 
-		if (current->type == JSON_ARRAY && current->length == 0) {
-			return current; // Empty array
+		if (current_is_container) { // Empty array
+			return current;
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
@@ -147,14 +152,16 @@ json_object *json_parse(FILE *f, json_object *current) {
 	/////////////////////////// Hashes
 
 	if (c == '{') {
-		return json_parse(f, add_object(JSON_HASH, current));
+		current = add_object(JSON_HASH, current);
+		current_is_container = 1;
+		goto again;
 	} else if (c == '}') {
 		if (current == NULL) {
 			json_error("} at top level");
 		}
 
-		if (current->type == JSON_HASH && current->length == 0) {
-			return current; // Empty hash
+		if (current_is_container) { // Empty hash
+			return current;
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
@@ -210,7 +217,9 @@ json_object *json_parse(FILE *f, json_object *current) {
 			json_error(", not in array or hash\n");
 		}
 
-		return json_parse(f, current->parent);
+		current = current->parent;
+		current_is_container = 1;
+		goto again;
 	}
 
 	/////////////////////////// Colon
@@ -227,7 +236,9 @@ json_object *json_parse(FILE *f, json_object *current) {
 			json_error(": without key\n");
 		}
 
-		return json_parse(f, current->parent);
+		current = current->parent;
+		current_is_container = 1;
+		goto again;
 	}
 
 	/////////////////////////// Numbers
