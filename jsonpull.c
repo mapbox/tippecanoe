@@ -23,9 +23,7 @@ static json_object *add_object(json_type type, json_object *parent, char **error
 			}
 
 			parent->array[parent->length++] = o;
-		}
-
-		if (parent->type == JSON_HASH) {
+		} else if (parent->type == JSON_HASH) {
 			if (parent->length > 0 && parent->values[parent->length - 1] == NULL) {
 				// Hash has key but no value, so this is the value
 
@@ -35,6 +33,8 @@ static json_object *add_object(json_type type, json_object *parent, char **error
 
 				if (type != JSON_STRING) {
 					*error = "Hash key is not a string";
+					free(o);
+					return NULL;
 				}
 
 				if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
@@ -46,6 +46,10 @@ static json_object *add_object(json_type type, json_object *parent, char **error
 				parent->values[parent->length] = NULL;
 				parent->length++;
 			}
+		} else {
+			*error = "Parent is not a container";
+			free(o);
+			return NULL;
 		}
 	}
 
@@ -124,6 +128,9 @@ again:
 
 	if (c == '[') {
 		current = add_object(JSON_ARRAY, current, error);
+		if (current == NULL) {
+			return NULL;
+		}
 		current_is = '[';
 		goto again;
 	} else if (c == ']') {
@@ -151,6 +158,9 @@ again:
 
 	if (c == '{') {
 		current = add_object(JSON_HASH, current, error);
+		if (current == NULL) {
+			return NULL;
+		}
 		current_is = '{';
 		goto again;
 	} else if (c == '}') {
@@ -308,8 +318,10 @@ again:
 		}
 
 		json_object *n = add_object(JSON_NUMBER, current, error);
-		n->number = atof(val.buf);
-		string_free(&val);
+		if (n != NULL) {
+			n->number = atof(val.buf);
+			string_free(&val);
+		}
 
 		return n;
 	}
@@ -369,7 +381,9 @@ again:
 		}
 
 		json_object *s = add_object(JSON_STRING, current, error);
-		s->string = val.buf;
+		if (s != NULL) {
+			s->string = val.buf;
+		}
 
 		return s;
 	}
