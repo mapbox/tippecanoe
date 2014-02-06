@@ -64,20 +64,31 @@ void json_print(json_object *j, int depth) {
 	}
 }
 
-int main() {
+void process(FILE *f) {
 	json_object *j = NULL;
 
-	while ((j = json_parse(stdin, j)) != NULL) {
-		json_object *g = json_hash_get(j, "type");
-		if (g != NULL && g->type == JSON_STRING && strcmp(g->string, "Feature") == 0) {
-			json_print(j, 0);
-			printf("\n");
-		}
-
+	while ((j = json_parse(f, j)) != NULL) {
 		if (j->parent == NULL) {
 			json_print(j, 0);
 			printf("\n");
 			j = NULL;
+		}
+	}
+}
+
+int main(int argc, char **argv) {
+	if (argc == 1) {
+		process(stdin);
+	} else {
+		int i;
+		for (i = 1; i < argc; i++) {
+			FILE *f = fopen(argv[i], "r");
+			if (f == NULL) {
+				perror(argv[i]);
+				exit(EXIT_FAILURE);
+			}
+			process(f);
+			fclose(f);
 		}
 	}
 }
