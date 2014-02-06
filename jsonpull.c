@@ -386,6 +386,7 @@ again:
 		json_object *s = add_object(JSON_STRING, current, error);
 		if (s != NULL) {
 			s->string = val.buf;
+			s->length = val.n;
 		}
 
 		return s;
