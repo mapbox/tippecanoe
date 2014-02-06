@@ -162,7 +162,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 		if (current->parent == NULL ||
 			(current->parent->type != JSON_ARRAY &&
 			 current->parent->type != JSON_HASH)) {
-			json_error(", not in array or hash: %d\n", current->parent->type);
+			json_error(", not in array or hash\n");
 		}
 
 		return json_parse(f, current->parent);
@@ -170,10 +170,10 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	if (c == ':') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			json_error(": not in hash: %d\n", current->parent);
+			json_error(": not in hash\n");
 		}
-		if (current->parent->hash == NULL || current->parent->hash->value != NULL) {
-			json_error(": without key: %d\n", current->parent);
+		if (current->parent->hash == NULL || current->parent->hash->key == NULL) {
+			json_error(": without key\n");
 		}
 
 		return json_parse(f, current->parent);
