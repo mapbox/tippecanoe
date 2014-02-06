@@ -62,6 +62,12 @@ static void json_error(char *s) {
 	exit(EXIT_FAILURE);
 }
 
+int peek(FILE *f) {
+	int c = getc(f);
+	ungetc(c, f);
+	return c;
+}
+
 json_object *parse(FILE *f, json_object *current) {
 	int c = getc(f);
 	if (c == EOF) {
@@ -138,5 +144,55 @@ json_object *parse(FILE *f, json_object *current) {
 		}
 
 		return parse(f, current);
+	}
+
+	if (c == '-' || (c >= '0' && c <= '9')) {
+#define MAX 500
+		char val[MAX];
+		int off = 0;
+
+		val[off++] = c;
+
+		if (c >= '1' && c <= '9') {
+			c = peek(f);
+
+			while (c >= '0' && c <= '9') {
+				val[off++] = getc(f);
+				c = peek(f);
+			}
+		}
+
+		if (peek(f) == '.') {
+			val[off++] = getc(f);
+
+			c = peek(f);
+			while (c >= '0' && c <= '9') {
+				val[off++] = getc(f);
+				c = peek(f);
+			}
+		}
+
+		c = peek(f);
+		if (c == 'e' || c == 'E') {
+			val[off++] = getc(f);
+
+			c = peek(f);
+			if (c == '+' || c == '-') {
+				val[off++] = getc(f);
+			}
+
+			c = peek(f);
+			while (c >= '0' && c <= '9') {
+				val[off++] = getc(f);
+				c = peek(f);
+			}
+		}
+
+		val[off++] = '\0';
+
+		json_object *n = add_object(JSON_NUMBER, current);
+		n->number = atof(val);
+
+		return n;
 	}
 }
