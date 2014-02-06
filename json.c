@@ -220,4 +220,48 @@ json_object *parse(FILE *f, json_object *current) {
 
 		return n;
 	}
+
+	if (c == '"') {
+		struct string val;
+		string_init(&val);
+
+		while ((c = getc(f)) != EOF) {
+			if (c == '"') {
+				break;
+			} else if (c == '\\') {
+				c = getc(f);
+
+				if (c == '"') {
+					string_append(&val, '"');
+				} else if (c == '\\') {
+					string_append(&val, '\\');
+				} else if (c == '/') {
+					string_append(&val, '/');
+				} else if (c == 'b') {
+					string_append(&val, '\b');
+				} else if (c == 'f') {
+					string_append(&val, '\f');
+				} else if (c == 'n') {
+					string_append(&val, '\n');
+				} else if (c == 'r') {
+					string_append(&val, '\r');
+				} else if (c == 't') {
+					string_append(&val, '\t');
+				} else if (c == 'u') {
+					/* XXX */
+				} else {
+					json_error("unknown string escape");
+				}
+			} else {
+				string_append(&val, c);
+			}
+		}
+
+		json_object *s = add_object(JSON_STRING, current);
+		s->string = val.buf;
+
+		return s;
+	}
+
+	json_error("unrecognized character");
 }
