@@ -153,6 +153,9 @@ json_object *json_parse(FILE *f, json_object *current) {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error("} without {\n");
 		}
+		if (current->parent->hash != NULL || current->parent->hash->value == NULL) {
+			json_error("} without hash value\n");
+		}
 
 		return current->parent;
 	}
