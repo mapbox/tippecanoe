@@ -5,6 +5,14 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
+static void json_error(char *s, ...) {
+	va_list ap;
+	va_start(ap, s);
+	vfprintf(stderr, s, ap);
+	va_end(ap);
+	exit(EXIT_FAILURE);
+}
+
 static json_object *add_object(json_type type, json_object *parent) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
@@ -26,6 +34,11 @@ static json_object *add_object(json_type type, json_object *parent) {
 				parent->hash->value = o;
 			} else {
 				// No current hash, so this is a key
+
+				if (type != JSON_STRING) {
+					json_error("Hash key is not a string");
+				}
+
 				json_hash *h = malloc(sizeof(json_hash));
 				h->next = parent->hash;
 				h->key = o;
@@ -53,14 +66,6 @@ json_object *json_hash_get(json_object *o, char *s) {
 	}
 
 	return NULL;
-}
-
-static void json_error(char *s, ...) {
-	va_list ap;
-	va_start(ap, s);
-	vfprintf(stderr, s, ap);
-	va_end(ap);
-	exit(EXIT_FAILURE);
 }
 
 static int peek(FILE *f) {
@@ -116,6 +121,14 @@ json_object *json_parse(FILE *f, json_object *current) {
 	if (c == '[') {
 		return json_parse(f, add_object(JSON_ARRAY, current));
 	} else if (c == ']') {
+		if (current == NULL) {
+			json_error("] at top level");
+		}
+
+		if (current->type == JSON_ARRAY && current->array == NULL) {
+			return current; // Empty array
+		}
+
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
 			json_error("] without [\n");
 		}
@@ -128,6 +141,14 @@ json_object *json_parse(FILE *f, json_object *current) {
 	if (c == '{') {
 		return json_parse(f, add_object(JSON_HASH, current));
 	} else if (c == '}') {
+		if (current == NULL) {
+			json_error("} at top level");
+		}
+
+		if (current->type == JSON_HASH && current->hash == NULL) {
+			return current; // Empty hash
+		}
+
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error("} without {\n");
 		}
