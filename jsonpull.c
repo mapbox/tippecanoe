@@ -22,8 +22,10 @@ static json_object *add_object(json_type type, json_object *parent) {
 
 		if (parent->type == JSON_HASH) {
 			if (parent->hash != NULL && parent->hash->value == NULL) {
+				// Hash has key but no value, so this is the value
 				parent->hash->value = o;
 			} else {
+				// No current hash, so this is a key
 				json_hash *h = malloc(sizeof(json_hash));
 				h->next = parent->hash;
 				h->key = o;
