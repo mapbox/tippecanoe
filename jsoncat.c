@@ -42,16 +42,15 @@ void json_print(json_object *j, int depth) {
 		printf("{\n");
 		indent(depth + 1);
 
-		json_hash *h = j->hash;
-		while (h != NULL) {
-			json_print(h->key, depth + 1);
+		int i;
+		for (i = 0; i < j->length; i++) {
+			json_print(j->keys[i], depth + 1);
 			printf(" : ");
-			json_print(h->value, depth + 1);
-			if (h->next != NULL) {
+			json_print(j->values[i], depth + 1);
+			if (i + 1 < j->length) {
 				printf(",\n");
 				indent(depth + 1);
 			}
-			h = h->next;
 		}
 		printf("\n");
 		indent(depth);
@@ -60,14 +59,13 @@ void json_print(json_object *j, int depth) {
 		printf("[\n");
 		indent(depth + 1);
 
-		json_array *a = j->array;
-		while (a != NULL) {
-			json_print(a->object, depth + 1);
-			if (a->next != NULL) {
+		int i;
+		for (i = 0; i < j->length; i++) {
+			json_print(j->array[i], depth + 1);
+			if (i + 1 < j->length) {
 				printf(",\n");
 				indent(depth + 1);
 			}
-			a = a->next;
 		}
 		printf("\n");
 		indent(depth);

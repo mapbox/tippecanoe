@@ -18,20 +18,25 @@ static json_object *add_object(json_type type, json_object *parent) {
 	o->type = type;
 	o->parent = parent;
 	o->array = NULL;
-	o->hash = NULL;
+	o->keys = NULL;
+	o->values = NULL;
+	o->length = 0;
+	o->__allocated = 0;
 
 	if (parent != NULL) {
 		if (parent->type == JSON_ARRAY) {
-			json_array *a = malloc(sizeof(json_array));
-			a->next = parent->array;
-			a->object = o;
-			parent->array = a;
+			if (parent->length >= parent->__allocated) {
+				parent->__allocated += 20;
+				parent->array = realloc(parent->array, parent->__allocated * sizeof(json_object *));
+			}
+
+			parent->array[parent->length++] = o;
 		}
 
 		if (parent->type == JSON_HASH) {
-			if (parent->hash != NULL && parent->hash->value == NULL) {
+			if (parent->length > 0 && parent->values[parent->length - 1] == NULL) {
 				// Hash has key but no value, so this is the value
-				parent->hash->value = o;
+				parent->values[parent->length - 1] = o;
 			} else {
 				// No current hash, so this is a key
 
@@ -39,11 +44,15 @@ static json_object *add_object(json_type type, json_object *parent) {
 					json_error("Hash key is not a string");
 				}
 
-				json_hash *h = malloc(sizeof(json_hash));
-				h->next = parent->hash;
-				h->key = o;
-				h->value = NULL;
-				parent->hash = h;
+				if (parent->length >= parent->__allocated) {
+					parent->__allocated += 20;
+					parent->keys = realloc(parent->keys, parent->__allocated * sizeof(json_object *));
+					parent->values = realloc(parent->values, parent->__allocated * sizeof(json_object *));
+				}
+
+				parent->keys[parent->length] = o;
+				parent->values[parent->length] = NULL;
+				parent->length++;
 			}
 		}
 	}
@@ -56,11 +65,11 @@ json_object *json_hash_get(json_object *o, char *s) {
 		return NULL;
 	}
 
-	json_hash *h;
-	for (h = o->hash; h != NULL; h = h->next) {
-		if (h->key != NULL && h->key->type == JSON_STRING) {
-			if (strcmp(h->key->string, s) == 0) {
-				return h->value;
+	int i;
+	for (i = 0; i < o->length; i++) {
+		if (o->keys[i] != NULL && o->keys[i]->type == JSON_STRING) {
+			if (strcmp(o->keys[i]->string, s) == 0) {
+				return o->values[i];
 			}
 		}
 	}
@@ -125,7 +134,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 			json_error("] at top level");
 		}
 
-		if (current->type == JSON_ARRAY && current->array == NULL) {
+		if (current->type == JSON_ARRAY && current->length == 0) {
 			return current; // Empty array
 		}
 
@@ -145,14 +154,14 @@ json_object *json_parse(FILE *f, json_object *current) {
 			json_error("} at top level");
 		}
 
-		if (current->type == JSON_HASH && current->hash == NULL) {
+		if (current->type == JSON_HASH && current->length == 0) {
 			return current; // Empty hash
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error("} without {\n");
 		}
-		if (current->parent->hash != NULL && current->parent->hash->value == NULL) {
+		if (current->parent->length != 0 && current->parent->values[current->parent->length - 1] == NULL) {
 			json_error("} without hash value\n");
 		}
 
@@ -215,7 +224,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error(": not in hash\n");
 		}
-		if (current->parent->hash == NULL || current->parent->hash->key == NULL) {
+		if (current->parent->length == 0 || current->parent->keys[current->parent->length - 1] == NULL) {
 			json_error(": without key\n");
 		}
 
