@@ -229,6 +229,13 @@ again:
 			return NULL;
 		}
 
+		if (current->parent->type == JSON_HASH) {
+			if (current->parent->length == 0 || current->parent->values[current->parent->length - 1] == NULL) {
+				*error = "Found comma in hash without a hash value";
+				return NULL;
+			}
+		}
+
 		current = current->parent;
 		current_is = ',';
 		goto again;
