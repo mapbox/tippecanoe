@@ -5,7 +5,7 @@
 #include <stdarg.h>
 
 typedef enum json_type {
-	JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_HASH, JSON_NULL, JSON_TRUE, JSON_FALSE,
+	JSON_HASH, JSON_ARRAY, JSON_NUMBER, JSON_STRING, JSON_TRUE, JSON_FALSE, JSON_NULL,
 } json_type;
 
 typedef struct json_array {
