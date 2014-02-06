@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include <stdarg.h>
 
 typedef enum json_type {
@@ -57,6 +58,23 @@ static json_object *add_object(json_type type, json_object *parent) {
 	}
 
 	return o;
+}
+
+json_object *json_hash_get(json_object *o, char *s) {
+	if (o == NULL || o->type != JSON_HASH) {
+		return NULL;
+	}
+
+	json_hash *h;
+	for (h = o->hash; h != NULL; h = h->next) {
+		if (h->key != NULL && h->key->type == JSON_STRING) {
+			if (strcmp(h->key->string, s) == 0) {
+				return h->value;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 static void json_error(char *s, ...) {
@@ -295,6 +313,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 	}
 
 	json_error("unrecognized character %c\n", c);
+	return NULL;
 }
 
 static void indent(int depth) {
@@ -360,6 +379,12 @@ int main() {
 	json_object *j = NULL;
 
 	while ((j = json_parse(stdin, j)) != NULL) {
+		json_object *g = json_hash_get(j, "type");
+		if (g != NULL && g->type == JSON_STRING && strcmp(g->string, "Feature") == 0) {
+			json_print(j, 0);
+			printf("\n");
+		}
+
 		if (j->parent == NULL) {
 			json_print(j, 0);
 			printf("\n");
