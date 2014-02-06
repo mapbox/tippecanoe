@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 typedef enum json_type {
 	JSON_STRING, JSON_NUMBER, JSON_ARRAY, JSON_HASH, JSON_NULL, JSON_TRUE, JSON_FALSE,
@@ -26,6 +27,8 @@ typedef struct json_object {
 	json_array *array;
 	json_hash *hash;
 } json_object;
+
+void json_print(json_object *j);
 
 static json_object *add_object(json_type type, json_object *parent) {
 	json_object *o = malloc(sizeof(struct json_object));
@@ -57,8 +60,11 @@ static json_object *add_object(json_type type, json_object *parent) {
 	return o;
 }
 
-static void json_error(char *s) {
-	fprintf(stderr, "%s\n", s);
+static void json_error(char *s, ...) {
+	va_list ap;
+	va_start(ap, s);
+	vfprintf(stderr, s, ap);
+	va_end(ap);
 	exit(EXIT_FAILURE);
 }
 
@@ -112,7 +118,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return json_parse(f, add_object(JSON_ARRAY, current));
 	} else if (c == ']') {
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
-			json_error("] without [");
+			json_error("] without [\n");
 		}
 
 		return current->parent;
@@ -122,7 +128,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return json_parse(f, add_object(JSON_HASH, current));
 	} else if (c == '}') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			json_error("} without {");
+			json_error("} without {\n");
 		}
 
 		return current->parent;
@@ -130,7 +136,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	if (c == 'n') {
 		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
-			json_error("misspelled null");
+			json_error("misspelled null\n");
 		}
 
 		return add_object(JSON_NULL, current);
@@ -138,7 +144,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	if (c == 't') {
 		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
-			json_error("misspelled true");
+			json_error("misspelled true\n");
 		}
 
 		return add_object(JSON_TRUE, current);
@@ -146,7 +152,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	if (c == 'f') {
 		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
-			json_error("misspelled false");
+			json_error("misspelled false\n");
 		}
 
 		return add_object(JSON_FALSE, current);
@@ -154,23 +160,23 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 	if (c == ',') {
 		if (current->parent == NULL ||
-			(current->parent->type != JSON_ARRAY ||
+			(current->parent->type != JSON_ARRAY &&
 			 current->parent->type != JSON_HASH)) {
-			json_error(", not in array or hash");
+			json_error(", not in array or hash: %d\n", current->parent->type);
 		}
 
-		return json_parse(f, current);
+		return json_parse(f, current->parent);
 	}
 
 	if (c == ':') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			json_error(": not in hash");
+			json_error(": not in hash: %d\n", current->parent);
 		}
 		if (current->parent->hash == NULL || current->parent->hash->value != NULL) {
-			json_error(": without key");
+			json_error(": without key: %d\n", current->parent);
 		}
 
-		return json_parse(f, current);
+		return json_parse(f, current->parent);
 	}
 
 	if (c == '-' || (c >= '0' && c <= '9')) {
@@ -250,7 +256,7 @@ json_object *json_parse(FILE *f, json_object *current) {
 				} else if (c == 'u') {
 					/* XXX */
 				} else {
-					json_error("unknown string escape");
+					json_error("unknown string escape %c\n", c);
 				}
 			} else {
 				string_append(&val, c);
@@ -263,26 +269,45 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return s;
 	}
 
-	json_error("unrecognized character");
+	json_error("unrecognized character %c\n", c);
 }
 
 void json_print(json_object *j) {
-	if (j->type == JSON_STRING) {
-		printf("string: %s\n", j->string);
+	if (j == NULL) {
+		printf("NULL");
+	} else if (j->type == JSON_STRING) {
+		printf("\"%s\"", j->string);
 	} else if (j->type == JSON_NUMBER) {
-		printf("number: %f\n", j->number);
+		printf("%f", j->number);
 	} else if (j->type == JSON_NULL) {
-		printf("null\n");
+		printf("null");
 	} else if (j->type == JSON_TRUE) {
-		printf("true\n");
+		printf("true");
 	} else if (j->type == JSON_FALSE) {
-		printf("false\n");
+		printf("false");
 	} else if (j->type == JSON_HASH) {
-		printf("hash\n");
+		printf("{");
+
+		json_hash *h = j->hash;
+		while (h != NULL) {
+			json_print(h->key);
+			printf(":");
+			json_print(h->value);
+			printf(",");
+			h = h->next;
+		}
+		printf("}");
 	} else if (j->type == JSON_ARRAY) {
-		printf("array\n");
+		printf("[");
+		json_array *a = j->array;
+		while (a != NULL) {
+			json_print(a->object);
+			printf(",");
+			a = a->next;
+		}
+		printf("]");
 	} else {
-		printf("what type? %d\n", j->type);
+		printf("what type? %d", j->type);
 	}
 }
 
@@ -290,10 +315,12 @@ int main() {
 	json_object *j = NULL;
 
 	while ((j = json_parse(stdin, j)) != NULL) {
+#if 0
 		if (j->parent != NULL) {
 			printf("parent: ");
 			json_print(j->parent);
 		}
+#endif
 		json_print(j);
 		printf("\n");
 	}
