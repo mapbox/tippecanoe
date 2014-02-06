@@ -24,13 +24,36 @@ typedef struct json_object {
 	char *string;
 	double number;
 	json_array *array;
-	json_hash *object;
+	json_hash *hash;
 } json_object;
 
-json_object *new_object(json_type type, json_object *parent) {
+static json_object *add_object(json_type type, json_object *parent) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
 	o->parent = parent;
+	o->array = NULL;
+	o->hash = NULL;
+
+	if (parent != NULL) {
+		if (parent->type == JSON_ARRAY) {
+			json_array *a = malloc(sizeof(json_array));
+			a->next = parent->array;
+			a->object = o;
+			parent->array = a;
+		}
+
+		if (parent->type == JSON_HASH) {
+			if (parent->hash != NULL && parent->hash->value == NULL) {
+				parent->hash->value = o;
+			} else {
+				json_hash *h = malloc(sizeof(json_hash));
+				h->next = parent->hash;
+				h->key = o;
+				parent->hash = h;
+			}
+		}
+	}
+
 	return o;
 }
 
@@ -53,7 +76,7 @@ json_object *parse(FILE *f, json_object *current) {
 	}
 
 	if (c == '[') {
-		return parse(f, new_object(JSON_ARRAY, current));
+		return parse(f, add_object(JSON_ARRAY, current));
 	} else if (c == ']') {
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
 			json_error("] without [");
@@ -63,7 +86,7 @@ json_object *parse(FILE *f, json_object *current) {
 	}
 
 	if (c == '{') {
-		return parse(f, new_object(JSON_HASH, current));
+		return parse(f, add_object(JSON_HASH, current));
 	} else if (c == '}') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error("} without {");
@@ -77,7 +100,7 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error("misspelled null");
 		}
 
-		return new_object(JSON_NULL, current);
+		return add_object(JSON_NULL, current);
 	}
 
 	if (c == 't') {
@@ -85,7 +108,7 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error("misspelled true");
 		}
 
-		return new_object(JSON_TRUE, current);
+		return add_object(JSON_TRUE, current);
 	}
 
 	if (c == 'f') {
@@ -93,7 +116,7 @@ json_object *parse(FILE *f, json_object *current) {
 			json_error("misspelled false");
 		}
 
-		return new_object(JSON_FALSE, current);
+		return add_object(JSON_FALSE, current);
 	}
 
 	if (c == ',') {
@@ -109,6 +132,9 @@ json_object *parse(FILE *f, json_object *current) {
 	if (c == ':') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error(": not in hash");
+		}
+		if (current->parent->hash == NULL || current->parent->hash->value != NULL) {
+			json_error(": without key");
 		}
 
 		return parse(f, current);
