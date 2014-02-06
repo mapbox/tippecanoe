@@ -116,11 +116,10 @@ again:
 		c = getc(f);
 		if (c == EOF) {
 			if (current != NULL) {
-				// Close out open containers
-				return current->parent;
-			} else {
-				return NULL;
+				*error = "Reached EOF without all containers being closed";
 			}
+
+			return NULL;
 		}
 	} while (c == ' ' || c == '\t' || c == '\r' || c == '\n');
 
