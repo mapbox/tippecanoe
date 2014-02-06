@@ -310,6 +310,10 @@ again:
 			}
 
 			c = peek(f);
+			if (c < '0' || c > '9') {
+				*error = "Exponent without digits";
+				return NULL;
+			}
 			while (c >= '0' && c <= '9') {
 				string_append(&val, getc(f));
 				c = peek(f);
