@@ -171,6 +171,10 @@ json_object *json_parse(FILE *f, json_object *current) {
 	/////////////////////////// Comma
 
 	if (c == ',') {
+		if (current == NULL) {
+			json_error("comma at top level");
+		}
+
 		if (current->parent == NULL ||
 			(current->parent->type != JSON_ARRAY &&
 			 current->parent->type != JSON_HASH)) {
@@ -183,6 +187,10 @@ json_object *json_parse(FILE *f, json_object *current) {
 	/////////////////////////// Colon
 
 	if (c == ':') {
+		if (current == NULL) {
+			json_error("colon at top level");
+		}
+
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error(": not in hash\n");
 		}
