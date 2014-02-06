@@ -95,4 +95,22 @@ json_object *parse(FILE *f, json_object *current) {
 
 		return new_object(JSON_FALSE, current);
 	}
+
+	if (c == ',') {
+		if (current->parent == NULL ||
+			(current->parent->type != JSON_ARRAY ||
+			 current->parent->type != JSON_HASH)) {
+			json_error(", not in array or hash");
+		}
+
+		return parse(f, current);
+	}
+
+	if (c == ':') {
+		if (current->parent == NULL || current->parent->type != JSON_HASH) {
+			json_error(": not in hash");
+		}
+
+		return parse(f, current);
+	}
 }
