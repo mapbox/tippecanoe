@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <stdarg.h>
-
 typedef enum json_type {
 	JSON_HASH, JSON_ARRAY, JSON_NUMBER, JSON_STRING, JSON_TRUE, JSON_FALSE, JSON_NULL,
 } json_type;
@@ -19,7 +13,6 @@ typedef struct json_object {
 	struct json_object **keys;
 	struct json_object **values;
 	int length;
-	int __allocated;
 } json_object;
 
 json_object *json_parse(FILE *f, json_object *current);

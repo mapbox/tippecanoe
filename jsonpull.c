@@ -13,6 +13,8 @@ static void json_error(char *s, ...) {
 	exit(EXIT_FAILURE);
 }
 
+#define SIZE_FOR(i) (((i) + 31) & ~31)
+
 static json_object *add_object(json_type type, json_object *parent) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
@@ -21,13 +23,11 @@ static json_object *add_object(json_type type, json_object *parent) {
 	o->keys = NULL;
 	o->values = NULL;
 	o->length = 0;
-	o->__allocated = 0;
 
 	if (parent != NULL) {
 		if (parent->type == JSON_ARRAY) {
-			if (parent->length >= parent->__allocated) {
-				parent->__allocated += 20;
-				parent->array = realloc(parent->array, parent->__allocated * sizeof(json_object *));
+			if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
+				parent->array = realloc(parent->array, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
 			}
 
 			parent->array[parent->length++] = o;
@@ -44,10 +44,9 @@ static json_object *add_object(json_type type, json_object *parent) {
 					json_error("Hash key is not a string");
 				}
 
-				if (parent->length >= parent->__allocated) {
-					parent->__allocated += 20;
-					parent->keys = realloc(parent->keys, parent->__allocated * sizeof(json_object *));
-					parent->values = realloc(parent->values, parent->__allocated * sizeof(json_object *));
+				if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
+					parent->keys = realloc(parent->keys, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
+					parent->values = realloc(parent->values, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
 				}
 
 				parent->keys[parent->length] = o;
