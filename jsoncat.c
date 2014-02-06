@@ -16,7 +16,20 @@ void json_print(json_object *j, int depth) {
 	if (j == NULL) {
 		printf("NULL");
 	} else if (j->type == JSON_STRING) {
-		printf("\"%s\"", j->string);
+		printf("\"");
+
+		char *cp;
+		for (cp = j->string; *cp != '\0'; cp++) {
+			if (*cp == '\\' || *cp == '"') {
+				printf("\\%c", *cp);
+			} else if (*cp >= 0 && *cp < ' ') {
+				printf("\\u%04x", *cp);
+			} else {
+				putchar(*cp);
+			}
+		}
+
+		printf("\"");
 	} else if (j->type == JSON_NUMBER) {
 		printf("%f", j->number);
 	} else if (j->type == JSON_NULL) {
