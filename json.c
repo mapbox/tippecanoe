@@ -106,12 +106,16 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return NULL;
 	}
 
+	/////////////////////////// Whitespace
+
 	while (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
 		c = getc(f);
 		if (c == EOF) {
 			return NULL;
 		}
 	}
+
+	/////////////////////////// Arrays
 
 	if (c == '[') {
 		return json_parse(f, add_object(JSON_ARRAY, current));
@@ -123,6 +127,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return current->parent;
 	}
 
+	/////////////////////////// Hashes
+
 	if (c == '{') {
 		return json_parse(f, add_object(JSON_HASH, current));
 	} else if (c == '}') {
@@ -133,6 +139,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return current->parent;
 	}
 
+	/////////////////////////// Null
+
 	if (c == 'n') {
 		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
 			json_error("misspelled null\n");
@@ -140,6 +148,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 		return add_object(JSON_NULL, current);
 	}
+
+	/////////////////////////// True
 
 	if (c == 't') {
 		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
@@ -149,6 +159,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return add_object(JSON_TRUE, current);
 	}
 
+	/////////////////////////// False
+
 	if (c == 'f') {
 		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
 			json_error("misspelled false\n");
@@ -156,6 +168,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 		return add_object(JSON_FALSE, current);
 	}
+
+	/////////////////////////// Comma
 
 	if (c == ',') {
 		if (current->parent == NULL ||
@@ -167,6 +181,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 		return json_parse(f, current->parent);
 	}
 
+	/////////////////////////// Colon
+
 	if (c == ':') {
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
 			json_error(": not in hash\n");
@@ -177,6 +193,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 		return json_parse(f, current->parent);
 	}
+
+	/////////////////////////// Numbers
 
 	if (c == '-' || (c >= '0' && c <= '9')) {
 		struct string val;
@@ -231,6 +249,8 @@ json_object *json_parse(FILE *f, json_object *current) {
 
 		return n;
 	}
+
+	/////////////////////////// Strings
 
 	if (c == '"') {
 		struct string val;
