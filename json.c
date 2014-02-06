@@ -52,6 +52,7 @@ static json_object *add_object(json_type type, json_object *parent) {
 				json_hash *h = malloc(sizeof(json_hash));
 				h->next = parent->hash;
 				h->key = o;
+				h->value = NULL;
 				parent->hash = h;
 			}
 		}
@@ -183,9 +184,15 @@ json_object *json_parse(FILE *f, json_object *current) {
 		struct string val;
 		string_init(&val);
 
-		string_append(&val, c);
+		if (c == '-') {
+			string_append(&val, c);
+			c = getc(f);
+		}
 
-		if (c >= '1' && c <= '9') {
+		if (c == '0') {
+			string_append(&val, c);
+		} else if (c >= '1' && c <= '9') {
+			string_append(&val, c);
 			c = peek(f);
 
 			while (c >= '0' && c <= '9') {
