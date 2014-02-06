@@ -103,7 +103,7 @@ static void string_free(struct string *s) {
 }
 
 json_object *json_parse(FILE *f, json_object *current, char **error) {
-	int current_is_container = 0;
+	int current_is = 0;
 	int c;
 again:
 	c = getc(f);
@@ -129,7 +129,7 @@ again:
 
 	if (c == '[') {
 		current = add_object(JSON_ARRAY, current, error);
-		current_is_container = 1;
+		current_is = '[';
 		goto again;
 	} else if (c == ']') {
 		if (current == NULL) {
@@ -137,8 +137,11 @@ again:
 			return NULL;
 		}
 
-		if (current_is_container) { // Empty array
+		if (current_is == '[') { // Empty array
 			return current;
+		} else if (current_is) {
+			*error = "Found ] without final element";
+			return NULL;
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
@@ -153,7 +156,7 @@ again:
 
 	if (c == '{') {
 		current = add_object(JSON_HASH, current, error);
-		current_is_container = 1;
+		current_is = '{';
 		goto again;
 	} else if (c == '}') {
 		if (current == NULL) {
@@ -161,8 +164,11 @@ again:
 			return NULL;
 		}
 
-		if (current_is_container) { // Empty hash
+		if (current_is == '{') { // Empty hash
 			return current;
+		} else if (current_is) {
+			*error = "Found } without final element";
+			return NULL;
 		}
 
 		if (current->parent == NULL || current->parent->type != JSON_HASH) {
@@ -224,7 +230,7 @@ again:
 		}
 
 		current = current->parent;
-		current_is_container = 1;
+		current_is = ',';
 		goto again;
 	}
 
@@ -246,7 +252,7 @@ again:
 		}
 
 		current = current->parent;
-		current_is_container = 1;
+		current_is = ':';
 		goto again;
 	}
 
