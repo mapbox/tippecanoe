@@ -76,7 +76,7 @@ void json_print(json_object *j, int depth) {
 }
 
 void process(FILE *f) {
-	json_pull *jp = json_begin(f);
+	json_pull *jp = json_begin_file(f);
 	json_object *j = NULL;
 
 	while ((j = json_parse(jp)) != NULL) {

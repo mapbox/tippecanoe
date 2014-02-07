@@ -9,10 +9,24 @@ typedef enum json_expect {
 	JSON_ITEM, JSON_COMMA, JSON_COLON, JSON_KEY, JSON_VALUE,
 } json_expect;
 
-json_pull *json_begin(FILE *f) {
+int read_file(json_pull *p) {
+	return fgetc(p->source);
+}
+
+int peek_file(json_pull *p) {
+	int c = getc(p->source);
+	ungetc(c, p->source);
+	return c;
+}
+
+json_pull *json_begin_file(FILE *f) {
 	json_pull *j = malloc(sizeof(json_pull));
 	j->container = NULL;
-	j->f = f;
+
+	j->read = read_file;
+	j->peek = peek_file;
+	j->source = f;
+
 	return j;
 }
 
@@ -79,12 +93,6 @@ json_object *json_hash_get(json_object *o, char *s) {
 	return NULL;
 }
 
-static int peek(FILE *f) {
-	int c = getc(f);
-	ungetc(c, f);
-	return c;
-}
-
 struct string {
 	char *buf;
 	int n;
@@ -114,12 +122,11 @@ static void string_free(struct string *s) {
 
 json_object *json_parse(json_pull *j) {
 	int c;
-	FILE *f = j->f;
 again:
 	/////////////////////////// Whitespace
 
 	do {
-		c = getc(f);
+		c = j->read(j);
 		if (c == EOF) {
 			if (j->container != NULL) {
 				j->error = "Reached EOF without all containers being closed";
@@ -190,7 +197,7 @@ again:
 	/////////////////////////// Null
 
 	if (c == 'n') {
-		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
+		if (j->read(j) != 'u' || j->read(j) != 'l' || j->read(j) != 'l') {
 			j->error = "Found misspelling of null";
 			return NULL;
 		}
@@ -201,7 +208,7 @@ again:
 	/////////////////////////// True
 
 	if (c == 't') {
-		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
+		if (j->read(j) != 'r' || j->read(j) != 'u' || j->read(j) != 'e') {
 			j->error = "Found misspelling of true";
 			return NULL;
 		}
@@ -212,7 +219,7 @@ again:
 	/////////////////////////// False
 
 	if (c == 'f') {
-		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
+		if (j->read(j) != 'a' || j->read(j) != 'l' || j->read(j) != 's' || j->read(j) != 'e') {
 			j->error = "Found misspelling of false";
 			return NULL;
 		}
@@ -267,48 +274,48 @@ again:
 
 		if (c == '-') {
 			string_append(&val, c);
-			c = getc(f);
+			c = j->read(j);
 		}
 
 		if (c == '0') {
 			string_append(&val, c);
 		} else if (c >= '1' && c <= '9') {
 			string_append(&val, c);
-			c = peek(f);
+			c = j->peek(j);
 
 			while (c >= '0' && c <= '9') {
-				string_append(&val, getc(f));
-				c = peek(f);
+				string_append(&val, j->read(j));
+				c = j->peek(j);
 			}
 		}
 
-		if (peek(f) == '.') {
-			string_append(&val, getc(f));
+		if (j->peek(j) == '.') {
+			string_append(&val, j->read(j));
 
-			c = peek(f);
+			c = j->peek(j);
 			while (c >= '0' && c <= '9') {
-				string_append(&val, getc(f));
-				c = peek(f);
+				string_append(&val, j->read(j));
+				c = j->peek(j);
 			}
 		}
 
-		c = peek(f);
+		c = j->peek(j);
 		if (c == 'e' || c == 'E') {
-			string_append(&val, getc(f));
+			string_append(&val, j->read(j));
 
-			c = peek(f);
+			c = j->peek(j);
 			if (c == '+' || c == '-') {
-				string_append(&val, getc(f));
+				string_append(&val, j->read(j));
 			}
 
-			c = peek(f);
+			c = j->peek(j);
 			if (c < '0' || c > '9') {
 				j->error = "Exponent without digits";
 				return NULL;
 			}
 			while (c >= '0' && c <= '9') {
-				string_append(&val, getc(f));
-				c = peek(f);
+				string_append(&val, j->read(j));
+				c = j->peek(j);
 			}
 		}
 
@@ -324,11 +331,11 @@ again:
 		struct string val;
 		string_init(&val);
 
-		while ((c = getc(f)) != EOF) {
+		while ((c = j->read(j)) != EOF) {
 			if (c == '"') {
 				break;
 			} else if (c == '\\') {
-				c = getc(f);
+				c = j->read(j);
 
 				if (c == '"') {
 					string_append(&val, '"');
@@ -350,7 +357,7 @@ again:
 					char hex[5] = "aaaa";
 					int i;
 					for (i = 0; i < 4; i++) {
-						hex[i] = getc(f);
+						hex[i] = j->read(j);
 					}
 					unsigned long ch = strtoul(hex, NULL, 16);
 					if (ch <= 0x7F) {

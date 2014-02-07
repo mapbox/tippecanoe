@@ -20,11 +20,14 @@ typedef struct json_object {
 struct json_pull {
 	json_object *container;
 	char *error;
-	FILE *f;
+
+	int (*read)(struct json_pull *);
+	int (*peek)(struct json_pull *);
+	void *source;
 };
 typedef struct json_pull json_pull;
 
-json_pull *json_begin(FILE *f);
+json_pull *json_begin_file(FILE *f);
 json_object *json_parse(json_pull *j);
 
 json_object *json_hash_get(json_object *o, char *s);
