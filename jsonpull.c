@@ -75,19 +75,27 @@ static json_object *add_object(json_pull *j, json_type type) {
 
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
-			if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
-				c->array = realloc(c->array, SIZE_FOR(c->length + 1) * sizeof(json_object *));
-			}
+			if (c->expect == JSON_ITEM) {
+				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
+					c->array = realloc(c->array, SIZE_FOR(c->length + 1) * sizeof(json_object *));
+				}
 
-			c->array[c->length++] = o;
-			c->expect = JSON_COMMA;
+				c->array[c->length++] = o;
+				c->expect = JSON_COMMA;
+			} else {
+				j->error = "Expected a comma, not a list item";
+				free(c);
+				return NULL;
+			}
 		} else if (c->type == JSON_HASH) {
 			if (c->expect == JSON_VALUE) {
 				c->values[c->length - 1] = o;
 				c->expect = JSON_COMMA;
-			} else {
+			} else if (c->expect == JSON_KEY) {
 				if (type != JSON_STRING) {
 					j->error = "Hash key is not a string";
+					free(c);
+					return NULL;
 				}
 
 				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
@@ -99,6 +107,10 @@ static json_object *add_object(json_pull *j, json_type type) {
 				c->values[c->length] = NULL;
 				c->length++;
 				c->expect = JSON_COLON;
+			} else {
+				j->error = "Expected a comma or colon";
+				free(c);
+				return NULL;
 			}
 		}
 	}
@@ -169,7 +181,11 @@ again:
 	/////////////////////////// Arrays
 
 	if (c == '[') {
-		j->container = add_object(j, JSON_ARRAY);
+		json_object *o = add_object(j, JSON_ARRAY);
+		if (o == NULL) {
+			return NULL;
+		}
+		j->container = o;
 		j->container->expect = JSON_ITEM;
 		goto again;
 	} else if (c == ']') {
@@ -198,7 +214,11 @@ again:
 	/////////////////////////// Hashes
 
 	if (c == '{') {
-		j->container = add_object(j, JSON_HASH);
+		json_object *o = add_object(j, JSON_HASH);
+		if (o == NULL) {
+			return NULL;
+		}
+		j->container = o;
 		j->container->expect = JSON_KEY;
 		goto again;
 	} else if (c == '}') {
@@ -350,7 +370,9 @@ again:
 		}
 
 		json_object *n = add_object(j, JSON_NUMBER);
-		n->number = atof(val.buf);
+		if (n != NULL) {
+			n->number = atof(val.buf);
+		}
 		string_free(&val);
 		return n;
 	}
@@ -410,8 +432,10 @@ again:
 		}
 
 		json_object *s = add_object(j, JSON_STRING);
-		s->string = val.buf;
-		s->length = val.n;
+		if (s != NULL) {
+			s->string = val.buf;
+			s->length = val.n;
+		}
 		return s;
 	}
 
