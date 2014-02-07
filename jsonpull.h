@@ -18,13 +18,15 @@ typedef struct json_object {
 } json_object;
 
 struct json_pull {
-	json_object *container;
+	json_object *root;
 	char *error;
 
 	int (*read)(struct json_pull *);
 	int (*peek)(struct json_pull *);
 	void *source;
 	int line;
+
+	json_object *container;
 };
 typedef struct json_pull json_pull;
 

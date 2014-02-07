@@ -11,9 +11,10 @@ typedef enum json_expect {
 
 static json_pull *json_init() {
 	json_pull *j = malloc(sizeof(json_pull));
-	j->container = NULL;
 	j->error = NULL;
 	j->line = 1;
+	j->root = NULL;
+	j->container = NULL;
 	return j;
 }
 
@@ -126,6 +127,8 @@ static json_object *add_object(json_pull *j, json_type type) {
 				return NULL;
 			}
 		}
+	} else {
+		j->root = o;
 	}
 
 	return o;
