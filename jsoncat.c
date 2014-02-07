@@ -12,7 +12,7 @@ static void indent(int depth) {
 	}
 }
 
-void json_print(json_object *j, int depth) {
+void json_print_one(json_object *j, int *depth) {
 	if (j == NULL) {
 		printf("NULL");
 	} else if (j->type == JSON_STRING) {
@@ -39,6 +39,20 @@ void json_print(json_object *j, int depth) {
 	} else if (j->type == JSON_FALSE) {
 		printf("false");
 	} else if (j->type == JSON_HASH) {
+		printf("\n");
+		(*depth)--;
+		indent(*depth);
+		printf("}");
+	} else if (j->type == JSON_ARRAY) {
+		printf("\n");
+		(*depth)--;
+		indent(*depth);
+		printf("]");
+	}
+}
+
+void json_print(json_object *j, int depth) {
+	if (j->type == JSON_HASH) {
 		printf("{\n");
 		indent(depth + 1);
 
@@ -71,7 +85,40 @@ void json_print(json_object *j, int depth) {
 		indent(depth);
 		printf("]");
 	} else {
-		printf("what type? %d", j->type);
+		json_print_one(j, &depth);
+	}
+}
+
+void callback(json_type type, json_pull *jp, void *state) {
+	int *level = state;
+
+	if (type == JSON_ARRAY) {
+		printf("[\n");
+		(*level)++;
+		indent(*level);
+	} else if (type == JSON_HASH) {
+		printf("{\n");
+		(*level)++;
+		indent(*level);
+	} else if (type == JSON_COMMA) {
+		printf(", ");
+	} else if (type == JSON_COLON) {
+		printf(": ");
+	}
+}
+
+void process_callback(FILE *f, char *fname) {
+	json_pull *jp = json_begin_file(f);
+	json_object *j;
+	int level = 0;
+
+	while ((j = json_parse_with_separators(jp, callback, &level)) != NULL) {
+		json_print_one(j, &level);
+		json_free(j);
+	}
+
+	if (jp->error != NULL) {
+		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
 	}
 }
 
@@ -82,6 +129,7 @@ void process(FILE *f, char *fname) {
 	while ((j = json_parse(jp)) != NULL) {
 		if (j->parent == NULL) {
 			json_print(j, 0);
+			json_free(j);
 			printf("\n");
 		}
 	}

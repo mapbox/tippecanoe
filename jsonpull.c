@@ -5,10 +5,6 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
-typedef enum json_expect {
-	JSON_ITEM, JSON_COMMA, JSON_COLON, JSON_KEY, JSON_VALUE,
-} json_expect;
-
 static json_pull *json_init() {
 	json_pull *j = malloc(sizeof(json_pull));
 	j->error = NULL;
@@ -76,16 +72,20 @@ json_pull *json_begin_string(char *s) {
 
 #define SIZE_FOR(i) (((i) + 31) & ~31)
 
-static json_object *add_object(json_pull *j, json_type type) {
+static json_object *fabricate_object(json_object *parent, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
-	o->parent = j->container;
+	o->parent = parent;
 	o->array = NULL;
 	o->keys = NULL;
 	o->values = NULL;
 	o->length = 0;
+	return o;
+}
 
+static json_object *add_object(json_pull *j, json_type type) {
 	json_object *c = j->container;
+	json_object *o = fabricate_object(c, type);
 
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
@@ -178,7 +178,7 @@ static void string_free(struct string *s) {
 	free(s->buf);
 }
 
-json_object *json_parse(json_pull *j) {
+json_object *json_parse_with_separators(json_pull *j, json_separator_callback cb, void *state) {
 	int c;
 again:
 	/////////////////////////// Whitespace
@@ -203,6 +203,11 @@ again:
 		}
 		j->container = o;
 		j->container->expect = JSON_ITEM;
+
+		if (cb != NULL) {
+			cb(JSON_ARRAY, j, state);
+		}
+
 		goto again;
 	} else if (c == ']') {
 		if (j->container == NULL) {
@@ -236,6 +241,11 @@ again:
 		}
 		j->container = o;
 		j->container->expect = JSON_KEY;
+
+		if (cb != NULL) {
+			cb(JSON_HASH, j, state);
+		}
+
 		goto again;
 	} else if (c == '}') {
 		if (j->container == NULL) {
@@ -312,6 +322,10 @@ again:
 			j->container->expect = JSON_ITEM;
 		}
 
+		if (cb != NULL) {
+			cb(JSON_COMMA, j, state);
+		}
+
 		goto again;
 	}
 
@@ -329,6 +343,11 @@ again:
 		}
 
 		j->container->expect = JSON_VALUE;
+
+		if (cb != NULL) {
+			cb(JSON_COLON, j, state);
+		}
+
 		goto again;
 	}
 
@@ -459,15 +478,8 @@ again:
 	return NULL;
 }
 
-static json_object *fabricate_null(json_object *parent) {
-	json_object *o = malloc(sizeof(struct json_object));
-	o->type = JSON_NULL;
-	o->parent = parent;
-	o->array = NULL;
-	o->keys = NULL;
-	o->values = NULL;
-	o->length = 0;
-	return o;
+json_object *json_parse(json_pull *j) {
+	return json_parse_with_separators(j, NULL, NULL);
 }
 
 void json_free(json_object *o) {
@@ -531,11 +543,11 @@ void json_free(json_object *o) {
 		if (o->parent->type == JSON_HASH) {
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->keys[i] == o) {
-					o->parent->keys[i] = fabricate_null(o->parent);
+					o->parent->keys[i] = fabricate_object(o->parent, JSON_NULL);
 					break;
 				}
 				if (o->parent->values[i] == o) {
-					o->parent->values[i] = fabricate_null(o->parent);
+					o->parent->values[i] = fabricate_object(o->parent, JSON_NULL);
 					break;
 				}
 			}
