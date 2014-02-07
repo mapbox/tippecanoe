@@ -9,6 +9,14 @@ typedef enum json_expect {
 	JSON_ITEM, JSON_COMMA, JSON_COLON, JSON_KEY, JSON_VALUE,
 } json_expect;
 
+static json_pull *json_init() {
+	json_pull *j = malloc(sizeof(json_pull));
+	j->container = NULL;
+	j->error = NULL;
+	j->line = 1;
+	return j;
+}
+
 static int read_file(json_pull *j) {
 	int c = fgetc(j->source);
 	if (c == '\n') {
@@ -24,9 +32,7 @@ static int peek_file(json_pull *j) {
 }
 
 json_pull *json_begin_file(FILE *f) {
-	json_pull *j = malloc(sizeof(json_pull));
-	j->container = NULL;
-	j->line = 1;
+	json_pull *j = json_init();
 
 	j->read = read_file;
 	j->peek = peek_file;
@@ -58,9 +64,7 @@ static int peek_string(json_pull *p) {
 }
 
 json_pull *json_begin_string(char *s) {
-	json_pull *j = malloc(sizeof(json_pull));
-	j->container = NULL;
-	j->line = 1;
+	json_pull *j = json_init();
 
 	j->read = read_string;
 	j->peek = peek_string;
