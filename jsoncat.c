@@ -75,7 +75,7 @@ void json_print(json_object *j, int depth) {
 	}
 }
 
-void process(FILE *f) {
+void process(FILE *f, char *fname) {
 	json_pull *jp = json_begin_file(f);
 	json_object *j = NULL;
 
@@ -88,13 +88,13 @@ void process(FILE *f) {
 	}
 
 	if (jp->error != NULL) {
-		fprintf(stderr, "%d: %s\n", jp->line, jp->error);
+		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
 	}
 }
 
 int main(int argc, char **argv) {
 	if (argc == 1) {
-		process(stdin);
+		process(stdin, "standard input");
 	} else {
 		int i;
 		for (i = 1; i < argc; i++) {
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
 				perror(argv[i]);
 				exit(EXIT_FAILURE);
 			}
-			process(f);
+			process(f, argv[i]);
 			fclose(f);
 		}
 	}
