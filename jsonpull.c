@@ -459,6 +459,17 @@ again:
 	return NULL;
 }
 
+static json_object *fabricate_null(json_object *parent) {
+	json_object *o = malloc(sizeof(struct json_object));
+	o->type = JSON_NULL;
+	o->parent = parent;
+	o->array = NULL;
+	o->keys = NULL;
+	o->values = NULL;
+	o->length = 0;
+	return o;
+}
+
 void json_free(json_object *o) {
 	int i;
 
@@ -469,14 +480,33 @@ void json_free(json_object *o) {
 	// Free any data linked from here
 
 	if (o->type == JSON_ARRAY) {
-		for (i = 0; i < o->length; i++) {
-			json_free(o->array[i]);
+		json_object **a = o->array;
+		int n = o->length;
+
+		o->array = NULL;
+		o->length = 0;
+
+		for (i = 0; i < n; i++) {
+			json_free(a[i]);
 		}
+
+		free(a);
 	} else if (o->type == JSON_HASH) {
-		for (i = 0; i < o->length; i++) {
-			json_free(o->keys[i]);
-			json_free(o->values[i]);
+		json_object **k = o->keys;
+		json_object **v = o->values;
+		int n = o->length;
+
+		o->keys = NULL;
+		o->values = NULL;
+		o->length = 0;
+
+		for (i = 0; i < n; i++) {
+			json_free(k[i]);
+			json_free(v[i]);
 		}
+
+		free(k);
+		free(v);
 	} else if (o->type == JSON_STRING) {
 		free(o->string);
 	}
@@ -500,24 +530,25 @@ void json_free(json_object *o) {
 
 		if (o->parent->type == JSON_HASH) {
 			for (i = 0; i < o->parent->length; i++) {
-				if (o->parent->keys[i] == o || o->parent->values[i] == o) {
+				if (o->parent->keys[i] == o) {
+					o->parent->keys[i] = fabricate_null(o->parent);
+					break;
+				}
+				if (o->parent->values[i] == o) {
+					o->parent->values[i] = fabricate_null(o->parent);
 					break;
 				}
 			}
 
 			if (i < o->parent->length) {
-				json_object *k = o->parent->keys[i];
-				json_object *v = o->parent->values[i];
+				if (o->parent->keys[i] != NULL && o->parent->keys[i]->type == JSON_NULL) {
+					if (o->parent->values[i] != NULL && o->parent->values[i]->type == JSON_NULL) {
+						free(o->parent->keys[i]);
+						free(o->parent->values[i]);
 
-				memmove(o->parent->keys + i, o->parent->keys + i + 1, o->parent->length - i - 1);
-				memmove(o->parent->values + i, o->parent->values + i + 1, o->parent->length - i - 1);
-				o->parent->length--;
-				
-				if (o->parent->values[i] == NULL) {
-					// Have not yet read the value for this pair
-				} else {
-					if (o->parent->keys[i] == o) {
-					} else {
+						memmove(o->parent->keys + i, o->parent->keys + i + 1, o->parent->length - i - 1);
+						memmove(o->parent->values + i, o->parent->values + i + 1, o->parent->length - i - 1);
+						o->parent->length--;
 					}
 				}
 			}
