@@ -9,11 +9,11 @@ typedef enum json_expect {
 	JSON_ITEM, JSON_COMMA, JSON_COLON, JSON_KEY, JSON_VALUE,
 } json_expect;
 
-int read_file(json_pull *p) {
+static int read_file(json_pull *p) {
 	return fgetc(p->source);
 }
 
-int peek_file(json_pull *p) {
+static int peek_file(json_pull *p) {
 	int c = getc(p->source);
 	ungetc(c, p->source);
 	return c;
@@ -26,6 +26,36 @@ json_pull *json_begin_file(FILE *f) {
 	j->read = read_file;
 	j->peek = peek_file;
 	j->source = f;
+
+	return j;
+}
+
+static int read_string(json_pull *p) {
+	char *cp = p->source;
+	if (*cp == '\0') {
+		return EOF;
+	}
+	int c = (unsigned char) *cp;
+	cp++;
+	p->source = cp;
+	return c;
+}
+
+static int peek_string(json_pull *p) {
+	char *cp = p->source;
+	if (*cp == '\0') {
+		return EOF;
+	}
+	return (unsigned char) *cp;
+}
+
+json_pull *json_begin_string(char *s) {
+	json_pull *j = malloc(sizeof(json_pull));
+	j->container = NULL;
+
+	j->read = read_string;
+	j->peek = peek_string;
+	j->source = s;
 
 	return j;
 }

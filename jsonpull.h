@@ -28,6 +28,7 @@ struct json_pull {
 typedef struct json_pull json_pull;
 
 json_pull *json_begin_file(FILE *f);
+json_pull *json_begin_string(char *s);
 json_object *json_parse(json_pull *j);
 
 json_object *json_hash_get(json_object *o, char *s);
