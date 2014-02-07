@@ -88,7 +88,7 @@ void process(FILE *f) {
 	}
 
 	if (jp->error != NULL) {
-		fprintf(stderr, "%s\n", jp->error);
+		fprintf(stderr, "%d: %s\n", jp->line, jp->error);
 	}
 }
 

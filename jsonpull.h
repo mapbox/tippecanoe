@@ -24,6 +24,7 @@ struct json_pull {
 	int (*read)(struct json_pull *);
 	int (*peek)(struct json_pull *);
 	void *source;
+	int line;
 };
 typedef struct json_pull json_pull;
 
