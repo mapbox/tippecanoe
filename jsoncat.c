@@ -76,10 +76,10 @@ void json_print(json_object *j, int depth) {
 }
 
 void process(FILE *f) {
+	json_pull *jp = json_begin(f);
 	json_object *j = NULL;
-	char *error = NULL;
 
-	while ((j = json_parse(f, j, &error)) != NULL) {
+	while ((j = json_parse(jp)) != NULL) {
 		if (j->parent == NULL) {
 			json_print(j, 0);
 			printf("\n");
@@ -87,8 +87,8 @@ void process(FILE *f) {
 		}
 	}
 
-	if (error != NULL) {
-		fprintf(stderr, "%s\n", error);
+	if (jp->error != NULL) {
+		fprintf(stderr, "%s\n", jp->error);
 	}
 }
 

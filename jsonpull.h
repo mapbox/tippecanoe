@@ -13,7 +13,18 @@ typedef struct json_object {
 	struct json_object **keys;
 	struct json_object **values;
 	int length;
+
+	int expect;
 } json_object;
 
-json_object *json_parse(FILE *f, json_object *current, char **error);
+struct json_pull {
+	json_object *container;
+	char *error;
+	FILE *f;
+};
+typedef struct json_pull json_pull;
+
+json_pull *json_begin(FILE *f);
+json_object *json_parse(json_pull *j);
+
 json_object *json_hash_get(json_object *o, char *s);

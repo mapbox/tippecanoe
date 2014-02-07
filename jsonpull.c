@@ -5,51 +5,57 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
+typedef enum json_expect {
+	JSON_ITEM, JSON_COMMA, JSON_COLON, JSON_KEY, JSON_VALUE,
+} json_expect;
+
+json_pull *json_begin(FILE *f) {
+	json_pull *j = malloc(sizeof(json_pull));
+	j->container = NULL;
+	j->f = f;
+	return j;
+}
+
 #define SIZE_FOR(i) (((i) + 31) & ~31)
 
-static json_object *add_object(json_type type, json_object *parent, char **error) {
+static json_object *add_object(json_pull *j, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
 	o->type = type;
-	o->parent = parent;
+	o->parent = j->container;
 	o->array = NULL;
 	o->keys = NULL;
 	o->values = NULL;
 	o->length = 0;
 
-	if (parent != NULL) {
-		if (parent->type == JSON_ARRAY) {
-			if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
-				parent->array = realloc(parent->array, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
+	json_object *c = j->container;
+
+	if (c != NULL) {
+		if (c->type == JSON_ARRAY) {
+			if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
+				c->array = realloc(c->array, SIZE_FOR(c->length + 1) * sizeof(json_object *));
 			}
 
-			parent->array[parent->length++] = o;
-		} else if (parent->type == JSON_HASH) {
-			if (parent->length > 0 && parent->values[parent->length - 1] == NULL) {
-				// Hash has key but no value, so this is the value
-
-				parent->values[parent->length - 1] = o;
+			c->array[c->length++] = o;
+			c->expect = JSON_COMMA;
+		} else if (c->type == JSON_HASH) {
+			if (c->expect == JSON_VALUE) {
+				c->values[c->length - 1] = o;
+				c->expect = JSON_COMMA;
 			} else {
-				// No current hash, so this is a key
-
 				if (type != JSON_STRING) {
-					*error = "Hash key is not a string";
-					free(o);
-					return NULL;
+					j->error = "Hash key is not a string";
 				}
 
-				if (SIZE_FOR(parent->length + 1) != SIZE_FOR(parent->length)) {
-					parent->keys = realloc(parent->keys, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
-					parent->values = realloc(parent->values, SIZE_FOR(parent->length + 1) * sizeof(json_object *));
+				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
+					c->keys = realloc(c->keys, SIZE_FOR(c->length + 1) * sizeof(json_object *));
+					c->values = realloc(c->values, SIZE_FOR(c->length + 1) * sizeof(json_object *));
 				}
 
-				parent->keys[parent->length] = o;
-				parent->values[parent->length] = NULL;
-				parent->length++;
+				c->keys[c->length] = o;
+				c->values[c->length] = NULL;
+				c->length++;
+				c->expect = JSON_COLON;
 			}
-		} else {
-			*error = "Parent is not a container";
-			free(o);
-			return NULL;
 		}
 	}
 
@@ -106,17 +112,17 @@ static void string_free(struct string *s) {
 	free(s->buf);
 }
 
-json_object *json_parse(FILE *f, json_object *current, char **error) {
-	int current_is = 0;
+json_object *json_parse(json_pull *j) {
 	int c;
+	FILE *f = j->f;
 again:
 	/////////////////////////// Whitespace
 
 	do {
 		c = getc(f);
 		if (c == EOF) {
-			if (current != NULL) {
-				*error = "Reached EOF without all containers being closed";
+			if (j->container != NULL) {
+				j->error = "Reached EOF without all containers being closed";
 			}
 
 			return NULL;
@@ -126,144 +132,130 @@ again:
 	/////////////////////////// Arrays
 
 	if (c == '[') {
-		current = add_object(JSON_ARRAY, current, error);
-		if (current == NULL) {
-			return NULL;
-		}
-		current_is = '[';
+		j->container = add_object(j, JSON_ARRAY);
+		j->container->expect = JSON_ITEM;
 		goto again;
 	} else if (c == ']') {
-		if (current == NULL) {
-			*error = "Found ] at top level";
+		if (j->container == NULL) {
+			j->error = "Found ] at top level";
 			return NULL;
 		}
 
-		if (current_is == '[') { // Empty array
-			return current;
-		} else if (current_is) {
-			*error = "Found ] without final element";
+		if (j->container->type != JSON_ARRAY) {
+			j->error = "Found ] not in an array";
 			return NULL;
 		}
 
-		if (current->parent == NULL || current->parent->type != JSON_ARRAY) {
-			*error = "Found ] without matching [";
-			return NULL;
+		if (j->container->expect != JSON_COMMA) {
+			if (! (j->container->expect == JSON_ITEM && j->container->length == 0)) {
+				j->error = "Found ] without final element";
+				return NULL;
+			}
 		}
 
-		return current->parent;
+		json_object *ret = j->container;
+		j->container = ret->parent;
+		return ret;
 	}
 
 	/////////////////////////// Hashes
 
 	if (c == '{') {
-		current = add_object(JSON_HASH, current, error);
-		if (current == NULL) {
-			return NULL;
-		}
-		current_is = '{';
+		j->container = add_object(j, JSON_HASH);
+		j->container->expect = JSON_KEY;
 		goto again;
 	} else if (c == '}') {
-		if (current == NULL) {
-			*error = "Found } at top level";
+		if (j->container == NULL) {
+			j->error = "Found } at top level";
 			return NULL;
 		}
 
-		if (current_is == '{') { // Empty hash
-			return current;
-		} else if (current_is) {
-			*error = "Found } without final element";
+		if (j->container->type != JSON_HASH) {
+			j->error = "Found } not in a hash";
 			return NULL;
 		}
 
-		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			*error = "Found } without matching {";
-			return NULL;
-		}
-		if (current->parent->length != 0 && current->parent->values[current->parent->length - 1] == NULL) {
-			*error = "Found hash key without value";
-			return NULL;
+		if (j->container->expect != JSON_COMMA) {
+			if (! (j->container->expect == JSON_KEY && j->container->length == 0)) {
+				j->error = "Found } without final element";
+				return NULL;
+			}
 		}
 
-		return current->parent;
+		json_object *ret = j->container;
+		j->container = ret->parent;
+		return ret;
 	}
 
 	/////////////////////////// Null
 
 	if (c == 'n') {
 		if (getc(f) != 'u' || getc(f) != 'l' || getc(f) != 'l') {
-			*error = "Found misspelling of null";
+			j->error = "Found misspelling of null";
 			return NULL;
 		}
 
-		return add_object(JSON_NULL, current, error);
+		return add_object(j, JSON_NULL);
 	}
 
 	/////////////////////////// True
 
 	if (c == 't') {
 		if (getc(f) != 'r' || getc(f) != 'u' || getc(f) != 'e') {
-			*error = "Found misspelling of true";
+			j->error = "Found misspelling of true";
 			return NULL;
 		}
 
-		return add_object(JSON_TRUE, current, error);
+		return add_object(j, JSON_TRUE);
 	}
 
 	/////////////////////////// False
 
 	if (c == 'f') {
 		if (getc(f) != 'a' || getc(f) != 'l' || getc(f) != 's' || getc(f) != 'e') {
-			*error = "Found misspelling of false";
+			j->error = "Found misspelling of false";
 			return NULL;
 		}
 
-		return add_object(JSON_FALSE, current, error);
+		return add_object(j, JSON_FALSE);
 	}
 
 	/////////////////////////// Comma
 
 	if (c == ',') {
-		if (current == NULL) {
-			*error = "Found comma at top level";
+		if (j->container == NULL) {
+			j->error = "Found comma at top level";
 			return NULL;
 		}
 
-		if (current->parent == NULL || (current->parent->type != JSON_ARRAY && current->parent->type != JSON_HASH)) {
-			*error = "Found comma outside of array or hash";
+		if (j->container->expect != JSON_COMMA) {
+			j->error = "Found unexpected comma";
 			return NULL;
 		}
 
-		if (current->parent->type == JSON_HASH) {
-			if (current->parent->length == 0 || current->parent->values[current->parent->length - 1] == NULL) {
-				*error = "Found comma in hash without a hash value";
-				return NULL;
-			}
+		if (j->container->type == JSON_HASH) {
+			j->container->expect = JSON_KEY;
+		} else {
+			j->container->expect = JSON_ITEM;
 		}
 
-		current = current->parent;
-		current_is = ',';
 		goto again;
 	}
 
 	/////////////////////////// Colon
 
 	if (c == ':') {
-		if (current == NULL) {
-			*error = "Found colon at top level";
+		if (j->container == NULL) {
+			j->error = "Found colon at top level";
 			return NULL;
 		}
 
-		if (current->parent == NULL || current->parent->type != JSON_HASH) {
-			*error = "Found colon outside of hash";
-			return NULL;
-		}
-		if (current->parent->length == 0 || current->parent->keys[current->parent->length - 1] == NULL) {
-			*error = "Found colon without a hash key";
+		if (j->container->expect != JSON_COLON) {
+			j->error = "Found unexpected colon";
 			return NULL;
 		}
 
-		current = current->parent;
-		current_is = ':';
+		j->container->expect = JSON_VALUE;
 		goto again;
 	}
 
@@ -311,7 +303,7 @@ again:
 
 			c = peek(f);
 			if (c < '0' || c > '9') {
-				*error = "Exponent without digits";
+				j->error = "Exponent without digits";
 				return NULL;
 			}
 			while (c >= '0' && c <= '9') {
@@ -320,12 +312,9 @@ again:
 			}
 		}
 
-		json_object *n = add_object(JSON_NUMBER, current, error);
-		if (n != NULL) {
-			n->number = atof(val.buf);
-			string_free(&val);
-		}
-
+		json_object *n = add_object(j, JSON_NUMBER);
+		n->number = atof(val.buf);
+		string_free(&val);
 		return n;
 	}
 
@@ -375,7 +364,7 @@ again:
 						string_append(&val, 0x80 | (ch & 0x3F));
 					}
 				} else {
-					*error = "Found backslash followed by unknown character";
+					j->error = "Found backslash followed by unknown character";
 					return NULL;
 				}
 			} else {
@@ -383,16 +372,13 @@ again:
 			}
 		}
 
-		json_object *s = add_object(JSON_STRING, current, error);
-		if (s != NULL) {
-			s->string = val.buf;
-			s->length = val.n;
-		}
-
+		json_object *s = add_object(j, JSON_STRING);
+		s->string = val.buf;
+		s->length = val.n;
 		return s;
 	}
 
-	*error = "Found unexpected character";
+	j->error = "Found unexpected character";
 	return NULL;
 }
 
