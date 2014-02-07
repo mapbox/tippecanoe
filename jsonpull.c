@@ -395,3 +395,71 @@ again:
 	*error = "Found unexpected character";
 	return NULL;
 }
+
+void json_free(json_object *o) {
+	int i;
+
+	if (o == NULL) {
+		return;
+	}
+
+	// Free any data linked from here
+
+	if (o->type == JSON_ARRAY) {
+		for (i = 0; i < o->length; i++) {
+			json_free(o->array[i]);
+		}
+	} else if (o->type == JSON_HASH) {
+		for (i = 0; i < o->length; i++) {
+			json_free(o->keys[i]);
+			json_free(o->values[i]);
+		}
+	} else if (o->type == JSON_STRING) {
+		free(o->string);
+	}
+
+	// Expunge references to this as an array element
+	// or a hash key or value.
+
+	if (o->parent != NULL) {
+		if (o->parent->type == JSON_ARRAY) {
+			for (i = 0; i < o->parent->length; i++) {
+				if (o->parent->array[i] == o) {
+					break;
+				}
+			}
+
+			if (i < o->parent->length) {
+				memmove(o->parent->array + i, o->parent->array + i + 1, o->parent->length - i - 1);
+				o->parent->length--;
+			}
+		}
+
+		if (o->parent->type == JSON_HASH) {
+			for (i = 0; i < o->parent->length; i++) {
+				if (o->parent->keys[i] == o || o->parent->values[i] == o) {
+					break;
+				}
+			}
+
+			if (i < o->parent->length) {
+				json_object *k = o->parent->keys[i];
+				json_object *v = o->parent->values[i];
+
+				memmove(o->parent->keys + i, o->parent->keys + i + 1, o->parent->length - i - 1);
+				memmove(o->parent->values + i, o->parent->values + i + 1, o->parent->length - i - 1);
+				o->parent->length--;
+				
+				if (o->parent->values[i] == NULL) {
+					// Have not yet read the value for this pair
+				} else {
+					if (o->parent->keys[i] == o) {
+					} else {
+					}
+				}
+			}
+		}
+	}
+
+	free(o);
+}
