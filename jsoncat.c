@@ -101,9 +101,10 @@ void callback(json_type type, json_pull *jp, void *state) {
 		(*level)++;
 		indent(*level);
 	} else if (type == JSON_COMMA) {
-		printf(", ");
+		printf(",\n");
+		indent(*level);
 	} else if (type == JSON_COLON) {
-		printf(": ");
+		printf(" : ");
 	}
 }
 
@@ -115,6 +116,10 @@ void process_callback(FILE *f, char *fname) {
 	while ((j = json_read_with_separators(jp, callback, &level)) != NULL) {
 		json_print_one(j, &level);
 		json_free(j);
+
+		if (j->parent == NULL) {
+			printf("\n");
+		}
 	}
 
 	if (jp->error != NULL) {
@@ -161,7 +166,7 @@ void process_tree(FILE *f, char *fname) {
 
 int main(int argc, char **argv) {
 	if (argc == 1) {
-		process_tree(stdin, "standard input");
+		process_callback(stdin, "standard input");
 	} else {
 		int i;
 		for (i = 1; i < argc; i++) {
@@ -170,7 +175,7 @@ int main(int argc, char **argv) {
 				perror(argv[i]);
 				exit(EXIT_FAILURE);
 			}
-			process_tree(f, argv[i]);
+			process_callback(f, argv[i]);
 			fclose(f);
 		}
 	}
