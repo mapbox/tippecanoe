@@ -5,8 +5,6 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
-#include "debug.h"
-
 json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_pull *), void *source) {
 	json_pull *j = malloc(sizeof(json_pull));
 
