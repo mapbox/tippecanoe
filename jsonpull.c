@@ -404,6 +404,7 @@ again:
 			c = j->peek(j);
 			if (c < '0' || c > '9') {
 				j->error = "Exponent without digits";
+				free(val.buf);
 				return NULL;
 			}
 			while (c >= '0' && c <= '9') {
@@ -467,6 +468,7 @@ again:
 					}
 				} else {
 					j->error = "Found backslash followed by unknown character";
+					free(val.buf);
 					return NULL;
 				}
 			} else {
