@@ -122,3 +122,15 @@ Utility function
 There is a function <code>json_hash_get</code> that looks up the JSON object hash value
 corresponding to a C string hash key in a JSON hash object. If the object specified is
 NULL or not a JSON hash or has no matching key, it returns NULL.
+
+Test program
+------------
+
+The <code>jsoncat</code> program reads JSON from the standard input or from
+named files and pretty-prints it to the standard output.
+
+Normally it uses the callback interface to avoid memory overhead.
+It has two options:
+
+* <code>-t</code> reads the whole tree and then prints it
+* <code>-i</code> reads incrementally, but still keeps it all in memory.
