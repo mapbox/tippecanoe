@@ -125,6 +125,8 @@ void process_callback(FILE *f, char *fname) {
 	if (jp->error != NULL) {
 		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
 	}
+
+	json_end(jp);
 }
 
 void process_incremental(FILE *f, char *fname) {
@@ -142,6 +144,8 @@ void process_incremental(FILE *f, char *fname) {
 	if (jp->error != NULL) {
 		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
 	}
+
+	json_end(jp);
 }
 
 void process_tree(FILE *f, char *fname) {
@@ -162,6 +166,8 @@ void process_tree(FILE *f, char *fname) {
 		json_free(j);
 		printf("\n");
 	}
+
+	json_end(jp);
 }
 
 int main(int argc, char **argv) {
