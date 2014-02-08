@@ -1,6 +1,12 @@
 typedef enum json_type {
+	// These types can be returned by json_parse()
 	JSON_HASH, JSON_ARRAY, JSON_NUMBER, JSON_STRING, JSON_TRUE, JSON_FALSE, JSON_NULL,
-	JSON_COMMA, JSON_COLON, JSON_ITEM, JSON_KEY, JSON_VALUE,
+
+	// These and JSON_HASH and JSON_ARRAY can be called back by json_parse_with_separators()
+	JSON_COMMA, JSON_COLON,
+
+	// These are only used internally as expectations of what comes next
+	JSON_ITEM, JSON_KEY, JSON_VALUE,
 } json_type;
 
 typedef struct json_object {
