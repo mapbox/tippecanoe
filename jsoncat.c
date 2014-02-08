@@ -122,7 +122,7 @@ void process_callback(FILE *f, char *fname) {
 	}
 }
 
-void process(FILE *f, char *fname) {
+void process_incremental(FILE *f, char *fname) {
 	json_pull *jp = json_begin_file(f);
 	json_object *j;
 
@@ -139,9 +139,29 @@ void process(FILE *f, char *fname) {
 	}
 }
 
+void process_tree(FILE *f, char *fname) {
+	json_pull *jp = json_begin_file(f);
+
+	while (1) {
+		json_object *j = json_read_tree(jp);
+
+		if (j == NULL) {
+			if (jp->error != NULL) {
+				fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
+			}
+
+			break;
+		}
+
+		json_print(j, 0);
+		json_free(j);
+		printf("\n");
+	}
+}
+
 int main(int argc, char **argv) {
 	if (argc == 1) {
-		process(stdin, "standard input");
+		process_tree(stdin, "standard input");
 	} else {
 		int i;
 		for (i = 1; i < argc; i++) {
@@ -150,7 +170,7 @@ int main(int argc, char **argv) {
 				perror(argv[i]);
 				exit(EXIT_FAILURE);
 			}
-			process(f, argv[i]);
+			process_tree(f, argv[i]);
 			fclose(f);
 		}
 	}

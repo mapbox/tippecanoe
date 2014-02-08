@@ -55,6 +55,10 @@ json_pull *json_begin_string(char *s) {
 	return json_begin(read_string, peek_string, s);
 }
 
+void json_end(json_pull *p) {
+	free(p);
+}
+
 static int read_wrap(json_pull *j) {
 	int c = j->read(j);
 
@@ -473,6 +477,18 @@ again:
 
 json_object *json_read(json_pull *j) {
 	return json_read_with_separators(j, NULL, NULL);
+}
+
+json_object *json_read_tree(json_pull *p) {
+	json_object *j;
+
+	while ((j = json_read(p)) != NULL) {
+		if (j->parent == NULL) {
+			return j;
+		}
+	}
+
+	return NULL;
 }
 
 void json_free(json_object *o) {
