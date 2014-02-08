@@ -10,7 +10,6 @@ json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_p
 
 	j->error = NULL;
 	j->line = 1;
-	j->root = NULL;
 	j->container = NULL;
 
 	j->read = read;
@@ -123,8 +122,6 @@ static json_object *add_object(json_pull *j, json_type type) {
 				return NULL;
 			}
 		}
-	} else {
-		j->root = o;
 	}
 
 	return o;
