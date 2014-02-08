@@ -22,8 +22,8 @@ You can also read from anything you want by calling <code>json_begin()</code>
 with your own <code>read()</code> and <code>peek()</code> functions that
 return or preview, respectively, the next UTF-8 byte from your input stream.
 
-Reading single JSON objects
----------------------------
+Reading full JSON trees 
+-----------------------
 
 The simplest form is <code>json_read_tree()</code>, which reads a complete
 JSON object from the stream, or NULL if there was an error or on end of file.
