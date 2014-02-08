@@ -52,7 +52,10 @@ void json_print_one(json_object *j, int *depth) {
 }
 
 void json_print(json_object *j, int depth) {
-	if (j->type == JSON_HASH) {
+	if (j == NULL) {
+		// Hash value in incompletely read hash
+		printf("NULL");
+	} else if (j->type == JSON_HASH) {
 		printf("{\n");
 		indent(depth + 1);
 
@@ -123,7 +126,9 @@ void process_callback(FILE *f, char *fname) {
 	}
 
 	if (jp->error != NULL) {
+		fflush(stdout);
 		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
+		json_free(jp->root);
 	}
 
 	json_end(jp);

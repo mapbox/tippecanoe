@@ -33,6 +33,7 @@ typedef struct json_pull {
 	void *source;
 
 	json_object *container;
+	json_object *root;
 } json_pull;
 
 json_pull *json_begin_file(FILE *f);

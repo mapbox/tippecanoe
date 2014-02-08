@@ -5,12 +5,15 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
+#include "debug.h"
+
 json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_pull *), void *source) {
 	json_pull *j = malloc(sizeof(json_pull));
 
 	j->error = NULL;
 	j->line = 1;
 	j->container = NULL;
+	j->root = NULL;
 
 	j->read = read;
 	j->peek = peek;
@@ -97,7 +100,7 @@ static json_object *add_object(json_pull *j, json_type type) {
 				c->expect = JSON_COMMA;
 			} else {
 				j->error = "Expected a comma, not a list item";
-				free(c);
+				free(o);
 				return NULL;
 			}
 		} else if (c->type == JSON_HASH) {
@@ -107,7 +110,7 @@ static json_object *add_object(json_pull *j, json_type type) {
 			} else if (c->expect == JSON_KEY) {
 				if (type != JSON_STRING) {
 					j->error = "Hash key is not a string";
-					free(c);
+					free(o);
 					return NULL;
 				}
 
@@ -122,10 +125,12 @@ static json_object *add_object(json_pull *j, json_type type) {
 				c->expect = JSON_COLON;
 			} else {
 				j->error = "Expected a comma or colon";
-				free(c);
+				free(o);
 				return NULL;
 			}
 		}
+	} else {
+		j->root = o;
 	}
 
 	return o;
