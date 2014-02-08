@@ -24,8 +24,7 @@ Reading single JSON objects
 
 The simplest form is <code>json_read_tree()</code>, which reads a complete
 JSON object from the stream, or NULL if there was an error or on end of file.
-Call <code>json_free()</code> on the object when you are done with it,
-and <code>json_end()</code> on the parser.
+Call <code>json_free()</code> on the object when you are done with it.
 
 You can continue calling <code>json_read_tree()</code> to read additional objects
 from the same stream. This is not standard JSON, but is useful for something like
@@ -66,3 +65,47 @@ purpose there is an additional streaming reader function,
 a function to call when brackets, braces, commas, and colons are read.
 Other object types and the closing of arrays and hashes are still sent through
 the normal return value.
+
+The types that can be sent to the callback function are
+<code>JSON_ARRAY</code>, <code>JSON_HASH</code>, <code>JSON_COMMA</code>,
+and <code>JSON_COLON</code>.
+
+Shutdown
+--------
+
+To free the parser object, call <code>json_end()</code> on it.
+
+Object format
+-------------
+
+JSON objects are represented as the C struct <code>json_object</code>.
+It contains a <code>type</code> field to indicate its type, a <code>parent</code>
+pointer to the container that encloses it, and additional fields per type.
+
+Types <code>JSON_NULL</code>, <code>JSON_TRUE</code>, and <code>JSON_FALSE</code>
+have no additional data.
+
+Strings have type <code>JSON_STRING</code>, with null-terminated UTF-8 text
+in <code>string</code> and length in <code>length</code>.
+
+Numbers have type <code>JSON_NUMBER</code>, with value in <code>number</code>.
+
+Arrays have type <code>JSON_ARRAY</code>. There are <code>length</code> elements in the array,
+and the elements are in <code>array</code>.
+
+Hashes have type <code>JSON_HASH</code>. There are <code>length</code> key-value pairs,
+and the keys are in <code>keys</code> and the values in <code>values</code>.
+
+Parser format
+-------------
+
+The parser object has two fields of public interest: <code>error</code> is a string
+describing any errors found in the JSON, and <code>line</code> is the current line number
+being read from the input to make it easier to find the errors.
+
+Utility function
+----------------
+
+There is a function <code>json_hash_get</code> that looks up the JSON object hash value
+corresponding to a C string hash key in a JSON hash object. If the object specified is
+NULL or not a JSON hash or has no matching key, it returns NULL.

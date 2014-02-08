@@ -26,11 +26,11 @@ typedef struct json_object {
 
 typedef struct json_pull {
 	char *error;
+	int line;
 
 	int (*read)(struct json_pull *);
 	int (*peek)(struct json_pull *);
 	void *source;
-	int line;
 
 	json_object *container;
 } json_pull;
