@@ -5,21 +5,23 @@
 #include <stdarg.h>
 #include "jsonpull.h"
 
-static json_pull *json_init() {
+json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_pull *), void *source) {
 	json_pull *j = malloc(sizeof(json_pull));
+
 	j->error = NULL;
 	j->line = 1;
 	j->root = NULL;
 	j->container = NULL;
+
+	j->read = read;
+	j->peek = peek;
+	j->source = source;
+
 	return j;
 }
 
 static int read_file(json_pull *j) {
-	int c = fgetc(j->source);
-	if (c == '\n') {
-		j->line++;
-	}
-	return c;
+	return fgetc(j->source);
 }
 
 static int peek_file(json_pull *j) {
@@ -29,13 +31,7 @@ static int peek_file(json_pull *j) {
 }
 
 json_pull *json_begin_file(FILE *f) {
-	json_pull *j = json_init();
-
-	j->read = read_file;
-	j->peek = peek_file;
-	j->source = f;
-
-	return j;
+	return json_begin(read_file, peek_file, f);
 }
 
 static int read_string(json_pull *j) {
@@ -44,11 +40,7 @@ static int read_string(json_pull *j) {
 		return EOF;
 	}
 	int c = (unsigned char) *cp;
-	cp++;
-	j->source = cp;
-	if (c == '\n') {
-		j->line++;
-	}
+	j->source = cp + 1;
 	return c;
 }
 
@@ -61,13 +53,17 @@ static int peek_string(json_pull *p) {
 }
 
 json_pull *json_begin_string(char *s) {
-	json_pull *j = json_init();
+	return json_begin(read_string, peek_string, s);
+}
 
-	j->read = read_string;
-	j->peek = peek_string;
-	j->source = s;
+static int read_wrap(json_pull *j) {
+	int c = j->read(j);
 
-	return j;
+	if (c == '\n') {
+		j->line++;
+	}
+
+	return c;
 }
 
 #define SIZE_FOR(i) (((i) + 31) & ~31)
@@ -184,7 +180,7 @@ again:
 	/////////////////////////// Whitespace
 
 	do {
-		c = j->read(j);
+		c = read_wrap(j);
 		if (c == EOF) {
 			if (j->container != NULL) {
 				j->error = "Reached EOF without all containers being closed";
@@ -273,7 +269,7 @@ again:
 	/////////////////////////// Null
 
 	if (c == 'n') {
-		if (j->read(j) != 'u' || j->read(j) != 'l' || j->read(j) != 'l') {
+		if (read_wrap(j) != 'u' || read_wrap(j) != 'l' || read_wrap(j) != 'l') {
 			j->error = "Found misspelling of null";
 			return NULL;
 		}
@@ -284,7 +280,7 @@ again:
 	/////////////////////////// True
 
 	if (c == 't') {
-		if (j->read(j) != 'r' || j->read(j) != 'u' || j->read(j) != 'e') {
+		if (read_wrap(j) != 'r' || read_wrap(j) != 'u' || read_wrap(j) != 'e') {
 			j->error = "Found misspelling of true";
 			return NULL;
 		}
@@ -295,7 +291,7 @@ again:
 	/////////////////////////// False
 
 	if (c == 'f') {
-		if (j->read(j) != 'a' || j->read(j) != 'l' || j->read(j) != 's' || j->read(j) != 'e') {
+		if (read_wrap(j) != 'a' || read_wrap(j) != 'l' || read_wrap(j) != 's' || read_wrap(j) != 'e') {
 			j->error = "Found misspelling of false";
 			return NULL;
 		}
@@ -359,7 +355,7 @@ again:
 
 		if (c == '-') {
 			string_append(&val, c);
-			c = j->read(j);
+			c = read_wrap(j);
 		}
 
 		if (c == '0') {
@@ -369,28 +365,28 @@ again:
 			c = j->peek(j);
 
 			while (c >= '0' && c <= '9') {
-				string_append(&val, j->read(j));
+				string_append(&val, read_wrap(j));
 				c = j->peek(j);
 			}
 		}
 
 		if (j->peek(j) == '.') {
-			string_append(&val, j->read(j));
+			string_append(&val, read_wrap(j));
 
 			c = j->peek(j);
 			while (c >= '0' && c <= '9') {
-				string_append(&val, j->read(j));
+				string_append(&val, read_wrap(j));
 				c = j->peek(j);
 			}
 		}
 
 		c = j->peek(j);
 		if (c == 'e' || c == 'E') {
-			string_append(&val, j->read(j));
+			string_append(&val, read_wrap(j));
 
 			c = j->peek(j);
 			if (c == '+' || c == '-') {
-				string_append(&val, j->read(j));
+				string_append(&val, read_wrap(j));
 			}
 
 			c = j->peek(j);
@@ -399,7 +395,7 @@ again:
 				return NULL;
 			}
 			while (c >= '0' && c <= '9') {
-				string_append(&val, j->read(j));
+				string_append(&val, read_wrap(j));
 				c = j->peek(j);
 			}
 		}
@@ -418,11 +414,11 @@ again:
 		struct string val;
 		string_init(&val);
 
-		while ((c = j->read(j)) != EOF) {
+		while ((c = read_wrap(j)) != EOF) {
 			if (c == '"') {
 				break;
 			} else if (c == '\\') {
-				c = j->read(j);
+				c = read_wrap(j);
 
 				if (c == '"') {
 					string_append(&val, '"');
@@ -444,7 +440,7 @@ again:
 					char hex[5] = "aaaa";
 					int i;
 					for (i = 0; i < 4; i++) {
-						hex[i] = j->read(j);
+						hex[i] = read_wrap(j);
 					}
 					unsigned long ch = strtoul(hex, NULL, 16);
 					if (ch <= 0x7F) {

@@ -41,6 +41,8 @@ typedef void (*json_separator_callback)(json_type type, json_pull *j, void *stat
 
 json_pull *json_begin_file(FILE *f);
 json_pull *json_begin_string(char *s);
+json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_pull *), void *source);
+
 json_object *json_parse(json_pull *j);
 json_object *json_parse_with_separators(json_pull *j, json_separator_callback cb, void *state);
 void json_free(json_object *j);
