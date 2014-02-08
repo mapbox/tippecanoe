@@ -70,6 +70,14 @@ The types that can be sent to the callback function are
 <code>JSON_ARRAY</code>, <code>JSON_HASH</code>, <code>JSON_COMMA</code>,
 and <code>JSON_COLON</code>.
 
+Cleanup
+-------
+
+If there was an error while parsing, the parser will have returned NULL before
+all the containers were closed. You will probably want to call <code>json_free()</code>
+on the <code>root</code> elemement of the parser, which should contain the full parse
+tree so far, to avoid leaking memory.
+
 Shutdown
 --------
 
@@ -102,6 +110,8 @@ Parser format
 The parser object has two fields of public interest: <code>error</code> is a string
 describing any errors found in the JSON, and <code>line</code> is the current line number
 being read from the input to make it easier to find the errors.
+
+The <code>root</code> field points to the outer object of the current parse tree.
 
 Utility function
 ----------------
