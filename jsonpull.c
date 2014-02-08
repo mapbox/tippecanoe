@@ -174,7 +174,7 @@ static void string_free(struct string *s) {
 	free(s->buf);
 }
 
-json_object *json_parse_with_separators(json_pull *j, json_separator_callback cb, void *state) {
+json_object *json_read_with_separators(json_pull *j, json_separator_callback cb, void *state) {
 	int c;
 again:
 	/////////////////////////// Whitespace
@@ -474,8 +474,8 @@ again:
 	return NULL;
 }
 
-json_object *json_parse(json_pull *j) {
-	return json_parse_with_separators(j, NULL, NULL);
+json_object *json_read(json_pull *j) {
+	return json_read_with_separators(j, NULL, NULL);
 }
 
 void json_free(json_object *o) {
