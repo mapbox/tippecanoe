@@ -182,6 +182,12 @@ static void string_free(struct string *s) {
 
 json_object *json_read_separators(json_pull *j, json_separator_callback cb, void *state) {
 	int c;
+
+	// In case there is an error at the top level
+	if (j->container == NULL) {
+		j->root = NULL;
+	}
+
 again:
 	/////////////////////////// Whitespace
 
