@@ -113,7 +113,7 @@ void process_callback(FILE *f, char *fname) {
 	json_object *j;
 	int level = 0;
 
-	while ((j = json_read_with_separators(jp, callback, &level)) != NULL) {
+	while ((j = json_read_separators(jp, callback, &level)) != NULL) {
 		json_print_one(j, &level);
 		json_free(j);
 

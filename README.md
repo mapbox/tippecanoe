@@ -59,4 +59,10 @@ Reading JSON streams with callbacks
 -----------------------------------
 
 If you are outputting a new stream as you read instead of just looking for the
-sub-objects that interest you,
+sub-objects that interest you, you also need to know when arrays and hashes begin,
+not just when they end, so you can output the opening bracket or brace. For this
+purpose there is an additional streaming reader function,
+<code>json_read_separators()</code>, which takes an additional argument for
+a function to call when brackets, braces, commas, and colons are read.
+Other object types and the closing of arrays and hashes are still sent through
+the normal return value.

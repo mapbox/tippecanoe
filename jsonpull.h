@@ -44,7 +44,7 @@ typedef void (*json_separator_callback)(json_type type, json_pull *j, void *stat
 
 json_object *json_read_tree(json_pull *j);
 json_object *json_read(json_pull *j);
-json_object *json_read_with_separators(json_pull *j, json_separator_callback cb, void *state);
+json_object *json_read_separators(json_pull *j, json_separator_callback cb, void *state);
 void json_free(json_object *j);
 
 json_object *json_hash_get(json_object *o, char *s);
