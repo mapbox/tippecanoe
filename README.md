@@ -8,6 +8,9 @@ But what distinguishes this one is the desire to let you
 read through gigantic files larger than you can comfortably
 fit in memory and still find the parts you need.
 
+It builds a parse tree, but you can tear down as much of the
+tree as you don't need while it is still in the middle of parsing.
+
 Setup
 -----
 
