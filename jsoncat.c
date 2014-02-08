@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "jsonpull.h"
 
 static void indent(int depth) {
@@ -147,7 +148,9 @@ void process_incremental(FILE *f, char *fname) {
 	}
 
 	if (jp->error != NULL) {
+		fflush(stdout);
 		fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
+		json_free(jp->root);
 	}
 
 	json_end(jp);
@@ -162,6 +165,7 @@ void process_tree(FILE *f, char *fname) {
 		if (j == NULL) {
 			if (jp->error != NULL) {
 				fprintf(stderr, "%s: %d: %s\n", fname, jp->line, jp->error);
+				json_free(jp->root);
 			}
 
 			break;
@@ -176,17 +180,38 @@ void process_tree(FILE *f, char *fname) {
 }
 
 int main(int argc, char **argv) {
-	if (argc == 1) {
-		process_callback(stdin, "standard input");
+	extern int optind;
+	int i;
+
+	void (*func)(FILE *, char *) = process_callback;
+
+	while ((i = getopt(argc, argv, "ti")) != -1) {
+		switch (i) {
+		case 't':
+			func = process_tree;
+			break;
+
+		case 'i':
+			func = process_incremental;
+			break;
+
+		default:
+			fprintf(stderr, "Unexpected option -%c\n", i);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (optind >= argc) {
+		func(stdin, "standard input");
 	} else {
 		int i;
-		for (i = 1; i < argc; i++) {
+		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
 			if (f == NULL) {
 				perror(argv[i]);
 				exit(EXIT_FAILURE);
 			}
-			process_callback(f, argv[i]);
+			func(f, argv[i]);
 			fclose(f);
 		}
 	}
