@@ -404,7 +404,7 @@ again:
 			c = j->peek(j);
 			if (c < '0' || c > '9') {
 				j->error = "Exponent without digits";
-				free(val.buf);
+				string_free(&val);
 				return NULL;
 			}
 			while (c >= '0' && c <= '9') {
@@ -468,7 +468,7 @@ again:
 					}
 				} else {
 					j->error = "Found backslash followed by unknown character";
-					free(val.buf);
+					string_free(&val);
 					return NULL;
 				}
 			} else {
@@ -478,8 +478,11 @@ again:
 
 		json_object *s = add_object(j, JSON_STRING);
 		if (s != NULL) {
+			val.buf = realloc(val.buf, val.n + 1);
 			s->string = val.buf;
 			s->length = val.n;
+		} else {
+			string_free(&val);
 		}
 		return s;
 	}
