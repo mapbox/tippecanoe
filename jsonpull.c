@@ -414,8 +414,11 @@ again:
 		json_object *n = add_object(j, JSON_NUMBER);
 		if (n != NULL) {
 			n->number = atof(val.buf);
+			n->string = val.buf;
+			n->length = val.n;
+		} else {
+			string_free(&val);
 		}
-		string_free(&val);
 		return n;
 	}
 
@@ -542,7 +545,7 @@ void json_free(json_object *o) {
 
 		free(k);
 		free(v);
-	} else if (o->type == JSON_STRING) {
+	} else if (o->type == JSON_STRING || o->type == JSON_NUMBER) {
 		free(o->string);
 	}
 

@@ -99,7 +99,9 @@ have no additional data.
 Strings have type <code>JSON_STRING</code>, with null-terminated UTF-8 text
 in <code>string</code> and length in <code>length</code>.
 
-Numbers have type <code>JSON_NUMBER</code>, with value in <code>number</code>.
+Numbers have type <code>JSON_NUMBER</code>, with value in <code>number</code>,
+and also preserve the original representation of the number
+in <code>string</code> and length in <code>length</code>.
 
 Arrays have type <code>JSON_ARRAY</code>. There are <code>length</code> elements in the array,
 and the elements are in <code>array</code>.
