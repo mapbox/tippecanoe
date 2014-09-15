@@ -9,6 +9,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <errno.h>
 #include "jsonpull.h"
 
 #define GEOM_POINT 0                /* array of positions */
@@ -18,7 +19,9 @@
 #define GEOM_POLYGON 4              /* array of arrays of arrays of positions */
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
 
-char *geometry_names[] = {
+#define GEOM_TYPES 6
+
+char *geometry_names[GEOM_TYPES] = {
 	"Point",
 	"MultiPoint",
 	"LineString",
@@ -27,7 +30,7 @@ char *geometry_names[] = {
 	"MultiPolygon",
 };
 
-int geometry_depths[] = {
+int geometry_depths[GEOM_TYPES] = {
 	1,
 	2,
 	2,
@@ -63,17 +66,15 @@ void read_json(FILE *f) {
 			if (geometry != NULL) {
 				json_object *geometry_type = json_hash_get(geometry, "type");
 				if (geometry_type != NULL && geometry_type->type == JSON_STRING) {
-					int t = -1;
+					int t;
 
-					if (strcmp(geometry_type->string, "Point") == 0) {
-						t = GEOM_POINT;
-					} else if (strcmp(geometry_type->string, "LineString") == 0) {
-						t = GEOM_LINESTRING;
-					} else {
-						fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+					for (t = 0; t < GEOM_TYPES; t++) {
+						if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+							break;
+						}
 					}
 
-					if (t != -1) {
+					if (t < GEOM_TYPES) {
 						json_object *properties = json_hash_get(j, "properties");
 						json_object *coordinates = json_hash_get(geometry, "coordinates");
 
@@ -146,7 +147,11 @@ void read_json(FILE *f) {
 						} else {
 							fprintf(stderr, "%d: feature with no properties\n", jp->line);
 						}
+					} else {
+						fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
 					}
+				} else {
+					fprintf(stderr, "%d: geometry has no type\n", jp->line);
 				}
 			} else {
 				fprintf(stderr, "%d: feature with no geometry\n", jp->line);
@@ -154,7 +159,27 @@ void read_json(FILE *f) {
 
 			json_free(j);
 		}
+
+		/* XXX check for any non-features in the outer object */
 	}
 
 	json_end(jp);
+}
+
+int main(int argc, char **argv) {
+	if (argc > 1) {
+		int i;
+		for (i = 1; i < argc; i++) {
+			FILE *f = fopen(argv[i], "r");
+			if (f == NULL) {
+				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
+			} else {
+				read_json(f);
+				fclose(f);
+			}
+		}
+	} else {
+		read_json(stdin);
+	}
+	return 0;
 }
