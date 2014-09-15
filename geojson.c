@@ -30,19 +30,42 @@ char *geometry_names[GEOM_TYPES] = {
 	"MultiPolygon",
 };
 
-int geometry_depths[GEOM_TYPES] = {
-	1,
-	2,
-	2,
-	3,
-	3,
-	4,
+int geometry_within[GEOM_TYPES] = {
+	-1,                /* point */
+	GEOM_POINT,        /* multipoint */
+	GEOM_POINT,        /* linestring */
+	GEOM_LINESTRING,   /* multilinestring */
+	GEOM_LINESTRING,   /* polygon */
+	GEOM_POLYGON,      /* multipolygon */
 };
 
 /* XXX */
 #define META_STRING JSON_STRING
 #define META_INTEGER JSON_NUMBER
-int metabits = 32;
+#define META_BOOLEAN JSON_TRUE
+
+void parse_geometry(int t, json_object *j) {
+	if (j == NULL || j->type != JSON_ARRAY) {
+		fprintf(stderr, "expected array for type %d\n", t);
+		return;
+	}
+
+	int within = geometry_within[t];
+	if (within >= 0) {
+		printf("[");
+		int i;
+		for (i = 0; i < j->length; i++) {
+			parse_geometry(within, j->array[i]);
+		}
+		printf("]");
+	} else {
+		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+			printf(" %f,%f ", j->array[0]->number, j->array[1]->number);
+		} else {
+			fprintf(stderr, "malformed point");
+		}
+	}
+}
 
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
@@ -118,50 +141,19 @@ void read_json(FILE *f) {
 						metatype[m] = META_INTEGER;
 						metaval[m] = properties->values[i]->string;
 						m++;
+					} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
+						metatype[m] = META_BOOLEAN;
+						metaval[m] = properties->values[i]->string;
+						m++;
 					} else {
 						fprintf(stderr, "%d: Unsupported meta type\n", jp->line);
+						goto next_feature;
 					}
 				}
 			}
 
-			int n;
-			if (t == GEOM_POINT) {
-				n = 1;
-			} else {
-				n = coordinates->length;
-			}
-
-			double lon[n], lat[n];
-			int ok = 1;
-
-			if (t == GEOM_POINT) {
-				if (coordinates->length >= 2) {
-					lon[0] = coordinates->array[0]->number;
-					lat[0] = coordinates->array[1]->number;
-				} else {
-					fprintf(stderr, "%d: not enough coordinates for a point\n", jp->line);
-					ok = 0;
-				}
-			} else {
-				for (i = 0; i < n; i++) {
-					if (coordinates->array[i]->type == JSON_ARRAY &&
-					    coordinates->array[i]->length >= 2) {
-						lon[i] = coordinates->array[i]->array[0]->number;
-						lat[i] = coordinates->array[i]->array[1]->number;
-					} else {
-						fprintf(stderr, "%d: not enough coordinates within the geometry\n", jp->line);
-						ok = 0;
-					}
-				}
-			}
-
-			if (ok) {
-				for (i = 0; i < n; i++) {
-					printf("%f,%f ", lat[i], lon[i]);
-				}
-				printf("\n");
-				// XXX encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metakey, metaval, metatype);
-			}
+			parse_geometry(t, coordinates);
+			printf("\n");
 		}
 
 next_feature:
