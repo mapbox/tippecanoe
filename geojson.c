@@ -49,7 +49,6 @@ void read_json(FILE *f) {
 
 	while (1) {
 		json_object *j = json_read(jp);
-
 		if (j == NULL) {
 			if (jp->error != NULL) {
 				fprintf(stderr, "%d: %s\n", jp->line, jp->error);
@@ -60,103 +59,113 @@ void read_json(FILE *f) {
 		}
 
 		json_object *type = json_hash_get(j, "type");
-		if (type != NULL && type->type == JSON_STRING && strcmp(type->string, "Feature") == 0) {
-			json_object *geometry = json_hash_get(j, "geometry");
+		if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
+			continue;
+		}
 
-			if (geometry != NULL) {
-				json_object *geometry_type = json_hash_get(geometry, "type");
-				if (geometry_type != NULL && geometry_type->type == JSON_STRING) {
-					int t;
+		json_object *geometry = json_hash_get(j, "geometry");
+		if (geometry == NULL) {
+			fprintf(stderr, "%d: feature with no geometry\n", jp->line);
+			goto next_feature;
+		}
 
-					for (t = 0; t < GEOM_TYPES; t++) {
-						if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
-							break;
-						}
-					}
+		json_object *geometry_type = json_hash_get(geometry, "type");
+		if (geometry_type == NULL || geometry_type->type != JSON_STRING) {
+			fprintf(stderr, "%d: geometry without type string\n", jp->line);
+			goto next_feature;
+		}
 
-					if (t < GEOM_TYPES) {
-						json_object *properties = json_hash_get(j, "properties");
-						json_object *coordinates = json_hash_get(geometry, "coordinates");
+		json_object *properties = json_hash_get(j, "properties");
+		if (properties == NULL || properties->type != JSON_HASH) {
+			fprintf(stderr, "%d: feature without properties hash\n", jp->line);
+			goto next_feature;
+		}
 
-						if (properties != NULL && properties->type == JSON_HASH) {
-							char *metakey[properties->length];
-							char *metaval[properties->length];
-							int metatype[properties->length];
-							int m = 0;
+		json_object *coordinates = json_hash_get(geometry, "coordinates"); 
+		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
+			fprintf(stderr, "%d: feature without coordinates array\n", jp->line);
+			goto next_feature;
+		}
 
-							int i;
-							for (i = 0; i < properties->length; i++) {
-								if (properties->keys[i]->type == JSON_STRING) {
-									metakey[m] = properties->keys[i]->string;
+		int t;
+		for (t = 0; t < GEOM_TYPES; t++) {
+			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+				break;
+			}
+		}
+		if (t >= GEOM_TYPES) {
+			fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			goto next_feature;
+		}
 
-									if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-										metatype[m] = META_STRING;
-										metaval[m] = properties->values[i]->string;
-										m++;
-									} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-										metatype[m] = META_INTEGER;
-										metaval[m] = properties->values[i]->string;
-										m++;
-									} else {
-										fprintf(stderr, "%d: Unsupported meta type\n", jp->line);
-									}
-								}
-							}
+		/* scope for variable-length arrays */
+		{
+			char *metakey[properties->length];
+			char *metaval[properties->length];
+			int metatype[properties->length];
+			int m = 0;
 
-							if (coordinates != NULL && coordinates->type == JSON_ARRAY) {
-								int n;
+			int i;
+			for (i = 0; i < properties->length; i++) {
+				if (properties->keys[i]->type == JSON_STRING) {
+					metakey[m] = properties->keys[i]->string;
 
-								if (t == GEOM_POINT) {
-									n = 1;
-								} else {
-									n = coordinates->length;
-								}
-
-								double lon[n], lat[n];
-								int ok = 1;
-
-								if (t == GEOM_POINT) {
-									if (coordinates->length >= 2) {
-										lon[0] = coordinates->array[0]->number;
-										lat[0] = coordinates->array[1]->number;
-									} else {
-										fprintf(stderr, "%d: not enough coordinates for a point\n", jp->line);
-										ok = 0;
-									}
-								} else {
-									for (i = 0; i < n; i++) {
-										if (coordinates->array[i]->type == JSON_ARRAY &&
-										    coordinates->array[i]->length >= 2) {
-											lon[i] = coordinates->array[i]->array[0]->number;
-											lat[i] = coordinates->array[i]->array[1]->number;
-										} else {
-											fprintf(stderr, "%d: not enough coordinates within the geometry\n", jp->line);
-											ok = 0;
-										}
-									}
-								}
-
-								if (ok) {
-									// XXX encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metakey, metaval, metatype);
-								}
-							} else {
-								fprintf(stderr, "%d: feature geometry with no coordinates\n", jp->line);
-							}
-						} else {
-							fprintf(stderr, "%d: feature with no properties\n", jp->line);
-						}
+					if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+						metatype[m] = META_STRING;
+						metaval[m] = properties->values[i]->string;
+						m++;
+					} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
+						metatype[m] = META_INTEGER;
+						metaval[m] = properties->values[i]->string;
+						m++;
 					} else {
-						fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+						fprintf(stderr, "%d: Unsupported meta type\n", jp->line);
 					}
-				} else {
-					fprintf(stderr, "%d: geometry has no type\n", jp->line);
 				}
-			} else {
-				fprintf(stderr, "%d: feature with no geometry\n", jp->line);
 			}
 
-			json_free(j);
+			int n;
+			if (t == GEOM_POINT) {
+				n = 1;
+			} else {
+				n = coordinates->length;
+			}
+
+			double lon[n], lat[n];
+			int ok = 1;
+
+			if (t == GEOM_POINT) {
+				if (coordinates->length >= 2) {
+					lon[0] = coordinates->array[0]->number;
+					lat[0] = coordinates->array[1]->number;
+				} else {
+					fprintf(stderr, "%d: not enough coordinates for a point\n", jp->line);
+					ok = 0;
+				}
+			} else {
+				for (i = 0; i < n; i++) {
+					if (coordinates->array[i]->type == JSON_ARRAY &&
+					    coordinates->array[i]->length >= 2) {
+						lon[i] = coordinates->array[i]->array[0]->number;
+						lat[i] = coordinates->array[i]->array[1]->number;
+					} else {
+						fprintf(stderr, "%d: not enough coordinates within the geometry\n", jp->line);
+						ok = 0;
+					}
+				}
+			}
+
+			if (ok) {
+				for (i = 0; i < n; i++) {
+					printf("%f,%f ", lat[i], lon[i]);
+				}
+				printf("\n");
+				// XXX encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metakey, metaval, metatype);
+			}
 		}
+
+next_feature:
+		json_free(j);
 
 		/* XXX check for any non-features in the outer object */
 	}
