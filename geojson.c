@@ -79,25 +79,23 @@ void read_json(FILE *f) {
 						json_object *coordinates = json_hash_get(geometry, "coordinates");
 
 						if (properties != NULL && properties->type == JSON_HASH) {
-							int metasize[properties->length];
-							char *metaname[properties->length];
-							char *meta[properties->length];
+							char *metakey[properties->length];
+							char *metaval[properties->length];
 							int metatype[properties->length];
 							int m = 0;
 
 							int i;
 							for (i = 0; i < properties->length; i++) {
 								if (properties->keys[i]->type == JSON_STRING) {
-									metasize[m] = metabits;
-									metaname[m] = properties->keys[i]->string;
+									metakey[m] = properties->keys[i]->string;
 
 									if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 										metatype[m] = META_STRING;
-										meta[m] = properties->values[i]->string;
+										metaval[m] = properties->values[i]->string;
 										m++;
 									} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
 										metatype[m] = META_INTEGER;
-										meta[m] = properties->values[i]->string;
+										metaval[m] = properties->values[i]->string;
 										m++;
 									} else {
 										fprintf(stderr, "%d: Unsupported meta type\n", jp->line);
@@ -139,7 +137,7 @@ void read_json(FILE *f) {
 								}
 
 								if (ok) {
-									// XXX encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metasize, metaname, meta, metatype);
+									// XXX encode(destdir, files, maxn, extra, xoff, pool, n, lat, lon, m, metakey, metaval, metatype);
 								}
 							} else {
 								fprintf(stderr, "%d: feature geometry with no coordinates\n", jp->line);
