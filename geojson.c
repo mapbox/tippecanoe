@@ -21,13 +21,17 @@
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
-#define MB_GEOM_POINT 1
-#define MB_GEOM_LINE 2
-#define MB_GEOM_POLYGON 3
+#define VT_POINT 1
+#define VT_LINE 2
+#define VT_POLYGON 3
 
-#define OP_MOVETO 1
-#define OP_LINETO 2
-#define OP_CLOSEPATH 7
+#define VT_MOVETO 1
+#define VT_LINETO 2
+#define VT_CLOSEPATH 7
+
+#define VT_STRING 1
+#define VT_NUMBER 2
+#define VT_BOOLEAN 7
 
 char *geometry_names[GEOM_TYPES] = {
 	"Point",
@@ -48,18 +52,13 @@ int geometry_within[GEOM_TYPES] = {
 };
 
 int mb_geometry[GEOM_TYPES] = {
-	MB_GEOM_POINT,
-	MB_GEOM_POINT,
-	MB_GEOM_LINE,
-	MB_GEOM_LINE,
-	MB_GEOM_POLYGON,
-	MB_GEOM_POLYGON,
+	VT_POINT,
+	VT_POINT,
+	VT_LINE,
+	VT_LINE,
+	VT_POLYGON,
+	VT_POLYGON,
 };
-
-/* XXX */
-#define META_STRING JSON_STRING
-#define META_INTEGER JSON_NUMBER
-#define META_BOOLEAN JSON_TRUE
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int *y) {
@@ -83,9 +82,9 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
 				if (i == 0 || t == GEOM_MULTIPOINT) {
-					op = OP_MOVETO;
+					op = VT_MOVETO;
 				} else {
-					op = OP_LINETO;
+					op = VT_LINETO;
 				}
 			}
 
@@ -133,7 +132,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 
 	if (t == GEOM_POLYGON) {
 		if (out != NULL) {
-			(*out)[0] = OP_CLOSEPATH;
+			(*out)[0] = VT_CLOSEPATH;
 			(*out) += 1;
 		}
 		if (n != NULL) {
@@ -210,15 +209,15 @@ void read_json(FILE *f) {
 					metakey[m] = properties->keys[i]->string;
 
 					if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-						metatype[m] = META_STRING;
+						metatype[m] = VT_STRING;
 						metaval[m] = properties->values[i]->string;
 						m++;
 					} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-						metatype[m] = META_INTEGER;
+						metatype[m] = VT_NUMBER;
 						metaval[m] = properties->values[i]->string;
 						m++;
 					} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-						metatype[m] = META_BOOLEAN;
+						metatype[m] = VT_BOOLEAN;
 						metaval[m] = properties->values[i]->string;
 						m++;
 					} else {
@@ -232,12 +231,12 @@ void read_json(FILE *f) {
 			int n = 0;
 
 			printf("%d: ", mb_geometry[t]);
-			parse_geometry(t, coordinates, bbox, &n, NULL, OP_MOVETO);
+			parse_geometry(t, coordinates, bbox, &n, NULL, VT_MOVETO);
 			printf("\n");
 
 			unsigned out[n];
 			unsigned *end = out;
-			parse_geometry(t, coordinates, NULL, NULL, &end, OP_MOVETO);
+			parse_geometry(t, coordinates, NULL, NULL, &end, VT_MOVETO);
 			printf("\n-> ");
 			for (i = 0; i < n; i++) {
 				printf("%x ", out[i]);
