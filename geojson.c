@@ -56,6 +56,15 @@ int mb_geometry[GEOM_TYPES] = {
 #define META_INTEGER JSON_NUMBER
 #define META_BOOLEAN JSON_TRUE
 
+// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int *y) {
+	double lat_rad = lat * M_PI / 180;
+	unsigned long long n = 1LL << zoom;
+
+	*x = n * ((lon + 180) / 360);
+	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
+}
+
 void parse_geometry(int t, json_object *j) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "expected array for type %d\n", t);
@@ -68,7 +77,7 @@ void parse_geometry(int t, json_object *j) {
 		int i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
-				if (i == 0) {
+				if (i == 0 || t == GEOM_MULTIPOINT) {
 					printf(" moveto ");
 				} else {
 					printf(" lineto ");

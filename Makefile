@@ -10,7 +10,7 @@ jsoncat: jsoncat.o jsonpull.o
 	cc -g -Wall -o $@ $^
 
 geojson: geojson.o jsonpull.o
-	cc -g -Wall -o $@ $^
+	cc -g -Wall -o $@ $^ -lm
 
 jsoncat.o jsonpull.o: jsonpull.h
 
