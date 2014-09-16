@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include "jsonpull.h"
 
 #define GEOM_POINT 0                /* array of positions */
@@ -65,7 +66,7 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
-void parse_geometry(int t, json_object *j) {
+void parse_geometry(int t, json_object *j, unsigned *bbox) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "expected array for type %d\n", t);
 		return;
@@ -84,11 +85,29 @@ void parse_geometry(int t, json_object *j) {
 				}
 			}
 
-			parse_geometry(within, j->array[i]);
+			parse_geometry(within, j->array[i], bbox);
 		}
 		printf("]");
 	} else {
 		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+			unsigned x, y;
+			double lon = j->array[0]->number;
+			double lat = j->array[1]->number;
+			latlon2tile(lat, lon, 32, &x, &y);
+
+			if (x < bbox[0]) {
+				bbox[0] = x;
+			}
+			if (y < bbox[1]) {
+				bbox[1] = y;
+			}
+			if (x > bbox[2]) {
+				bbox[2] = x;
+			}
+			if (y > bbox[3]) {
+				bbox[3] = y;
+			}
+
 			printf(" %f,%f ", j->array[0]->number, j->array[1]->number);
 		} else {
 			fprintf(stderr, "malformed point");
@@ -185,9 +204,13 @@ void read_json(FILE *f) {
 				}
 			}
 
+			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
 			printf("%d: ", mb_geometry[t]);
-			parse_geometry(t, coordinates);
+			parse_geometry(t, coordinates, bbox);
 			printf("\n");
+
+			printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 		}
 
 next_feature:
