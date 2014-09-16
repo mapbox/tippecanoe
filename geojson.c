@@ -21,6 +21,7 @@
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
+#define VT_END 0
 #define VT_POINT 1
 #define VT_LINE 2
 #define VT_POLYGON 3
@@ -69,7 +70,25 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **out, int op) {
+void serialize_int(FILE *out, int n, long long *fpos) {
+	fwrite(&n, sizeof(int), 1, out);
+	*fpos += sizeof(int);
+}
+
+void serialize_uint(FILE *out, unsigned n, long long *fpos) {
+	fwrite(&n, sizeof(unsigned), 1, out);
+	*fpos += sizeof(unsigned);
+}
+
+void serialize_string(FILE *out, char *s, long long *fpos) {
+	int len = strlen(s);
+
+	serialize_int(out, len, fpos);
+	fwrite(s, sizeof(char), len, out);
+	*fpos += len;
+}
+
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "expected array for type %d\n", t);
 		return;
@@ -77,7 +96,6 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 
 	int within = geometry_within[t];
 	if (within >= 0) {
-		printf("[");
 		int i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
@@ -88,62 +106,48 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, n, out, op);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op);
 		}
-		printf("]");
 	} else {
 		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			if (out != NULL || bbox != NULL) {
-				unsigned x, y;
-				double lon = j->array[0]->number;
-				double lat = j->array[1]->number;
-				latlon2tile(lat, lon, 32, &x, &y);
+			unsigned x, y;
+			double lon = j->array[0]->number;
+			double lat = j->array[1]->number;
+			latlon2tile(lat, lon, 32, &x, &y);
 
-				if (bbox != NULL) {
-					if (x < bbox[0]) {
-						bbox[0] = x;
-					}
-					if (y < bbox[1]) {
-						bbox[1] = y;
-					}
-					if (x > bbox[2]) {
-						bbox[2] = x;
-					}
-					if (y > bbox[3]) {
-						bbox[3] = y;
-					}
+			if (bbox != NULL) {
+				if (x < bbox[0]) {
+					bbox[0] = x;
 				}
-				if (out != NULL) {
-					(*out)[0] = op;
-					(*out)[1] = x;
-					(*out)[2] = y;
-					(*out) += 3;
+				if (y < bbox[1]) {
+					bbox[1] = y;
 				}
-				if (n != NULL) {
-					*n += 3;
+				if (x > bbox[2]) {
+					bbox[2] = x;
+				}
+				if (y > bbox[3]) {
+					bbox[3] = y;
 				}
 			}
 
-			printf(" %d %f,%f ", op, j->array[0]->number, j->array[1]->number);
+			serialize_int(out, op, fpos);
+			serialize_uint(out, x, fpos);
+			serialize_uint(out, y, fpos);
 		} else {
 			fprintf(stderr, "malformed point");
 		}
 	}
 
 	if (t == GEOM_POLYGON) {
-		if (out != NULL) {
-			(*out)[0] = VT_CLOSEPATH;
-			(*out) += 1;
-		}
-		if (n != NULL) {
-			*n += 1;
-		}
-		printf(" closepath ");
+		serialize_int(out, VT_CLOSEPATH, fpos);
 	}
 }
 
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
+
+	FILE *out = fopen("meta.out", "wb");
+	long long fpos = 0;
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -227,23 +231,20 @@ void read_json(FILE *f) {
 				}
 			}
 
-			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
-			int n = 0;
-
-			printf("%d: ", mb_geometry[t]);
-			parse_geometry(t, coordinates, bbox, &n, NULL, VT_MOVETO);
-			printf("\n");
-
-			unsigned out[n];
-			unsigned *end = out;
-			parse_geometry(t, coordinates, NULL, NULL, &end, VT_MOVETO);
-			printf("\n-> ");
-			for (i = 0; i < n; i++) {
-				printf("%x ", out[i]);
+			serialize_int(out, m, &fpos);
+			for (i = 0; i < m; i++) {
+				serialize_int(out, metatype[i], &fpos);
+				serialize_string(out, metakey[i], &fpos);
+				serialize_string(out, metaval[i], &fpos);
 			}
-			printf("\n");
+
+			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
+			serialize_int(out, t, &fpos);
+			parse_geometry(t, coordinates, bbox, &fpos, out, VT_MOVETO);
+			serialize_int(out, VT_END, &fpos);
 			
-			printf("%d elements, bbox %x %x %x %x\n", n, bbox[0], bbox[1], bbox[2], bbox[3]);
+			printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 		}
 
 next_feature:
