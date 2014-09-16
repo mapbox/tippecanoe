@@ -70,7 +70,7 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **out) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **out, int op) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "expected array for type %d\n", t);
 		return;
@@ -82,26 +82,14 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 		int i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
-				int op;
-
 				if (i == 0 || t == GEOM_MULTIPOINT) {
 					op = OP_MOVETO;
-					printf(" moveto ");
 				} else {
 					op = OP_LINETO;
-					printf(" lineto ");
-				}
-
-				if (n != NULL) {
-					(*n)++;
-				}
-				if (out != NULL) {
-					**out = op;
-					(*out)++;
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, n, out);
+			parse_geometry(within, j->array[i], bbox, n, out, op);
 		}
 		printf("]");
 	} else {
@@ -127,16 +115,17 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **ou
 					}
 				}
 				if (out != NULL) {
-					(*out)[0] = x;
-					(*out)[1] = y;
-					(*out) += 2;
+					(*out)[0] = op;
+					(*out)[1] = x;
+					(*out)[2] = y;
+					(*out) += 3;
 				}
 				if (n != NULL) {
-					*n += 2;
+					*n += 3;
 				}
 			}
 
-			printf(" %f,%f ", j->array[0]->number, j->array[1]->number);
+			printf(" %d %f,%f ", op, j->array[0]->number, j->array[1]->number);
 		} else {
 			fprintf(stderr, "malformed point");
 		}
@@ -243,12 +232,12 @@ void read_json(FILE *f) {
 			int n = 0;
 
 			printf("%d: ", mb_geometry[t]);
-			parse_geometry(t, coordinates, bbox, &n, NULL);
+			parse_geometry(t, coordinates, bbox, &n, NULL, OP_MOVETO);
 			printf("\n");
 
 			unsigned out[n];
 			unsigned *end = out;
-			parse_geometry(t, coordinates, NULL, NULL, &end);
+			parse_geometry(t, coordinates, NULL, NULL, &end, OP_MOVETO);
 			printf("\n-> ");
 			for (i = 0; i < n; i++) {
 				printf("%x ", out[i]);
