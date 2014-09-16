@@ -25,6 +25,10 @@
 #define MB_GEOM_LINE 2
 #define MB_GEOM_POLYGON 3
 
+#define OP_MOVETO 1
+#define OP_LINETO 2
+#define OP_CLOSEPATH 7
+
 char *geometry_names[GEOM_TYPES] = {
 	"Point",
 	"MultiPoint",
@@ -66,7 +70,7 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, int *n, unsigned **out) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "expected array for type %d\n", t);
 		return;
@@ -78,34 +82,58 @@ void parse_geometry(int t, json_object *j, unsigned *bbox) {
 		int i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
+				int op;
+
 				if (i == 0 || t == GEOM_MULTIPOINT) {
+					op = OP_MOVETO;
 					printf(" moveto ");
 				} else {
+					op = OP_LINETO;
 					printf(" lineto ");
+				}
+
+				if (n != NULL) {
+					(*n)++;
+				}
+				if (out != NULL) {
+					**out = op;
+					(*out)++;
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox);
+			parse_geometry(within, j->array[i], bbox, n, out);
 		}
 		printf("]");
 	} else {
 		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			unsigned x, y;
-			double lon = j->array[0]->number;
-			double lat = j->array[1]->number;
-			latlon2tile(lat, lon, 32, &x, &y);
+			if (out != NULL || bbox != NULL) {
+				unsigned x, y;
+				double lon = j->array[0]->number;
+				double lat = j->array[1]->number;
+				latlon2tile(lat, lon, 32, &x, &y);
 
-			if (x < bbox[0]) {
-				bbox[0] = x;
-			}
-			if (y < bbox[1]) {
-				bbox[1] = y;
-			}
-			if (x > bbox[2]) {
-				bbox[2] = x;
-			}
-			if (y > bbox[3]) {
-				bbox[3] = y;
+				if (bbox != NULL) {
+					if (x < bbox[0]) {
+						bbox[0] = x;
+					}
+					if (y < bbox[1]) {
+						bbox[1] = y;
+					}
+					if (x > bbox[2]) {
+						bbox[2] = x;
+					}
+					if (y > bbox[3]) {
+						bbox[3] = y;
+					}
+				}
+				if (out != NULL) {
+					(*out)[0] = x;
+					(*out)[1] = y;
+					(*out) += 2;
+				}
+				if (n != NULL) {
+					*n += 2;
+				}
 			}
 
 			printf(" %f,%f ", j->array[0]->number, j->array[1]->number);
@@ -115,6 +143,13 @@ void parse_geometry(int t, json_object *j, unsigned *bbox) {
 	}
 
 	if (t == GEOM_POLYGON) {
+		if (out != NULL) {
+			(*out)[0] = OP_CLOSEPATH;
+			(*out) += 1;
+		}
+		if (n != NULL) {
+			*n += 1;
+		}
 		printf(" closepath ");
 	}
 }
@@ -205,12 +240,22 @@ void read_json(FILE *f) {
 			}
 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+			int n = 0;
 
 			printf("%d: ", mb_geometry[t]);
-			parse_geometry(t, coordinates, bbox);
+			parse_geometry(t, coordinates, bbox, &n, NULL);
 			printf("\n");
 
-			printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+			unsigned out[n];
+			unsigned *end = out;
+			parse_geometry(t, coordinates, NULL, NULL, &end);
+			printf("\n-> ");
+			for (i = 0; i < n; i++) {
+				printf("%x ", out[i]);
+			}
+			printf("\n");
+			
+			printf("%d elements, bbox %x %x %x %x\n", n, bbox[0], bbox[1], bbox[2], bbox[3]);
 		}
 
 next_feature:
