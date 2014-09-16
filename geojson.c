@@ -18,8 +18,11 @@
 #define GEOM_MULTILINESTRING 3      /* array of arrays of arrays of positions */
 #define GEOM_POLYGON 4              /* array of arrays of arrays of positions */
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
-
 #define GEOM_TYPES 6
+
+#define MB_GEOM_POINT 1
+#define MB_GEOM_LINE 2
+#define MB_GEOM_POLYGON 3
 
 char *geometry_names[GEOM_TYPES] = {
 	"Point",
@@ -39,6 +42,15 @@ int geometry_within[GEOM_TYPES] = {
 	GEOM_POLYGON,      /* multipolygon */
 };
 
+int mb_geometry[GEOM_TYPES] = {
+	MB_GEOM_POINT,
+	MB_GEOM_POINT,
+	MB_GEOM_LINE,
+	MB_GEOM_LINE,
+	MB_GEOM_POLYGON,
+	MB_GEOM_POLYGON,
+};
+
 /* XXX */
 #define META_STRING JSON_STRING
 #define META_INTEGER JSON_NUMBER
@@ -55,6 +67,14 @@ void parse_geometry(int t, json_object *j) {
 		printf("[");
 		int i;
 		for (i = 0; i < j->length; i++) {
+			if (within == GEOM_POINT) {
+				if (i == 0) {
+					printf(" moveto ");
+				} else {
+					printf(" lineto ");
+				}
+			}
+
 			parse_geometry(within, j->array[i]);
 		}
 		printf("]");
@@ -64,6 +84,10 @@ void parse_geometry(int t, json_object *j) {
 		} else {
 			fprintf(stderr, "malformed point");
 		}
+	}
+
+	if (t == GEOM_POLYGON) {
+		printf(" closepath ");
 	}
 }
 
@@ -152,6 +176,7 @@ void read_json(FILE *f) {
 				}
 			}
 
+			printf("%d: ", mb_geometry[t]);
 			parse_geometry(t, coordinates);
 			printf("\n");
 		}
