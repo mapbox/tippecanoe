@@ -212,52 +212,50 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 }
 
-int deserialize_int(FILE *f, int *n) {
-	if (fread(n, sizeof(int), 1, f) <= 0) {
-		return 0;
-	}
-
-	return 1;
+void deserialize_int(char **f, int *n) {
+	memcpy(n, *f, sizeof(int));
+	*f += sizeof(int);
 }
 
-void deserialize_string(FILE *f) {
+void deserialize_string(char **f) {
 	int len;
 	deserialize_int(f, &len);
 	char s[len + 1];
-	fread(s, sizeof(char), len, f);
+	memcpy(s, *f, len);
+	*f += len;
 	s[len] = '\0';
 	printf("%s", s);
 }
 
-void check(struct index *ix, long long n) {
-	FILE *f = fopen("meta.out", "rb");
+void check(struct index *ix, long long n, char *metabase) {
 	int i;
 
 	for (i = 0; i < n; i++) {
 		printf("%llx ", ix[i].index);
 
-		off_t pos = ix[i].fpos;
-		fseeko(f, pos, SEEK_SET);
+		char *meta = metabase + ix[i].fpos;
 
 		int m;
-		deserialize_int(f, &m);
+		deserialize_int(&meta, &m);
 
 		int i;
 		for (i = 0; i < m; i++) {
 			int t;
-			deserialize_int(f, &t);
+			deserialize_int(&meta, &t);
 			printf("(%d) ", t);
-			deserialize_string(f);
+			deserialize_string(&meta);
 			printf("=");
-			deserialize_string(f);
+			deserialize_string(&meta);
 			printf("; ");
 		}
 
 		int t;
-		deserialize_int(f, &t);
+		deserialize_int(&meta, &t);
 		printf("(%d) ", t);
 
-		while (deserialize_int(f, &t)) {
+		while (1) {
+			deserialize_int(&meta, &t);
+
 			if (t == VT_END) {
 				break;
 			}
@@ -266,8 +264,8 @@ void check(struct index *ix, long long n) {
 
 			if (t == VT_MOVETO || t == VT_LINETO) {
 				int x, y;
-				deserialize_int(f, &x);
-				deserialize_int(f, &y);
+				deserialize_int(&meta, &x);
+				deserialize_int(&meta, &y);
 
 				printf("%x,%x ", x, y);
 			}
@@ -408,11 +406,22 @@ next_feature:
 		exit(EXIT_FAILURE);
 	}
 
+	int mfd = open("meta.out", O_RDWR);
+	struct stat mst;
+	fstat(mfd, &mst);
+	char *meta = mmap(NULL, mst.st_size, PROT_READ, MAP_PRIVATE, mfd, 0);
+	if (meta == MAP_FAILED) {
+		perror("mmap meta");
+		exit(EXIT_FAILURE);
+	}
+
 	qsort(index, st.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, st.st_size / sizeof(struct index));
+	check(index, st.st_size / sizeof(struct index), meta);
 
 	munmap(index, st.st_size);
+	munmap(meta, mst.st_size);
 	close(fd);
+	close(mfd);
 }
 
 int main(int argc, char **argv) {
