@@ -70,6 +70,62 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
+#define MAX_ZOOM 28
+#define ZOOM_BITS 5
+
+int get_bbox_zoom(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2) {
+	int z;
+	for (z = 0; z < MAX_ZOOM; z++) {
+		int mask = 1 << (32 - (z + 1));
+
+		if (((x1 & mask) != (x2 & mask)) ||
+		    ((y1 & mask) != (y2 & mask))) {
+			return z;
+		}
+	}
+
+	return MAX_ZOOM;
+}
+
+void get_bbox_tile(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, int *z, unsigned int *x, unsigned int *y) {
+	*z = get_bbox_zoom(x1, y1, x2, y2);
+
+	if (*z == 0) {
+		*x = *y = 0;
+	} else {
+		*x = x1 >> (32 - *z);
+		*y = y1 >> (32 - *z);
+	}
+}
+
+/*
+ *  5 bits for zoom             (<< 59)
+ * 56 bits for interspersed yx  (<< 3)
+ *  3 bits for tags             (<< 0)
+ */
+unsigned long long encode_bbox(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, int tags) {
+	int z = get_bbox_zoom(x1, y1, x2, y2);
+	long long out = ((long long) z) << (64 - ZOOM_BITS);
+
+	int i;
+	for (i = 0; i < MAX_ZOOM; i++) {
+		long long v = ((y1 >> (32 - (i + 1))) & 1) << 1;
+		v |= (x1 >> (32 - (i + 1))) & 1;
+		v = v << (64 - ZOOM_BITS - 2 * (i + 1));
+
+		out |= v;
+	}
+
+	return out;
+}
+
+struct index {
+	unsigned long long index;
+	long long fpos;
+
+	struct index *next;
+};
+
 void serialize_int(FILE *out, int n, long long *fpos) {
 	fwrite(&n, sizeof(int), 1, out);
 	*fpos += sizeof(int);
@@ -160,12 +216,16 @@ void deserialize_string(FILE *f) {
 	printf("%s", s);
 }
 
-void check() {
+void check(struct index *ix) {
 	FILE *f = fopen("meta.out", "rb");
 
-	int m;
+	for (; ix != NULL; ix = ix->next) {
+		off_t pos = ix->fpos;
+		fseeko(f, pos, SEEK_SET);
 
-	while (deserialize_int(f, &m)) {
+		int m;
+		deserialize_int(f, &m);
+
 		int i;
 		for (i = 0; i < m; i++) {
 			int t;
@@ -204,6 +264,7 @@ void check() {
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
 
+	struct index *index = NULL;
 	FILE *out = fopen("meta.out", "wb");
 	long long fpos = 0;
 
@@ -260,6 +321,8 @@ void read_json(FILE *f) {
 
 		/* scope for variable-length arrays */
 		{
+			long long start = fpos;
+
 			char *metakey[properties->length];
 			char *metaval[properties->length];
 			int metatype[properties->length];
@@ -303,6 +366,13 @@ void read_json(FILE *f) {
 			serialize_int(out, VT_END, &fpos);
 			
 			// printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+
+			struct index *ix = malloc(sizeof(struct index));
+
+			ix->index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
+			ix->fpos = start;
+			ix->next = index;
+			index = ix;
 		}
 
 next_feature:
@@ -314,7 +384,7 @@ next_feature:
 	json_end(jp);
 	fclose(out);
 
-	check();
+	check(index);
 }
 
 int main(int argc, char **argv) {
