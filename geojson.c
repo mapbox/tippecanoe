@@ -216,11 +216,12 @@ void deserialize_string(FILE *f) {
 	printf("%s", s);
 }
 
-void check(struct index *ix) {
+void check(struct index *ix, long long n) {
 	FILE *f = fopen("meta.out", "rb");
+	int i;
 
-	for (; ix != NULL; ix = ix->next) {
-		off_t pos = ix->fpos;
+	for (i = 0; i < n; i++) {
+		off_t pos = ix[i].fpos;
 		fseeko(f, pos, SEEK_SET);
 
 		int m;
@@ -264,8 +265,8 @@ void check(struct index *ix) {
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
 
-	struct index *index = NULL;
-	FILE *out = fopen("meta.out", "wb");
+	FILE *metafile = fopen("meta.out", "wb");
+	FILE *indexfile = fopen("index.out", "wb");
 	long long fpos = 0;
 
 	while (1) {
@@ -346,33 +347,31 @@ void read_json(FILE *f) {
 						metaval[m] = properties->values[i]->string;
 						m++;
 					} else {
-						fprintf(stderr, "%d: Unsupported meta type\n", jp->line);
+						fprintf(stderr, "%d: Unsupported metafile type\n", jp->line);
 						goto next_feature;
 					}
 				}
 			}
 
-			serialize_int(out, m, &fpos);
+			serialize_int(metafile, m, &fpos);
 			for (i = 0; i < m; i++) {
-				serialize_int(out, metatype[i], &fpos);
-				serialize_string(out, metakey[i], &fpos);
-				serialize_string(out, metaval[i], &fpos);
+				serialize_int(metafile, metatype[i], &fpos);
+				serialize_string(metafile, metakey[i], &fpos);
+				serialize_string(metafile, metaval[i], &fpos);
 			}
 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
-			serialize_int(out, t, &fpos);
-			parse_geometry(t, coordinates, bbox, &fpos, out, VT_MOVETO);
-			serialize_int(out, VT_END, &fpos);
+			serialize_int(metafile, t, &fpos);
+			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
+			serialize_int(metafile, VT_END, &fpos);
 			
 			// printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 
-			struct index *ix = malloc(sizeof(struct index));
-
-			ix->index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
-			ix->fpos = start;
-			ix->next = index;
-			index = ix;
+			struct index ix;
+			ix.index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
+			ix.fpos = start;
+			fwrite(&ix, sizeof(struct index), 1, indexfile);
 		}
 
 next_feature:
@@ -382,9 +381,22 @@ next_feature:
 	}
 
 	json_end(jp);
-	fclose(out);
+	fclose(metafile);
+	fclose(indexfile);
 
-	check(index);
+	int fd = open("index.out", O_RDWR);
+	struct stat st;
+	fstat(fd, &st);
+	struct index *index = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	if (index == MAP_FAILED) {
+		perror("mmap index");
+		exit(EXIT_FAILURE);
+	}
+
+	check(index, st.st_size / sizeof(struct index));
+
+	munmap(index, st.st_size);
+	close(fd);
 }
 
 int main(int argc, char **argv) {
