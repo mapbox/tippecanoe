@@ -139,13 +139,22 @@ int indexcmp(const void *v1, const void *v2) {
 	}
 }
 
+size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream) {
+	size_t w = fwrite(ptr, size, nitems, stream);
+	if (w != nitems) {
+		fprintf(stderr, "Write failed\n");
+		exit(EXIT_FAILURE);
+	}
+	return w;
+}
+
 void serialize_int(FILE *out, int n, long long *fpos) {
-	fwrite(&n, sizeof(int), 1, out);
+	fwrite_check(&n, sizeof(int), 1, out);
 	*fpos += sizeof(int);
 }
 
 void serialize_uint(FILE *out, unsigned n, long long *fpos) {
-	fwrite(&n, sizeof(unsigned), 1, out);
+	fwrite_check(&n, sizeof(unsigned), 1, out);
 	*fpos += sizeof(unsigned);
 }
 
@@ -153,7 +162,7 @@ void serialize_string(FILE *out, char *s, long long *fpos) {
 	int len = strlen(s);
 
 	serialize_int(out, len, fpos);
-	fwrite(s, sizeof(char), len, out);
+	fwrite_check(s, sizeof(char), len, out);
 	*fpos += len;
 }
 
@@ -384,7 +393,7 @@ void read_json(FILE *f) {
 			struct index ix;
 			ix.index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
 			ix.fpos = start;
-			fwrite(&ix, sizeof(struct index), 1, indexfile);
+			fwrite_check(&ix, sizeof(struct index), 1, indexfile);
 		}
 
 next_feature:
