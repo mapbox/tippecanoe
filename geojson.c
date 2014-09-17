@@ -143,6 +143,64 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 }
 
+int deserialize_int(FILE *f, int *n) {
+	if (fread(n, sizeof(int), 1, f) <= 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
+void deserialize_string(FILE *f) {
+	int len;
+	deserialize_int(f, &len);
+	char s[len + 1];
+	fread(s, sizeof(char), len, f);
+	s[len] = '\0';
+	printf("%s", s);
+}
+
+void check() {
+	FILE *f = fopen("meta.out", "rb");
+
+	int m;
+
+	while (deserialize_int(f, &m)) {
+		int i;
+		for (i = 0; i < m; i++) {
+			int t;
+			deserialize_int(f, &t);
+			printf("(%d) ", t);
+			deserialize_string(f);
+			printf("=");
+			deserialize_string(f);
+			printf("; ");
+		}
+
+		int t;
+		deserialize_int(f, &t);
+		printf("(%d) ", t);
+
+		while (deserialize_int(f, &t)) {
+			if (t == VT_END) {
+				break;
+			}
+
+			printf("%d: ", t);
+
+			if (t == VT_MOVETO || t == VT_LINETO) {
+				int x, y;
+				deserialize_int(f, &x);
+				deserialize_int(f, &y);
+
+				printf("%x,%x ", x, y);
+			}
+		}
+
+		printf("\n");
+	}
+}
+
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
 
@@ -244,7 +302,7 @@ void read_json(FILE *f) {
 			parse_geometry(t, coordinates, bbox, &fpos, out, VT_MOVETO);
 			serialize_int(out, VT_END, &fpos);
 			
-			printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+			// printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 		}
 
 next_feature:
@@ -254,6 +312,9 @@ next_feature:
 	}
 
 	json_end(jp);
+	fclose(out);
+
+	check();
 }
 
 int main(int argc, char **argv) {
