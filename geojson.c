@@ -126,6 +126,19 @@ struct index {
 	struct index *next;
 };
 
+int indexcmp(const void *v1, const void *v2) {
+	const struct index *i1 = v1;
+	const struct index *i2 = v2;
+
+	if (i1->index < i2->index) {
+		return -1;
+	} else if (i1->index > i2->index) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 void serialize_int(FILE *out, int n, long long *fpos) {
 	fwrite(&n, sizeof(int), 1, out);
 	*fpos += sizeof(int);
@@ -221,6 +234,8 @@ void check(struct index *ix, long long n) {
 	int i;
 
 	for (i = 0; i < n; i++) {
+		printf("%llx ", ix[i].index);
+
 		off_t pos = ix[i].fpos;
 		fseeko(f, pos, SEEK_SET);
 
@@ -393,6 +408,7 @@ next_feature:
 		exit(EXIT_FAILURE);
 	}
 
+	qsort(index, st.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
 	check(index, st.st_size / sizeof(struct index));
 
 	munmap(index, st.st_size);
