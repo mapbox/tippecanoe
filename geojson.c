@@ -291,6 +291,8 @@ void read_json(FILE *f) {
 	FILE *indexfile = fopen("index.out", "wb");
 	long long fpos = 0;
 
+	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
 	while (1) {
 		json_object *j = json_read(jp);
 		if (j == NULL) {
@@ -387,6 +389,17 @@ void read_json(FILE *f) {
 			serialize_int(metafile, t, &fpos);
 			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
 			serialize_int(metafile, VT_END, &fpos);
+
+			for (i = 0; i < 2; i++) {
+				if (bbox[i] < file_bbox[i]) {
+					file_bbox[i] = bbox[i];
+				}
+			}
+			for (i = 2; i < 4; i++) {
+				if (bbox[i] > file_bbox[i]) {
+					file_bbox[i] = bbox[i];
+				}
+			}
 			
 			// printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 
@@ -401,6 +414,8 @@ next_feature:
 
 		/* XXX check for any non-features in the outer object */
 	}
+
+	printf("bbox: %x %x %x %x\n", file_bbox[0], file_bbox[1], file_bbox[2], file_bbox[3]);
 
 	json_end(jp);
 	fclose(metafile);
