@@ -407,6 +407,9 @@ void read_json(FILE *f) {
 	FILE *indexfile = fopen(indexname, "wb");
 	long long fpos = 0;
 
+	unlink(metaname);
+	unlink(indexname);
+
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
 	while (1) {
@@ -561,9 +564,6 @@ next_feature:
 
 	close(indexfd);
 	close(metafd);
-
-	unlink(metaname);
-	unlink(indexname);
 }
 
 int main(int argc, char **argv) {
