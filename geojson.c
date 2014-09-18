@@ -395,8 +395,6 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 }
 
 void read_json(FILE *f) {
-	json_pull *jp = json_begin_file(f);
-
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -411,6 +409,9 @@ void read_json(FILE *f) {
 	unlink(indexname);
 
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
+	json_pull *jp = json_begin_file(f);
+	long long seq = 0;
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -526,6 +527,11 @@ void read_json(FILE *f) {
 			ix.index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
 			ix.fpos = start;
 			fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+
+			if (seq % 100000 == 0) {
+				fprintf(stderr, "Read %.1f million features\r", seq / 1000000.0);
+			}
+			seq++;
 		}
 
 next_feature:

@@ -6,11 +6,13 @@ install: jsonpull.h libjsonpull.a
 	cp jsonpull.h $(PREFIX)/include/jsonpull.h
 	cp libjsonpull.a $(PREFIX)/lib/libjsonpull.a
 
+PG=
+
 jsoncat: jsoncat.o jsonpull.o
-	cc -g -Wall -o $@ $^
+	cc $(PG) -g -Wall -o $@ $^
 
 geojson: geojson.o jsonpull.o
-	cc -g -Wall -o $@ $^ -lm
+	cc $(PG) -O3 -g -Wall -o $@ $^ -lm
 
 jsoncat.o jsonpull.o: jsonpull.h
 
@@ -19,4 +21,4 @@ libjsonpull.a: jsonpull.o
 	ranlib $@
 
 %.o: %.c
-	cc -g -Wall -c $<
+	cc $(PG) -O3 -g -Wall -c $<
