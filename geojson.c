@@ -73,6 +73,10 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 #define MAX_ZOOM 28
 #define ZOOM_BITS 5
 
+#if (2 * MAX_ZOOM) + ZOOM_BITS > 64
+#error "Not enough bits for index"
+#endif
+
 int get_bbox_zoom(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2) {
 	int z;
 	for (z = 0; z < MAX_ZOOM; z++) {
@@ -287,8 +291,14 @@ void check(struct index *ix, long long n, char *metabase) {
 void read_json(FILE *f) {
 	json_pull *jp = json_begin_file(f);
 
-	FILE *metafile = fopen("meta.out", "wb");
-	FILE *indexfile = fopen("index.out", "wb");
+	char metaname[] = "/tmp/meta.XXXXXXXX";
+	char indexname[] = "/tmp/index.XXXXXXXX";
+
+	int metafd = mkstemp(metaname);
+	int indexfd = mkstemp(indexname);
+
+	FILE *metafile = fopen(metaname, "wb");
+	FILE *indexfile = fopen(indexname, "wb");
 	long long fpos = 0;
 
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
@@ -415,37 +425,39 @@ next_feature:
 		/* XXX check for any non-features in the outer object */
 	}
 
-	printf("bbox: %x %x %x %x\n", file_bbox[0], file_bbox[1], file_bbox[2], file_bbox[3]);
-
 	json_end(jp);
 	fclose(metafile);
 	fclose(indexfile);
 
-	int fd = open("index.out", O_RDWR);
-	struct stat st;
-	fstat(fd, &st);
-	struct index *index = mmap(NULL, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	printf("bbox: %x %x %x %x\n", file_bbox[0], file_bbox[1], file_bbox[2], file_bbox[3]);
+
+	struct stat indexst;
+	fstat(indexfd, &indexst);
+	struct index *index = mmap(NULL, indexst.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, indexfd, 0);
 	if (index == MAP_FAILED) {
 		perror("mmap index");
 		exit(EXIT_FAILURE);
 	}
 
-	int mfd = open("meta.out", O_RDWR);
-	struct stat mst;
-	fstat(mfd, &mst);
-	char *meta = mmap(NULL, mst.st_size, PROT_READ, MAP_PRIVATE, mfd, 0);
+	struct stat metast;
+	fstat(metafd, &metast);
+	char *meta = mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
 
-	qsort(index, st.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, st.st_size / sizeof(struct index), meta);
+	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
+	check(index, indexst.st_size / sizeof(struct index), meta);
 
-	munmap(index, st.st_size);
-	munmap(meta, mst.st_size);
-	close(fd);
-	close(mfd);
+	munmap(index, indexst.st_size);
+	munmap(meta, metast.st_size);
+
+	close(indexfd);
+	close(metafd);
+
+	unlink(metaname);
+	unlink(indexname);
 }
 
 int main(int argc, char **argv) {
