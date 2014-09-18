@@ -70,6 +70,14 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	*y = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
 }
 
+// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *lon) {
+	unsigned long long n = 1LL << zoom;
+	*lon = 360.0 * x / n - 180.0;
+	float lat_rad = atan(sinh(M_PI * (1 - 2.0 * y / n)));
+	*lat = lat_rad * 180 / M_PI;
+}
+
 #define MAX_ZOOM 28
 #define ZOOM_BITS 5
 
@@ -121,6 +129,47 @@ unsigned long long encode_bbox(unsigned int x1, unsigned int y1, unsigned int x2
 	}
 
 	return out;
+}
+
+void encode_tile(int zz, int z, unsigned int x, unsigned int y, unsigned long long *start, unsigned long long *end) {
+	long long out = ((long long) zz) << (64 - ZOOM_BITS);
+
+	x <<= (32 - z);
+	y <<= (32 - z);
+
+	int i;
+	for (i = 0; i < MAX_ZOOM; i++) {
+		long long v = ((y >> (32 - (i + 1))) & 1) << 1;
+		v |= (x >> (32 - (i + 1))) & 1;
+		v = v << (64 - ZOOM_BITS - 2 * (i + 1));
+
+		out |= v;
+	}
+
+	*start = out;
+	*end = out | (((unsigned long long) -1LL) >> (2 * z + ZOOM_BITS));
+}
+
+// http://www.tbray.org/ongoing/When/200x/2003/03/22/Binary
+void *search(const void *key, const void *base, size_t nel, size_t width,
+		int (*cmp)(const void *, const void *)) {
+
+	long long high = nel, low = -1, probe;
+	while (high - low > 1) {
+		probe = (low + high) >> 1;
+		int c = cmp(((char *) base) + probe * width, key);
+		if (c > 0) {
+			high = probe;
+		} else {
+			low = probe;
+		}
+	}
+
+	if (low < 0) {
+		low = 0;
+	}
+
+	return ((char *) base) + low * width;
 }
 
 struct index {
@@ -240,13 +289,35 @@ void deserialize_string(char **f) {
 	printf("%s", s);
 }
 
-void check(struct index *ix, long long n, char *metabase) {
-	int i;
 
-	for (i = 0; i < n; i++) {
-		printf("%llx ", ix[i].index);
+void range_lookup(struct index *ix, long long n, char *metabase, unsigned long long start, unsigned long long end, int z_lookup, int z, unsigned x, unsigned y) {
+	struct index istart, iend;
+	istart.index = start;
+	iend.index = end;
 
-		char *meta = metabase + ix[i].fpos;
+	printf("range %llx to %llx, %d/%u/%u, %d\n", start, end, z, x, y, z_lookup);
+
+	struct index *pstart = search(&istart, ix, n, sizeof(struct index), indexcmp);
+	struct index *pend = search(&iend, ix, n, sizeof(struct index), indexcmp);
+
+	if (pend >= ix + n) {
+		pend = ix + n - 1;
+	}
+	while (pstart > ix && indexcmp(pstart - 1, &istart) == 0) {
+		pstart--;
+	}
+	if (indexcmp(pstart, &istart) < 0) {
+		pstart++;
+	}
+	if (indexcmp(pend, &iend) > 0) {
+		pend--;
+	}
+
+	struct index *i;
+	for (i = pstart; i <= pend; i++) {
+		printf("%llx ", i->index);
+
+		char *meta = metabase + i->fpos;
 
 		int m;
 		deserialize_int(&meta, &m);
@@ -280,11 +351,46 @@ void check(struct index *ix, long long n, char *metabase) {
 				deserialize_int(&meta, &x);
 				deserialize_int(&meta, &y);
 
-				printf("%x,%x ", x, y);
+				double lat, lon;
+				tile2latlon(x, y, 32, &lat,&lon);
+				printf("%f,%f ", lat, lon);
 			}
 		}
 
 		printf("\n");
+	}
+}
+
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
+	int z = 14;
+	unsigned x1, y1, x2, y2;
+
+	if (z == 0) {
+		x1 = y1 = x2 = y2 = 0;
+	} else {
+		x1 = file_bbox[0] >> (32 - z);
+		y1 = file_bbox[1] >> (32 - z);
+		x2 = file_bbox[2] >> (32 - z);
+		y2 = file_bbox[3] >> (32 - z);
+	}
+
+	unsigned x, y;
+	for (y = y1; y <= y2; y++) {
+		for (x = x1; x <= x2; x++) {
+			int zz;
+
+			for (zz = 0; zz <= MAX_ZOOM; zz++) {
+				unsigned long long start, end;
+
+				if (zz <= z) {
+					encode_tile(zz, zz, x >> (z - zz), y >> (z - zz), &start, &end);
+				} else {
+					encode_tile(zz, z, x, y, &start, &end);
+				}
+
+				range_lookup(ix, n, metabase, start, end, zz, z, x, y);
+			}
+		}
 	}
 }
 
@@ -448,7 +554,7 @@ next_feature:
 	}
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
