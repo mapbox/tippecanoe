@@ -374,10 +374,22 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 		y2 = file_bbox[3] >> (32 - z);
 	}
 
+	long long total = (y2 - y1 + 1) * (x2 - x1 + 1);
+	long long seq = 0;
+	long long percent = -1;
+
+	fprintf(stderr, "\n");
+
 	unsigned x, y;
 	for (y = y1; y <= y2; y++) {
 		for (x = x1; x <= x2; x++) {
 			int zz;
+
+			seq++;
+			if (100 * seq / total > percent) {
+				percent = 100 * seq / total;
+				fprintf(stderr, "%lld%% (%lld / %lld)\r", percent, seq, total);
+			}
 
 			for (zz = 0; zz <= MAX_ZOOM; zz++) {
 				unsigned long long start, end;
