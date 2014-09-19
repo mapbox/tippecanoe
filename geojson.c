@@ -78,76 +78,30 @@ void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *
 	*lat = lat_rad * 180 / M_PI;
 }
 
-#define MAX_ZOOM 28
-#define ZOOM_BITS 5
-
-#if (2 * MAX_ZOOM) + ZOOM_BITS > 64
-#error "Not enough bits for index"
-#endif
-
-int get_bbox_zoom(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2) {
-	int z;
-	for (z = 0; z < MAX_ZOOM; z++) {
-		int mask = 1 << (32 - (z + 1));
-
-		if (((x1 & mask) != (x2 & mask)) ||
-		    ((y1 & mask) != (y2 & mask))) {
-			return z;
-		}
-	}
-
-	return MAX_ZOOM;
-}
-
-void get_bbox_tile(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, int *z, unsigned int *x, unsigned int *y) {
-	*z = get_bbox_zoom(x1, y1, x2, y2);
-
-	if (*z == 0) {
-		*x = *y = 0;
-	} else {
-		*x = x1 >> (32 - *z);
-		*y = y1 >> (32 - *z);
-	}
-}
-
-/*
- *  5 bits for zoom             (<< 59)
- * 56 bits for interspersed yx  (<< 3)
- *  3 bits for tags             (<< 0)
- */
-unsigned long long encode_bbox(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, int tags) {
-	int z = get_bbox_zoom(x1, y1, x2, y2);
-	long long out = ((long long) z) << (64 - ZOOM_BITS);
+unsigned long long encode(unsigned int wx, unsigned int wy) {
+	long long out = 0;
 
 	int i;
-	for (i = 0; i < MAX_ZOOM; i++) {
-		long long v = ((y1 >> (32 - (i + 1))) & 1) << 1;
-		v |= (x1 >> (32 - (i + 1))) & 1;
-		v = v << (64 - ZOOM_BITS - 2 * (i + 1));
+	for (i = 0; i < 32; i++) {
+		long long v = ((wx >> (32 - (i + 1))) & 1) << 1;
+		v |= (wy >> (32 - (i + 1))) & 1;
+		v = v << (64 - 2 * (i + 1));
 
 		out |= v;
 	}
+
 
 	return out;
 }
 
-void encode_tile(int zz, int z, unsigned int x, unsigned int y, unsigned long long *start, unsigned long long *end) {
-	long long out = ((long long) zz) << (64 - ZOOM_BITS);
-
-	x <<= (32 - z);
-	y <<= (32 - z);
+void decode(unsigned long long index, unsigned *wx, unsigned *wy) {
+	*wx = *wy = 0;
 
 	int i;
-	for (i = 0; i < MAX_ZOOM; i++) {
-		long long v = ((y >> (32 - (i + 1))) & 1) << 1;
-		v |= (x >> (32 - (i + 1))) & 1;
-		v = v << (64 - ZOOM_BITS - 2 * (i + 1));
-
-		out |= v;
+	for (i = 0; i < 32; i++) {
+		*wx |= ((index >> (64 - 2 * (i + 1) + 1)) & 1) << (32 - (i + 1));
+		*wy |= ((index >> (64 - 2 * (i + 1) + 0)) & 1) << (32 - (i + 1));
 	}
-
-	*start = out;
-	*end = out | (((unsigned long long) -1LL) >> (2 * z + ZOOM_BITS));
 }
 
 // http://www.tbray.org/ongoing/When/200x/2003/03/22/Binary
@@ -311,14 +265,23 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void range_lookup(struct index *ix, long long n, char *metabase, unsigned long long start, unsigned long long end, int z_lookup, int z, unsigned x, unsigned y) {
-	printf("range %llx to %llx, %d/%u/%u, %d\n", start, end, z, x, y, z_lookup);
-
-	struct index *pstart, *pend;
-	range_search(ix, n, start, end, &pstart, &pend);
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
+	fprintf(stderr, "\n");
+	unsigned long long oindex = 0;
 
 	struct index *i;
-	for (i = pstart; i <= pend; i++) {
+	for (i = ix; i < ix + n; i++) {
+		if (i->index != oindex) {
+			printf("-----------------------------------\n");
+
+			int z = 14;
+			unsigned wx, wy;
+			decode(i->index, &wx, &wy);
+			printf("%d/%u/%u    %x %x\n", z, wx >> (32 - z), wy >> (32 - z), wx, wy);
+
+			oindex = i->index;
+		}
+
 		printf("%llx ", i->index);
 
 		char *meta = metabase + i->fpos;
@@ -357,74 +320,11 @@ void range_lookup(struct index *ix, long long n, char *metabase, unsigned long l
 
 				double lat, lon;
 				tile2latlon(x, y, 32, &lat,&lon);
-				printf("%f,%f ", lat, lon);
+				printf("%f,%f (%x/%x) ", lat, lon, x, y);
 			}
 		}
 
 		printf("\n");
-	}
-}
-
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
-	int z = 14;
-	unsigned x1, y1, x2, y2;
-
-	struct enumerate {
-		struct index *here;
-		struct index *end;
-
-		struct file *next;
-	} enums[MAX_ZOOM + 1];
-
-	int i;
-	for (i = 0; i < MAX_ZOOM + 1; i++) {
-		unsigned long long start, end;
-		struct index *pstart, *pend;
-
-		encode_tile(i, 0, 0, 0, &start, &end);
-		range_search(ix, n, start, end, &pstart, &pend);
-
-		printf("zoom %d is %llx %llx that's %ld to %ld\n", i, start, end, pstart - ix, pend - ix);
-	}
-
-	if (z == 0) {
-		x1 = y1 = x2 = y2 = 0;
-	} else {
-		x1 = file_bbox[0] >> (32 - z);
-		y1 = file_bbox[1] >> (32 - z);
-		x2 = file_bbox[2] >> (32 - z);
-		y2 = file_bbox[3] >> (32 - z);
-	}
-
-	long long total = (y2 - y1 + 1) * (x2 - x1 + 1);
-	long long seq = 0;
-	long long percent = -1;
-
-	fprintf(stderr, "\n");
-
-	unsigned x, y;
-	for (y = y1; y <= y2; y++) {
-		for (x = x1; x <= x2; x++) {
-			int zz;
-
-			seq++;
-			if (100 * seq / total > percent) {
-				percent = 100 * seq / total;
-				fprintf(stderr, "%lld%% (%lld / %lld)\r", percent, seq, total);
-			}
-
-			for (zz = 0; zz <= MAX_ZOOM; zz++) {
-				unsigned long long start, end;
-
-				if (zz <= z) {
-					encode_tile(zz, zz, x >> (z - zz), y >> (z - zz), &start, &end);
-				} else {
-					encode_tile(zz, z, x, y, &start, &end);
-				}
-
-				range_lookup(ix, n, metabase, start, end, zz, z, x, y);
-			}
-		}
 	}
 }
 
@@ -498,7 +398,6 @@ void read_json(FILE *f) {
 			goto next_feature;
 		}
 
-		/* scope for variable-length arrays */
 		{
 			long long start = fpos;
 
@@ -544,6 +443,19 @@ void read_json(FILE *f) {
 			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
 			serialize_int(metafile, VT_END, &fpos);
 
+			int z = 14;
+
+			/* XXX do proper overlap instead of whole bounding box */
+			unsigned x, y;
+			for (x = bbox[0] >> (32 - z); x <= bbox[2] >> (32 - z); x++) {
+				for (y = bbox[1] >> (32 - z); y <= bbox[3] >> (32 - z); y++) {
+					struct index ix;
+					ix.index = encode(x << (32 - z), y << (32 - z));
+					ix.fpos = start;
+					fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+				}
+			}
+
 			for (i = 0; i < 2; i++) {
 				if (bbox[i] < file_bbox[i]) {
 					file_bbox[i] = bbox[i];
@@ -555,13 +467,6 @@ void read_json(FILE *f) {
 				}
 			}
 			
-			// printf("bbox %x %x %x %x\n", bbox[0], bbox[1], bbox[2], bbox[3]);
-
-			struct index ix;
-			ix.index = encode_bbox(bbox[0], bbox[1], bbox[2], bbox[3], 0);
-			ix.fpos = start;
-			fwrite_check(&ix, sizeof(struct index), 1, indexfile);
-
 			if (seq % 100000 == 0) {
 				fprintf(stderr, "Read %.1f million features\r", seq / 1000000.0);
 			}
