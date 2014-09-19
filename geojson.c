@@ -289,29 +289,33 @@ void deserialize_string(char **f) {
 	printf("%s", s);
 }
 
-
-void range_lookup(struct index *ix, long long n, char *metabase, unsigned long long start, unsigned long long end, int z_lookup, int z, unsigned x, unsigned y) {
+void range_search(struct index *ix, long long n, unsigned long long start, unsigned long long end, struct index **pstart, struct index **pend) {
 	struct index istart, iend;
 	istart.index = start;
 	iend.index = end;
 
+	*pstart = search(&istart, ix, n, sizeof(struct index), indexcmp);
+	*pend = search(&iend, ix, n, sizeof(struct index), indexcmp);
+
+	if (*pend >= ix + n) {
+		*pend = ix + n - 1;
+	}
+	while (*pstart > ix && indexcmp(*pstart - 1, &istart) == 0) {
+		(*pstart)--;
+	}
+	if (indexcmp(*pstart, &istart) < 0) {
+		(*pstart)++;
+	}
+	if (indexcmp(*pend, &iend) > 0) {
+		(*pend)--;
+	}
+}
+
+void range_lookup(struct index *ix, long long n, char *metabase, unsigned long long start, unsigned long long end, int z_lookup, int z, unsigned x, unsigned y) {
 	printf("range %llx to %llx, %d/%u/%u, %d\n", start, end, z, x, y, z_lookup);
 
-	struct index *pstart = search(&istart, ix, n, sizeof(struct index), indexcmp);
-	struct index *pend = search(&iend, ix, n, sizeof(struct index), indexcmp);
-
-	if (pend >= ix + n) {
-		pend = ix + n - 1;
-	}
-	while (pstart > ix && indexcmp(pstart - 1, &istart) == 0) {
-		pstart--;
-	}
-	if (indexcmp(pstart, &istart) < 0) {
-		pstart++;
-	}
-	if (indexcmp(pend, &iend) > 0) {
-		pend--;
-	}
+	struct index *pstart, *pend;
+	range_search(ix, n, start, end, &pstart, &pend);
 
 	struct index *i;
 	for (i = pstart; i <= pend; i++) {
@@ -364,6 +368,24 @@ void range_lookup(struct index *ix, long long n, char *metabase, unsigned long l
 void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 	int z = 14;
 	unsigned x1, y1, x2, y2;
+
+	struct enumerate {
+		struct index *here;
+		struct index *end;
+
+		struct file *next;
+	} enums[MAX_ZOOM + 1];
+
+	int i;
+	for (i = 0; i < MAX_ZOOM + 1; i++) {
+		unsigned long long start, end;
+		struct index *pstart, *pend;
+
+		encode_tile(i, 0, 0, 0, &start, &end);
+		range_search(ix, n, start, end, &pstart, &pend);
+
+		printf("zoom %d is %llx %llx that's %ld to %ld\n", i, start, end, pstart - ix, pend - ix);
+	}
 
 	if (z == 0) {
 		x1 = y1 = x2 = y2 = 0;
