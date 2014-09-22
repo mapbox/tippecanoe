@@ -146,6 +146,53 @@ int indexcmp(const void *v1, const void *v2) {
 	}
 }
 
+struct pool_val {
+	char *s;
+	int type;
+	int n;
+
+	struct pool_val *next;
+};
+
+struct pool {
+	struct pool_val *vals;
+	int n;
+};
+
+struct pool_val *pool(struct pool *p, char *s, int type) {
+	struct pool_val **v = &(p->vals);
+
+	while (*v != NULL) {
+		int cmp = strcmp(s, (*v)->s);
+
+		if (cmp == 0) {
+			cmp = type - (*v)->type;
+		}
+
+		if (cmp == 0) {
+			return *v;
+		}
+
+		v = &((*v)->next);
+	}
+
+	*v = malloc(sizeof(struct pool_val));
+	(*v)->next = NULL;
+	(*v)->s = s;
+	(*v)->type = type;
+	(*v)->n = p->n++;
+	return *v;
+}
+
+void pool_free(struct pool *p) {
+	while (p->vals != NULL) {
+		struct pool_val *next = p->vals->next;
+		free(p->vals);
+		p->vals = next;
+	}
+}
+
+
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
@@ -168,9 +215,10 @@ void serialize_uint(FILE *out, unsigned n, long long *fpos) {
 void serialize_string(FILE *out, char *s, long long *fpos) {
 	int len = strlen(s);
 
-	serialize_int(out, len, fpos);
+	serialize_int(out, len + 1, fpos);
 	fwrite_check(s, sizeof(char), len, out);
-	*fpos += len;
+	fwrite_check("", sizeof(char), 1, out);
+	*fpos += len + 1;
 }
 
 void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op) {
@@ -233,14 +281,15 @@ void deserialize_int(char **f, int *n) {
 	*f += sizeof(int);
 }
 
-void deserialize_string(char **f) {
+struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
+	struct pool_val *ret;
 	int len;
+
 	deserialize_int(f, &len);
-	char s[len + 1];
-	memcpy(s, *f, len);
+	ret = pool(p, *f, type);
 	*f += len;
-	s[len] = '\0';
-	printf("%s", s);
+
+	return ret;
 }
 
 void range_search(struct index *ix, long long n, unsigned long long start, unsigned long long end, struct index **pstart, struct index **pend) {
@@ -266,8 +315,12 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 }
 
 void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
-	struct index *i;
+	struct pool keys, values;
+	keys.n = values.n = 0;
+	keys.vals = values.vals = NULL;
 
+	struct index *i;
+	printf("tile -----------------------------------------------\n");
 	for (i = start; i < end; i++) {
 		printf("%llx ", i->index);
 
@@ -280,11 +333,10 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 		for (i = 0; i < m; i++) {
 			int t;
 			deserialize_int(&meta, &t);
-			printf("(%d) ", t);
-			deserialize_string(&meta);
-			printf("=");
-			deserialize_string(&meta);
-			printf("; ");
+			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
+			struct pool_val *value = deserialize_string(&meta, &values, t);
+
+			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
 		}
 
 		int t;
@@ -313,13 +365,16 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 
 		printf("\n");
 	}
+
+	pool_free(&keys);
+	pool_free(&values);
 }
 
 void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 	fprintf(stderr, "\n");
 
 	int z;
-	for (z = 11; z >= 11; z--) {
+	for (z = 14; z >= 14; z--) {
 		struct index *i, *j = NULL;
 		for (i = ix; i < ix + n && i != NULL; i = j) {
 			unsigned wx, wy;
