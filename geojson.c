@@ -265,23 +265,10 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
-	fprintf(stderr, "\n");
-	unsigned long long oindex = 0;
-
+void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
 	struct index *i;
-	for (i = ix; i < ix + n; i++) {
-		if (i->index != oindex) {
-			printf("-----------------------------------\n");
 
-			int z = 14;
-			unsigned wx, wy;
-			decode(i->index, &wx, &wy);
-			printf("%d/%u/%u    %x %x\n", z, wx >> (32 - z), wy >> (32 - z), wx, wy);
-
-			oindex = i->index;
-		}
-
+	for (i = start; i < end; i++) {
 		printf("%llx ", i->index);
 
 		char *meta = metabase + i->fpos;
@@ -325,6 +312,34 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 		}
 
 		printf("\n");
+	}
+}
+
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
+	fprintf(stderr, "\n");
+
+	int z;
+	for (z = 11; z >= 11; z--) {
+		struct index *i, *j = NULL;
+		for (i = ix; i < ix + n && i != NULL; i = j) {
+			unsigned wx, wy;
+			decode(i->index, &wx, &wy);
+
+			printf("%lld in %lld\n", (long long)(i - ix), (long long)n);
+
+			for (j = i + 1; j < ix + n; j++) {
+				unsigned wx2, wy2;
+				decode(j->index, &wx2, &wy2);
+
+				if (wx2 >> (32 - z) != wx >> (32 - z) || wy2 >> (32 - z) != wy >> (32 - z)) {
+					break;
+				}
+			}
+
+			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, wx >> (32 - z), wy >> (32 - z), wx, wy, (long long)(i - ix), (long long)(j - ix));
+
+			check_range(i, j, metabase, file_bbox);
+		}
 	}
 }
 
