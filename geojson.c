@@ -301,19 +301,6 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 
 		char *meta = metabase + i->fpos;
 
-		int m;
-		deserialize_int(&meta, &m);
-
-		int i;
-		for (i = 0; i < m; i++) {
-			int t;
-			deserialize_int(&meta, &t);
-			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
-			struct pool_val *value = deserialize_string(&meta, &keys, t);
-
-			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
-		}
-
 		int t;
 		deserialize_int(&meta, &t);
 		printf("(%d) ", t);
@@ -336,6 +323,19 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 				tile2latlon(x, y, 32, &lat,&lon);
 				printf("%f,%f (%x/%x) ", lat, lon, x, y);
 			}
+		}
+
+		int m;
+		deserialize_int(&meta, &m);
+
+		int i;
+		for (i = 0; i < m; i++) {
+			int t;
+			deserialize_int(&meta, &t);
+			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
+			struct pool_val *value = deserialize_string(&meta, &keys, t);
+
+			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
 		}
 
 		printf("\n");
@@ -446,6 +446,12 @@ void read_json(FILE *f) {
 		{
 			long long start = fpos;
 
+			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
+			serialize_int(metafile, t, &fpos);
+			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
+			serialize_int(metafile, VT_END, &fpos);
+
 			char *metakey[properties->length];
 			char *metaval[properties->length];
 			int metatype[properties->length];
@@ -481,12 +487,6 @@ void read_json(FILE *f) {
 				serialize_string(metafile, metakey[i], &fpos);
 				serialize_string(metafile, metaval[i], &fpos);
 			}
-
-			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
-
-			serialize_int(metafile, t, &fpos);
-			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
-			serialize_int(metafile, VT_END, &fpos);
 
 			int z = 14;
 
