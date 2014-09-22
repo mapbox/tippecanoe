@@ -4,6 +4,10 @@
 #include <zlib.h>
 #include "vector_tile.pb.h"
 
+extern "C" {
+	#include "tile.h"
+}
+
 #define XMAX 4096
 #define YMAX 4096
 
@@ -35,7 +39,7 @@ static inline int compress(std::string const& input, std::string& output) {
 	return 0;
 }
 
-void write_tile(char *name) {
+void write_tile(char *name, struct pool *keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
         mapnik::vector::tile tile;
@@ -45,6 +49,10 @@ void write_tile(char *name) {
         layer->set_version(1);
         layer->set_extent(XMAX);
 
+	struct pool_val *pv;
+	for (pv = keys->vals; pv != NULL; pv = pv->next) {
+		layer->add_keys(pv->s, strlen(pv->s));
+	}
 
 
 
@@ -53,7 +61,10 @@ void write_tile(char *name) {
         std::string compressed;
 
         tile.SerializeToString(&s);
+	std::cout << s;
+#if 0
         compress(s, compressed);
         std::cout << compressed;
+#endif
 }
 

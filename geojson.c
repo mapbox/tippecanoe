@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <limits.h>
 #include "jsonpull.h"
+#include "tile.h"
 
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
@@ -20,19 +21,6 @@
 #define GEOM_POLYGON 4              /* array of arrays of arrays of positions */
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
-
-#define VT_END 0
-#define VT_POINT 1
-#define VT_LINE 2
-#define VT_POLYGON 3
-
-#define VT_MOVETO 1
-#define VT_LINETO 2
-#define VT_CLOSEPATH 7
-
-#define VT_STRING 1
-#define VT_NUMBER 2
-#define VT_BOOLEAN 7
 
 char *geometry_names[GEOM_TYPES] = {
 	"Point",
@@ -145,19 +133,6 @@ int indexcmp(const void *v1, const void *v2) {
 		return 0;
 	}
 }
-
-struct pool_val {
-	char *s;
-	int type;
-	int n;
-
-	struct pool_val *next;
-};
-
-struct pool {
-	struct pool_val *vals;
-	int n;
-};
 
 struct pool_val *pool(struct pool *p, char *s, int type) {
 	struct pool_val **v = &(p->vals);
@@ -315,9 +290,9 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 }
 
 void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
-	struct pool keys, values;
-	keys.n = values.n = 0;
-	keys.vals = values.vals = NULL;
+	struct pool keys;
+	keys.n = 0;
+	keys.vals = NULL;
 
 	struct index *i;
 	printf("tile -----------------------------------------------\n");
@@ -334,7 +309,7 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 			int t;
 			deserialize_int(&meta, &t);
 			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
-			struct pool_val *value = deserialize_string(&meta, &values, t);
+			struct pool_val *value = deserialize_string(&meta, &keys, t);
 
 			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
 		}
@@ -366,8 +341,8 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 		printf("\n");
 	}
 
+	write_tile("layer", &keys);
 	pool_free(&keys);
-	pool_free(&values);
 }
 
 void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
