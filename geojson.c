@@ -114,13 +114,6 @@ void *search(const void *key, const void *base, size_t nel, size_t width,
 	return ((char *) base) + low * width;
 }
 
-struct index {
-	unsigned long long index;
-	long long fpos;
-
-	struct index *next;
-};
-
 int indexcmp(const void *v1, const void *v2) {
 	const struct index *i1 = v1;
 	const struct index *i2 = v2;
@@ -287,62 +280,6 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	if (indexcmp(*pend, &iend) > 0) {
 		(*pend)--;
 	}
-}
-
-void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
-	struct pool keys;
-	keys.n = 0;
-	keys.vals = NULL;
-
-	struct index *i;
-	printf("tile -----------------------------------------------\n");
-	for (i = start; i < end; i++) {
-		printf("%llx ", i->index);
-
-		char *meta = metabase + i->fpos;
-
-		int t;
-		deserialize_int(&meta, &t);
-		printf("(%d) ", t);
-
-		while (1) {
-			deserialize_int(&meta, &t);
-
-			if (t == VT_END) {
-				break;
-			}
-
-			printf("%d: ", t);
-
-			if (t == VT_MOVETO || t == VT_LINETO) {
-				int x, y;
-				deserialize_int(&meta, &x);
-				deserialize_int(&meta, &y);
-
-				double lat, lon;
-				tile2latlon(x, y, 32, &lat,&lon);
-				printf("%f,%f (%x/%x) ", lat, lon, x, y);
-			}
-		}
-
-		int m;
-		deserialize_int(&meta, &m);
-
-		int i;
-		for (i = 0; i < m; i++) {
-			int t;
-			deserialize_int(&meta, &t);
-			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
-			struct pool_val *value = deserialize_string(&meta, &keys, t);
-
-			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
-		}
-
-		printf("\n");
-	}
-
-	write_tile("layer", &keys);
-	pool_free(&keys);
 }
 
 void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {

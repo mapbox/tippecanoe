@@ -39,13 +39,13 @@ static inline int compress(std::string const& input, std::string& output) {
 	return 0;
 }
 
-void write_tile(char *name, struct pool *keys) {
+void write_tile(const char *name, struct pool *keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
         mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer = tile.add_layers();
 
-        layer->set_name("name");
+        layer->set_name(name);
         layer->set_version(1);
         layer->set_extent(XMAX);
 
@@ -66,5 +66,62 @@ void write_tile(char *name, struct pool *keys) {
         compress(s, compressed);
         std::cout << compressed;
 #endif
+}
+
+
+void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
+	struct pool keys;
+	keys.n = 0;
+	keys.vals = NULL;
+
+	struct index *i;
+	printf("tile -----------------------------------------------\n");
+	for (i = start; i < end; i++) {
+		printf("%llx ", i->index);
+
+		char *meta = metabase + i->fpos;
+
+		int t;
+		deserialize_int(&meta, &t);
+		printf("(%d) ", t);
+
+		while (1) {
+			deserialize_int(&meta, &t);
+
+			if (t == VT_END) {
+				break;
+			}
+
+			printf("%d: ", t);
+
+			if (t == VT_MOVETO || t == VT_LINETO) {
+				int x, y;
+				deserialize_int(&meta, &x);
+				deserialize_int(&meta, &y);
+
+				//double lat, lon;
+				//tile2latlon(x, y, 32, &lat,&lon);
+				//printf("%f,%f (%x/%x) ", lat, lon, x, y);
+			}
+		}
+
+		int m;
+		deserialize_int(&meta, &m);
+
+		int i;
+		for (i = 0; i < m; i++) {
+			int t;
+			deserialize_int(&meta, &t);
+			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
+			struct pool_val *value = deserialize_string(&meta, &keys, t);
+
+			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
+		}
+
+		printf("\n");
+	}
+
+	write_tile("layer", &keys);
+	pool_free(&keys);
 }
 
