@@ -14,7 +14,7 @@ PG=
 jsoncat: jsoncat.o jsonpull.o
 	cc $(PG) -g -Wall -o $@ $^
 
-geojson: geojson.o jsonpull.o vector_tile.pb.o
+geojson: geojson.o jsonpull.o vector_tile.pb.o tile.o
 	cc $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite
 
 jsoncat.o jsonpull.o: jsonpull.h
@@ -27,4 +27,4 @@ libjsonpull.a: jsonpull.o
 	cc $(PG) -O3 -g -Wall -c $<
 
 %.o: %.cc
-	g++ -g -Wall -O3 -c $<
+	g++ $(PG) -O3 -g -Wall -c $<
