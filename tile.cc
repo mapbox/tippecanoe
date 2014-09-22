@@ -39,37 +39,17 @@ static inline int compress(std::string const& input, std::string& output) {
 	return 0;
 }
 
-void write_tile(const char *name, struct pool *keys) {
+
+void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
         mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer = tile.add_layers();
 
-        layer->set_name(name);
+        layer->set_name("name");
         layer->set_version(1);
         layer->set_extent(XMAX);
 
-	struct pool_val *pv;
-	for (pv = keys->vals; pv != NULL; pv = pv->next) {
-		layer->add_keys(pv->s, strlen(pv->s));
-	}
-
-
-
-
-        std::string s;
-        std::string compressed;
-
-        tile.SerializeToString(&s);
-	std::cout << s;
-#if 0
-        compress(s, compressed);
-        std::cout << compressed;
-#endif
-}
-
-
-void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
 	struct pool keys;
 	keys.n = 0;
 	keys.vals = NULL;
@@ -121,7 +101,20 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 		printf("\n");
 	}
 
-	write_tile("layer", &keys);
+	struct pool_val *pv;
+	for (pv = keys.vals; pv != NULL; pv = pv->next) {
+		layer->add_keys(pv->s, strlen(pv->s));
+	}
 	pool_free(&keys);
+
+        std::string s;
+        std::string compressed;
+
+        tile.SerializeToString(&s);
+	std::cout << s;
+#if 0
+        compress(s, compressed);
+        std::cout << compressed;
+#endif
 }
 
