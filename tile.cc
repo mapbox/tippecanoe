@@ -57,6 +57,8 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 	struct index *i;
 	printf("tile -----------------------------------------------\n");
 	for (i = start; i < end; i++) {
+		mapnik::vector::tile_feature *feature = layer->add_features();
+
 		printf("%llx ", i->index);
 
 		char *meta = metabase + i->fpos;
@@ -65,16 +67,27 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 		deserialize_int(&meta, &t);
 		printf("(%d) ", t);
 
-		while (1) {
-			deserialize_int(&meta, &t);
+		if (t == VT_POINT) {
+			feature->set_type(mapnik::vector::tile::Point);
+		} else if (t == VT_LINE) {
+			feature->set_type(mapnik::vector::tile::LineString);
+		} else if (t == VT_POLYGON) {
+			feature->set_type(mapnik::vector::tile::Polygon);
+		} else {
+			feature->set_type(mapnik::vector::tile::Unknown);
+		}
 
-			if (t == VT_END) {
+		while (1) {
+			int op;
+			deserialize_int(&meta, &op);
+
+			if (op == VT_END) {
 				break;
 			}
 
-			printf("%d: ", t);
+			printf("%d: ", op);
 
-			if (t == VT_MOVETO || t == VT_LINETO) {
+			if (op == VT_MOVETO || op == VT_LINETO) {
 				int x, y;
 				deserialize_int(&meta, &x);
 				deserialize_int(&meta, &y);
@@ -94,6 +107,9 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 			deserialize_int(&meta, &t);
 			struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
 			struct pool_val *value = deserialize_string(&meta, &keys, t);
+
+			feature->add_tags(key->n);
+			feature->add_tags(value->n);
 
 			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
 		}
