@@ -217,7 +217,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		int i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
-				if (i == 0 || t == GEOM_MULTIPOINT) {
+				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
 					op = VT_MOVETO;
 				} else {
 					op = VT_LINETO;
@@ -256,7 +256,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		}
 	}
 
-	if (t == GEOM_POLYGON) {
+	if (mb_geometry[t] == GEOM_POLYGON) {
 		serialize_int(out, VT_CLOSEPATH, fpos);
 	}
 }
@@ -414,7 +414,7 @@ void read_json(FILE *f) {
 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
-			serialize_int(metafile, t, &fpos);
+			serialize_int(metafile, mb_geometry[t], &fpos);
 			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
 			serialize_int(metafile, VT_END, &fpos);
 
