@@ -130,12 +130,14 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 				int dx = wwx - px;
 				int dy = wwy - py;
 
-				feature->add_geometry((dx << 1) ^ (dx >> 31));
-				feature->add_geometry((dy << 1) ^ (dy >> 31));
+				if (dx != 0 || dy != 0 || length == 0) {
+					feature->add_geometry((dx << 1) ^ (dx >> 31));
+					feature->add_geometry((dy << 1) ^ (dy >> 31));
 
-				px = wwx;
-				py = wwy;
-				length++;
+					px = wwx;
+					py = wwy;
+					length++;
+				}
 
 				//printf("%lld,%lld ", wwx, wwy);
 			} else if (op == VT_CLOSEPATH) {
