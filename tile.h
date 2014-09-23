@@ -41,5 +41,4 @@ struct index {
 };
 
 
-void write_tile(char *name, struct pool *keys);
-void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox);
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y);

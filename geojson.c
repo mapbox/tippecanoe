@@ -305,7 +305,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, wx >> (32 - z), wy >> (32 - z), wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			check_range(i, j, metabase, file_bbox);
+			write_tile(i, j, metabase, file_bbox, z, wx >> (32 - z), wy >> (32 - z));
 		}
 	}
 }

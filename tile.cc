@@ -11,6 +11,8 @@ extern "C" {
 #define XMAX 4096
 #define YMAX 4096
 
+#define CMD_BITS 3
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const& input, std::string& output) {
 	z_stream deflate_s;
@@ -40,7 +42,7 @@ static inline int compress(std::string const& input, std::string& output) {
 }
 
 
-void check_range(struct index *start, struct index *end, char *metabase, unsigned *file_bbox) {
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
         mapnik::vector::tile tile;
@@ -58,6 +60,11 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 	printf("tile -----------------------------------------------\n");
 	for (i = start; i < end; i++) {
 		mapnik::vector::tile_feature *feature = layer->add_features();
+
+		int px = 0, py = 0;
+		int cmd_idx = -1;
+		int cmd = -1;
+		int length = 0;
 
 		printf("%llx ", i->index);
 
@@ -87,15 +94,49 @@ void check_range(struct index *start, struct index *end, char *metabase, unsigne
 
 			printf("%d: ", op);
 
-			if (op == VT_MOVETO || op == VT_LINETO) {
-				int x, y;
-				deserialize_int(&meta, &x);
-				deserialize_int(&meta, &y);
+			if (op != cmd) {
+				if (cmd_idx >= 0) {
+					feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
+				}
 
-				//double lat, lon;
-				//tile2latlon(x, y, 32, &lat,&lon);
-				//printf("%f,%f (%x/%x) ", lat, lon, x, y);
+				cmd = op;
+				length = 0;
+				cmd_idx = feature->geometry_size();
+				feature->add_geometry(0);
 			}
+
+			if (op == VT_MOVETO || op == VT_LINETO) {
+				int wx, wy;
+				deserialize_int(&meta, &wx);
+				deserialize_int(&meta, &wy);
+
+				long long wwx = (unsigned) wx;
+				long long wwy = (unsigned) wy;
+
+				wwx -= tx << (32 - z);
+				wwy -= ty << (32 - z);
+
+				wwx >>= (32 - 12 - z);
+				wwy >>= (32 - 12 - z);
+
+				int dx = wwx - px;
+				int dy = wwy - py;
+
+				feature->add_geometry((dx << 1) ^ (dx >> 31));
+				feature->add_geometry((dy << 1) ^ (dy >> 31));
+
+				px = wwx;
+				py = wwy;
+				length++;
+
+				printf("%lld,%lld ", wwx, wwy);
+			} else if (op == VT_CLOSEPATH) {
+				length++;
+			}
+		}
+
+		if (cmd_idx >= 0) {
+			feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
 		}
 
 		int m;
