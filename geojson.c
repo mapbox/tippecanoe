@@ -14,6 +14,8 @@
 #include "jsonpull.h"
 #include "tile.h"
 
+#define BASE_ZOOM 14
+
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
 #define GEOM_LINESTRING 2           /* array of arrays of positions */
@@ -303,7 +305,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 	fprintf(stderr, "\n");
 
 	int z;
-	for (z = 14; z >= 0; z--) {
+	for (z = BASE_ZOOM; z >= 0; z--) {
 		struct index *i, *j = NULL;
 		for (i = ix; i < ix + n && i != NULL; i = j) {
 			unsigned wx, wy;
@@ -334,7 +336,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == 14 ? 12 : 10);
+			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM);
 		}
 	}
 }

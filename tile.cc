@@ -6,6 +6,7 @@
 #include <zlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <math.h>
 #include "vector_tile.pb.h"
 
 extern "C" {
@@ -121,7 +122,7 @@ int draw(char **meta, mapnik::vector::tile_feature *feature, int z, unsigned tx,
 }
 
 
-void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail) {
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -144,12 +145,29 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	values.head = NULL;
 	values.tail = NULL;
 
+	double interval = 1;
+	double seq = 0;
+
+	if (z < basezoom) {
+		interval = exp(log(2.5) * (basezoom - z));
+	}
+
 	struct index *i;
 	for (i = start; i < end; i++) {
 		int t;
 
 		char *meta = metabase + i->fpos;
 		deserialize_int(&meta, &t);
+
+		if (t == VT_POINT) {
+			seq++;
+
+			if (seq >= 0) {
+				seq -= interval;
+			} else {
+				continue;
+			}
+		}
 
 		if (t == VT_POINT || draw(&meta, NULL, z, tx, ty, detail)) {
 			meta = metabase + i->fpos;
