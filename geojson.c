@@ -139,25 +139,42 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 
 		if (cmp == 0) {
 			return *v;
+		} else if (cmp < 0) {
+			v = &((*v)->left);
+		} else {
+			v = &((*v)->right);
 		}
-
-		v = &((*v)->next);
 	}
 
 	*v = malloc(sizeof(struct pool_val));
+	(*v)->left = NULL;
+	(*v)->right = NULL;
 	(*v)->next = NULL;
 	(*v)->s = s;
 	(*v)->type = type;
 	(*v)->n = p->n++;
+
+	if (p->tail != NULL) {
+		p->tail->next = *v;
+	}
+	p->tail = *v;
+	if (p->head == NULL) {
+		p->head = *v;
+	}
+
 	return *v;
 }
 
 void pool_free(struct pool *p) {
-	while (p->vals != NULL) {
-		struct pool_val *next = p->vals->next;
-		free(p->vals);
-		p->vals = next;
+	while (p->head != NULL) {
+		struct pool_val *next = p->head->next;
+		free(p->head);
+		p->head = next;
 	}
+
+	p->head = NULL;
+	p->tail = NULL;
+	p->vals = NULL;
 }
 
 

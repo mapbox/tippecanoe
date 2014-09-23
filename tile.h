@@ -19,11 +19,17 @@ struct pool_val {
 	int type;
 	int n;
 
+	struct pool_val *left;
+	struct pool_val *right;
+
 	struct pool_val *next;
 };
 
 struct pool {
 	struct pool_val *vals;
+
+	struct pool_val *head;
+	struct pool_val *tail;
 	int n;
 };
 

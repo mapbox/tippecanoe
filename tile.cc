@@ -59,6 +59,8 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	struct pool keys;
 	keys.n = 0;
 	keys.vals = NULL;
+	keys.head = NULL;
+	keys.tail = NULL;
 
 	struct index *i;
 	//printf("tile -----------------------------------------------\n");
@@ -165,7 +167,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	}
 
 	struct pool_val *pv;
-	for (pv = keys.vals; pv != NULL; pv = pv->next) {
+	for (pv = keys.head; pv != NULL; pv = pv->next) {
 		layer->add_keys(pv->s, strlen(pv->s));
 	}
 	pool_free(&keys);
