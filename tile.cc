@@ -12,9 +12,6 @@ extern "C" {
 	#include "tile.h"
 }
 
-#define XMAX 4096
-#define YMAX 4096
-
 #define CMD_BITS 3
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -46,7 +43,7 @@ static inline int compress(std::string const& input, std::string& output) {
 }
 
 
-void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty) {
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
         mapnik::vector::tile tile;
@@ -54,7 +51,8 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 
         layer->set_name("name");
         layer->set_version(1);
-        layer->set_extent(XMAX);
+
+        layer->set_extent(1 << detail);
 
 	struct pool keys;
 	keys.n = 0;
@@ -124,8 +122,8 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 					wwy -= ty << (32 - z);
 				}
 
-				wwx >>= (32 - 12 - z);
-				wwy >>= (32 - 12 - z);
+				wwx >>= (32 - detail - z);
+				wwy >>= (32 - detail - z);
 
 				int dx = wwx - px;
 				int dy = wwy - py;

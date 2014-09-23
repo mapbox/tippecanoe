@@ -334,7 +334,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			write_tile(i, j, metabase, file_bbox, z, tx, ty);
+			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == 14 ? 12 : 10);
 		}
 	}
 }
