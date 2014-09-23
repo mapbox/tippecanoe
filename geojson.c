@@ -286,11 +286,17 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 	fprintf(stderr, "\n");
 
 	int z;
-	for (z = 14; z >= 14; z--) {
+	for (z = 14; z >= 0; z--) {
 		struct index *i, *j = NULL;
 		for (i = ix; i < ix + n && i != NULL; i = j) {
 			unsigned wx, wy;
 			decode(i->index, &wx, &wy);
+
+			unsigned tx = 0, ty = 0;
+			if (z != 0) {
+				tx = wx >> (32 - z);
+				ty = wy >> (32 - z);
+			}
 
 			// printf("%lld in %lld\n", (long long)(i - ix), (long long)n);
 
@@ -298,14 +304,20 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 				unsigned wx2, wy2;
 				decode(j->index, &wx2, &wy2);
 
-				if (wx2 >> (32 - z) != wx >> (32 - z) || wy2 >> (32 - z) != wy >> (32 - z)) {
+				unsigned tx2 = 0, ty2 = 0;
+				if (z != 0) {
+					tx2 = wx2 >> (32 - z);
+					ty2 = wy2 >> (32 - z);
+				}
+
+				if (tx2 != tx || ty2 != ty) {
 					break;
 				}
 			}
 
-			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, wx >> (32 - z), wy >> (32 - z), wx, wy, (long long)(i - ix), (long long)(j - ix));
+			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			write_tile(i, j, metabase, file_bbox, z, wx >> (32 - z), wy >> (32 - z));
+			write_tile(i, j, metabase, file_bbox, z, tx, ty);
 		}
 	}
 }
@@ -428,13 +440,20 @@ void read_json(FILE *f) {
 			int z = 14;
 
 			/* XXX do proper overlap instead of whole bounding box */
-			unsigned x, y;
-			for (x = bbox[0] >> (32 - z); x <= bbox[2] >> (32 - z); x++) {
-				for (y = bbox[1] >> (32 - z); y <= bbox[3] >> (32 - z); y++) {
-					struct index ix;
-					ix.index = encode(x << (32 - z), y << (32 - z));
-					ix.fpos = start;
-					fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+			if (z == 0) {
+				struct index ix;
+				ix.index = encode(0, 0);
+				ix.fpos = start;
+				fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+			} else {
+				unsigned x, y;
+				for (x = bbox[0] >> (32 - z); x <= bbox[2] >> (32 - z); x++) {
+					for (y = bbox[1] >> (32 - z); y <= bbox[3] >> (32 - z); y++) {
+						struct index ix;
+						ix.index = encode(x << (32 - z), y << (32 - z));
+						ix.fpos = start;
+						fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+					}
 				}
 			}
 

@@ -117,8 +117,10 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 				long long wwx = (unsigned) wx;
 				long long wwy = (unsigned) wy;
 
-				wwx -= tx << (32 - z);
-				wwy -= ty << (32 - z);
+				if (z != 0) {
+					wwx -= tx << (32 - z);
+					wwy -= ty << (32 - z);
+				}
 
 				wwx >>= (32 - 12 - z);
 				wwy >>= (32 - 12 - z);
