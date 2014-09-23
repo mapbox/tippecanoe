@@ -46,13 +46,13 @@ static inline int compress(std::string const& input, std::string& output) {
 void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-        mapnik::vector::tile tile;
+	mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer = tile.add_layers();
 
-        layer->set_name("name");
-        layer->set_version(1);
+	layer->set_name("name");
+	layer->set_version(1);
 
-        layer->set_extent(1 << detail);
+	layer->set_extent(1 << detail);
 
 	struct pool keys;
 	keys.n = 0;
@@ -172,12 +172,12 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	}
 	pool_free(&keys);
 
-        std::string s;
-        std::string compressed;
+	std::string s;
+	std::string compressed;
 
-        tile.SerializeToString(&s);
-        compress(s, compressed);
-        //std::cout << compressed;
+	tile.SerializeToString(&s);
+	compress(s, compressed);
+	//std::cout << compressed;
 
 	const char *prefix = "tiles";
 	char path[strlen(prefix) + 200];
