@@ -122,7 +122,7 @@ int draw(char **meta, mapnik::vector::tile_feature *feature, int z, unsigned tx,
 }
 
 
-void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom) {
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -199,6 +199,9 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 
 				feature->add_tags(key->n);
 				feature->add_tags(value->n);
+
+				// Dup to retain after munmap
+				pool(file_keys, strdup(key->s), t);
 			}
 		}
 	}

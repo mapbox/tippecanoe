@@ -36,6 +36,7 @@ struct pool {
 
 void deserialize_int(char **f, int *n);
 struct pool_val *deserialize_string(char **f, struct pool *p, int type);
+struct pool_val *pool(struct pool *p, char *s, int type);
 void pool_free(struct pool *p);
 
 
@@ -47,4 +48,4 @@ struct index {
 };
 
 
-void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom);
+void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom, struct pool *file_keys);

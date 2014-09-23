@@ -301,7 +301,7 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys) {
 	fprintf(stderr, "\n");
 
 	int z;
@@ -336,12 +336,25 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM);
+			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys);
 		}
 	}
 }
 
-void read_json(FILE *f) {
+void quote(FILE *fp, char *s) {
+	for (; *s != '\0'; s++) {
+		if (*s == '\\' || *s == '\"') {
+			fputc('\\', fp);
+			fputc(*s, fp);
+		} else if (*s < ' ') {
+			fprintf(fp, "\\u%04x", *s);
+		} else {
+			fputc(*s, fp);
+		}
+	}
+}
+
+void read_json(FILE *f, char *fname) {
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -529,14 +542,73 @@ next_feature:
 		exit(EXIT_FAILURE);
 	}
 
+	struct pool file_keys;
+	file_keys.n = 0;
+	file_keys.vals = NULL;
+	file_keys.head = NULL;
+	file_keys.tail = NULL;
+
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
 
 	close(indexfd);
 	close(metafd);
+
+	FILE *fp = fopen("tiles/metadata.json", "w");
+	if (fp == NULL) {
+		fprintf(stderr, "metadata.json: %s\n", strerror(errno));
+	} else {
+		fprintf(fp, "{\n");
+
+		fprintf(fp, "\"name\": \"");
+		quote(fp, fname);
+		fprintf(fp, "\",\n");
+
+		fprintf(fp, "\"description\": \"");
+		quote(fp, fname);
+		fprintf(fp, "\",\n");
+
+		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
+
+		fprintf(fp, "\"version\": 1,\n");
+		fprintf(fp, "\"minzoom\": %d,\n", 0);
+		fprintf(fp, "\"maxzoom\": %d,\n", BASE_ZOOM);
+		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, BASE_ZOOM);
+		fprintf(fp, "\"bounds\": \"%f,%f,%f,%f\",\n", minlon, minlat, maxlon, maxlat);
+		fprintf(fp, "\"type\": \"overlay\",\n");
+
+		fprintf(fp, "\"json\": \"{");
+		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
+		quote(fp, "name");
+		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", 0, BASE_ZOOM);
+
+		struct pool_val *pv;
+		for (pv = file_keys.head; pv != NULL; pv = pv->next) {
+			fprintf(fp, "\\\"");
+			quote(fp, pv->s);
+
+			if (pv->type == VT_NUMBER) { 
+				fprintf(fp, "\\\": \\\"Number\\\"");
+			} else {
+				fprintf(fp, "\\\": \\\"String\\\"");
+			}
+
+			if (pv->next != NULL) {
+				fprintf(fp, ", ");
+			}
+		}
+
+		fprintf(fp, "} } ]");
+		fprintf(fp, "}\",\n");
+
+		fprintf(fp, "\"format\": \"%s\"\n", "pbf"); // no trailing comma
+		fprintf(fp, "}\n");
+
+		fclose(fp);
+	}
 }
 
 int main(int argc, char **argv) {
@@ -547,12 +619,12 @@ int main(int argc, char **argv) {
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				read_json(f);
+				read_json(f, argv[i]);
 				fclose(f);
 			}
 		}
 	} else {
-		read_json(stdin);
+		read_json(stdin, "standard input");
 	}
 	return 0;
 }
