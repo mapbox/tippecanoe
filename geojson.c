@@ -456,10 +456,13 @@ void read_json(FILE *f) {
 
 			int z = 14;
 
+			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
+			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
+
 			/* XXX do proper overlap instead of whole bounding box */
 			if (z == 0) {
 				struct index ix;
-				ix.index = encode(0, 0);
+				ix.index = encode(cx, cy);
 				ix.fpos = start;
 				fwrite_check(&ix, sizeof(struct index), 1, indexfile);
 			} else {
@@ -467,7 +470,12 @@ void read_json(FILE *f) {
 				for (x = bbox[0] >> (32 - z); x <= bbox[2] >> (32 - z); x++) {
 					for (y = bbox[1] >> (32 - z); y <= bbox[3] >> (32 - z); y++) {
 						struct index ix;
-						ix.index = encode(x << (32 - z), y << (32 - z));
+
+						if (x == cx >> (32 - z) && y == cy >> (32 - z)) {
+							ix.index = encode(cx, cy);
+						} else {
+							ix.index = encode(x << (32 - z), y << (32 - z));
+						}
 						ix.fpos = start;
 						fwrite_check(&ix, sizeof(struct index), 1, indexfile);
 					}
