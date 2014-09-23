@@ -1,7 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <stdio.h>
+#include <unistd.h>
 #include <zlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "vector_tile.pb.h"
 
 extern "C" {
@@ -57,7 +61,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	keys.vals = NULL;
 
 	struct index *i;
-	printf("tile -----------------------------------------------\n");
+	//printf("tile -----------------------------------------------\n");
 	for (i = start; i < end; i++) {
 		mapnik::vector::tile_feature *feature = layer->add_features();
 
@@ -66,13 +70,13 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 		int cmd = -1;
 		int length = 0;
 
-		printf("%llx ", i->index);
+		//printf("%llx ", i->index);
 
 		char *meta = metabase + i->fpos;
 
 		int t;
 		deserialize_int(&meta, &t);
-		printf("(%d) ", t);
+		//printf("(%d) ", t);
 
 		if (t == VT_POINT) {
 			feature->set_type(mapnik::vector::tile::Point);
@@ -92,7 +96,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 				break;
 			}
 
-			printf("%d: ", op);
+			//printf("%d: ", op);
 
 			if (op != cmd) {
 				if (cmd_idx >= 0) {
@@ -129,7 +133,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 				py = wwy;
 				length++;
 
-				printf("%lld,%lld ", wwx, wwy);
+				//printf("%lld,%lld ", wwx, wwy);
 			} else if (op == VT_CLOSEPATH) {
 				length++;
 			}
@@ -152,10 +156,10 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 			feature->add_tags(key->n);
 			feature->add_tags(value->n);
 
-			printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
+			//printf("%s (%d) = %s (%d)\n", key->s, key->n, value->s, value->n);
 		}
 
-		printf("\n");
+		//printf("\n");
 	}
 
 	struct pool_val *pv;
@@ -168,10 +172,23 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
         std::string compressed;
 
         tile.SerializeToString(&s);
-	std::cout << s;
-#if 0
         compress(s, compressed);
-        std::cout << compressed;
-#endif
+        //std::cout << compressed;
+
+	const char *prefix = "tiles";
+	char path[strlen(prefix) + 200];
+
+	mkdir(prefix, 0777);
+
+	sprintf(path, "%s/%d", prefix, z);
+	mkdir(path, 0777);
+
+	sprintf(path, "%s/%d/%u", prefix, z, tx);
+	mkdir(path, 0777);
+
+	sprintf(path, "%s/%d/%u/%u.pbf", prefix, z, tx, ty);
+	FILE *f = fopen(path, "wb");
+	fwrite(compressed.data(), 1, compressed.size(), f);
+	fclose(f);
 }
 

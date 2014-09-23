@@ -292,7 +292,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox) {
 			unsigned wx, wy;
 			decode(i->index, &wx, &wy);
 
-			printf("%lld in %lld\n", (long long)(i - ix), (long long)n);
+			// printf("%lld in %lld\n", (long long)(i - ix), (long long)n);
 
 			for (j = i + 1; j < ix + n; j++) {
 				unsigned wx2, wy2;
