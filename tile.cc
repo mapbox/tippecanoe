@@ -205,7 +205,11 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 
 	tile.SerializeToString(&s);
 	compress(s, compressed);
-	//std::cout << compressed;
+
+	if (compressed.size() > 500000) {
+		fprintf(stderr, "tile %d/%u/%u size is %lld, >500000\n", z, tx, ty, (long long) compressed.size());
+		exit(EXIT_FAILURE);
+	}
 
 	const char *prefix = "tiles";
 	char path[strlen(prefix) + 200];
