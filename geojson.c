@@ -573,6 +573,12 @@ next_feature:
 
 		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
+		tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
+		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
+
+		midlat = (maxlat + minlat) / 2;
+		midlon = (maxlon + minlon) / 2;
+
 		fprintf(fp, "\"version\": 1,\n");
 		fprintf(fp, "\"minzoom\": %d,\n", 0);
 		fprintf(fp, "\"maxzoom\": %d,\n", BASE_ZOOM);
