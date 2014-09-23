@@ -138,6 +138,12 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	keys.head = NULL;
 	keys.tail = NULL;
 
+	struct pool values;
+	values.n = 0;
+	values.vals = NULL;
+	values.head = NULL;
+	values.tail = NULL;
+
 	struct index *i;
 	for (i = start; i < end; i++) {
 		int t;
@@ -171,7 +177,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 				int t;
 				deserialize_int(&meta, &t);
 				struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
-				struct pool_val *value = deserialize_string(&meta, &keys, t);
+				struct pool_val *value = deserialize_string(&meta, &values, t);
 
 				feature->add_tags(key->n);
 				feature->add_tags(value->n);
@@ -182,6 +188,15 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	struct pool_val *pv;
 	for (pv = keys.head; pv != NULL; pv = pv->next) {
 		layer->add_keys(pv->s, strlen(pv->s));
+	}
+	for (pv = values.head; pv != NULL; pv = pv->next) {
+		mapnik::vector::tile_value *tv = layer->add_values();
+
+		if (pv->type == VT_NUMBER) {
+			tv->set_double_value(atof(pv->s));
+		} else {
+			tv->set_string_value(pv->s);
+		}
 	}
 	pool_free(&keys);
 
