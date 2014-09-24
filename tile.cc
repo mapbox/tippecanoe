@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <stack>
 #include <stdio.h>
 #include <unistd.h>
 #include <zlib.h>
@@ -47,6 +48,7 @@ struct draw {
 	int op;
 	long long x;
 	long long y;
+	int necessary;
 };
 
 int decode_feature(char **meta, struct draw *out, int z, unsigned tx, unsigned ty, int detail) {
@@ -256,6 +258,128 @@ void to_tile_scale(struct draw *geom, int n, int z, int detail) {
 	}
 }
 
+double square_distance_from_line(long long point_x, long long point_y, long long segA_x, long long segA_y, long long segB_x, long long segB_y) {
+	double p2x = segB_x - segA_x;
+	double p2y = segB_y - segA_y;
+	double something = p2x * p2x + p2y * p2y;
+	double u = 0 == something ? 0 : ((point_x - segA_x) * p2x + (point_y - segA_y) * p2y) / something;
+
+	if (u > 1) {
+		u = 1;
+	} else if (u < 0) {
+		u = 0;
+	}
+
+	double x = segA_x + u * p2x;
+	double y = segA_y + u * p2y;
+
+	double dx = x - point_x;
+	double dy = y - point_y;
+
+	return dx * dx + dy * dy;
+}
+
+// https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
+void douglas_peucker(struct draw *geom, int n, double e) {
+	e = e * e;
+	std::stack<int> recursion_stack;
+
+	{
+		int left_border = 0;
+		int right_border = 1;
+		// Sweep linerarily over array and identify those ranges that need to be checked
+		do {
+			if (geom[right_border].necessary) {
+				recursion_stack.push(left_border);
+				recursion_stack.push(right_border);
+				left_border = right_border;
+			}
+			++right_border;
+		} while (right_border < n);
+	}
+
+	while (!recursion_stack.empty()) {
+		// pop next element
+		int second = recursion_stack.top();
+		recursion_stack.pop();
+		int first = recursion_stack.top();
+		recursion_stack.pop();
+
+		int max_distance = -1;
+		int farthest_element_index = second;
+
+		// find index idx of element with max_distance
+		int i;
+		for (i = first + 1; i < second; i++) {
+			double temp_dist = square_distance_from_line(geom[i].x, geom[i].y,
+				geom[first].x, geom[first].y,
+				geom[second].x, geom[second].y);
+
+			double distance = fabs(temp_dist);
+	
+			if (distance > e && distance > max_distance) {
+				farthest_element_index = i;
+				max_distance = distance;
+			}
+		}
+
+		if (max_distance > e) {
+			// mark idx as necessary
+			geom[farthest_element_index].necessary = 1;
+
+			if (1 < farthest_element_index - first) {
+				recursion_stack.push(first);
+				recursion_stack.push(farthest_element_index);
+			}
+			if (1 < second - farthest_element_index) {
+				recursion_stack.push(farthest_element_index);
+				recursion_stack.push(second);
+			}
+		}
+	}
+}
+
+int simplify_lines(struct draw *geom, int n, int z, int detail) {
+	int res = 1 << (32 - detail - z);
+
+	int i;
+	for (i = 0; i < n; i++) {
+		if (geom[i].op == VT_MOVETO) {
+			geom[i].necessary = 1;
+		} else if (geom[i].op == VT_LINETO) {
+			geom[i].necessary = 0;
+		} else {
+			geom[i].necessary = 1;
+		}
+	}
+
+	for (i = 0; i < n; i++) {
+		if (geom[i].op == VT_MOVETO) {
+			int j;
+			for (j = i + 1; j < n; j++) {
+				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+					break;
+				}
+			}
+
+			geom[i].necessary = 1;
+			geom[j - 1].necessary = 1;
+
+			douglas_peucker(geom + i, j - i, res);
+			i = j - 1;
+		}
+	}
+
+	int out = 0;
+	for (i = 0; i < n; i++) {
+		if (geom[i].necessary) {
+			geom[out++] = geom[i];
+		}
+	}
+
+	return out;
+}
+
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -317,9 +441,15 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		deserialize_int(&meta, &t);
 		decode_feature(&meta, geom, z, tx, ty, detail);
 
+		if (t == VT_LINE || t == VT_POLYGON) {
+			len = simplify_lines(geom, len, z, detail);
+		}
+
+#if 0
 		if (t == VT_LINE && z != basezoom) {
 			len = shrink_lines(geom, len, z, basezoom);
 		}
+#endif
 
 		to_tile_scale(geom, len, z, detail);
 
