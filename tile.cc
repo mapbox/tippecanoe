@@ -77,9 +77,6 @@ int decode_feature(char **meta, struct draw *out, int z, unsigned tx, unsigned t
 				wwy -= ty << (32 - z);
 			}
 
-			wwx >>= (32 - detail - z);
-			wwy >>= (32 - detail - z);
-
 			if (out != NULL) {
 				out[len].x = wwx;
 				out[len].y = wwy;
@@ -125,10 +122,6 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 
 			int dx = wwx - px;
 			int dy = wwy - py;
-
-			if (dx == 0 && dy == 0 && op == VT_LINETO) {
-				printf("0 delta\n");
-			}
 
 			if (feature != NULL) {
 				feature->add_geometry((dx << 1) ^ (dx >> 31));
@@ -204,6 +197,15 @@ int remove_noop(struct draw *geom, int n) {
 	return out;
 }
 
+void to_tile_scale(struct draw *geom, int n, int z, int detail) {
+	int i;
+
+	for (i = 0; i < n; i++) {
+		geom[i].x >>= (32 - detail - z);
+		geom[i].y >>= (32 - detail - z);
+	}
+}
+
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -264,6 +266,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		meta = metabase + i->fpos;
 		deserialize_int(&meta, &t);
 		decode_feature(&meta, geom, z, tx, ty, detail);
+
+		to_tile_scale(geom, len, z, detail);
 
 		if (t == VT_LINE || t == VT_POLYGON) {
 			len = remove_noop(geom, len);
