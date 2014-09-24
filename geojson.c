@@ -322,8 +322,9 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy) {
 	fprintf(stderr, "\n");
+	long long most = 0;
 
 	int z;
 	for (z = BASE_ZOOM; z >= 0; z--) {
@@ -357,7 +358,13 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys);
+
+			if (z == BASE_ZOOM && len > most) {
+				*midx = tx;
+				*midy = ty;
+				most = len;
+			}
 		}
 	}
 }
@@ -390,6 +397,7 @@ void read_json(FILE *f, char *fname) {
 	unlink(indexname);
 
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+	unsigned midx = 0, midy = 0;
 
 	json_pull *jp = json_begin_file(f);
 	long long seq = 0;
@@ -570,7 +578,7 @@ next_feature:
 	file_keys.tail = NULL;
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
@@ -594,11 +602,14 @@ next_feature:
 
 		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
-		tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
-		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
+		tile2latlon(midx, midy, BASE_ZOOM, &maxlat, &minlon);
+		tile2latlon(midx + 1, midy + 1, BASE_ZOOM, &minlat, &maxlon);
 
 		midlat = (maxlat + minlat) / 2;
 		midlon = (maxlon + minlon) / 2;
+
+		tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
+		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
 		fprintf(fp, "\"version\": 1,\n");
 		fprintf(fp, "\"minzoom\": %d,\n", 0);

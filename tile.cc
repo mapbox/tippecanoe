@@ -204,7 +204,7 @@ int remove_noop(struct draw *geom, int n) {
 	return out;
 }
 
-void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -235,6 +235,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 
 	double interval = 1;
 	double seq = 0;
+	long long count = 0;
 
 	if (z < basezoom) {
 		interval = exp(log(2.5) * (basezoom - z));
@@ -288,6 +289,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 			}
 
 			draw(geom, len, feature);
+			count += len;
 
 			int m;
 			deserialize_int(&meta, &m);
@@ -351,5 +353,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	FILE *f = fopen(path, "wb");
 	fwrite(compressed.data(), 1, compressed.size(), f);
 	fclose(f);
+
+	return count;
 }
 
