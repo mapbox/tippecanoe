@@ -149,7 +149,7 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	return drew;
 }
 
-int remove_noop(struct draw *geom, int n) {
+int remove_noop(struct draw *geom, int n, int type) {
 	// first pass: remove empty linetos
 
 	long long x = 0, y = 0;
@@ -192,6 +192,23 @@ int remove_noop(struct draw *geom, int n) {
 		}
 
 		geom[out++] = geom[i];
+	}
+
+	// second pass: remove empty movetos
+
+	if (type == VT_LINE) {
+		n = out;
+		out = 0;
+
+		for (i = 0; i < n; i++) {
+			if (geom[i].op == VT_MOVETO) {
+				if (i - 1 >= 0 && geom[i - 1].op == VT_LINETO && geom[i - 1].x == geom[i].x && geom[i - 1].y == geom[i].y) {
+					continue;
+				}
+			}
+
+			geom[out++] = geom[i];
+		}
 	}
 
 	return out;
@@ -307,7 +324,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		to_tile_scale(geom, len, z, detail);
 
 		if (t == VT_LINE || t == VT_POLYGON) {
-			len = remove_noop(geom, len);
+			len = remove_noop(geom, len, t);
 		}
 
 		if (t == VT_POINT || draw(geom, len, NULL)) {
