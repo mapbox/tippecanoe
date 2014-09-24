@@ -98,10 +98,10 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	int cmd = -1;
 	int length = 0;
 	int drew = 0;
-	int i = 0;
+	int i;
 
-	while (i < n) {
-		int op = geom[i++].op;
+	for (i = 0; i < n; i++) {
+		int op = geom[i].op;
 
 		if (op != cmd) {
 			if (cmd_idx >= 0) {
@@ -120,8 +120,8 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 		}
 
 		if (op == VT_MOVETO || op == VT_LINETO) {
-			long long wwx = geom[i - 1].x;
-			long long wwy = geom[i - 1].y;
+			long long wwx = geom[i].x;
+			long long wwy = geom[i].y;
 
 			int dx = wwx - px;
 			int dy = wwy - py;
