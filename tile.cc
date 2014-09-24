@@ -126,19 +126,21 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 			int dx = wwx - px;
 			int dy = wwy - py;
 
-			if (dx != 0 || dy != 0 || length == 0) {
-				if (feature != NULL) {
-					feature->add_geometry((dx << 1) ^ (dx >> 31));
-					feature->add_geometry((dy << 1) ^ (dy >> 31));
-				}
+			if (dx == 0 && dy == 0 && op == VT_LINETO) {
+				printf("0 delta\n");
+			}
 
-				px = wwx;
-				py = wwy;
-				length++;
+			if (feature != NULL) {
+				feature->add_geometry((dx << 1) ^ (dx >> 31));
+				feature->add_geometry((dy << 1) ^ (dy >> 31));
+			}
 
-				if (op == VT_LINETO && (dx != 0 || dy != 0)) {
-					drew = 1;
-				}
+			px = wwx;
+			py = wwy;
+			length++;
+
+			if (op == VT_LINETO && (dx != 0 || dy != 0)) {
+				drew = 1;
 			}
 		} else if (op == VT_CLOSEPATH) {
 			length++;
@@ -154,6 +156,53 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	return drew;
 }
 
+int remove_noop(struct draw *geom, int n) {
+	// first pass: remove empty linetos
+
+	long long x = 0, y = 0;
+	int out = 0;
+	int i;
+
+	for (i = 0; i < n; i++) {
+		if (geom[i].op == VT_LINETO && geom[i].x == x && geom[i].y == y) {
+			continue;
+		}
+
+		if (geom[i].op == VT_CLOSEPATH) {
+			geom[out++] = geom[i];
+		} else { /* moveto or lineto */
+			geom[out++] = geom[i];
+			x = geom[i].x;
+			y = geom[i].y;
+		}
+	}
+
+	// second pass: remove unused movetos
+
+	n = out;
+	out = 0;
+
+	for (i = 0; i < n; i++) {
+		if (geom[i].op == VT_MOVETO) {
+			if (i + 1 >= n) {
+				continue;
+			}
+
+			if (geom[i + 1].op == VT_MOVETO) {
+				continue;
+			}
+
+			if (geom[i + 1].op == VT_CLOSEPATH) {
+				i++; // also remove unused closepath
+				continue;
+			}
+		}
+
+		geom[out++] = geom[i];
+	}
+
+	return out;
+}
 
 void write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -214,6 +263,10 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 		meta = metabase + i->fpos;
 		deserialize_int(&meta, &t);
 		decode_feature(&meta, geom, z, tx, ty, detail);
+
+		if (t == VT_LINE || t == VT_POLYGON) {
+			len = remove_noop(geom, len);
+		}
 
 		if (t == VT_POINT || draw(geom, len, NULL)) {
 			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
