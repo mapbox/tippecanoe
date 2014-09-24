@@ -129,11 +129,11 @@ int indexcmp(const void *v1, const void *v2) {
 	}
 }
 
-struct pool_val *pool(struct pool *p, char *s, int type) {
+struct pool_val *pool1(struct pool *p, char *s, int type, int (*compare)(const char *, const char *)) {
 	struct pool_val **v = &(p->vals);
 
 	while (*v != NULL) {
-		int cmp = strcmp(s, (*v)->s);
+		int cmp = compare(s, (*v)->s);
 
 		if (cmp == 0) {
 			cmp = type - (*v)->type;
@@ -165,6 +165,27 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 	}
 
 	return *v;
+}
+
+struct pool_val *pool(struct pool *p, char *s, int type) {
+	return pool1(p, s, type, strcmp);
+}
+
+int llcmp(const char *v1, const char *v2) {
+	long long *ll1 = (long long *) v1;
+	long long *ll2 = (long long *) v2;
+
+	if (*ll1 < *ll2) {
+		return -1;
+	} else if (*ll1 > *ll2) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+struct pool_val *pool_long_long(struct pool *p, long long *s, int type) {
+	return pool1(p, (char *) s, type, llcmp);
 }
 
 void pool_free(struct pool *p) {

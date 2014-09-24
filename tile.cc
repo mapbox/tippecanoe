@@ -145,6 +145,12 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 	values.head = NULL;
 	values.tail = NULL;
 
+	struct pool dup;
+	dup.n = 1;
+	dup.vals = NULL;
+	dup.head = NULL;
+	dup.tail = NULL;
+
 	double interval = 1;
 	double seq = 0;
 
@@ -170,6 +176,12 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 		}
 
 		if (t == VT_POINT || draw(&meta, NULL, z, tx, ty, detail)) {
+			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
+			if (pv->n == 0) {
+				continue;
+			}
+			pv->n = 0;
+
 			meta = metabase + i->fpos;
 			deserialize_int(&meta, &t);
 
@@ -220,6 +232,8 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 		}
 	}
 	pool_free(&keys);
+	pool_free(&values);
+	pool_free(&dup);
 
 	std::string s;
 	std::string compressed;
