@@ -43,7 +43,13 @@ static inline int compress(std::string const& input, std::string& output) {
 	return 0;
 }
 
-int decode_feature(char **meta, long long *out, int z, unsigned tx, unsigned ty, int detail) {
+struct draw {
+	int op;
+	long long x;
+	long long y;
+};
+
+int decode_feature(char **meta, struct draw *out, int z, unsigned tx, unsigned ty, int detail) {
 	int len = 0;
 
 	while (1) {
@@ -55,10 +61,8 @@ int decode_feature(char **meta, long long *out, int z, unsigned tx, unsigned ty,
 		}
 
 		if (out != NULL) {
-			out[len] = op;
+			out[len].op = op;
 		}
-
-		len++;
 
 		if (op == VT_MOVETO || op == VT_LINETO) {
 			int wx, wy;
@@ -77,18 +81,18 @@ int decode_feature(char **meta, long long *out, int z, unsigned tx, unsigned ty,
 			wwy >>= (32 - detail - z);
 
 			if (out != NULL) {
-				out[len] = wwx;
-				out[len + 1] = wwy;
+				out[len].x = wwx;
+				out[len].y = wwy;
 			}
-
-			len += 2;
 		}
+
+		len++;
 	}
 
 	return len;
 }
 
-int draw(long long *geom, int n, mapnik::vector::tile_feature *feature) {
+int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	int px = 0, py = 0;
 	int cmd_idx = -1;
 	int cmd = -1;
@@ -97,7 +101,7 @@ int draw(long long *geom, int n, mapnik::vector::tile_feature *feature) {
 	int i = 0;
 
 	while (i < n) {
-		int op = geom[i++];
+		int op = geom[i++].op;
 
 		if (op != cmd) {
 			if (cmd_idx >= 0) {
@@ -116,8 +120,8 @@ int draw(long long *geom, int n, mapnik::vector::tile_feature *feature) {
 		}
 
 		if (op == VT_MOVETO || op == VT_LINETO) {
-			long long wwx = geom[i++];
-			long long wwy = geom[i++];
+			long long wwx = geom[i - 1].x;
+			long long wwy = geom[i - 1].y;
 
 			int dx = wwx - px;
 			int dy = wwy - py;
@@ -205,7 +209,7 @@ void write_tile(struct index *start, struct index *end, char *metabase, unsigned
 		}
 
 		int len = decode_feature(&meta, NULL, z, tx, ty, detail);
-		long long geom[len];
+		struct draw geom[len];
 
 		meta = metabase + i->fpos;
 		deserialize_int(&meta, &t);
