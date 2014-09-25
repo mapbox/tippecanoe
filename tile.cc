@@ -305,7 +305,7 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 		int first = recursion_stack.top();
 		recursion_stack.pop();
 
-		int max_distance = -1;
+		double max_distance = -1;
 		int farthest_element_index = second;
 
 		// find index idx of element with max_distance
@@ -316,7 +316,7 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 				geom[second].x, geom[second].y);
 
 			double distance = fabs(temp_dist);
-	
+
 			if (distance > e && distance > max_distance) {
 				farthest_element_index = i;
 				max_distance = distance;
