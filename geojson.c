@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -12,6 +13,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <sqlite3.h>
+#include <stdarg.h>
 #include "jsonpull.h"
 #include "tile.h"
 
@@ -370,17 +372,41 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 	fprintf(stderr, "\n");
 }
 
-void quote(FILE *fp, char *s) {
+void quote(char **buf, char *s) {
+	char tmp[strlen(s) * 8 + 1];
+	char *out = tmp;
+
 	for (; *s != '\0'; s++) {
 		if (*s == '\\' || *s == '\"') {
-			fputc('\\', fp);
-			fputc(*s, fp);
+			*out++ = '\\';
+			*out++ = *s;
 		} else if (*s < ' ') {
-			fprintf(fp, "\\u%04x", *s);
+			sprintf(out, "\\u%04x", *s);
+			out = out + strlen(out);
 		} else {
-			fputc(*s, fp);
+			*out++ = *s;
 		}
 	}
+
+	*out = '\0';
+	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	strcat(*buf, tmp);
+}
+
+void aprintf(char **buf, const char *format, ...) {
+	va_list ap;
+	char *tmp;
+
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
+
+	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	strcat(*buf, tmp);
+	free(tmp);
 }
 
 void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, char *outdir, sqlite3 *outdb) {
@@ -604,13 +630,7 @@ next_feature:
 	close(indexfd);
 	close(metafd);
 
-	char s[strlen(outdir) + strlen("/metadata.json") + 1];
-	sprintf(s, "%s/metadata.json", outdir);
-
-	FILE *fp = fopen(s, "w");
-	if (fp == NULL) {
-		fprintf(stderr, "metadata.json: %s\n", strerror(errno));
-	} else {
+	{
 		char *sql, *err;
 
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -687,33 +707,35 @@ next_feature:
 		}
 		sqlite3_free(sql);
 
-		fprintf(fp, "\"json\": \"{");
-		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
-		quote(fp, layername);
-		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", minzoom, maxzoom);
+		char *buf = strdup("{");
+		aprintf(&buf, "\"vector_layers\": [ { \"id\": \"");
+		quote(&buf, layername);
+		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
 
 		struct pool_val *pv;
 		for (pv = file_keys.head; pv != NULL; pv = pv->next) {
-			fprintf(fp, "\\\"");
-			quote(fp, pv->s);
+			aprintf(&buf, "\"");
+			quote(&buf, pv->s);
 
 			if (pv->type == VT_NUMBER) { 
-				fprintf(fp, "\\\": \\\"Number\\\"");
+				aprintf(&buf, "\": \"Number\"");
 			} else {
-				fprintf(fp, "\\\": \\\"String\\\"");
+				aprintf(&buf, "\": \"String\"");
 			}
 
 			if (pv->next != NULL) {
-				fprintf(fp, ", ");
+				aprintf(&buf, ", ");
 			}
 		}
 
-		fprintf(fp, "} } ]");
-		fprintf(fp, "}\",\n");
+		aprintf(&buf, "} } ] }");
 
-		fprintf(fp, "}\n");
-
-		fclose(fp);
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
 	}
 }
 
