@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <sqlite3.h>
 #include "jsonpull.h"
 #include "tile.h"
 
@@ -382,7 +383,7 @@ void quote(FILE *fp, char *s) {
 	}
 }
 
-void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, char *outdir) {
+void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, char *outdir, sqlite3 *outdb) {
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -610,15 +611,43 @@ next_feature:
 	if (fp == NULL) {
 		fprintf(stderr, "metadata.json: %s\n", strerror(errno));
 	} else {
-		fprintf(fp, "{\n");
+		char *sql, *err;
 
-		fprintf(fp, "\"name\": \"");
-		quote(fp, fname);
-		fprintf(fp, "\",\n");
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set name in metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
 
-		fprintf(fp, "\"description\": \"");
-		quote(fp, fname);
-		fprintf(fp, "\",\n");
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", fname);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set description in metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %d);", 1);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('minzoom', %d);", minzoom);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('maxzoom', %d);", maxzoom);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
 
 		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
@@ -631,9 +660,6 @@ next_feature:
 		tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
 		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
-		fprintf(fp, "\"version\": 1,\n");
-		fprintf(fp, "\"minzoom\": %d,\n", minzoom);
-		fprintf(fp, "\"maxzoom\": %d,\n", maxzoom);
 		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, maxzoom);
 		fprintf(fp, "\"bounds\": \"%f,%f,%f,%f\",\n", minlon, minlat, maxlon, maxlat);
 		fprintf(fp, "\"type\": \"overlay\",\n");
@@ -676,7 +702,7 @@ int main(int argc, char **argv) {
 
 	char *name = NULL;
 	char *layer = NULL;
-	char *outdir = "tiles";
+	char *outdir = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
 
@@ -703,9 +729,30 @@ int main(int argc, char **argv) {
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s [-o outdir] [-n name] [-l layername] [-z maxzoom] [-Z minzoom] file.json ...\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] file.json ...\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	if (outdir == NULL) {
+		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	sqlite3 *outdb;
+	if (sqlite3_open(outdir, &outdb) != SQLITE_OK) {
+		fprintf(stderr, "%s: %s: %s\n", argv[0], outdir,  sqlite3_errmsg(outdb));
+		exit(EXIT_FAILURE);
+	}
+
+	char *err = NULL;
+	if (sqlite3_exec(outdb, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create metadata table: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create tiles table: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
 	}
 	
 	if (argc > optind) {
@@ -715,12 +762,14 @@ int main(int argc, char **argv) {
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdir);
+				// XXX
+				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, "tiles", outdb);
 				fclose(f);
 			}
 		}
 	} else {
-		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, outdir);
+		// XXX
+		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, "tiles", outdb);
 	}
 	return 0;
 }

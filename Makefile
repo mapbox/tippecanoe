@@ -15,7 +15,7 @@ jsoncat: jsoncat.o jsonpull.o
 	cc $(PG) -g -Wall -o $@ $^
 
 geojson: geojson.o jsonpull.o vector_tile.pb.o tile.o
-	cc $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite
+	cc $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 jsoncat.o jsonpull.o: jsonpull.h
 
