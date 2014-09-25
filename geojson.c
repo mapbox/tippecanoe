@@ -15,6 +15,7 @@
 #include "tile.h"
 
 #define BASE_ZOOM 14
+#define MIN_ZOOM 0
 
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
@@ -327,7 +328,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 	long long most = 0;
 
 	int z;
-	for (z = BASE_ZOOM; z >= 0; z--) {
+	for (z = BASE_ZOOM; z >= MIN_ZOOM; z--) {
 		struct index *i, *j = NULL;
 		for (i = ix; i < ix + n && i != NULL; i = j) {
 			unsigned wx, wy;
@@ -612,7 +613,7 @@ next_feature:
 		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
 		fprintf(fp, "\"version\": 1,\n");
-		fprintf(fp, "\"minzoom\": %d,\n", 0);
+		fprintf(fp, "\"minzoom\": %d,\n", MIN_ZOOM);
 		fprintf(fp, "\"maxzoom\": %d,\n", BASE_ZOOM);
 		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, BASE_ZOOM);
 		fprintf(fp, "\"bounds\": \"%f,%f,%f,%f\",\n", minlon, minlat, maxlon, maxlat);
@@ -621,7 +622,7 @@ next_feature:
 		fprintf(fp, "\"json\": \"{");
 		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
 		quote(fp, "name");
-		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", 0, BASE_ZOOM);
+		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", MIN_ZOOM, BASE_ZOOM);
 
 		struct pool_val *pv;
 		for (pv = file_keys.head; pv != NULL; pv = pv->next) {
