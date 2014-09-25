@@ -354,7 +354,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 				}
 			}
 
-			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
+			fprintf(stderr, "  %3.1f%%   %d/%u/%u    %x %x   %lld to %lld    \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
 			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? 12 : 10, maxzoom, file_keys, layername, outdir);
 
@@ -365,6 +365,8 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 			}
 		}
 	}
+
+	fprintf(stderr, "\n");
 }
 
 void quote(FILE *fp, char *s) {
