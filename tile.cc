@@ -380,13 +380,13 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 	return out;
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer = tile.add_layers();
 
-	layer->set_name("name");
+	layer->set_name(layername);
 	layer->set_version(1);
 
 	layer->set_extent(1 << detail);

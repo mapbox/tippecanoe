@@ -323,7 +323,7 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername) {
 	fprintf(stderr, "\n");
 	long long most = 0;
 
@@ -359,7 +359,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys, layername);
 
 			if (z == BASE_ZOOM && len > most) {
 				*midx = tx;
@@ -578,8 +578,10 @@ next_feature:
 	file_keys.head = NULL;
 	file_keys.tail = NULL;
 
+	char *layername = "name";
+
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
@@ -621,7 +623,7 @@ next_feature:
 
 		fprintf(fp, "\"json\": \"{");
 		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
-		quote(fp, "name");
+		quote(fp, layername);
 		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", MIN_ZOOM, BASE_ZOOM);
 
 		struct pool_val *pv;
