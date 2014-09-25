@@ -648,7 +648,6 @@ next_feature:
 		}
 		sqlite3_free(sql);
 
-
 		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
 		tile2latlon(midx, midy, maxzoom, &maxlat, &minlon);
@@ -660,9 +659,33 @@ next_feature:
 		tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
 		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
-		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, maxzoom);
-		fprintf(fp, "\"bounds\": \"%f,%f,%f,%f\",\n", minlon, minlat, maxlon, maxlat);
-		fprintf(fp, "\"type\": \"overlay\",\n");
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('center', '%f,%f,%d');", midlon, midlat, maxzoom);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('bounds', '%f,%f,%f,%f');", minlon, minlat, maxlon, maxlat);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('type', %Q);", "overlay");
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", "pbf");
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set metadata: %s\n", err);
+			exit(EXIT_FAILURE);
+		}
+		sqlite3_free(sql);
 
 		fprintf(fp, "\"json\": \"{");
 		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
@@ -688,7 +711,6 @@ next_feature:
 		fprintf(fp, "} } ]");
 		fprintf(fp, "}\",\n");
 
-		fprintf(fp, "\"format\": \"%s\"\n", "pbf"); // no trailing comma
 		fprintf(fp, "}\n");
 
 		fclose(fp);
@@ -746,12 +768,32 @@ int main(int argc, char **argv) {
 	}
 
 	char *err = NULL;
+	if (sqlite3_exec(outdb, "PRAGMA synchronous=0", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "PRAGMA locking_mode=EXCLUSIVE", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "PRAGMA journal_mode=DELETE", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
 	if (sqlite3_exec(outdb, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create metadata table: %s\n", argv[0], err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create tiles table: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "create unique index name on metadata (name);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "create unique index tile_index on tiles (zoom_level, tile_column, tile_row);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
 		exit(EXIT_FAILURE);
 	}
 	
@@ -771,5 +813,15 @@ int main(int argc, char **argv) {
 		// XXX
 		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, "tiles", outdb);
 	}
+
+	if (sqlite3_exec(outdb, "ANALYZE;", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(outdb, "VACUUM;", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+
 	return 0;
 }
