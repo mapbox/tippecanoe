@@ -14,9 +14,6 @@
 #include "jsonpull.h"
 #include "tile.h"
 
-#define BASE_ZOOM 14
-#define MIN_ZOOM 0
-
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
 #define GEOM_LINESTRING 2           /* array of arrays of positions */
@@ -323,12 +320,12 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, char *outdir) {
 	fprintf(stderr, "\n");
 	long long most = 0;
 
 	int z;
-	for (z = BASE_ZOOM; z >= MIN_ZOOM; z--) {
+	for (z = maxzoom; z >= minzoom; z--) {
 		struct index *i, *j = NULL;
 		for (i = ix; i < ix + n && i != NULL; i = j) {
 			unsigned wx, wy;
@@ -359,9 +356,9 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			printf("%d/%u/%u    %x %x   %lld to %lld\n", z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == BASE_ZOOM ? 12 : 10, BASE_ZOOM, file_keys, layername);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? 12 : 10, maxzoom, file_keys, layername, outdir);
 
-			if (z == BASE_ZOOM && len > most) {
+			if (z == maxzoom && len > most) {
 				*midx = tx;
 				*midy = ty;
 				most = len;
@@ -383,7 +380,7 @@ void quote(FILE *fp, char *s) {
 	}
 }
 
-void read_json(FILE *f, char *fname) {
+void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, char *outdir) {
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -578,10 +575,25 @@ next_feature:
 	file_keys.head = NULL;
 	file_keys.tail = NULL;
 
-	char *layername = "name";
+	char trunc[strlen(fname) + 1];
+	if (layername == NULL) {
+		char *cp, *use = fname;
+		for (cp = fname; *cp; cp++) {
+			if (*cp == '/' && cp[1] != '\0') {
+				use = cp + 1;
+			}
+		}
+		strcpy(trunc, use);
+		cp = strstr(trunc, ".json");
+		if (cp != NULL) {
+			*cp = '\0';
+		}
+		printf("using layer name %s\n", trunc);
+		layername = trunc;
+	}
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdir);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
@@ -589,7 +601,10 @@ next_feature:
 	close(indexfd);
 	close(metafd);
 
-	FILE *fp = fopen("tiles/metadata.json", "w");
+	char s[strlen(outdir) + strlen("/metadata.json") + 1];
+	sprintf(s, "%s/metadata.json", outdir);
+
+	FILE *fp = fopen(s, "w");
 	if (fp == NULL) {
 		fprintf(stderr, "metadata.json: %s\n", strerror(errno));
 	} else {
@@ -605,8 +620,8 @@ next_feature:
 
 		double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
-		tile2latlon(midx, midy, BASE_ZOOM, &maxlat, &minlon);
-		tile2latlon(midx + 1, midy + 1, BASE_ZOOM, &minlat, &maxlon);
+		tile2latlon(midx, midy, maxzoom, &maxlat, &minlon);
+		tile2latlon(midx + 1, midy + 1, maxzoom, &minlat, &maxlon);
 
 		midlat = (maxlat + minlat) / 2;
 		midlon = (maxlon + minlon) / 2;
@@ -615,16 +630,16 @@ next_feature:
 		tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
 		fprintf(fp, "\"version\": 1,\n");
-		fprintf(fp, "\"minzoom\": %d,\n", MIN_ZOOM);
-		fprintf(fp, "\"maxzoom\": %d,\n", BASE_ZOOM);
-		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, BASE_ZOOM);
+		fprintf(fp, "\"minzoom\": %d,\n", minzoom);
+		fprintf(fp, "\"maxzoom\": %d,\n", maxzoom);
+		fprintf(fp, "\"center\": \"%f,%f,%d\",\n", midlon, midlat, maxzoom);
 		fprintf(fp, "\"bounds\": \"%f,%f,%f,%f\",\n", minlon, minlat, maxlon, maxlat);
 		fprintf(fp, "\"type\": \"overlay\",\n");
 
 		fprintf(fp, "\"json\": \"{");
 		fprintf(fp, "\\\"vector_layers\\\": [ { \\\"id\\\": \\\"");
 		quote(fp, layername);
-		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", MIN_ZOOM, BASE_ZOOM);
+		fprintf(fp, "\\\", \\\"description\\\": \\\"\\\", \\\"minzoom\\\": %d, \\\"maxzoom\\\": %d, \\\"fields\\\": {", minzoom, maxzoom);
 
 		struct pool_val *pv;
 		for (pv = file_keys.head; pv != NULL; pv = pv->next) {
@@ -653,19 +668,57 @@ next_feature:
 }
 
 int main(int argc, char **argv) {
-	if (argc > 1) {
+	extern int optind;
+	extern char *optarg;
+	int i;
+
+	char *name = NULL;
+	char *layer = NULL;
+	char *outdir = "tiles";
+	int maxzoom = 14;
+	int minzoom = 0;
+
+	while ((i = getopt(argc, argv, "l:n:z:Z:o:")) != -1) {
+		switch (i) {
+		case 'n':
+			name = optarg;
+			break;
+
+		case 'l':
+			layer = optarg;
+			break;
+
+		case 'z':
+			maxzoom = atoi(optarg);
+			break;
+
+		case 'Z':
+			minzoom = atoi(optarg);	
+			break;
+
+		case 'o':
+			outdir = optarg;
+			break;
+
+		default:
+			fprintf(stderr, "Usage: %s [-o outdir] [-n name] [-l layername] [-z maxzoom] [-Z minzoom] file.json ...\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	if (argc > optind) {
 		int i;
-		for (i = 1; i < argc; i++) {
+		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				read_json(f, argv[i]);
+				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdir);
 				fclose(f);
 			}
 		}
 	} else {
-		read_json(stdin, "standard input");
+		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, outdir);
 	}
 	return 0;
 }

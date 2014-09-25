@@ -380,7 +380,7 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 	return out;
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, char *outdir) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -526,7 +526,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		exit(EXIT_FAILURE);
 	}
 
-	const char *prefix = "tiles";
+	const char *prefix = outdir;
 	char path[strlen(prefix) + 200];
 
 	mkdir(prefix, 0777);
