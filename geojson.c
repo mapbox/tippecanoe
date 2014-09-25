@@ -323,7 +323,7 @@ void range_search(struct index *ix, long long n, unsigned long long start, unsig
 	}
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, char *outdir) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, sqlite3 *outdb) {
 	fprintf(stderr, "\n");
 	long long most = 0;
 
@@ -359,7 +359,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			fprintf(stderr, "  %3.1f%%   %d/%u/%u    %x %x   %lld to %lld    \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? 12 : 10, maxzoom, file_keys, layername, outdir);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? 12 : 10, maxzoom, file_keys, layername, outdb);
 
 			if (z == maxzoom && len > most) {
 				*midx = tx;
@@ -622,7 +622,7 @@ next_feature:
 	}
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdir);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);

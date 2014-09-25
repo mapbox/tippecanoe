@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <math.h>
+#include <sqlite3.h>
 #include "vector_tile.pb.h"
 
 extern "C" {
@@ -380,7 +381,7 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 	return out;
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, char *outdir) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -526,21 +527,21 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		exit(EXIT_FAILURE);
 	}
 
-	const char *prefix = outdir;
-	char path[strlen(prefix) + 200];
+	sqlite3_stmt *stmt;
+	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
+	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 insert prep failed\n");
+		exit(EXIT_FAILURE);
+	}
 
-	mkdir(prefix, 0777);
+	sqlite3_bind_int(stmt, 1, z);
+	sqlite3_bind_int(stmt, 2, tx);
+	sqlite3_bind_int(stmt, 3, (1 << z) - 1 - ty);
+	sqlite3_bind_blob(stmt, 4, compressed.data(), compressed.size(), NULL);
 
-	sprintf(path, "%s/%d", prefix, z);
-	mkdir(path, 0777);
-
-	sprintf(path, "%s/%d/%u", prefix, z, tx);
-	mkdir(path, 0777);
-
-	sprintf(path, "%s/%d/%u/%u.pbf", prefix, z, tx, ty);
-	FILE *f = fopen(path, "wb");
-	fwrite(compressed.data(), 1, compressed.size(), f);
-	fclose(f);
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		fprintf(stderr, "sqlite3 insert failed: %s\n", sqlite3_errmsg(outdb));
+	}
 
 	return count;
 }
