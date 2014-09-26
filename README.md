@@ -28,6 +28,9 @@ Example
 Geometric simplifications
 -------------------------
 
+At every zoom level, line and polygon features are subjected to Douglas-Peucker
+simplification to the resolution of the tile.
+
 For point features, it drops 1/2.5 of the dots for each zoom level above the base.
 I don't know why 2.5 is the appropriate number, but the densities of many different
 data sets fall off at about this same rate.
