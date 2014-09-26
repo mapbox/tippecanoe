@@ -11,7 +11,7 @@ vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
 PG=
 
 tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o
-	cc $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
+	g++ $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^

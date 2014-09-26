@@ -42,7 +42,7 @@ if it is appropriate to do more than that.
 Development
 -----------
 
-Requires protoc, protobuf-lite, and sqlite3. To build:
+Requires protoc (brew install protobuf), protobuf-lite, and sqlite3. To build:
 
     make
 
