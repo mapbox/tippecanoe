@@ -542,6 +542,9 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		fprintf(stderr, "sqlite3 insert failed: %s\n", sqlite3_errmsg(outdb));
 	}
+	if (sqlite3_finalize(stmt) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 finalize failed: %s\n", sqlite3_errmsg(outdb));
+	}
 
 	return count;
 }
