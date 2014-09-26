@@ -1,23 +1,17 @@
 PREFIX=/usr/local
 
-all: jsoncat libjsonpull.a geojson
+all: tippecanoe
 
-install: jsonpull.h libjsonpull.a
-	cp jsonpull.h $(PREFIX)/include/jsonpull.h
-	cp libjsonpull.a $(PREFIX)/lib/libjsonpull.a
+install: tippecanoe
+	cp tippecanoe $(PREFIX)/bin/tippecanoe
 
 vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
 	protoc --cpp_out=. vector_tile.proto
 
 PG=
 
-jsoncat: jsoncat.o jsonpull.o
-	cc $(PG) -g -Wall -o $@ $^
-
-geojson: geojson.o jsonpull.o vector_tile.pb.o tile.o
+tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o
 	cc $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
-
-jsoncat.o jsonpull.o: jsonpull.h
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
@@ -28,3 +22,6 @@ libjsonpull.a: jsonpull.o
 
 %.o: %.cc
 	g++ $(PG) -O3 -g -Wall -c $<
+
+clean:
+	rm tippecanoe *.o
