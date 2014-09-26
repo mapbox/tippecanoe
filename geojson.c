@@ -784,7 +784,7 @@ int main(int argc, char **argv) {
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] file.json ...\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [file.json]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -830,7 +830,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 	
-	if (argc > optind) {
+	if (argc == optind + 1) {
 		int i;
 		for (i = optind; i < argc; i++) {
 			FILE *f = fopen(argv[i], "r");
@@ -841,6 +841,9 @@ int main(int argc, char **argv) {
 				fclose(f);
 			}
 		}
+	} else if (argc > optind) {
+		fprintf(stderr, "%s: Only accepts one input file\n", argv[0]);
+		exit(EXIT_FAILURE);
 	} else {
 		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, outdb);
 	}
