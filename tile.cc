@@ -341,7 +341,7 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 }
 
 int simplify_lines(struct draw *geom, int n, int z, int detail) {
-	int res = 1 << (32 - 10 - z); // 1/4 pixel
+	int res = 1 << (32 - detail - z);
 
 	int i;
 	for (i = 0; i < n; i++) {

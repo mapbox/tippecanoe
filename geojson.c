@@ -17,6 +17,9 @@
 #include "jsonpull.h"
 #include "tile.h"
 
+int low_detail = 10;
+int full_detail = 12;
+
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
 #define GEOM_LINESTRING 2           /* array of arrays of positions */
@@ -359,7 +362,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			fprintf(stderr, "  %3.1f%%   %d/%u/%u    %x %x   %lld to %lld    \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? 12 : 10, maxzoom, file_keys, layername, outdb);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb);
 
 			if (z == maxzoom && len > most) {
 				*midx = tx;
@@ -409,7 +412,7 @@ void aprintf(char **buf, const char *format, ...) {
 	free(tmp);
 }
 
-void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, char *outdir, sqlite3 *outdb) {
+void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb) {
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -750,7 +753,7 @@ int main(int argc, char **argv) {
 	int maxzoom = 14;
 	int minzoom = 0;
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:o:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -768,12 +771,20 @@ int main(int argc, char **argv) {
 			minzoom = atoi(optarg);	
 			break;
 
+		case 'd':
+			full_detail = atoi(optarg);
+			break;
+
+		case 'D':
+			low_detail = atoi(optarg);
+			break;
+
 		case 'o':
 			outdir = optarg;
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] file.json ...\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] file.json ...\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -826,14 +837,12 @@ int main(int argc, char **argv) {
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				// XXX
-				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, "tiles", outdb);
+				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb);
 				fclose(f);
 			}
 		}
 	} else {
-		// XXX
-		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, "tiles", outdb);
+		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, outdb);
 	}
 
 	if (sqlite3_exec(outdb, "ANALYZE;", NULL, NULL, &err) != SQLITE_OK) {
@@ -842,6 +851,10 @@ int main(int argc, char **argv) {
 	}
 	if (sqlite3_exec(outdb, "VACUUM;", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_close(outdb) != SQLITE_OK) {
+		fprintf(stderr, "%s: could not close database: %s\n", argv[0], sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
 	}
 
