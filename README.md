@@ -29,6 +29,8 @@ Geometric simplifications
 -------------------------
 
 For point features, it drops 1/2.5 of the dots for each zoom level above the base.
+I don't know why 2.5 is the appropriate number, but the densities of many different
+data sets fall off at about this same rate.
 
 For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark, so I need to figure out an
@@ -43,3 +45,7 @@ Development
 Requires protoc, protobuf-lite, and sqlite3. To build:
 
     make
+
+and perhaps
+
+    make install
