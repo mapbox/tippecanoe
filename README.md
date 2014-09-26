@@ -23,7 +23,7 @@ Options
 Example
 -------
 
-    tippecanoe -o alameda.json -l alameda -n "Alameda County from TIGER" -z12 -d14 tl_2014_06001_roads.json
+    tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z12 -d14 tl_2014_06001_roads.json
 
 Geometric simplifications
 -------------------------
@@ -36,3 +36,10 @@ equitable way to throw features away.
 
 It also throws away any polygons that are too small to draw. I'm not sure yet
 if it is appropriate to do more than that.
+
+Development
+-----------
+
+Requires protoc, protobuf-lite, and sqlite3. To build:
+
+    make
