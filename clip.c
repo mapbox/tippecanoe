@@ -28,6 +28,7 @@ int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymi
 	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
 	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
 	int accept = 0;
+	int changed = 0;
  
 	while (1) {
 		if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
@@ -65,13 +66,19 @@ int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymi
 				*x0 = x;
 				*y0 = y;
 				outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
+				changed = 1;
 			} else {
 				*x1 = x;
 				*y1 = y;
 				outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
+				changed = 1;
 			}
 		}
 	}
 
-	return accept;
+	if (accept == 0) {
+		return 0;
+	} else {
+		return changed + 1;
+	}
 }

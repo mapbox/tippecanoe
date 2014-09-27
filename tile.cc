@@ -13,6 +13,7 @@
 
 extern "C" {
 	#include "tile.h"
+	#include "clip.h"
 }
 
 #define CMD_BITS 3
@@ -340,6 +341,58 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 	}
 }
 
+int clip_lines(struct draw *geom, int n, int z, int detail) {
+	struct draw tmp[n * 3];
+	int out = 0;
+	int i;
+
+	for (i = 0; i < n; i++) {
+		if (i - 1 >= 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
+			double x1 = geom[i - 1].x;
+			double y1 = geom[i - 1].y;
+
+			double x2 = geom[i - 0].x;
+			double y2 = geom[i - 0].y;
+
+			unsigned area = 0xFFFFFFFF;
+			if (z != 0) {
+				area = 1 << (32 - z);
+			}
+
+			int c = clip(&x1, &y1, &x2, &y2, 0, 0, area, area);
+
+			if (c > 1) { // clipped
+				tmp[out].op = VT_MOVETO;
+				tmp[out].x = x1;
+				tmp[out].y = y1;
+				out++;
+
+				tmp[out].op = VT_LINETO;
+				tmp[out].x = x2;
+				tmp[out].y = y2;
+				out++;
+
+				tmp[out].op = VT_MOVETO;
+				tmp[out].x = geom[i].x;
+				tmp[out].y = geom[i].y;
+				out++;
+			} else if (c == 1) { // unchanged
+				tmp[out++] = geom[i];
+			} else { // clipped away entirely
+				tmp[out].op = VT_MOVETO;
+				tmp[out].op = geom[i].x;
+				tmp[out].op = geom[i].y;
+				out++;
+			}
+		} else {
+			tmp[out++] = geom[i];
+		}
+	}
+
+	memcpy(geom, tmp, out * sizeof(struct draw));
+	return out;
+}
+
 int simplify_lines(struct draw *geom, int n, int z, int detail) {
 	int res = 1 << (32 - detail - z);
 
@@ -441,6 +494,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		meta = metabase + i->fpos;
 		deserialize_int(&meta, &t);
 		decode_feature(&meta, geom, z, tx, ty, detail);
+
+		if (t == VT_LINE) {
+			len = clip_lines(geom, len, z, detail);
+		}
 
 		if (t == VT_LINE || t == VT_POLYGON) {
 			len = simplify_lines(geom, len, z, detail);
