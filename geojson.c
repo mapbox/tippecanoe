@@ -620,8 +620,17 @@ next_feature:
 		if (cp != NULL) {
 			*cp = '\0';
 		}
-		printf("using layer name %s\n", trunc);
 		layername = trunc;
+
+		char *out = trunc;
+		for (cp = trunc; *cp; cp++) {
+			if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
+				*out++ = *cp;
+			}
+		}
+		*out = '\0';
+
+		printf("using layer name %s\n", trunc);
 	}
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
