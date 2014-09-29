@@ -24,13 +24,14 @@ Options
  * -Z Lowest zoom level (default 0)
  * -d Detail at base zoom level (default 12, for tile resolution of 4096)
  * -D Detail at lower zoom levels (default 10, for tile resolution of 1024) 
+ * -x property (removes the named properties from all features)
 
 Example
 -------
 
     tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 tl_2014_06001_roads.json
 
-    cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14
+    cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
 
 Geometric simplifications
 -------------------------
