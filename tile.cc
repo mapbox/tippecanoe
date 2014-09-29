@@ -445,23 +445,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 	layer->set_extent(1 << detail);
 
-	struct pool keys;
-	keys.n = 0;
-	keys.vals = NULL;
-	keys.head = NULL;
-	keys.tail = NULL;
-
-	struct pool values;
-	values.n = 0;
-	values.vals = NULL;
-	values.head = NULL;
-	values.tail = NULL;
-
-	struct pool dup;
-	dup.n = 1;
-	dup.vals = NULL;
-	dup.head = NULL;
-	dup.tail = NULL;
+	struct pool keys, values, dup;
+	pool_init(&keys, 0);
+	pool_init(&values, 0);
+	pool_init(&dup, 1);
 
 	double interval = 1;
 	double seq = 0;

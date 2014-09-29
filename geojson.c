@@ -227,6 +227,12 @@ void pool_free(struct pool *p) {
 	p->vals = NULL;
 }
 
+void pool_init(struct pool *p, int n) {
+	p->n = n;
+	p->vals = NULL;
+	p->head = NULL;
+	p->tail = NULL;
+}
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream) {
 	size_t w = fwrite(ptr, size, nitems, stream);
@@ -629,10 +635,7 @@ next_feature:
 	}
 
 	struct pool file_keys;
-	file_keys.n = 0;
-	file_keys.vals = NULL;
-	file_keys.head = NULL;
-	file_keys.tail = NULL;
+	pool_init(&file_keys, 0);
 
 	char trunc[strlen(fname) + 1];
 	if (layername == NULL) {
@@ -790,10 +793,7 @@ int main(int argc, char **argv) {
 	int minzoom = 0;
 
 	struct pool exclude;
-	exclude.n = 0;
-	exclude.vals = NULL;
-	exclude.head = NULL;
-	exclude.tail = NULL;
+	pool_init(&exclude, 0);
 
 	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:")) != -1) {
 		switch (i) {
@@ -826,10 +826,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			{
-				struct pool_val *pv = pool(&exclude, optarg, VT_STRING);
-				pv->n = 1;
-			}
+			pool(&exclude, optarg, VT_STRING);
 			break;
 
 		default:
