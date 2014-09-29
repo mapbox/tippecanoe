@@ -15,6 +15,7 @@ extern "C" {
 	#include "tile.h"
 	#include "pool.h"
 	#include "clip.h"
+	#include "mbtiles.h"
 }
 
 #define CMD_BITS 3
@@ -572,24 +573,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		exit(EXIT_FAILURE);
 	}
 
-	sqlite3_stmt *stmt;
-	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
-	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
-		fprintf(stderr, "sqlite3 insert prep failed\n");
-		exit(EXIT_FAILURE);
-	}
-
-	sqlite3_bind_int(stmt, 1, z);
-	sqlite3_bind_int(stmt, 2, tx);
-	sqlite3_bind_int(stmt, 3, (1 << z) - 1 - ty);
-	sqlite3_bind_blob(stmt, 4, compressed.data(), compressed.size(), NULL);
-
-	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		fprintf(stderr, "sqlite3 insert failed: %s\n", sqlite3_errmsg(outdb));
-	}
-	if (sqlite3_finalize(stmt) != SQLITE_OK) {
-		fprintf(stderr, "sqlite3 finalize failed: %s\n", sqlite3_errmsg(outdb));
-	}
+	mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 
 	return count;
 }
