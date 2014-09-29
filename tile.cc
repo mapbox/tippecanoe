@@ -436,6 +436,16 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 	return out;
 }
 
+struct coalesce {
+	int type;
+
+	int ngeom;
+	struct draw *geom;
+
+	int nmeta;
+	int *meta;
+};
+
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -459,6 +469,9 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	if (z < basezoom) {
 		interval = exp(log(2.5) * (basezoom - z));
 	}
+
+	int nfeatures = 0;
+	struct coalesce features[end - start];
 
 	struct index *i;
 	for (i = start; i < end; i++) {
@@ -511,23 +524,17 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 			pv->n = 0;
 
-			mapnik::vector::tile_feature *feature = layer->add_features();
+			features[nfeatures].type = t;
 
-			if (t == VT_POINT) {
-				feature->set_type(mapnik::vector::tile::Point);
-			} else if (t == VT_LINE) {
-				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (t == VT_POLYGON) {
-				feature->set_type(mapnik::vector::tile::Polygon);
-			} else {
-				feature->set_type(mapnik::vector::tile::Unknown);
-			}
-
-			draw(geom, len, feature);
-			count += len;
+			features[nfeatures].ngeom = len;
+			features[nfeatures].geom = (struct draw *) malloc(len * sizeof(struct draw));
+			memcpy(features[nfeatures].geom, geom, len * sizeof(struct draw));
 
 			int m;
 			deserialize_int(&meta, &m);
+
+			features[nfeatures].nmeta = 2 * m;
+			features[nfeatures].meta = (int *) malloc(2 * m * sizeof(int));
 
 			int i;
 			for (i = 0; i < m; i++) {
@@ -536,13 +543,41 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
 				struct pool_val *value = deserialize_string(&meta, &values, t);
 
-				feature->add_tags(key->n);
-				feature->add_tags(value->n);
+				features[nfeatures].meta[2 * i + 0] = key->n;
+				features[nfeatures].meta[2 * i + 1] = value->n;
 
 				// Dup to retain after munmap
 				pool(file_keys, strdup(key->s), t);
 			}
+
+			nfeatures++;
 		}
+	}
+
+	int x;
+	for (x = 0; x < nfeatures; x++) {
+		mapnik::vector::tile_feature *feature = layer->add_features();
+
+		if (features[x].type == VT_POINT) {
+			feature->set_type(mapnik::vector::tile::Point);
+		} else if (features[x].type == VT_LINE) {
+			feature->set_type(mapnik::vector::tile::LineString);
+		} else if (features[x].type == VT_POLYGON) {
+			feature->set_type(mapnik::vector::tile::Polygon);
+		} else {
+			feature->set_type(mapnik::vector::tile::Unknown);
+		}
+
+		draw(features[x].geom, features[x].ngeom, feature);
+		count += features[x].ngeom;
+
+		int y;
+		for (y = 0; y < features[x].nmeta; y++) {
+			feature->add_tags(features[x].meta[y]);
+		}
+
+		free(features[x].geom);
+		free(features[x].meta);
 	}
 
 	struct pool_val *pv;
