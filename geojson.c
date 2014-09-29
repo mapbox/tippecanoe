@@ -233,28 +233,6 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-void range_search(struct index *ix, long long n, unsigned long long start, unsigned long long end, struct index **pstart, struct index **pend) {
-	struct index istart, iend;
-	istart.index = start;
-	iend.index = end;
-
-	*pstart = search(&istart, ix, n, sizeof(struct index), indexcmp);
-	*pend = search(&iend, ix, n, sizeof(struct index), indexcmp);
-
-	if (*pend >= ix + n) {
-		*pend = ix + n - 1;
-	}
-	while (*pstart > ix && indexcmp(*pstart - 1, &istart) == 0) {
-		(*pstart)--;
-	}
-	if (indexcmp(*pstart, &istart) < 0) {
-		(*pstart)++;
-	}
-	if (indexcmp(*pend, &iend) > 0) {
-		(*pend)--;
-	}
-}
-
 void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, sqlite3 *outdb) {
 	fprintf(stderr, "\n");
 	long long most = 0;
