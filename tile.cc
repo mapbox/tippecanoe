@@ -511,7 +511,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	}
 
 	int nfeatures = 0;
-	struct coalesce features[end - start];
+	struct coalesce *features = (struct coalesce *) malloc((end - start) * sizeof(struct coalesce));
 
 	struct index *i;
 	for (i = start; i < end; i++) {
@@ -641,6 +641,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		free(features[x].geom);
 		free(features[x].meta);
 	}
+
+	free(features);
 
 	struct pool_val *pv;
 	for (pv = keys.head; pv != NULL; pv = pv->next) {
