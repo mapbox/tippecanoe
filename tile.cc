@@ -13,6 +13,7 @@
 
 extern "C" {
 	#include "tile.h"
+	#include "pool.h"
 	#include "clip.h"
 }
 
