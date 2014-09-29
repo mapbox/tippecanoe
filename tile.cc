@@ -600,7 +600,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 	int out = 0;
 	for (x = 0; x < nfeatures; x++) {
-		if (out > 0 && features[out - 1].ngeom + features[x].ngeom < 20000 && coalcmp(&features[x], &features[out - 1]) == 0) {
+		if (out > 0 && features[out - 1].ngeom + features[x].ngeom < 20000 && coalcmp(&features[x], &features[out - 1]) == 0 && features[x].type != VT_POINT) {
 			struct draw *tmp = (struct draw *) malloc((features[x].ngeom + features[out - 1].ngeom) * sizeof(struct draw));
 			memcpy(tmp, features[out - 1].geom, features[out - 1].ngeom * sizeof(struct draw));
 			memcpy(tmp + features[out - 1].ngeom, features[x].geom, features[x].ngeom * sizeof(struct draw));
