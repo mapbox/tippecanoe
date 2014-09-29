@@ -538,11 +538,12 @@ int main(int argc, char **argv) {
 	char *outdir = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
+	int force = 0;
 
 	struct pool exclude;
 	pool_init(&exclude, 0);
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:f")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -576,6 +577,10 @@ int main(int argc, char **argv) {
 			pool(&exclude, optarg, VT_STRING);
 			break;
 
+		case 'f':
+			force = 1;
+			break;
+
 		default:
 			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [file.json]\n", argv[0]);
 			exit(EXIT_FAILURE);
@@ -585,6 +590,10 @@ int main(int argc, char **argv) {
 	if (outdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);
 		exit(EXIT_FAILURE);
+	}
+
+	if (force) {
+		unlink(outdir);
 	}
 
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
