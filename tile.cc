@@ -444,6 +444,8 @@ struct coalesce {
 
 	int nmeta;
 	int *meta;
+
+	unsigned long long index;
 };
 
 int coalcmp(const void *v1, const void *v2) {
@@ -465,6 +467,23 @@ int coalcmp(const void *v1, const void *v2) {
 	}
 
 	return c1->nmeta - c2->nmeta;
+}
+
+int coalindexcmp(const void *v1, const void *v2) {
+	int cmp = coalcmp(v1, v2);
+
+	if (cmp == 0) {
+		const struct coalesce *c1 = (const struct coalesce *) v1;
+		const struct coalesce *c2 = (const struct coalesce *) v2;
+
+		if (c1->index < c2->index) {
+			return -1;
+		} else if (c1->index > c2->index) {
+			return 1;
+		}
+	}
+
+	return cmp;
 }
 
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb) {
@@ -546,6 +565,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			pv->n = 0;
 
 			features[nfeatures].type = t;
+			features[nfeatures].index = i->index;
 
 			features[nfeatures].ngeom = len;
 			features[nfeatures].geom = (struct draw *) malloc(len * sizeof(struct draw));
@@ -575,7 +595,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		}
 	}
 
-	qsort(features, nfeatures, sizeof(struct coalesce), coalcmp);
+	qsort(features, nfeatures, sizeof(struct coalesce), coalindexcmp);
 	int x;
 
 	int out = 0;
