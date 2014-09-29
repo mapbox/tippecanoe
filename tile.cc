@@ -446,6 +446,27 @@ struct coalesce {
 	int *meta;
 };
 
+int coalcmp(const void *v1, const void *v2) {
+	const struct coalesce *c1 = (const struct coalesce *) v1;
+	const struct coalesce *c2 = (const struct coalesce *) v2;
+
+	int cmp = c1->type - c2->type;
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	int i;
+	for (i = 0; i < c1->nmeta && i < c2->nmeta; i++) {
+		cmp = c1->meta[i] - c2->meta[i];
+
+		if (cmp != 0) {
+			return cmp;
+		}
+	}
+
+	return c1->nmeta - c2->nmeta;
+}
+
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -554,7 +575,28 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		}
 	}
 
+	qsort(features, nfeatures, sizeof(struct coalesce), coalcmp);
 	int x;
+
+	int out = 0;
+	for (x = 0; x < nfeatures; x++) {
+		if (out > 0 && features[out - 1].ngeom + features[x].ngeom < 20000 && coalcmp(&features[x], &features[out - 1]) == 0) {
+			struct draw *tmp = (struct draw *) malloc((features[x].ngeom + features[out - 1].ngeom) * sizeof(struct draw));
+			memcpy(tmp, features[out - 1].geom, features[out - 1].ngeom * sizeof(struct draw));
+			memcpy(tmp + features[out - 1].ngeom, features[x].geom, features[x].ngeom * sizeof(struct draw));
+
+			free(features[x].geom);
+			free(features[out - 1].geom);
+			free(features[x].meta);
+
+			features[out - 1].ngeom += features[x].ngeom;
+			features[out - 1].geom = tmp;
+		} else {
+			features[out++] = features[x];
+		}
+	}
+	nfeatures = out;
+
 	for (x = 0; x < nfeatures; x++) {
 		mapnik::vector::tile_feature *feature = layer->add_features();
 

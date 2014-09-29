@@ -51,8 +51,8 @@ in some places), so I need to figure out an equitable way to throw features away
 It also throws away any polygons that are too small to draw. I'm not sure yet
 if it is appropriate to do more than that.
 
-It should consolidate features in the same tile that share the same type and attributes,
-to make the tile data smaller, but doesn't do that yet.
+Features in the same tile that share the same type and attributes are coalesced
+together into a single geometry.
 
 Development
 -----------
