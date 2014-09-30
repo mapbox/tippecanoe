@@ -2,6 +2,8 @@
 #include <fstream>
 #include <string>
 #include <stack>
+#include <vector>
+#include <algorithm>
 #include <stdio.h>
 #include <unistd.h>
 #include <zlib.h>
@@ -55,22 +57,20 @@ struct draw {
 	int necessary;
 };
 
-int decode_feature(char **meta, struct draw *out, int z, unsigned tx, unsigned ty, int detail) {
-	int len = 0;
+typedef std::vector<draw> drawvec;
+
+drawvec decode_feature(char **meta, int z, unsigned tx, unsigned ty, int detail) {
+	drawvec out;
 
 	while (1) {
-		int op;
-		deserialize_int(meta, &op);
+		draw d;
 
-		if (op == VT_END) {
+		deserialize_int(meta, &d.op);
+		if (d.op == VT_END) {
 			break;
 		}
 
-		if (out != NULL) {
-			out[len].op = op;
-		}
-
-		if (op == VT_MOVETO || op == VT_LINETO) {
+		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
 			int wx, wy;
 			deserialize_int(meta, &wx);
 			deserialize_int(meta, &wy);
@@ -83,19 +83,17 @@ int decode_feature(char **meta, struct draw *out, int z, unsigned tx, unsigned t
 				wwy -= ty << (32 - z);
 			}
 
-			if (out != NULL) {
-				out[len].x = wwx;
-				out[len].y = wwy;
-			}
+			d.x = wwx;
+			d.y = wwy;
 		}
 
-		len++;
+		out.push_back(d);
 	}
 
-	return len;
+	return out;
 }
 
-int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
+int draw(drawvec &geom, mapnik::vector::tile_feature *feature) {
 	int px = 0, py = 0;
 	int cmd_idx = -1;
 	int cmd = -1;
@@ -103,6 +101,7 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	int drew = 0;
 	int i;
 
+	int n = geom.size();
 	for (i = 0; i < n; i++) {
 		int op = geom[i].op;
 
@@ -155,22 +154,22 @@ int draw(struct draw *geom, int n, mapnik::vector::tile_feature *feature) {
 	return drew;
 }
 
-int remove_noop(struct draw *geom, int n, int type) {
+drawvec remove_noop(drawvec geom, int type) {
 	// first pass: remove empty linetos
 
 	long long x = 0, y = 0;
-	int out = 0;
-	int i;
+	drawvec out;
+	unsigned i;
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO && geom[i].x == x && geom[i].y == y) {
 			continue;
 		}
 
 		if (geom[i].op == VT_CLOSEPATH) {
-			geom[out++] = geom[i];
+			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
-			geom[out++] = geom[i];
+			out.push_back(geom[i]);
 			x = geom[i].x;
 			y = geom[i].y;
 		}
@@ -178,12 +177,12 @@ int remove_noop(struct draw *geom, int n, int type) {
 
 	// second pass: remove unused movetos
 
-	n = out;
-	out = 0;
+	geom = out;
+	out.resize(0);
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			if (i + 1 >= n) {
+			if (i + 1 >= geom.size()) {
 				continue;
 			}
 
@@ -197,23 +196,23 @@ int remove_noop(struct draw *geom, int n, int type) {
 			}
 		}
 
-		geom[out++] = geom[i];
+		out.push_back(geom[i]);
 	}
 
 	// second pass: remove empty movetos
 
 	if (type == VT_LINE) {
-		n = out;
-		out = 0;
+		geom = out;
+		out.resize(0);
 
-		for (i = 0; i < n; i++) {
+		for (i = 0; i < geom.size(); i++) {
 			if (geom[i].op == VT_MOVETO) {
-				if (i - 1 >= 0 && geom[i - 1].op == VT_LINETO && geom[i - 1].x == geom[i].x && geom[i - 1].y == geom[i].y) {
+				if (i > 0 && geom[i - 1].op == VT_LINETO && geom[i - 1].x == geom[i].x && geom[i - 1].y == geom[i].y) {
 					continue;
 				}
 			}
 
-			geom[out++] = geom[i];
+			out.push_back(geom[i]);
 		}
 	}
 
@@ -253,10 +252,10 @@ int shrink_lines(struct draw *geom, int len, int z, int basezoom) {
 	return out;
 }
 
-void to_tile_scale(struct draw *geom, int n, int z, int detail) {
-	int i;
+void to_tile_scale(drawvec &geom, int z, int detail) {
+	unsigned i;
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < geom.size(); i++) {
 		geom[i].x >>= (32 - detail - z);
 		geom[i].y >>= (32 - detail - z);
 	}
@@ -284,7 +283,7 @@ double square_distance_from_line(long long point_x, long long point_y, long long
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-void douglas_peucker(struct draw *geom, int n, double e) {
+void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	e = e * e;
 	std::stack<int> recursion_stack;
 
@@ -293,7 +292,7 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 		int right_border = 1;
 		// Sweep linerarily over array and identify those ranges that need to be checked
 		do {
-			if (geom[right_border].necessary) {
+			if (geom[start + right_border].necessary) {
 				recursion_stack.push(left_border);
 				recursion_stack.push(right_border);
 				left_border = right_border;
@@ -315,9 +314,9 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 		// find index idx of element with max_distance
 		int i;
 		for (i = first + 1; i < second; i++) {
-			double temp_dist = square_distance_from_line(geom[i].x, geom[i].y,
-				geom[first].x, geom[first].y,
-				geom[second].x, geom[second].y);
+			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y,
+				geom[start + first].x, geom[start + first].y,
+				geom[start + second].x, geom[start + second].y);
 
 			double distance = fabs(temp_dist);
 
@@ -329,7 +328,7 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 
 		if (max_distance > e) {
 			// mark idx as necessary
-			geom[farthest_element_index].necessary = 1;
+			geom[start + farthest_element_index].necessary = 1;
 
 			if (1 < farthest_element_index - first) {
 				recursion_stack.push(first);
@@ -343,13 +342,12 @@ void douglas_peucker(struct draw *geom, int n, double e) {
 	}
 }
 
-int clip_lines(struct draw *geom, int n, int z, int detail) {
-	struct draw tmp[n * 3];
-	int out = 0;
-	int i;
+drawvec clip_lines(drawvec &geom, int z, int detail) {
+	drawvec out;
+	unsigned i;
 
-	for (i = 0; i < n; i++) {
-		if (i - 1 >= 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
+	for (i = 0; i < geom.size(); i++) {
+		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
 
@@ -364,42 +362,45 @@ int clip_lines(struct draw *geom, int n, int z, int detail) {
 			int c = clip(&x1, &y1, &x2, &y2, 0, 0, area, area);
 
 			if (c > 1) { // clipped
-				tmp[out].op = VT_MOVETO;
-				tmp[out].x = x1;
-				tmp[out].y = y1;
-				out++;
+				struct draw d;
 
-				tmp[out].op = VT_LINETO;
-				tmp[out].x = x2;
-				tmp[out].y = y2;
-				out++;
+				d.op = VT_MOVETO;
+				d.x = x1;
+				d.y = y1;
+				out.push_back(d);
+			
+				d.op = VT_LINETO;
+				d.x = x2;
+				d.y = y2;
+				out.push_back(d);
 
-				tmp[out].op = VT_MOVETO;
-				tmp[out].x = geom[i].x;
-				tmp[out].y = geom[i].y;
-				out++;
+				d.op = VT_MOVETO;
+				d.x = geom[i].x;
+				d.y = geom[i].y;
+				out.push_back(d);
 			} else if (c == 1) { // unchanged
-				tmp[out++] = geom[i];
+				out.push_back(geom[i]);
 			} else { // clipped away entirely
-				tmp[out].op = VT_MOVETO;
-				tmp[out].op = geom[i].x;
-				tmp[out].op = geom[i].y;
-				out++;
+				struct draw d;
+
+				d.op = VT_MOVETO;
+				d.op = geom[i].x;
+				d.op = geom[i].y;
+				out.push_back(d);
 			}
 		} else {
-			tmp[out++] = geom[i];
+			out.push_back(geom[i]);
 		}
 	}
 
-	memcpy(geom, tmp, out * sizeof(struct draw));
 	return out;
 }
 
-int simplify_lines(struct draw *geom, int n, int z, int detail) {
+drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	int res = 1 << (32 - detail - z);
 
-	int i;
-	for (i = 0; i < n; i++) {
+	unsigned i;
+	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			geom[i].necessary = 1;
 		} else if (geom[i].op == VT_LINETO) {
@@ -409,10 +410,10 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 		}
 	}
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			int j;
-			for (j = i + 1; j < n; j++) {
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
 					break;
 				}
@@ -421,15 +422,15 @@ int simplify_lines(struct draw *geom, int n, int z, int detail) {
 			geom[i].necessary = 1;
 			geom[j - 1].necessary = 1;
 
-			douglas_peucker(geom + i, j - i, res);
+			douglas_peucker(geom, i, j - i, res);
 			i = j - 1;
 		}
 	}
 
-	int out = 0;
-	for (i = 0; i < n; i++) {
+	drawvec out;
+	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].necessary) {
-			geom[out++] = geom[i];
+			out.push_back(geom[i]);
 		}
 	}
 
@@ -440,7 +441,7 @@ struct coalesce {
 	int type;
 
 	int ngeom;
-	struct draw *geom;
+	drawvec geom;
 
 	int nmeta;
 	int *meta;
@@ -510,8 +511,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		interval = exp(log(2.5) * (basezoom - z));
 	}
 
-	int nfeatures = 0;
-	struct coalesce *features = (struct coalesce *) malloc((end - start) * sizeof(struct coalesce));
+	std::vector<coalesce> features;
 
 	struct index *i;
 	for (i = start; i < end; i++) {
@@ -530,19 +530,14 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 		}
 
-		int len = decode_feature(&meta, NULL, z, tx, ty, detail);
-		struct draw geom[3 * len];
-
-		meta = metabase + i->fpos;
-		deserialize_int(&meta, &t);
-		decode_feature(&meta, geom, z, tx, ty, detail);
+		drawvec geom = decode_feature(&meta, z, tx, ty, detail);
 
 		if (t == VT_LINE) {
-			len = clip_lines(geom, len, z, detail);
+			geom = clip_lines(geom, z, detail);
 		}
 
 		if (t == VT_LINE || t == VT_POLYGON) {
-			len = simplify_lines(geom, len, z, detail);
+			geom = simplify_lines(geom, z, detail);
 		}
 
 #if 0
@@ -551,27 +546,26 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		}
 #endif
 
-		to_tile_scale(geom, len, z, detail);
+		to_tile_scale(geom, z, detail);
 
-		if (t == VT_POINT || draw(geom, len, NULL)) {
+		if (t == VT_POINT || draw(geom, NULL)) {
 			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
 			if (pv->n == 0) {
 				continue;
 			}
 			pv->n = 0;
 
-			features[nfeatures].type = t;
-			features[nfeatures].index = i->index;
+			struct coalesce c;
 
-			features[nfeatures].ngeom = len;
-			features[nfeatures].geom = (struct draw *) malloc(len * sizeof(struct draw));
-			memcpy(features[nfeatures].geom, geom, len * sizeof(struct draw));
+			c.type = t;
+			c.index = i->index;
+			c.geom = geom;
 
 			int m;
 			deserialize_int(&meta, &m);
 
-			features[nfeatures].nmeta = 2 * m;
-			features[nfeatures].meta = (int *) malloc(2 * m * sizeof(int));
+			c.nmeta = 2 * m;
+			c.meta = (int *) malloc(2 * m * sizeof(int));
 
 			int i;
 			for (i = 0; i < m; i++) {
@@ -580,42 +574,42 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
 				struct pool_val *value = deserialize_string(&meta, &values, t);
 
-				features[nfeatures].meta[2 * i + 0] = key->n;
-				features[nfeatures].meta[2 * i + 1] = value->n;
+				c.meta[2 * i + 0] = key->n;
+				c.meta[2 * i + 1] = value->n;
 
 				// Dup to retain after munmap
 				pool(file_keys, strdup(key->s), t);
 			}
 
-			nfeatures++;
+			features.push_back(c);
 		}
 	}
 
-	qsort(features, nfeatures, sizeof(struct coalesce), coalindexcmp);
-	int x;
+	// XXX
+	// qsort(features, nfeatures, sizeof(struct coalesce), coalindexcmp);
 
-	int out = 0;
-	for (x = 0; x < nfeatures; x++) {
-		if (out > 0 && features[out - 1].ngeom + features[x].ngeom < 20000 && coalcmp(&features[x], &features[out - 1]) == 0 && features[x].type != VT_POINT) {
-			struct draw *tmp = (struct draw *) malloc((features[x].ngeom + features[out - 1].ngeom) * sizeof(struct draw));
-			memcpy(tmp, features[out - 1].geom, features[out - 1].ngeom * sizeof(struct draw));
-			memcpy(tmp + features[out - 1].ngeom, features[x].geom, features[x].ngeom * sizeof(struct draw));
+	std::vector<coalesce> out;
 
-			free(features[x].geom);
-			free(features[out - 1].geom);
+	unsigned x;
+	for (x = 0; x < features.size(); x++) {
+		unsigned y = out.size() - 1;
+
+		if (out.size() > 0 && out[y].geom.size() + features[x].geom.size() < 20000 && coalcmp(&features[x], &out[y]) == 0 && features[x].type != VT_POINT) {
+			unsigned z;
+			for (z = 0; z < features[x].geom.size(); z++) {
+				out[y].geom.push_back(features[x].geom[z]);
+			}
+
 			free(features[x].meta);
-
-			features[out - 1].ngeom += features[x].ngeom;
-			features[out - 1].geom = tmp;
 		} else {
-			features[out++] = features[x];
+			out.push_back(features[x]);
 		}
 	}
-	nfeatures = out;
 
-	for (x = 0; x < nfeatures; x++) {
+	features = out;
+	for (x = 0; x < features.size(); x++) {
 		if (features[x].type == VT_LINE || features[x].type == VT_POLYGON) {
-			features[x].ngeom = remove_noop(features[x].geom, features[x].ngeom, features[x].type);
+			features[x].geom = remove_noop(features[x].geom, features[x].type);
 		}
 
 		mapnik::vector::tile_feature *feature = layer->add_features();
@@ -630,7 +624,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			feature->set_type(mapnik::vector::tile::Unknown);
 		}
 
-		draw(features[x].geom, features[x].ngeom, feature);
+		draw(features[x].geom, feature);
 		count += features[x].ngeom;
 
 		int y;
@@ -638,11 +632,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			feature->add_tags(features[x].meta[y]);
 		}
 
-		free(features[x].geom);
 		free(features[x].meta);
 	}
 
-	free(features);
+	features.resize(0);
 
 	struct pool_val *pv;
 	for (pv = keys.head; pv != NULL; pv = pv->next) {
