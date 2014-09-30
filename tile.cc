@@ -150,6 +150,9 @@ int to_feature(drawvec &geom, mapnik::vector::tile_feature *feature) {
 			}
 		} else if (op == VT_CLOSEPATH) {
 			length++;
+		} else {
+			fprintf(stderr, "\nInternal error: corrupted geometry\n");
+			exit(EXIT_FAILURE);
 		}
 	}
 
