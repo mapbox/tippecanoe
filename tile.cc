@@ -553,10 +553,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		to_tile_scale(geom, len, z, detail);
 
-		if (t == VT_LINE || t == VT_POLYGON) {
-			len = remove_noop(geom, len, t);
-		}
-
 		if (t == VT_POINT || draw(geom, len, NULL)) {
 			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
 			if (pv->n == 0) {
@@ -618,6 +614,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	nfeatures = out;
 
 	for (x = 0; x < nfeatures; x++) {
+		if (features[x].type == VT_LINE || features[x].type == VT_POLYGON) {
+			features[x].ngeom = remove_noop(features[x].geom, features[x].ngeom, features[x].type);
+		}
+
 		mapnik::vector::tile_feature *feature = layer->add_features();
 
 		if (features[x].type == VT_POINT) {
