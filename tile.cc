@@ -55,6 +55,14 @@ struct draw {
 	long long x;
 	long long y;
 	int necessary;
+
+	draw(int op, long long x, long long y) {
+		this->op = op;
+		this->x = x;
+		this->y = y;
+	}
+
+	draw() { }
 };
 
 typedef std::vector<draw> drawvec;
@@ -93,7 +101,7 @@ drawvec decode_feature(char **meta, int z, unsigned tx, unsigned ty, int detail)
 	return out;
 }
 
-int draw(drawvec &geom, mapnik::vector::tile_feature *feature) {
+int to_feature(drawvec &geom, mapnik::vector::tile_feature *feature) {
 	int px = 0, py = 0;
 	int cmd_idx = -1;
 	int cmd = -1;
@@ -362,31 +370,13 @@ drawvec clip_lines(drawvec &geom, int z, int detail) {
 			int c = clip(&x1, &y1, &x2, &y2, 0, 0, area, area);
 
 			if (c > 1) { // clipped
-				struct draw d;
-
-				d.op = VT_MOVETO;
-				d.x = x1;
-				d.y = y1;
-				out.push_back(d);
-			
-				d.op = VT_LINETO;
-				d.x = x2;
-				d.y = y2;
-				out.push_back(d);
-
-				d.op = VT_MOVETO;
-				d.x = geom[i].x;
-				d.y = geom[i].y;
-				out.push_back(d);
+				out.push_back(draw(VT_MOVETO, x1, y1));
+				out.push_back(draw(VT_LINETO, x2, y2));
+				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 			} else if (c == 1) { // unchanged
 				out.push_back(geom[i]);
 			} else { // clipped away entirely
-				struct draw d;
-
-				d.op = VT_MOVETO;
-				d.op = geom[i].x;
-				d.op = geom[i].y;
-				out.push_back(d);
+				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -548,7 +538,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		to_tile_scale(geom, z, detail);
 
-		if (t == VT_POINT || draw(geom, NULL)) {
+		if (t == VT_POINT || to_feature(geom, NULL)) {
 			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
 			if (pv->n == 0) {
 				continue;
@@ -624,7 +614,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			feature->set_type(mapnik::vector::tile::Unknown);
 		}
 
-		draw(features[x].geom, feature);
+		to_feature(features[x].geom, feature);
 		count += features[x].ngeom;
 
 		int y;
