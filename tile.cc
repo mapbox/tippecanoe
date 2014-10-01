@@ -230,19 +230,50 @@ drawvec remove_noop(drawvec geom, int type) {
 	return out;
 }
 
-drawvec shrink_lines(drawvec &geom, int z, int basezoom) {
-	double scale = 1.0 / exp(log(sqrt(2.5)) * (basezoom - z));
+drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here) {
+	long long res = 200LL << (32 - 8 - z);
+	long long portion = res / exp(log(sqrt(2.5)) * (basezoom - z));
+
 	unsigned i;
 	drawvec out;
 
 	for (i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
-			long long cx = (geom[i].x + geom[i - 1].x) / 2;
-			long long cy = (geom[i].y + geom[i - 1].y) / 2;
+			double dx = (geom[i].x - geom[i - 1].x);
+			double dy = (geom[i].y - geom[i - 1].y);
+			long long d = sqrt(dx * dx + dy * dy);
 
-			out.push_back(draw(VT_MOVETO, cx + (geom[i - 1].x - cx) * scale, cy + (geom[i - 1].y - cy) * scale));
-			out.push_back(draw(VT_LINETO, cx + (geom[i].x - cx) * scale, cy + (geom[i].y - cy) * scale));
-			out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+			long long n;
+			long long next = LONG_LONG_MAX;
+			for (n = *here; n < *here + d; n = next) {
+				int within;
+
+				if (n % res < portion) {
+					next = (n / res) * res + portion;
+					within = 1;
+				} else {
+					next = (n / res + 1) * res;
+					within = 0;
+				}
+
+				if (next > *here + d) {
+					next = *here + d;
+				}
+
+				//printf("drawing from %lld to %lld in %lld\n", n - *here, next - *here, d);
+
+				double f1 = (n - *here) / (double) d;
+				double f2 = (next - *here) / (double) d;
+
+				if (within) {
+					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f1 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f1 * (geom[i].y - geom[i - 1].y)));
+					out.push_back(draw(VT_LINETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
+				} else {
+					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
+				}
+			}
+
+			*here += d;
 		} else {
 			out.push_back(geom[i]);
 		}
@@ -496,6 +527,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	double interval = 1;
 	double seq = 0;
 	long long count = 0;
+	long long along = 0;
 
 	if (z < basezoom) {
 		interval = exp(log(2.5) * (basezoom - z));
@@ -532,7 +564,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 #if 0
 		if (t == VT_LINE && z != basezoom) {
-			geom = shrink_lines(geom, z, basezoom);
+			geom = shrink_lines(geom, z, detail, basezoom, &along);
 		}
 #endif
 
