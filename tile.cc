@@ -430,6 +430,8 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	return out;
 }
 
+int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
+
 struct coalesce {
 	int type;
 
@@ -440,6 +442,15 @@ struct coalesce {
 	int *meta;
 
 	unsigned long long index;
+
+	bool operator< (const coalesce &o) const {
+		int cmp = coalindexcmp(this, &o);
+		if (cmp < 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 };
 
 int coalcmp(const void *v1, const void *v2) {
@@ -463,13 +474,10 @@ int coalcmp(const void *v1, const void *v2) {
 	return c1->nmeta - c2->nmeta;
 }
 
-int coalindexcmp(const void *v1, const void *v2) {
-	int cmp = coalcmp(v1, v2);
+int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
+	int cmp = coalcmp((const void *) c1, (const void *) c2);
 
 	if (cmp == 0) {
-		const struct coalesce *c1 = (const struct coalesce *) v1;
-		const struct coalesce *c2 = (const struct coalesce *) v2;
-
 		if (c1->index < c2->index) {
 			return -1;
 		} else if (c1->index > c2->index) {
@@ -578,14 +586,16 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		}
 	}
 
-	// XXX
-	// qsort(features, nfeatures, sizeof(struct coalesce), coalindexcmp);
+	std::sort(features.begin(), features.end());
 
 	std::vector<coalesce> out;
-
 	unsigned x;
 	for (x = 0; x < features.size(); x++) {
 		unsigned y = out.size() - 1;
+
+		if (out.size() > 0 && coalcmp(&features[x], &out[y]) < 0) {
+			fprintf(stderr, "\nfeature out of order\n");
+		}
 
 		if (out.size() > 0 && out[y].geom.size() + features[x].geom.size() < 20000 && coalcmp(&features[x], &out[y]) == 0 && features[x].type != VT_POINT) {
 			unsigned z;
