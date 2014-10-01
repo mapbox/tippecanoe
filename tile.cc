@@ -230,36 +230,24 @@ drawvec remove_noop(drawvec geom, int type) {
 	return out;
 }
 
-int shrink_lines(struct draw *geom, int len, int z, int basezoom) {
+drawvec shrink_lines(drawvec &geom, int z, int basezoom) {
 	double scale = 1.0 / exp(log(sqrt(2.5)) * (basezoom - z));
-	struct draw tmp[3 * len];
-	int out = 0;
-	int i;
+	unsigned i;
+	drawvec out;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
 			long long cx = (geom[i].x + geom[i - 1].x) / 2;
 			long long cy = (geom[i].y + geom[i - 1].y) / 2;
 
-			tmp[out + 0].op = VT_MOVETO;
-			tmp[out + 0].x = cx + (geom[i - 1].x - cx) * scale;
-			tmp[out + 0].y = cy + (geom[i - 1].y - cy) * scale;
-
-			tmp[out + 1].op = VT_LINETO;
-			tmp[out + 1].x = cx + (geom[i].x - cx) * scale;
-			tmp[out + 1].y = cy + (geom[i].y - cy) * scale;
-
-			tmp[out + 2].op = VT_MOVETO;
-			tmp[out + 2].x = geom[i].x;
-			tmp[out + 2].y = geom[i].y;
-
-			out += 3;
+			out.push_back(draw(VT_MOVETO, cx + (geom[i - 1].x - cx) * scale, cy + (geom[i - 1].y - cy) * scale));
+			out.push_back(draw(VT_LINETO, cx + (geom[i].x - cx) * scale, cy + (geom[i].y - cy) * scale));
+			out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 		} else {
-			tmp[out++] = geom[i];
+			out.push_back(geom[i]);
 		}
 	}
 
-	memcpy(geom, tmp, out * sizeof(struct draw));
 	return out;
 }
 
@@ -544,7 +532,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 #if 0
 		if (t == VT_LINE && z != basezoom) {
-			len = shrink_lines(geom, len, z, basezoom);
+			geom = shrink_lines(geom, z, basezoom);
 		}
 #endif
 
