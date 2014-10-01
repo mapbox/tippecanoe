@@ -576,8 +576,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				c.meta.push_back(key->n);
 				c.meta.push_back(value->n);
 
-				// Dup to retain after munmap
-				pool(file_keys, strdup(key->s), t);
+				if (!is_pooled(file_keys, key->s, t)) {
+					// Dup to retain after munmap
+					pool(file_keys, strdup(key->s), t);
+				}
 			}
 
 			features.push_back(c);
