@@ -434,13 +434,8 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
 	int type;
-
-	int ngeom;
 	drawvec geom;
-
-	int nmeta;
-	int *meta;
-
+	std::vector<int> meta;
 	unsigned long long index;
 
 	bool operator< (const coalesce &o) const {
@@ -462,8 +457,8 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-	int i;
-	for (i = 0; i < c1->nmeta && i < c2->nmeta; i++) {
+	unsigned i;
+	for (i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
 		cmp = c1->meta[i] - c2->meta[i];
 
 		if (cmp != 0) {
@@ -471,7 +466,13 @@ int coalcmp(const void *v1, const void *v2) {
 		}
 	}
 
-	return c1->nmeta - c2->nmeta;
+	if (c1->meta.size() < c2->meta.size()) {
+		return -1;
+	} else if (c1->meta.size() > c2->meta.size()) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
@@ -565,9 +566,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			int m;
 			deserialize_int(&meta, &m);
 
-			c.nmeta = 2 * m;
-			c.meta = (int *) malloc(2 * m * sizeof(int));
-
 			int i;
 			for (i = 0; i < m; i++) {
 				int t;
@@ -575,8 +573,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
 				struct pool_val *value = deserialize_string(&meta, &values, t);
 
-				c.meta[2 * i + 0] = key->n;
-				c.meta[2 * i + 1] = value->n;
+				c.meta.push_back(key->n);
+				c.meta.push_back(value->n);
 
 				// Dup to retain after munmap
 				pool(file_keys, strdup(key->s), t);
@@ -602,8 +600,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			for (z = 0; z < features[x].geom.size(); z++) {
 				out[y].geom.push_back(features[x].geom[z]);
 			}
-
-			free(features[x].meta);
 		} else {
 			out.push_back(features[x]);
 		}
@@ -628,14 +624,12 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		}
 
 		to_feature(features[x].geom, feature);
-		count += features[x].ngeom;
+		count += features[x].geom.size();
 
-		int y;
-		for (y = 0; y < features[x].nmeta; y++) {
+		unsigned y;
+		for (y = 0; y < features[x].meta.size(); y++) {
 			feature->add_tags(features[x].meta[y]);
 		}
-
-		free(features[x].meta);
 	}
 
 	features.resize(0);
