@@ -202,6 +202,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, char *fname, char *layername, int mi
 		exit(EXIT_FAILURE);
 	}
 	sqlite3_free(sql);
+	free(buf);
 }
 
 void mbtiles_close(sqlite3 *outdb, char **argv) {

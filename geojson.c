@@ -526,6 +526,8 @@ next_feature:
 	tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
 	mbtiles_write_metadata(outdb, fname, layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, &file_keys);
+
+	pool_free_strings(&file_keys);
 }
 
 int main(int argc, char **argv) {

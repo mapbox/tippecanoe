@@ -84,8 +84,12 @@ struct pool_val *pool_long_long(struct pool *p, long long *s, int type) {
 	return pool1(p, (char *) s, type, llcmp);
 }
 
-void pool_free(struct pool *p) {
+void pool_free1(struct pool *p, void (*func)(void *)) {
 	while (p->head != NULL) {
+		if (func != NULL) {
+			func(p->head->s);
+		}
+
 		struct pool_val *next = p->head->next;
 		free(p->head);
 		p->head = next;
@@ -94,6 +98,14 @@ void pool_free(struct pool *p) {
 	p->head = NULL;
 	p->tail = NULL;
 	p->vals = NULL;
+}
+
+void pool_free(struct pool *p) {
+	pool_free1(p, NULL);
+}
+
+void pool_free_strings(struct pool *p) {
+	pool_free1(p, free);
 }
 
 void pool_init(struct pool *p, int n) {
