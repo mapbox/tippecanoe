@@ -372,6 +372,140 @@ void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	}
 }
 
+static bool inside(draw d, int edge, int area) {
+	int clip_buffer = area / 64;
+
+	switch (edge) {
+		case 0: // top
+			return d.y > -clip_buffer;
+
+		case 1: // right
+			return d.x < area + clip_buffer;
+
+		case 2: // bottom
+			return d.y < area + clip_buffer;
+
+		case 3: // left
+			return d.x > -clip_buffer;
+	}
+
+	fprintf(stderr, "internal error inside\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
+	double s1_x = p1.x - p0.x;
+	double s1_y = p1.y - p0.y;
+	double s2_x = p3.x - p2.x;
+	double s2_y = p3.y - p2.y;
+
+	double s, t;
+	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = ( s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+}
+
+static draw intersect(draw a, draw b, int edge, int area) {
+	int clip_buffer = area / 64;
+
+	switch (edge) {
+		case 0: // top
+			return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
+			break;
+
+		case 1: // right
+			return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
+			break;
+
+		case 2: // bottom 
+			return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
+			break;
+
+		case 3: // left
+			return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
+			break;
+	}
+
+	fprintf(stderr, "internal error intersecting\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
+static drawvec clip_poly1(drawvec &geom, int z, int detail) {
+	drawvec out = geom;
+
+	unsigned area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1 << (32 - z);
+	}
+
+	for (int edge = 0; edge < 4; edge++) {
+		if (out.size() > 0) {
+			drawvec in = out;
+			out.resize(0);
+
+			draw S = in[in.size() - 1];
+
+			for (unsigned e = 0; e < in.size(); e++) {
+				draw E = in[e];
+
+				if (inside(E, edge, area)) {
+					if (!inside(S, edge, area)) {
+						out.push_back(intersect(S, E, edge, area));
+					}
+					out.push_back(E);
+				} else if (inside(S, edge, area)) {
+					out.push_back(intersect(S, E, edge, area));
+				}
+
+				S = E;
+			}
+		}
+	}
+
+	if (out.size() > 0) {
+		out[0].op = VT_MOVETO;
+		for (unsigned i = 1; i < out.size(); i++) {
+			out[i].op = VT_LINETO;
+		}
+	}
+
+	return out;
+}
+
+drawvec clip_poly(drawvec &geom, int z, int detail) {
+	drawvec out;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op == VT_CLOSEPATH) {
+					break;
+				}
+			}
+
+			drawvec tmp;
+			for (unsigned k = i; k < j; k++) {
+				tmp.push_back(geom[k]);
+			}
+			tmp = clip_poly1(tmp, z, detail);
+			for (unsigned k = 0; k < tmp.size(); k++) {
+				out.push_back(tmp[k]);
+			}
+
+			out.push_back(draw(VT_CLOSEPATH, 0, 0));
+			i = j;
+		} else {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
+
 drawvec clip_lines(drawvec &geom, int z, int detail) {
 	drawvec out;
 	unsigned i;
@@ -556,6 +690,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		if (t == VT_LINE) {
 			geom = clip_lines(geom, z, detail);
+		}
+
+		if (t == VT_POLYGON) {
+			geom = clip_poly(geom, z, detail);
 		}
 
 		if (t == VT_LINE || t == VT_POLYGON) {
