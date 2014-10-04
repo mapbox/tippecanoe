@@ -137,7 +137,7 @@ int indexcmp(const void *v1, const void *v2) {
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
-		fprintf(stderr, "Write failed\n");
+		fprintf(stderr, "Write failed: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 	return w;
