@@ -134,37 +134,37 @@ int indexcmp(const void *v1, const void *v2) {
 	}
 }
 
-size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream) {
+size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, char *fname, json_pull *source) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
-		fprintf(stderr, "Write failed: %s\n", strerror(errno));
+		fprintf(stderr, "%s:%d: Write to temporary file failed: %s\n", fname, source->line, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 	return w;
 }
 
-void serialize_int(FILE *out, int n, long long *fpos) {
-	fwrite_check(&n, sizeof(int), 1, out);
+void serialize_int(FILE *out, int n, long long *fpos, char *fname, json_pull *source) {
+	fwrite_check(&n, sizeof(int), 1, out, fname, source);
 	*fpos += sizeof(int);
 }
 
-void serialize_uint(FILE *out, unsigned n, long long *fpos) {
-	fwrite_check(&n, sizeof(unsigned), 1, out);
+void serialize_uint(FILE *out, unsigned n, long long *fpos, char *fname, json_pull *source) {
+	fwrite_check(&n, sizeof(unsigned), 1, out, fname, source);
 	*fpos += sizeof(unsigned);
 }
 
-void serialize_string(FILE *out, char *s, long long *fpos) {
+void serialize_string(FILE *out, char *s, long long *fpos, char *fname, json_pull *source) {
 	int len = strlen(s);
 
-	serialize_int(out, len + 1, fpos);
-	fwrite_check(s, sizeof(char), len, out);
-	fwrite_check("", sizeof(char), 1, out);
+	serialize_int(out, len + 1, fpos, fname, source);
+	fwrite_check(s, sizeof(char), len, out, fname, source);
+	fwrite_check("", sizeof(char), 1, out, fname, source);
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, char *fname, json_pull *source) {
 	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "expected array for type %d\n", t);
+		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
 		return;
 	}
 
@@ -180,7 +180,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source);
 		}
 	} else {
 		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -204,16 +204,16 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			serialize_int(out, op, fpos);
-			serialize_uint(out, x, fpos);
-			serialize_uint(out, y, fpos);
+			serialize_int(out, op, fpos, fname, source);
+			serialize_uint(out, x, fpos, fname, source);
+			serialize_uint(out, y, fpos, fname, source);
 		} else {
-			fprintf(stderr, "malformed point");
+			fprintf(stderr, "%s:%d: malformed point", fname, source->line);
 		}
 	}
 
 	if (mb_geometry[t] == GEOM_POLYGON) {
-		serialize_int(out, VT_CLOSEPATH, fpos);
+		serialize_int(out, VT_CLOSEPATH, fpos, fname, source);
 	}
 }
 
@@ -306,7 +306,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "%d: %s\n", jp->line, jp->error);
+				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
 			}
 
 			json_free(jp->root);
@@ -320,25 +320,25 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "%d: feature with no geometry\n", jp->line);
+			fprintf(stderr, "%s:%d: feature with no geometry\n", fname, jp->line);
 			goto next_feature;
 		}
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL || geometry_type->type != JSON_STRING) {
-			fprintf(stderr, "%d: geometry without type string\n", jp->line);
+			fprintf(stderr, "%s:%d: geometry without type string\n", fname, jp->line);
 			goto next_feature;
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || properties->type != JSON_HASH) {
-			fprintf(stderr, "%d: feature without properties hash\n", jp->line);
+			fprintf(stderr, "%s:%d: feature without properties hash\n", fname, jp->line);
 			goto next_feature;
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates"); 
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-			fprintf(stderr, "%d: feature without coordinates array\n", jp->line);
+			fprintf(stderr, "%s:%d: feature without coordinates array\n", fname, jp->line);
 			goto next_feature;
 		}
 
@@ -349,7 +349,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			}
 		}
 		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", fname, jp->line, geometry_type->string);
 			goto next_feature;
 		}
 
@@ -358,9 +358,9 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
-			serialize_int(metafile, mb_geometry[t], &fpos);
-			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO);
-			serialize_int(metafile, VT_END, &fpos);
+			serialize_int(metafile, mb_geometry[t], &fpos, fname, jp);
+			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO, fname, jp);
+			serialize_int(metafile, VT_END, &fpos, fname, jp);
 
 			char *metakey[properties->length];
 			char *metaval[properties->length];
@@ -389,17 +389,17 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 						metaval[m] = properties->values[i]->string;
 						m++;
 					} else {
-						fprintf(stderr, "%d: Unsupported metafile type\n", jp->line);
+						fprintf(stderr, "%s:%d: Unsupported property type for %s\n", fname, jp->line, properties->keys[i]->string);
 						goto next_feature;
 					}
 				}
 			}
 
-			serialize_int(metafile, m, &fpos);
+			serialize_int(metafile, m, &fpos, fname, jp);
 			for (i = 0; i < m; i++) {
-				serialize_int(metafile, metatype[i], &fpos);
-				serialize_string(metafile, metakey[i], &fpos);
-				serialize_string(metafile, metaval[i], &fpos);
+				serialize_int(metafile, metatype[i], &fpos, fname, jp);
+				serialize_string(metafile, metakey[i], &fpos, fname, jp);
+				serialize_string(metafile, metaval[i], &fpos, fname, jp);
 			}
 
 			int z = 14;
@@ -412,7 +412,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				struct index ix;
 				ix.index = encode(cx, cy);
 				ix.fpos = start;
-				fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+				fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 			} else {
 				unsigned x, y;
 				for (x = bbox[0] >> (32 - z); x <= bbox[2] >> (32 - z); x++) {
@@ -425,7 +425,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 							ix.index = encode(x << (32 - z), y << (32 - z));
 						}
 						ix.fpos = start;
-						fwrite_check(&ix, sizeof(struct index), 1, indexfile);
+						fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 					}
 				}
 			}
