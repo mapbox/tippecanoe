@@ -43,17 +43,23 @@ simplification to the resolution of the tile.
 
 For point features, it drops 1/2.5 of the dots for each zoom level above the base.
 I don't know why 2.5 is the appropriate number, but the densities of many different
-data sets fall off at about this same rate.
+data sets fall off at about this same rate. You can use -r to specify a different rate.
 
 For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark (and too dense for the 500K tile limit,
 in some places), so I need to figure out an equitable way to throw features away.
 
-It also throws away any polygons that are too small to draw. I'm not sure yet
-if it is appropriate to do more than that.
+Any polygons that are smaller than a minimum area (currently 9 square subpixels) will
+have their probability diffused, so that some of them will be drawn as a square of
+this minimum size and others will not be drawn at all, preserving the total area that
+all of them should have had together.
 
 Features in the same tile that share the same type and attributes are coalesced
-together into a single geometry.
+together into a single geometry. You are strongly encouraged to use -x to exclude
+any unnecessary properties to reduce wasted file size.
+
+If a tile is larger than 500K, it will try encoding that tile at progressively
+lower resolutions before failing if it still doesn't fit.
 
 Development
 -----------
