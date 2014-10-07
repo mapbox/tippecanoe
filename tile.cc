@@ -506,6 +506,63 @@ drawvec clip_poly(drawvec &geom, int z, int detail) {
 	return out;
 }
 
+drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
+	drawvec out;
+	long long pixel = 1 << (32 - detail - z);
+
+	*reduced = true;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op == VT_CLOSEPATH) {
+					break;
+				}
+			}
+
+			double area = 0;
+			for (unsigned k = i; k < j; k++) {
+				area += geom[k].x * geom[i + ((k - i + 1) % (j - i))].y;
+				area -= geom[k].y * geom[i + ((k - i + 1) % (j - i))].x;
+			}
+			area = fabs(area / 2);
+
+			if (area <= pixel * pixel) {
+				//printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
+
+				*accum_area += area;
+				if (*accum_area > pixel * pixel) {
+					// XXX use centroid;
+
+					out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y + pixel));
+					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y + pixel));
+					out.push_back(draw(VT_CLOSEPATH, geom[i].x, geom[i].y));
+
+					*accum_area -= pixel * pixel;
+				}
+			} else {
+				//printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
+
+				for (unsigned k = i; k <= j && k < geom.size(); k++) {
+					out.push_back(geom[k]);
+				}
+
+				*reduced = false;
+			}
+
+			i = j;
+		} else {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
+
+
 drawvec clip_lines(drawvec &geom, int z, int detail) {
 	drawvec out;
 	unsigned i;
@@ -665,6 +722,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		double seq = 0;
 		long long count = 0;
 		long long along = 0;
+		double accum_area = 0;
 
 		if (z < basezoom) {
 			interval = exp(log(droprate) * (basezoom - z));
@@ -691,6 +749,11 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 			drawvec geom = decode_feature(&meta, z, tx, ty, line_detail);
 
+			bool reduced = false;
+			if (t == VT_POLYGON) {
+				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
+			}
+
 			if (t == VT_LINE) {
 				geom = clip_lines(geom, z, line_detail);
 			}
@@ -700,7 +763,9 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 
 			if (t == VT_LINE || t == VT_POLYGON) {
-				geom = simplify_lines(geom, z, line_detail);
+				if (!reduced) {
+					geom = simplify_lines(geom, z, line_detail);
+				}
 			}
 
 #if 0
