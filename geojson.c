@@ -491,6 +491,10 @@ next_feature:
 		if (cp != NULL) {
 			*cp = '\0';
 		}
+		cp = strstr(trunc, ".mbtiles");
+		if (cp != NULL) {
+			*cp = '\0';
+		}
 		layername = trunc;
 
 		char *out = trunc;
@@ -615,7 +619,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: Only accepts one input file\n", argv[0]);
 		exit(EXIT_FAILURE);
 	} else {
-		read_json(stdin, name ? name : "standard input", layer, maxzoom, minzoom, outdb, &exclude);
+		read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude);
 	}
 
 	mbtiles_close(outdb, argv);
