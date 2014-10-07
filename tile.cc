@@ -230,9 +230,9 @@ drawvec remove_noop(drawvec geom, int type) {
 	return out;
 }
 
-drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here) {
+drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here, double droprate) {
 	long long res = 200LL << (32 - 8 - z);
-	long long portion = res / exp(log(sqrt(2.5)) * (basezoom - z));
+	long long portion = res / exp(log(sqrt(droprate)) * (basezoom - z));
 
 	unsigned i;
 	drawvec out;
@@ -642,7 +642,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
 	int line_detail;
 
 	for (line_detail = detail; line_detail >= 7; line_detail--) {
@@ -667,7 +667,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		long long along = 0;
 
 		if (z < basezoom) {
-			interval = exp(log(2.5) * (basezoom - z));
+			interval = exp(log(droprate) * (basezoom - z));
 		}
 
 		std::vector<coalesce> features;

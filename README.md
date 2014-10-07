@@ -26,6 +26,7 @@ Options
  * -D Detail at lower zoom levels (default 10, for tile resolution of 1024) 
  * -x Property (removes the named properties from all features)
  * -f Force: Delete existing mbtiles file if it already exists.
+ * -r Rate at which dots are dropped at lower zoom levels (default 2.5)
 
 Example
 -------
