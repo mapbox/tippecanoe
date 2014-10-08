@@ -647,6 +647,7 @@ struct coalesce {
 	drawvec geom;
 	std::vector<int> meta;
 	unsigned long long index;
+	char *metasrc;
 
 	bool operator< (const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -699,19 +700,91 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
+void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys) {
+	struct pool_val *pv;
+
+	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
+	}
+}
+
+void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+	int m;
+	deserialize_int(meta, &m);
+
+	int i;
+	for (i = 0; i < m; i++) {
+		int t;
+		deserialize_int(meta, &t);
+		struct pool_val *key = deserialize_string(meta, keys, VT_STRING);
+		struct pool_val *value = deserialize_string(meta, values, t);
+
+		intmeta->push_back(key->n);
+		intmeta->push_back(value->n);
+
+		if (!is_pooled(file_keys, key->s, t)) {
+			// Dup to retain after munmap
+			pool(file_keys, strdup(key->s), t);
+		}
+	}
+}
+
+mapnik::vector::tile create_tile(char *layername, int line_detail, std::vector<coalesce> &features, long long *count, struct pool *keys, struct pool *values) {
+	mapnik::vector::tile tile;
+	mapnik::vector::tile_layer *layer = tile.add_layers();
+
+	layer->set_name(layername);
+	layer->set_version(1);
+	layer->set_extent(1 << line_detail);
+
+	unsigned x;
+	for (x = 0; x < features.size(); x++) {
+		if (features[x].type == VT_LINE || features[x].type == VT_POLYGON) {
+			features[x].geom = remove_noop(features[x].geom, features[x].type);
+		}
+
+		mapnik::vector::tile_feature *feature = layer->add_features();
+
+		if (features[x].type == VT_POINT) {
+			feature->set_type(mapnik::vector::tile::Point);
+		} else if (features[x].type == VT_LINE) {
+			feature->set_type(mapnik::vector::tile::LineString);
+		} else if (features[x].type == VT_POLYGON) {
+			feature->set_type(mapnik::vector::tile::Polygon);
+		} else {
+			feature->set_type(mapnik::vector::tile::Unknown);
+		}
+
+		to_feature(features[x].geom, feature);
+		*count += features[x].geom.size();
+
+		unsigned y;
+		for (y = 0; y < features[x].meta.size(); y++) {
+			feature->add_tags(features[x].meta[y]);
+		}
+	}
+
+	struct pool_val *pv;
+	for (pv = keys->head; pv != NULL; pv = pv->next) {
+		layer->add_keys(pv->s, strlen(pv->s));
+	}
+	for (pv = values->head; pv != NULL; pv = pv->next) {
+		mapnik::vector::tile_value *tv = layer->add_values();
+
+		if (pv->type == VT_NUMBER) {
+			tv->set_double_value(atof(pv->s));
+		} else {
+			tv->set_string_value(pv->s);
+		}
+	}
+
+	return tile;
+}
+
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
 	int line_detail;
 
 	for (line_detail = detail; line_detail >= 7; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-		mapnik::vector::tile tile;
-		mapnik::vector::tile_layer *layer = tile.add_layers();
-
-		layer->set_name(layername);
-		layer->set_version(1);
-
-		layer->set_extent(1 << line_detail);
 
 		struct pool keys, values, dup;
 		pool_init(&keys, 0);
@@ -788,26 +861,9 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				c.type = t;
 				c.index = i->index;
 				c.geom = geom;
+				c.metasrc = meta;
 
-				int m;
-				deserialize_int(&meta, &m);
-
-				int i;
-				for (i = 0; i < m; i++) {
-					int t;
-					deserialize_int(&meta, &t);
-					struct pool_val *key = deserialize_string(&meta, &keys, VT_STRING);
-					struct pool_val *value = deserialize_string(&meta, &values, t);
-
-					c.meta.push_back(key->n);
-					c.meta.push_back(value->n);
-
-					if (!is_pooled(file_keys, key->s, t)) {
-						// Dup to retain after munmap
-						pool(file_keys, strdup(key->s), t);
-					}
-				}
-
+				decode_meta(&meta, &keys, &values, file_keys, &c.meta);
 				features.push_back(c);
 			}
 		}
@@ -832,49 +888,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				out.push_back(features[x]);
 			}
 		}
-
 		features = out;
-		for (x = 0; x < features.size(); x++) {
-			if (features[x].type == VT_LINE || features[x].type == VT_POLYGON) {
-				features[x].geom = remove_noop(features[x].geom, features[x].type);
-			}
 
-			mapnik::vector::tile_feature *feature = layer->add_features();
+		mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
 
-			if (features[x].type == VT_POINT) {
-				feature->set_type(mapnik::vector::tile::Point);
-			} else if (features[x].type == VT_LINE) {
-				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (features[x].type == VT_POLYGON) {
-				feature->set_type(mapnik::vector::tile::Polygon);
-			} else {
-				feature->set_type(mapnik::vector::tile::Unknown);
-			}
-
-			to_feature(features[x].geom, feature);
-			count += features[x].geom.size();
-
-			unsigned y;
-			for (y = 0; y < features[x].meta.size(); y++) {
-				feature->add_tags(features[x].meta[y]);
-			}
-		}
-
-		features.resize(0);
-
-		struct pool_val *pv;
-		for (pv = keys.head; pv != NULL; pv = pv->next) {
-			layer->add_keys(pv->s, strlen(pv->s));
-		}
-		for (pv = values.head; pv != NULL; pv = pv->next) {
-			mapnik::vector::tile_value *tv = layer->add_values();
-
-			if (pv->type == VT_NUMBER) {
-				tv->set_double_value(atof(pv->s));
-			} else {
-				tv->set_string_value(pv->s);
-			}
-		}
 		pool_free(&keys);
 		pool_free(&values);
 		pool_free(&dup);
@@ -884,6 +901,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		tile.SerializeToString(&s);
 		compress(s, compressed);
+
+		evaluate(features, metabase, file_keys);
 
 		if (compressed.size() > 500000) {
 			fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
