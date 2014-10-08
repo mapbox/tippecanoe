@@ -700,14 +700,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys) {
-	struct pool_val *pv;
-
-	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
-	}
-}
-
-void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *skip) {
 	int m;
 	deserialize_int(meta, &m);
 
@@ -716,14 +709,20 @@ void decode_meta(char **meta, struct pool *keys, struct pool *values, struct poo
 		int t;
 		deserialize_int(meta, &t);
 		struct pool_val *key = deserialize_string(meta, keys, VT_STRING);
-		struct pool_val *value = deserialize_string(meta, values, t);
 
-		intmeta->push_back(key->n);
-		intmeta->push_back(value->n);
+		if (skip != NULL && (strcmp(key->s, skip) == 0)) {
+			deserialize_int(meta, &t);
+			*meta += t;
+		} else {
+			struct pool_val *value = deserialize_string(meta, values, t);
 
-		if (!is_pooled(file_keys, key->s, t)) {
-			// Dup to retain after munmap
-			pool(file_keys, strdup(key->s), t);
+			intmeta->push_back(key->n);
+			intmeta->push_back(value->n);
+
+			if (!is_pooled(file_keys, key->s, t)) {
+				// Dup to retain after munmap
+				pool(file_keys, strdup(key->s), t);
+			}
 		}
 	}
 }
@@ -778,6 +777,37 @@ mapnik::vector::tile create_tile(char *layername, int line_detail, std::vector<c
 	}
 
 	return tile;
+}
+
+void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, char *layername, int line_detail) {
+	struct pool_val *pv;
+
+	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
+		struct pool keys, values;
+		pool_init(&keys, 0);
+		pool_init(&values, 0);
+		long long count = 0;
+
+		for (unsigned i = 0; i < features.size(); i++) {
+			char *meta = features[i].metasrc;
+
+			features[i].meta.resize(0);
+			decode_meta(&meta, &keys, &values, file_keys, &features[i].meta, pv->s);
+		}
+
+		mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+
+		std::string s;
+		std::string compressed;
+
+		tile.SerializeToString(&s);
+		compress(s, compressed);
+
+		fprintf(stderr, "with -x %s, size would be %lld\n", pv->s, (long long) s.size());
+
+		pool_free(&values);
+		pool_free(&keys);
+	}
 }
 
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
@@ -863,7 +893,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				c.geom = geom;
 				c.metasrc = meta;
 
-				decode_meta(&meta, &keys, &values, file_keys, &c.meta);
+				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
 				features.push_back(c);
 			}
 		}
@@ -902,10 +932,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		tile.SerializeToString(&s);
 		compress(s, compressed);
 
-		evaluate(features, metabase, file_keys);
-
 		if (compressed.size() > 500000) {
 			fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+
+			evaluate(features, metabase, file_keys, layername, line_detail);
 		} else {
 			mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 			return count;
