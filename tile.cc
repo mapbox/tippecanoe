@@ -779,9 +779,28 @@ mapnik::vector::tile create_tile(char *layername, int line_detail, std::vector<c
 	return tile;
 }
 
-void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, char *layername, int line_detail) {
-	struct pool_val *pv;
+struct sll {
+	char *name;	
+	long long val;
 
+	bool operator< (const sll &o) const {
+		if (this->val < o.val) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	sll(char *name, long long val) {
+		this->name = name;
+		this->val = val;
+	}
+};
+
+void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, char *layername, int line_detail, long long orig) {
+	std::vector<sll> options;
+
+	struct pool_val *pv;
 	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
 		struct pool keys, values;
 		pool_init(&keys, 0);
@@ -803,15 +822,21 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 		tile.SerializeToString(&s);
 		compress(s, compressed);
 
-		fprintf(stderr, "with -x %s, size would be %lld\n", pv->s, (long long) s.size());
+		options.push_back(sll(pv->s, compressed.size()));
 
 		pool_free(&values);
 		pool_free(&keys);
+	}
+
+	std::sort(options.begin(), options.end());
+	for (unsigned i = 0; i < options.size() && i < 10; i++) {
+		fprintf(stderr, "with -x %s, size would be %lld, for a savings of %lld\n", options[i].name, options[i].val, orig - options[i].val);
 	}
 }
 
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
 	int line_detail;
+	static bool evaluated = false;
 
 	for (line_detail = detail; line_detail >= 7; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -935,7 +960,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		if (compressed.size() > 500000) {
 			fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
-			evaluate(features, metabase, file_keys, layername, line_detail);
+			if (!evaluated) {
+				evaluated = true;
+				evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
+			}
 		} else {
 			mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 			return count;
