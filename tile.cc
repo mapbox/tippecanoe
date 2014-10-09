@@ -700,7 +700,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *skip) {
+void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
 	int m;
 	deserialize_int(meta, &m);
 
@@ -710,7 +710,7 @@ void decode_meta(char **meta, struct pool *keys, struct pool *values, struct poo
 		deserialize_int(meta, &t);
 		struct pool_val *key = deserialize_string(meta, keys, VT_STRING);
 
-		if (skip != NULL && (strcmp(key->s, skip) == 0)) {
+		if (only != NULL && (strcmp(key->s, only) != 0)) {
 			deserialize_int(meta, &t);
 			*meta += t;
 		} else {
@@ -814,7 +814,8 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 			decode_meta(&meta, &keys, &values, file_keys, &features[i].meta, pv->s);
 		}
 
-		mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+		std::vector<coalesce> empty;
+		mapnik::vector::tile tile = create_tile(layername, line_detail, empty, &count, &keys, &values);
 
 		std::string s;
 		std::string compressed;
@@ -829,8 +830,10 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	}
 
 	std::sort(options.begin(), options.end());
-	for (unsigned i = 0; i < options.size() && i < 10; i++) {
-		fprintf(stderr, "with -x %s, size would be %lld, for a savings of %lld\n", options[i].name, options[i].val, orig - options[i].val);
+	for (unsigned i = 0; i < options.size(); i++) {
+		if (options[i].val > 1024) {
+			fprintf(stderr, "using -x %s would save about %lld, for a tile size of of %lld\n", options[i].name, options[i].val, orig - options[i].val);
+		}
 	}
 }
 
