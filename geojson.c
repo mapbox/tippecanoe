@@ -441,8 +441,8 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				}
 			}
 			
-			if (seq % 100000 == 0) {
-				fprintf(stderr, "Read %.1f million features\r", seq / 1000000.0);
+			if (seq % 10000 == 0) {
+				fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
 			}
 			seq++;
 		}
