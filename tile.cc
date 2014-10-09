@@ -21,6 +21,7 @@ extern "C" {
 }
 
 #define CMD_BITS 3
+#define MIN_DETAIL 7
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const& input, std::string& output) {
@@ -835,13 +836,31 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 			fprintf(stderr, "using -x %s would save about %lld, for a tile size of of %lld\n", options[i].name, options[i].val, orig - options[i].val);
 		}
 	}
+
+	struct pool keys, values;
+	pool_init(&keys, 0);
+	pool_init(&values, 0);
+	long long count = 0;
+
+	std::vector<coalesce> empty;
+	mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+
+	std::string s;
+	std::string compressed;
+
+	tile.SerializeToString(&s);
+	compress(s, compressed);
+	fprintf(stderr, "geometry alone (-X) would be %lld\n", (long long) compressed.size());
+
+	pool_free(&values);
+	pool_free(&keys);
 }
 
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
 	int line_detail;
 	static bool evaluated = false;
 
-	for (line_detail = detail; line_detail >= 7; line_detail--) {
+	for (line_detail = detail; line_detail >= MIN_DETAIL; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 		struct pool keys, values, dup;
@@ -963,7 +982,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		if (compressed.size() > 500000) {
 			fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
-			if (!evaluated) {
+			if (line_detail == MIN_DETAIL || !evaluated) {
 				evaluated = true;
 				evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
 			}
