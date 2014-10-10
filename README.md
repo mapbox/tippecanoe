@@ -18,15 +18,16 @@ it encounters.
 Options
 -------
 
- * -l Layer name (default "file" if source is file.json)
- * -n Human-readable name (default file.json)
- * -z Base zoom level (default 14)
- * -Z Lowest zoom level (default 0)
- * -d Detail at base zoom level (default 12, for tile resolution of 4096)
- * -D Detail at lower zoom levels (default 10, for tile resolution of 1024) 
- * -x Property (removes the named properties from all features)
- * -f Force: Delete existing mbtiles file if it already exists.
- * -r Rate at which dots are dropped at lower zoom levels (default 2.5)
+ * -l <i>name</i>: Layer name (default "file" if source is file.json)
+ * -n <i>name</i>: Human-readable name (default file.json)
+ * -z <i>zoom</i>: Base zoom level (default 14)
+ * -Z <i>zoom</i>: Lowest zoom level (default 0)
+ * -d <i>detail</i>: Detail at base zoom level (default 12, for tile resolution of 4096)
+ * -D <i>detail</i>: Detail at lower zoom levels (default 10, for tile resolution of 1024) 
+ * -x <i>name</i> Property (removes the named properties from all features)
+ * -X: Exclude all properties
+ * -f: Force: Delete existing mbtiles file if it already exists.
+ * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
 
 Example
 -------
