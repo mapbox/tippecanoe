@@ -212,7 +212,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		}
 	}
 
-	if (mb_geometry[t] == GEOM_POLYGON) {
+	if (mb_geometry[t] == VT_POLYGON) {
 		serialize_int(out, VT_CLOSEPATH, fpos, fname, source);
 	}
 }
