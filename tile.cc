@@ -477,6 +477,10 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail) {
 }
 
 drawvec clip_poly(drawvec &geom, int z, int detail) {
+	if (z == 0) {
+		return geom;
+	}
+
 	drawvec out;
 
 	for (unsigned i = 0; i < geom.size(); i++) {
