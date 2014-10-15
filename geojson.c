@@ -169,6 +169,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 
 	int within = geometry_within[t];
+	long long began = *fpos;
 	if (within >= 0) {
 		int i;
 		for (i = 0; i < j->length; i++) {
@@ -212,8 +213,10 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		}
 	}
 
-	if (mb_geometry[t] == VT_POLYGON) {
-		serialize_int(out, VT_CLOSEPATH, fpos, fname, source);
+	if (t == GEOM_POLYGON) {
+		if (*fpos != began) {
+			serialize_int(out, VT_CLOSEPATH, fpos, fname, source);
+		}
 	}
 }
 

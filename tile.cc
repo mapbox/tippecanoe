@@ -522,6 +522,10 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				}
 			}
 
+			if (j + 1 < geom.size() && geom[j + 1].op == VT_CLOSEPATH) {
+				fprintf(stderr, "double closepath\n");
+			}
+
 			double area = 0;
 			for (unsigned k = i; k < j; k++) {
 				area += geom[k].x * geom[i + ((k - i + 1) % (j - i))].y;
@@ -556,6 +560,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			i = j;
 		} else {
+			fprintf(stderr, "how did we get here with %d?\n", geom[i].op);
 			out.push_back(geom[i]);
 		}
 	}
