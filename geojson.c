@@ -402,7 +402,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				serialize_string(metafile, metaval[i], &fpos, fname, jp);
 			}
 
-			int z = 14;
+			int z = maxzoom;
 
 			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
 			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
