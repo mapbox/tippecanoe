@@ -487,7 +487,7 @@ drawvec clip_poly(drawvec &geom, int z, int detail) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH) {
+				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
 					break;
 				}
 			}
@@ -501,8 +501,12 @@ drawvec clip_poly(drawvec &geom, int z, int detail) {
 				out.push_back(tmp[k]);
 			}
 
-			out.push_back(draw(VT_CLOSEPATH, 0, 0));
-			i = j;
+			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
+				out.push_back(draw(VT_CLOSEPATH, 0, 0));
+				i = j;
+			} else {
+				i = j - 1;
+			}
 		} else {
 			out.push_back(geom[i]);
 		}
