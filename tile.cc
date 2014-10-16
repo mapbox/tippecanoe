@@ -373,8 +373,8 @@ void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	}
 }
 
-static bool inside(draw d, int edge, int area) {
-	int clip_buffer = area / 64;
+static bool inside(draw d, int edge, long long area) {
+	long long clip_buffer = area / 64;
 
 	switch (edge) {
 		case 0: // top
@@ -408,8 +408,8 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
 }
 
-static draw intersect(draw a, draw b, int edge, int area) {
-	int clip_buffer = area / 64;
+static draw intersect(draw a, draw b, int edge, long long area) {
+	long long clip_buffer = area / 64;
 
 	switch (edge) {
 		case 0: // top
@@ -437,9 +437,9 @@ static draw intersect(draw a, draw b, int edge, int area) {
 static drawvec clip_poly1(drawvec &geom, int z, int detail) {
 	drawvec out = geom;
 
-	unsigned area = 0xFFFFFFFF;
+	long long area = 0xFFFFFFFF;
 	if (z != 0) {
-		area = 1 << (32 - z);
+		area = 1LL << (32 - z);
 	}
 
 	for (int edge = 0; edge < 4; edge++) {
