@@ -662,6 +662,7 @@ struct coalesce {
 	std::vector<int> meta;
 	unsigned long long index;
 	char *metasrc;
+	bool coalesced;
 
 	bool operator< (const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -952,6 +953,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				c.index = i->index;
 				c.geom = geom;
 				c.metasrc = meta;
+				c.coalesced = false;
 
 				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
 				features.push_back(c);
@@ -974,11 +976,19 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				for (z = 0; z < features[x].geom.size(); z++) {
 					out[y].geom.push_back(features[x].geom[z]);
 				}
+				out[y].coalesced = true;
 			} else {
 				out.push_back(features[x]);
 			}
 		}
 		features = out;
+
+		for (x = 0; x < features.size(); x++) {
+			if (features[x].coalesced && features[x].type == VT_LINE) {
+				features[x].geom = remove_noop(features[x].geom, features[x].type);
+				features[x].geom = simplify_lines(features[x].geom, 32, 0);
+			}
+		}
 
 		mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
 
