@@ -30,6 +30,7 @@ typedef struct json_pull {
 
 	int (*read)(struct json_pull *);
 	int (*peek)(struct json_pull *);
+	int peeked;
 	void *source;
 
 	json_object *container;

@@ -16,8 +16,19 @@ json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_p
 	j->read = read;
 	j->peek = peek;
 	j->source = source;
+	j->peeked = j->read(j);
 
 	return j;
+}
+
+static inline int peek(json_pull *j) {
+	return j->peeked;
+}
+
+static inline int next(json_pull *j) {
+	int ret = j->peeked;
+	j->peeked = j->read(j);
+	return ret;
 }
 
 static int read_file(json_pull *j) {
@@ -60,8 +71,8 @@ void json_end(json_pull *p) {
 	free(p);
 }
 
-static int read_wrap(json_pull *j) {
-	int c = j->read(j);
+static inline int read_wrap(json_pull *j) {
+	int c = next(j);
 
 	if (c == '\n') {
 		j->line++;
@@ -372,34 +383,34 @@ again:
 			string_append(&val, c);
 		} else if (c >= '1' && c <= '9') {
 			string_append(&val, c);
-			c = j->peek(j);
+			c = peek(j);
 
 			while (c >= '0' && c <= '9') {
 				string_append(&val, read_wrap(j));
-				c = j->peek(j);
+				c = peek(j);
 			}
 		}
 
-		if (j->peek(j) == '.') {
+		if (peek(j) == '.') {
 			string_append(&val, read_wrap(j));
 
-			c = j->peek(j);
+			c = peek(j);
 			while (c >= '0' && c <= '9') {
 				string_append(&val, read_wrap(j));
-				c = j->peek(j);
+				c = peek(j);
 			}
 		}
 
-		c = j->peek(j);
+		c = peek(j);
 		if (c == 'e' || c == 'E') {
 			string_append(&val, read_wrap(j));
 
-			c = j->peek(j);
+			c = peek(j);
 			if (c == '+' || c == '-') {
 				string_append(&val, read_wrap(j));
 			}
 
-			c = j->peek(j);
+			c = peek(j);
 			if (c < '0' || c > '9') {
 				j->error = "Exponent without digits";
 				string_free(&val);
@@ -407,7 +418,7 @@ again:
 			}
 			while (c >= '0' && c <= '9') {
 				string_append(&val, read_wrap(j));
-				c = j->peek(j);
+				c = peek(j);
 			}
 		}
 
