@@ -28,18 +28,23 @@ typedef struct json_pull {
 	char *error;
 	int line;
 
-	int (*read)(struct json_pull *);
-	int (*peek)(struct json_pull *);
-	int peeked;
+	int (*read)(struct json_pull *, char *buf, int n);
 	void *source;
+	char *buffer;
+	int buffer_tail;
+	int buffer_head;
 
 	json_object *container;
 	json_object *root;
 } json_pull;
 
 json_pull *json_begin_file(FILE *f);
+
+#if 0
 json_pull *json_begin_string(char *s);
-json_pull *json_begin(int (*read)(struct json_pull *), int (*peek)(struct json_pull *), void *source);
+#endif
+
+json_pull *json_begin(int (*read)(struct json_pull *, char *buffer, int n), void *source);
 void json_end(json_pull *p);
 
 typedef void (*json_separator_callback)(json_type type, json_pull *j, void *state);
