@@ -654,6 +654,44 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	return out;
 }
 
+drawvec reorder_lines(drawvec &geom) {
+	// Only reorder simple linestrings with a single moveto
+
+	unsigned i;
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			if (i != 0) {
+				return geom;
+			}
+		} else if (geom[i].op == VT_LINETO) {
+			if (i == 0) {
+				return geom;
+			}
+		} else {
+			return geom;
+		}
+	}
+
+	// Reorder anything that goes up and to the left
+	// instead of down and to the right
+	// so that it will coalesce better
+
+	unsigned long long l1 = encode(geom[0].x, geom[0].y);
+	unsigned long long l2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+
+	if (l1 > l2) {
+		drawvec out;
+		for (i = 0; i < geom.size(); i++) {
+			out.push_back(geom[geom.size() - 1 - i]);
+		}
+		out[0].op = VT_MOVETO;
+		out[out.size() - 1].op = VT_LINETO;
+		return out;
+	}
+
+	return geom;
+}
+
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
@@ -937,6 +975,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				geom = shrink_lines(geom, z, line_detail, basezoom, &along);
 			}
 #endif
+
+			if (t == VT_LINE) {
+				geom = reorder_lines(geom);
+			}
 
 			to_tile_scale(geom, z, line_detail);
 
