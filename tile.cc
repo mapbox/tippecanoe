@@ -992,7 +992,11 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				struct coalesce c;
 
 				c.type = t;
-				c.index = i->index;
+				if (geom.size() > 0) {
+					c.index = encode(geom[0].x, geom[0].y);
+				} else {
+					c.index = i->index;
+				}
 				c.geom = geom;
 				c.metasrc = meta;
 				c.coalesced = false;
