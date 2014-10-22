@@ -699,6 +699,7 @@ struct coalesce {
 	drawvec geom;
 	std::vector<int> meta;
 	unsigned long long index;
+	unsigned long long index2;
 	char *metasrc;
 	bool coalesced;
 
@@ -746,6 +747,12 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 		if (c1->index < c2->index) {
 			return -1;
 		} else if (c1->index > c2->index) {
+			return 1;
+		}
+
+		if (c1->index2 > c2->index2) {
+			return -1;
+		} else if (c1->index2 < c2->index2) {
 			return 1;
 		}
 	}
@@ -994,8 +1001,17 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				c.type = t;
 				if (geom.size() > 0) {
 					c.index = encode(geom[0].x, geom[0].y);
+					c.index2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+
+					// Anything numbered below the start of the line
+					// can't possibly be the next feature.
+					// We want lowest-but-not-under.
+					if (c.index2 < c.index) {
+						c.index2 = ~0LL;
+					}
 				} else {
 					c.index = i->index;
+					c.index2 = i->index;
 				}
 				c.geom = geom;
 				c.metasrc = meta;
