@@ -1,6 +1,6 @@
 PREFIX=/usr/local
 
-all: tippecanoe enumerate
+all: tippecanoe enumerate decode
 
 install: tippecanoe
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
@@ -15,6 +15,9 @@ tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o
 
 enumerate: enumerate.o
 	gcc $(PG) -O3 -g -Wall -o $@ $^ -lsqlite3
+
+decode: decode.o vector_tile.pb.o
+	g++ $(PG) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
