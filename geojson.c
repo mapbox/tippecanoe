@@ -122,28 +122,6 @@ void decode(unsigned long long index, unsigned *wx, unsigned *wy) {
 	}
 }
 
-// http://www.tbray.org/ongoing/When/200x/2003/03/22/Binary
-void *search(const void *key, const void *base, size_t nel, size_t width,
-		int (*cmp)(const void *, const void *)) {
-
-	long long high = nel, low = -1, probe;
-	while (high - low > 1) {
-		probe = (low + high) >> 1;
-		int c = cmp(((char *) base) + probe * width, key);
-		if (c > 0) {
-			high = probe;
-		} else {
-			low = probe;
-		}
-	}
-
-	if (low < 0) {
-		low = 0;
-	}
-
-	return ((char *) base) + low * width;
-}
-
 int indexcmp(const void *v1, const void *v2) {
 	const struct index *i1 = v1;
 	const struct index *i2 = v2;

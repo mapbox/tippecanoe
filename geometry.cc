@@ -124,6 +124,7 @@ drawvec remove_noop(drawvec geom, int type) {
 }
 
 /* XXX */
+#if 0
 drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here, double droprate) {
 	long long res = 200LL << (32 - 8 - z);
 	long long portion = res / exp(log(sqrt(droprate)) * (basezoom - z));
@@ -175,6 +176,7 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 
 	return out;
 }
+#endif
 
 static bool inside(draw d, int edge, long long area) {
 	long long clip_buffer = area / 64;
