@@ -7,6 +7,10 @@
 #include <math.h>
 #include "vector_tile.pb.h"
 
+extern "C" {
+	#include "projection.h"
+}
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 inline bool is_compressed(std::string const& data) {
 	return data.size() > 2 && (uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C;
@@ -42,14 +46,6 @@ inline int decompress(std::string const& input, std::string & output) {
 
 int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
-}
-
-// http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *lon) {
-        unsigned long long n = 1LL << zoom;
-        *lon = 360.0 * x / n - 180.0;
-        double lat_rad = atan(sinh(M_PI * (1 - 2.0 * y / n)));
-        *lat = lat_rad * 180 / M_PI;
 }
 
 void handle(std::string message, int z, unsigned x, unsigned y) {

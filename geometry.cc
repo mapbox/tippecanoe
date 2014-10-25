@@ -13,6 +13,7 @@
 extern "C" {
 	#include "tile.h"
 	#include "clip.h"
+	#include "projection.h"
 }
 
 drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail) {

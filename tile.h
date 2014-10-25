@@ -24,6 +24,4 @@ struct index {
         struct index *next;
 };
 
-unsigned long long encode(unsigned int wx, unsigned int wy);
-
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate);

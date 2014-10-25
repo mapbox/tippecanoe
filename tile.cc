@@ -19,6 +19,7 @@ extern "C" {
 	#include "pool.h"
 	#include "clip.h"
 	#include "mbtiles.h"
+	#include "projection.h"
 }
 
 #define CMD_BITS 3
