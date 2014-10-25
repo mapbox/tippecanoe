@@ -207,8 +207,8 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	double s2_x = p3.x - p2.x;
 	double s2_y = p3.y - p2.y;
 
-	double s, t;
-	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	double t;
+	//s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
 	t = ( s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));

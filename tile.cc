@@ -355,7 +355,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		double interval = 1;
 		double seq = 0;
 		long long count = 0;
-		long long along = 0;
+		//long long along = 0;
 		double accum_area = 0;
 
 		if (z < basezoom) {
