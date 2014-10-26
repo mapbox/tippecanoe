@@ -468,6 +468,19 @@ next_feature:
 	tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
 	tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
 
+	if (midlat < minlat) {
+		midlat = minlat;
+	}
+	if (midlat > maxlat) {
+		midlat = maxlat;
+	}
+	if (midlon < minlon) {
+		midlon = minlon;
+	}
+	if (midlon > maxlon) {
+		midlon = maxlon;
+	}
+
 	mbtiles_write_metadata(outdb, fname, layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, &file_keys);
 
 	pool_free_strings(&file_keys);
