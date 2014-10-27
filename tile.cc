@@ -366,8 +366,13 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		struct index *i;
 		for (i = start; i < end; i++) {
-			int t;
+			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
+			if (pv->n == 0) {
+				continue;
+			}
+			pv->n = 0;
 
+			int t;
 			char *meta = metabase + i->fpos;
 			deserialize_int(&meta, &t);
 
@@ -415,12 +420,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			to_tile_scale(geom, z, line_detail);
 
 			if (t == VT_POINT || to_feature(geom, NULL)) {
-				struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
-				if (pv->n == 0) {
-					continue;
-				}
-				pv->n = 0;
-
 				struct coalesce c;
 
 				c.type = t;
