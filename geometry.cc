@@ -395,8 +395,8 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			unsigned min = 0;
-			unsigned area = 0xFFFFFFFF;
+			long long min = 0;
+			long long area = 0xFFFFFFFF;
 			if (z != 0) {
 				area = 1 << (32 - z);
 
