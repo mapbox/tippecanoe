@@ -20,7 +20,7 @@
 #include "projection.h"
 
 int low_detail = 10;
-int full_detail = 12;
+int full_detail = -1;
 
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
@@ -579,6 +579,13 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-X] [-r droprate] [-b buffer] [file.json]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	if (full_detail <= 0) {
+		// ~0.5m accuracy at whatever zoom
+		// 12 bits (4096 units) at z14
+
+		full_detail = 26 - maxzoom;
 	}
 
 	if (outdir == NULL) {
