@@ -172,7 +172,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer) {
 	fprintf(stderr, "\n");
 	long long most = 0;
 
@@ -208,7 +208,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 
 			fprintf(stderr, "  %3.1f%%   %d/%u/%u    %x %x   %lld to %lld    \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
 
-			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate);
+			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer);
 
 			if (z == maxzoom && len > most) {
 				*midx = tx;
@@ -221,7 +221,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 	fprintf(stderr, "\n");
 }
 
-void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, int exclude_all, double droprate) {
+void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, int exclude_all, double droprate, int buffer) {
 	char metaname[] = "/tmp/meta.XXXXXXXX";
 	char indexname[] = "/tmp/index.XXXXXXXX";
 
@@ -342,7 +342,6 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			}
 
 			int z = maxzoom;
-			int buffer = 10;
 
 			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
 			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
@@ -470,7 +469,7 @@ next_feature:
 	}
 
 	qsort(index, indexst.st_size / sizeof(struct index), sizeof(struct index), indexcmp);
-	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate);
+	check(index, indexst.st_size / sizeof(struct index), meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer);
 
 	munmap(index, indexst.st_size);
 	munmap(meta, metast.st_size);
@@ -520,12 +519,13 @@ int main(int argc, char **argv) {
 	int minzoom = 0;
 	int force = 0;
 	double droprate = 2.5;
+	int buffer = 5;
 
 	struct pool exclude;
 	pool_init(&exclude, 0);
 	int exclude_all = 0;
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:r:fX")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:r:b:fX")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -567,12 +567,16 @@ int main(int argc, char **argv) {
 			droprate = atof(optarg);
 			break;
 
+		case 'b':
+			buffer = atoi(optarg);
+			break;
+
 		case 'f':
 			force = 1;
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-X] [-r droprate] [file.json]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-X] [-r droprate] [-b buffer] [file.json]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -595,7 +599,7 @@ int main(int argc, char **argv) {
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate);
+				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate, buffer);
 				fclose(f);
 			}
 		}
@@ -603,7 +607,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: Only accepts one input file\n", argv[0]);
 		exit(EXIT_FAILURE);
 	} else {
-		read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate);
+		read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate, buffer);
 	}
 
 	mbtiles_close(outdb, argv);

@@ -340,7 +340,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate, int buffer) {
 	int line_detail;
 	static bool evaluated = false;
 
@@ -398,11 +398,11 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 
 			if (t == VT_LINE) {
-				geom = clip_lines(geom, z, line_detail);
+				geom = clip_lines(geom, z, line_detail, buffer);
 			}
 
 			if (t == VT_POLYGON) {
-				geom = clip_poly(geom, z, line_detail);
+				geom = clip_poly(geom, z, line_detail, buffer);
 			}
 
 			if (t == VT_LINE || t == VT_POLYGON) {

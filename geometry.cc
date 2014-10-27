@@ -179,8 +179,8 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-static bool inside(draw d, int edge, long long area) {
-	long long clip_buffer = area / 64;
+static bool inside(draw d, int edge, long long area, long long buffer) {
+	long long clip_buffer = buffer * area / 256;
 
 	switch (edge) {
 		case 0: // top
@@ -214,8 +214,8 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
 }
 
-static draw intersect(draw a, draw b, int edge, long long area) {
-	long long clip_buffer = area / 64;
+static draw intersect(draw a, draw b, int edge, long long area, long long buffer) {
+	long long clip_buffer = buffer * area / 256;
 
 	switch (edge) {
 		case 0: // top
@@ -240,7 +240,7 @@ static draw intersect(draw a, draw b, int edge, long long area) {
 }
 
 // http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
-static drawvec clip_poly1(drawvec &geom, int z, int detail) {
+static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 	drawvec out = geom;
 
 	long long area = 0xFFFFFFFF;
@@ -258,13 +258,13 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail) {
 			for (unsigned e = 0; e < in.size(); e++) {
 				draw E = in[e];
 
-				if (inside(E, edge, area)) {
-					if (!inside(S, edge, area)) {
-						out.push_back(intersect(S, E, edge, area));
+				if (inside(E, edge, area, buffer)) {
+					if (!inside(S, edge, area, buffer)) {
+						out.push_back(intersect(S, E, edge, area, buffer));
 					}
 					out.push_back(E);
-				} else if (inside(S, edge, area)) {
-					out.push_back(intersect(S, E, edge, area));
+				} else if (inside(S, edge, area, buffer)) {
+					out.push_back(intersect(S, E, edge, area, buffer));
 				}
 
 				S = E;
@@ -282,7 +282,7 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail) {
 	return out;
 }
 
-drawvec clip_poly(drawvec &geom, int z, int detail) {
+drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 	if (z == 0) {
 		return geom;
 	}
@@ -302,7 +302,7 @@ drawvec clip_poly(drawvec &geom, int z, int detail) {
 			for (unsigned k = i; k < j; k++) {
 				tmp.push_back(geom[k]);
 			}
-			tmp = clip_poly1(tmp, z, detail);
+			tmp = clip_poly1(tmp, z, detail, buffer);
 			for (unsigned k = 0; k < tmp.size(); k++) {
 				out.push_back(tmp[k]);
 			}
@@ -383,7 +383,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 }
 
 
-drawvec clip_lines(drawvec &geom, int z, int detail) {
+drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 	unsigned i;
 
@@ -395,12 +395,16 @@ drawvec clip_lines(drawvec &geom, int z, int detail) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
+			unsigned min = 0;
 			unsigned area = 0xFFFFFFFF;
 			if (z != 0) {
 				area = 1 << (32 - z);
+
+				min -= buffer * area / 256;
+				area += buffer * area / 256;
 			}
 
-			int c = clip(&x1, &y1, &x2, &y2, 0, 0, area, area);
+			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) { // clipped
 				out.push_back(draw(VT_MOVETO, x1, y1));
