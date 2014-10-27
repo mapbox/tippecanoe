@@ -366,6 +366,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		struct index *i;
 		for (i = start; i < end; i++) {
+			if (z > i->maxzoom) {
+				continue;
+			}
+
 			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
 			if (pv->n == 0) {
 				continue;
