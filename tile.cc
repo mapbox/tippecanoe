@@ -3,6 +3,7 @@
 #include <string>
 #include <stack>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <stdio.h>
 #include <unistd.h>
@@ -347,10 +348,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	for (line_detail = detail; line_detail >= MIN_DETAIL; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-		struct pool keys, values, dup;
+		struct pool keys, values;
 		pool_init(&keys, 0);
 		pool_init(&values, 0);
-		pool_init(&dup, 1);
+		std::map<long long, int> dup;
 
 		double interval = 1;
 		double seq = 0;
@@ -370,11 +371,10 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				continue;
 			}
 
-			struct pool_val *pv = pool_long_long(&dup, &i->fpos, 0);
-			if (pv->n == 0) {
+			if (dup.count(i->fpos) != 0) {
 				continue;
 			}
-			pv->n = 0;
+			dup.insert(std::pair<long long, int>(i->fpos, 1));
 
 			int t;
 			char *meta = metabase + i->fpos;
@@ -484,7 +484,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		pool_free(&keys);
 		pool_free(&values);
-		pool_free(&dup);
 
 		std::string s;
 		std::string compressed;

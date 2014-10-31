@@ -19,7 +19,6 @@ struct pool {
 
 
 struct pool_val *pool(struct pool *p, char *s, int type);
-struct pool_val *pool_long_long(struct pool *p, long long *val, int type);
 void pool_free(struct pool *p);
 void pool_free_strings(struct pool *p);
 void pool_init(struct pool *p, int n);
