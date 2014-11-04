@@ -587,7 +587,7 @@ next_feature:
 			fprintf(stderr, "\n");
 		}
 
-		void *map = mmap(NULL, indexst.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, indexfd, 0);
+		void *map = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
 			perror("mmap");
 			exit(EXIT_FAILURE);
