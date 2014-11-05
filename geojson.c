@@ -96,6 +96,11 @@ void serialize_int(FILE *out, int n, long long *fpos, char *fname, json_pull *so
 	*fpos += sizeof(int);
 }
 
+void serialize_byte(FILE *out, signed char n, long long *fpos, char *fname, json_pull *source) {
+	fwrite_check(&n, sizeof(signed char), 1, out, fname, source);
+	*fpos += sizeof(signed char);
+}
+
 void serialize_uint(FILE *out, unsigned n, long long *fpos, char *fname, json_pull *source) {
 	fwrite_check(&n, sizeof(unsigned), 1, out, fname, source);
 	*fpos += sizeof(unsigned);
@@ -153,7 +158,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			serialize_int(out, op, fpos, fname, source);
+			serialize_byte(out, op, fpos, fname, source);
 			serialize_uint(out, x, fpos, fname, source);
 			serialize_uint(out, y, fpos, fname, source);
 		} else {
@@ -163,7 +168,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 
 	if (t == GEOM_POLYGON) {
 		if (*fpos != began) {
-			serialize_int(out, VT_CLOSEPATH, fpos, fname, source);
+			serialize_byte(out, VT_CLOSEPATH, fpos, fname, source);
 		}
 	}
 }
@@ -171,6 +176,11 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 void deserialize_int(char **f, int *n) {
 	memcpy(n, *f, sizeof(int));
 	*f += sizeof(int);
+}
+
+void deserialize_byte(char **f, signed char *n) {
+	memcpy(n, *f, sizeof(signed char));
+	*f += sizeof(signed char);
 }
 
 struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
@@ -382,7 +392,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
 			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO, fname, jp);
-			serialize_int(metafile, VT_END, &fpos, fname, jp);
+			serialize_byte(metafile, VT_END, &fpos, fname, jp);
 
 			char *metakey[properties->length];
 			char *metaval[properties->length];

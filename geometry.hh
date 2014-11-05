@@ -1,5 +1,5 @@
 struct draw {
-	int op;
+	signed char op;
 	long long x;
 	long long y;
 	int necessary;

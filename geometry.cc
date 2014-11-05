@@ -22,7 +22,7 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 	while (1) {
 		draw d;
 
-		deserialize_int(meta, &d.op);
+		deserialize_byte(meta, &d.op);
 		if (d.op == VT_END) {
 			break;
 		}
