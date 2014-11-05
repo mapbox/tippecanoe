@@ -381,7 +381,6 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
-			serialize_int(metafile, mb_geometry[t], &fpos, fname, jp);
 			parse_geometry(t, coordinates, bbox, &fpos, metafile, VT_MOVETO, fname, jp);
 			serialize_int(metafile, VT_END, &fpos, fname, jp);
 
@@ -467,6 +466,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 								ix.index = encode(x << (32 - z), y << (32 - z));
 							}
 							ix.fpos = start;
+							ix.type = mb_geometry[t];
 							ix.maxzoom = z;
 							fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 						}

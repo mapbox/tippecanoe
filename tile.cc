@@ -376,10 +376,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 			dup.insert(std::pair<long long, int>(i->fpos, 1));
 
-			int t;
-			char *meta = metabase + i->fpos;
-			deserialize_int(&meta, &t);
-
+			int t = i->type;
 			if (t == VT_POINT) {
 				seq++;
 
@@ -390,6 +387,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				}
 			}
 
+			char *meta = metabase + i->fpos;
 			drawvec geom = decode_geometry(&meta, z, tx, ty, line_detail);
 
 			bool reduced = false;
