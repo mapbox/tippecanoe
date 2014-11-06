@@ -4,6 +4,7 @@
 #include <stack>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <stdio.h>
 #include <unistd.h>
@@ -351,7 +352,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		struct pool keys, values;
 		pool_init(&keys, 0);
 		pool_init(&values, 0);
-		std::map<long long, int> dup;
+		std::set<long long> dup;
 
 		double interval = 1;
 		double seq = 0;
@@ -375,7 +376,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				if (dup.count(i->fpos) != 0) {
 					continue;
 				}
-				dup.insert(std::pair<long long, int>(i->fpos, 1));
+				dup.insert(i->fpos);
 			}
 
 			int t = i->type;
