@@ -444,6 +444,8 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				struct index ix;
 				ix.index = encode(cx, cy);
 				ix.fpos = start;
+				ix.type = mb_geometry[t];
+				ix.maxzoom = z;
 				fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 			} else {
 				for (z = maxzoom; z >= 1; z--) {
