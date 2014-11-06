@@ -448,39 +448,52 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				ix.maxzoom = z;
 				fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 			} else {
-				for (z = maxzoom; z >= 1; z--) {
-					unsigned x, y;
-					for (x = (bbox[0] - (buffer << (32 - z - 8))) >> (32 - z); x <= (bbox[2] + (buffer << (32 - z - 8))) >> (32 - z); x++) {
-						for (y = (bbox[1] - (buffer << (32 - z - 8))) >> (32 - z); y <= (bbox[3] + (buffer << (32 - z - 8))) >> (32 - z); y++) {
-							if (z != maxzoom) {
-								// There must be a clearer way to write this, but the intent is
-								// not to add an additional index for a low-zoom tile
-								// if one of its children was already part of the
-								// buffered bounding box for the child's zoom.
+				int pass;
+				int instances = 0;
 
-								// So we are comparing this tile's x and y to the edges of the
-								// bounding box at the next zoom down, but divided by two
-								// to get it back into this zoom's tile coordinate scheme
+				for (pass = 0; pass < 2; pass++) {
+					for (z = maxzoom; z >= 1; z--) {
+						unsigned x, y;
+						for (x = (bbox[0] - (buffer << (32 - z - 8))) >> (32 - z); x <= (bbox[2] + (buffer << (32 - z - 8))) >> (32 - z); x++) {
+							for (y = (bbox[1] - (buffer << (32 - z - 8))) >> (32 - z); y <= (bbox[3] + (buffer << (32 - z - 8))) >> (32 - z); y++) {
+								if (z != maxzoom) {
+									// There must be a clearer way to write this, but the intent is
+									// not to add an additional index for a low-zoom tile
+									// if one of its children was already part of the
+									// buffered bounding box for the child's zoom.
 
-								if ((x >= ((bbox[0] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-							            (x <= ((bbox[2] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-								    (y >= ((bbox[1] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-								    (y <= ((bbox[3] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1))) {
-									continue;
+									// So we are comparing this tile's x and y to the edges of the
+									// bounding box at the next zoom down, but divided by two
+									// to get it back into this zoom's tile coordinate scheme
+
+									if ((x >= ((bbox[0] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
+									    (x <= ((bbox[2] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
+									    (y >= ((bbox[1] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
+									    (y <= ((bbox[3] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1))) {
+										continue;
+									}
+								}
+
+								if (pass == 0) {
+									instances++;
+									if (instances > 1) {
+										break;
+									}
+								} else {
+									struct index ix;
+
+									if (x == cx >> (32 - z) && y == cy >> (32 - z)) {
+										ix.index = encode(cx, cy);
+									} else {
+										ix.index = encode(x << (32 - z), y << (32 - z));
+									}
+									ix.fpos = start;
+									ix.type = mb_geometry[t];
+									ix.maxzoom = z;
+									ix.candup = (instances > 1);
+									fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 								}
 							}
-
-							struct index ix;
-
-							if (x == cx >> (32 - z) && y == cy >> (32 - z)) {
-								ix.index = encode(cx, cy);
-							} else {
-								ix.index = encode(x << (32 - z), y << (32 - z));
-							}
-							ix.fpos = start;
-							ix.type = mb_geometry[t];
-							ix.maxzoom = z;
-							fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 						}
 					}
 				}

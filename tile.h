@@ -22,7 +22,8 @@ struct index {
 	unsigned long long index;
 	long long fpos : 48;
 	int maxzoom : 8;
-	int type : 8;
+	int type : 7;
+	int candup : 1;
 };
 
 long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate, int buffer);

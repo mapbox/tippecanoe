@@ -371,10 +371,12 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				continue;
 			}
 
-			if (dup.count(i->fpos) != 0) {
-				continue;
+			if (i->candup) {
+				if (dup.count(i->fpos) != 0) {
+					continue;
+				}
+				dup.insert(std::pair<long long, int>(i->fpos, 1));
 			}
-			dup.insert(std::pair<long long, int>(i->fpos, 1));
 
 			int t = i->type;
 			if (t == VT_POINT) {
