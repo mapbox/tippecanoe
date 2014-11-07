@@ -398,7 +398,7 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 			long long min = 0;
 			long long area = 0xFFFFFFFF;
 			if (z != 0) {
-				area = 1 << (32 - z);
+				area = 1LL << (32 - z);
 
 				min -= buffer * area / 256;
 				area += buffer * area / 256;
