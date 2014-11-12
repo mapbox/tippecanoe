@@ -371,6 +371,9 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			if (z > i->maxzoom) {
 				continue;
 			}
+			if (z + line_detail <= i->minzoom) {
+				continue;
+			}
 
 			if (i->candup) {
 				if (dup.count(i->fpos) != 0) {

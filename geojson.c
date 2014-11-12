@@ -445,6 +445,18 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
 			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
 
+			int minzoom = 0;
+			if (mb_geometry[t] == VT_LINE) {
+				for (minzoom = 0; minzoom < 31; minzoom++) {
+					unsigned mask = 1 << (32 - (minzoom + 1));
+
+					if (((bbox[0] & mask) != (bbox[2] & mask)) ||
+					    ((bbox[1] & mask) != (bbox[3] & mask))) {
+						break;
+					}
+				}
+			}
+
 			/* XXX do proper overlap instead of whole bounding box */
 			if (z == 0) {
 				struct index ix;
@@ -452,6 +464,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 				ix.fpos = start;
 				ix.type = mb_geometry[t];
 				ix.maxzoom = z;
+				ix.minzoom = minzoom;
 				fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 			} else {
 				int pass;
@@ -497,6 +510,7 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 									ix.type = mb_geometry[t];
 									ix.maxzoom = z;
 									ix.candup = (instances > 1);
+									ix.minzoom = minzoom;
 									fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
 								}
 							}

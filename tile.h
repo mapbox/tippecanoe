@@ -20,8 +20,9 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type);
 
 struct index {
 	unsigned long long index;
-	long long fpos : 48;
-	int maxzoom : 8;
+	long long fpos : 44;
+	int maxzoom : 6;
+	int minzoom : 6;
 	int type : 7;
 	int candup : 1;
 };
