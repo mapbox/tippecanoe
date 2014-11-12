@@ -296,7 +296,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
-void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, int exclude_all, double droprate, int buffer, char *tmpdir) {
+void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, char *tmpdir) {
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
@@ -402,7 +402,11 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			int i;
 			for (i = 0; i < properties->length; i++) {
 				if (properties->keys[i]->type == JSON_STRING) {
-					if (exclude_all || is_pooled(exclude, properties->keys[i]->string, VT_STRING)) {
+					if (exclude_all) {
+						if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
+							continue;
+						}
+					} else if (is_pooled(exclude, properties->keys[i]->string, VT_STRING)) {
 						continue;
 					}
 
@@ -721,11 +725,12 @@ int main(int argc, char **argv) {
 	int buffer = 5;
 	char *tmpdir = "/tmp";
 
-	struct pool exclude;
+	struct pool exclude, include;
 	pool_init(&exclude, 0);
+	pool_init(&include, 0);
 	int exclude_all = 0;
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:r:b:fXt:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -759,6 +764,11 @@ int main(int argc, char **argv) {
 			pool(&exclude, optarg, VT_STRING);
 			break;
 
+		case 'y':
+			exclude_all = 1;
+			pool(&include, optarg, VT_STRING);
+			break;
+
 		case 'X':
 			exclude_all = 1;
 			break;
@@ -780,7 +790,7 @@ int main(int argc, char **argv) {
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [file.json]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [file.json]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -810,7 +820,7 @@ int main(int argc, char **argv) {
 			if (f == NULL) {
 				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			} else {
-				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate, buffer, tmpdir);
+				read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir);
 				fclose(f);
 			}
 		}
@@ -818,7 +828,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: Only accepts one input file\n", argv[0]);
 		exit(EXIT_FAILURE);
 	} else {
-		read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, exclude_all, droprate, buffer, tmpdir);
+		read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir);
 	}
 
 	mbtiles_close(outdb, argv);

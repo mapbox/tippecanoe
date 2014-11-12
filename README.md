@@ -25,6 +25,7 @@ Options
  * -d <i>detail</i>: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
  * -D <i>detail</i>: Detail at lower zoom levels (default 10, for tile resolution of 1024) 
  * -x <i>name</i>: Exclude the named properties from all features
+ * -y <i>name</i>: Include the named properties in all features, excluding all those not explicitly named
  * -X: Exclude all properties and encode only geometries
  * -f: Delete the mbtiles file if it already exists instead of giving an error
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
