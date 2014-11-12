@@ -420,6 +420,8 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 						metatype[m] = VT_BOOLEAN;
 						metaval[m] = properties->values[i]->string;
 						m++;
+					} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
+						;
 					} else {
 						fprintf(stderr, "%s:%d: Unsupported property type for %s\n", fname, jp->line, properties->keys[i]->string);
 						goto next_feature;
