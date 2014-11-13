@@ -232,7 +232,7 @@ void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, s
 				}
 			}
 
-			fprintf(stderr, "  %3.1f%%   %d/%u/%u    %x %x   %lld to %lld    \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty, wx, wy, (long long)(i - ix), (long long)(j - ix));
+			fprintf(stderr, "  %3.1f%%   %d/%u/%u  \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty);
 
 			long long len = write_tile(i, j, metabase, file_bbox, z, tx, ty, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer);
 
