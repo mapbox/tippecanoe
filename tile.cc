@@ -346,7 +346,7 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 	int line_detail;
 	static bool evaluated = false;
 
-	for (line_detail = detail; line_detail >= MIN_DETAIL; line_detail--) {
+	for (line_detail = detail; line_detail >= MIN_DETAIL || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 		struct pool keys, values;
