@@ -14,8 +14,8 @@ extern "C" {
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 inline bool is_compressed(std::string const& data) {
 	return data.size() > 2 &&
-		((uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C) ||
-		((uint8_t)data[0] == 0x1F && (uint8_t)data[1] == 0x8B);
+		(((uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C) ||
+		 ((uint8_t)data[0] == 0x1F && (uint8_t)data[1] == 0x8B));
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
