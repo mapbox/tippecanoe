@@ -354,24 +354,21 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 		pool_init(&values, 0);
 		std::set<long long> dup;
 
-		double interval = 1;
-		double seq = 0;
 		long long count = 0;
 		//long long along = 0;
 		double accum_area = 0;
-
-		if (z < basezoom) {
-			interval = exp(log(droprate) * (basezoom - z));
-		}
 
 		std::vector<coalesce> features;
 
 		struct index *i;
 		for (i = start; i < end; i++) {
+			int t = i->type;
+
 			if (z > i->maxzoom) {
 				continue;
 			}
-			if (z + line_detail <= i->minzoom) {
+			if ((t == VT_LINE && z + line_detail <= i->minzoom) ||
+			    (t == VT_POINT && z < i->minzoom)) {
 				continue;
 			}
 
@@ -380,17 +377,6 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 					continue;
 				}
 				dup.insert(i->fpos);
-			}
-
-			int t = i->type;
-			if (t == VT_POINT) {
-				seq++;
-
-				if (seq >= 0) {
-					seq -= interval;
-				} else {
-					continue;
-				}
 			}
 
 			char *meta = metabase + i->fpos;

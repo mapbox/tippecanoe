@@ -445,6 +445,16 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
 			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
 
+			/*
+			 * Note that minzoom for lines is the dimension
+			 * of the geometry in world coordinates, but
+			 * for points is the lowest zoom level (in tiles,
+			 * not in pixels) at which it should be drawn.
+			 *
+			 * So a line that is too small for, say, z8
+			 * will have minzoom of 18 (if tile detail is 10),
+			 * not 8.
+			 */
 			int minzoom = 0;
 			if (mb_geometry[t] == VT_LINE) {
 				for (minzoom = 0; minzoom < 31; minzoom++) {
@@ -455,6 +465,12 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 						break;
 					}
 				}
+			} else if (mb_geometry[t] == VT_POINT) {
+				double r = ((double) rand()) / RAND_MAX;
+				if (r == 0) {
+					r = .00000001;
+				}
+				minzoom = maxzoom - floor(log(r) / - log(droprate));
 			}
 
 			/* XXX do proper overlap instead of whole bounding box */
