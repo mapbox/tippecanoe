@@ -13,7 +13,9 @@ extern "C" {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 inline bool is_compressed(std::string const& data) {
-	return data.size() > 2 && (uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C;
+	return data.size() > 2 &&
+		((uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C) ||
+		((uint8_t)data[0] == 0x1F && (uint8_t)data[1] == 0x8B);
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -24,7 +26,9 @@ inline int decompress(std::string const& input, std::string & output) {
 	inflate_s.opaque = Z_NULL;
 	inflate_s.avail_in = 0;
 	inflate_s.next_in = Z_NULL;
-	inflateInit(&inflate_s);
+	if (inflateInit2(&inflate_s, 32 + 15) != Z_OK) {
+		fprintf(stderr, "error: %s\n", inflate_s.msg);
+	}
 	inflate_s.next_in = (Bytef *)input.data();
 	inflate_s.avail_in = input.size();
 	size_t length = 0;
@@ -34,6 +38,7 @@ inline int decompress(std::string const& input, std::string & output) {
 		inflate_s.next_out = (Bytef *)(output.data() + length);
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
+			fprintf(stderr, "error: %s\n", inflate_s.msg);
 			return 0;
 		}
 
