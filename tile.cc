@@ -35,7 +35,7 @@ static inline int compress(std::string const& input, std::string& output) {
 	deflate_s.opaque = Z_NULL;
 	deflate_s.avail_in = 0;
 	deflate_s.next_in = Z_NULL;
-	deflateInit2(&deflate_s, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
+	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
 	deflate_s.next_in = (Bytef *)input.data();
 	deflate_s.avail_in = input.size();
 	size_t length = 0;
@@ -470,26 +470,30 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 			}
 		}
 
-		mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+		if (features.size() > 0) {
+			mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
 
-		pool_free(&keys);
-		pool_free(&values);
+			pool_free(&keys);
+			pool_free(&values);
 
-		std::string s;
-		std::string compressed;
+			std::string s;
+			std::string compressed;
 
-		tile.SerializeToString(&s);
-		compress(s, compressed);
+			tile.SerializeToString(&s);
+			compress(s, compressed);
 
-		if (compressed.size() > 500000) {
-			fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+			if (compressed.size() > 500000) {
+				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
-			if (line_detail == MIN_DETAIL || !evaluated) {
-				evaluated = true;
-				evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
+				if (line_detail == MIN_DETAIL || !evaluated) {
+					evaluated = true;
+					evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
+				}
+			} else {
+				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+				return count;
 			}
 		} else {
-			mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 			return count;
 		}
 	}
