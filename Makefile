@@ -1,4 +1,4 @@
-PREFIX=/usr/local
+PREFIX ?= /usr/local
 
 all: tippecanoe enumerate decode
 
