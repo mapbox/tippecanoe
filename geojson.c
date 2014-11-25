@@ -565,10 +565,22 @@ next_feature:
 	printf("bbox: %x %x %x %x\n", file_bbox[0], file_bbox[1], file_bbox[2], file_bbox[3]);
 
 	struct stat indexst;
-	fstat(indexfd, &indexst);
-
 	struct stat metast;
-	fstat(metafd, &metast);
+
+	if (fstat(indexfd, &indexst) != 0) {
+		perror("stat index\n");
+		exit(EXIT_FAILURE);
+	}
+	if (fstat(metafd, &metast) != 0) {
+		perror("stat meta\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (indexst.st_size == 0 || metast.st_size == 0) {
+		fprintf(stderr, "%s: did not read any valid geometries\n", fname);
+		exit(EXIT_FAILURE);
+	}
+
 	char *meta = mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
