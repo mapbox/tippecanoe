@@ -70,7 +70,7 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-static void quote(char **buf, char *s) {
+static void quote(char **buf, const char *s) {
 	char tmp[strlen(s) * 8 + 1];
 	char *out = tmp;
 
@@ -107,7 +107,7 @@ static void aprintf(char **buf, const char *format, ...) {
 	free(tmp);
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, char *fname, char *layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool *fields) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, const char *layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool *fields) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);

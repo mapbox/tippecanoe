@@ -214,7 +214,7 @@ void decode_meta(char **meta, struct pool *keys, struct pool *values, struct poo
 	}
 }
 
-mapnik::vector::tile create_tile(char *layername, int line_detail, std::vector<coalesce> &features, long long *count, struct pool *keys, struct pool *values) {
+mapnik::vector::tile create_tile(const char *layername, int line_detail, std::vector<coalesce> &features, long long *count, struct pool *keys, struct pool *values) {
 	mapnik::vector::tile tile;
 	mapnik::vector::tile_layer *layer = tile.add_layers();
 
@@ -284,7 +284,7 @@ struct sll {
 	}
 };
 
-void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, char *layername, int line_detail, long long orig) {
+void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, const char *layername, int line_detail, long long orig) {
 	std::vector<sll> options;
 
 	struct pool_val *pv;
@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, char *layername, sqlite3 *outdb, double droprate, int buffer) {
+long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer) {
 	int line_detail;
 	static bool evaluated = false;
 

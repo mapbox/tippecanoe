@@ -161,7 +161,7 @@ static json_object *add_object(json_pull *j, json_type type) {
 	return o;
 }
 
-json_object *json_hash_get(json_object *o, char *s) {
+json_object *json_hash_get(json_object *o, const char *s) {
 	if (o == NULL || o->type != JSON_HASH) {
 		return NULL;
 	}

@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <sqlite3.h>
 #include <stdarg.h>
+
 #include "jsonpull.h"
 #include "tile.h"
 #include "pool.h"
@@ -30,7 +31,7 @@ int full_detail = -1;
 #define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
-char *geometry_names[GEOM_TYPES] = {
+const char *geometry_names[GEOM_TYPES] = {
 	"Point",
 	"MultiPoint",
 	"LineString",
@@ -58,8 +59,8 @@ int mb_geometry[GEOM_TYPES] = {
 };
 
 int indexcmp(const void *v1, const void *v2) {
-	const struct index *i1 = v1;
-	const struct index *i2 = v2;
+	const struct index *i1 = (const struct index *) v1;
+	const struct index *i2 = (const struct index *) v2;
 
 	if (i1->index < i2->index) {
 		return -1;
@@ -82,7 +83,7 @@ int indexcmp(const void *v1, const void *v2) {
 	return 0;
 }
 
-size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, char *fname, json_pull *source) {
+size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname, json_pull *source) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
 		fprintf(stderr, "%s:%d: Write to temporary file failed: %s\n", fname, source->line, strerror(errno));
@@ -91,22 +92,22 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 	return w;
 }
 
-void serialize_int(FILE *out, int n, long long *fpos, char *fname, json_pull *source) {
+void serialize_int(FILE *out, int n, long long *fpos, const char *fname, json_pull *source) {
 	fwrite_check(&n, sizeof(int), 1, out, fname, source);
 	*fpos += sizeof(int);
 }
 
-void serialize_byte(FILE *out, signed char n, long long *fpos, char *fname, json_pull *source) {
+void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname, json_pull *source) {
 	fwrite_check(&n, sizeof(signed char), 1, out, fname, source);
 	*fpos += sizeof(signed char);
 }
 
-void serialize_uint(FILE *out, unsigned n, long long *fpos, char *fname, json_pull *source) {
+void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname, json_pull *source) {
 	fwrite_check(&n, sizeof(unsigned), 1, out, fname, source);
 	*fpos += sizeof(unsigned);
 }
 
-void serialize_string(FILE *out, char *s, long long *fpos, char *fname, json_pull *source) {
+void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname, json_pull *source) {
 	int len = strlen(s);
 
 	serialize_int(out, len + 1, fpos, fname, source);
@@ -115,7 +116,7 @@ void serialize_string(FILE *out, char *s, long long *fpos, char *fname, json_pul
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, char *fname, json_pull *source) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
 		return;
@@ -194,7 +195,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer) {
+void check(struct index *ix, long long n, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer) {
 	fprintf(stderr, "\n");
 	long long most = 0;
 
@@ -296,7 +297,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
-void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, char *tmpdir) {
+void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir) {
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
@@ -354,25 +355,29 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
 			fprintf(stderr, "%s:%d: feature with no geometry\n", fname, jp->line);
-			goto next_feature;
+			json_free(j);
+			continue;
 		}
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL || geometry_type->type != JSON_STRING) {
 			fprintf(stderr, "%s:%d: geometry without type string\n", fname, jp->line);
-			goto next_feature;
+			json_free(j);
+			continue;
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || properties->type != JSON_HASH) {
 			fprintf(stderr, "%s:%d: feature without properties hash\n", fname, jp->line);
-			goto next_feature;
+			json_free(j);
+			continue;
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates"); 
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 			fprintf(stderr, "%s:%d: feature without coordinates array\n", fname, jp->line);
-			goto next_feature;
+			json_free(j);
+			continue;
 		}
 
 		int t;
@@ -383,7 +388,8 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 		}
 		if (t >= GEOM_TYPES) {
 			fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", fname, jp->line, geometry_type->string);
-			goto next_feature;
+			json_free(j);
+			continue;
 		}
 
 		{
@@ -428,7 +434,8 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 						;
 					} else {
 						fprintf(stderr, "%s:%d: Unsupported property type for %s\n", fname, jp->line, properties->keys[i]->string);
-						goto next_feature;
+						json_free(j);
+						continue;
 					}
 				}
 			}
@@ -552,7 +559,6 @@ void read_json(FILE *f, char *fname, char *layername, int maxzoom, int minzoom, 
 			seq++;
 		}
 
-next_feature:
 		json_free(j);
 
 		/* XXX check for any non-features in the outer object */
@@ -581,7 +587,7 @@ next_feature:
 		exit(EXIT_FAILURE);
 	}
 
-	char *meta = mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
+	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
@@ -592,14 +598,15 @@ next_feature:
 
 	char trunc[strlen(fname) + 1];
 	if (layername == NULL) {
-		char *cp, *use = fname;
-		for (cp = fname; *cp; cp++) {
-			if (*cp == '/' && cp[1] != '\0') {
-				use = cp + 1;
+		const char *ocp, *use = fname;
+		for (ocp = fname; *ocp; ocp++) {
+			if (*ocp == '/' && ocp[1] != '\0') {
+				use = ocp + 1;
 			}
 		}
 		strcpy(trunc, use);
-		cp = strstr(trunc, ".json");
+
+		char *cp = strstr(trunc, ".json");
 		if (cp != NULL) {
 			*cp = '\0';
 		}
@@ -691,7 +698,7 @@ next_feature:
 			exit(EXIT_FAILURE);
 		}
 
-		merge(merges, nmerges, map, f, bytes, indexst.st_size / bytes);
+		merge(merges, nmerges, (unsigned char *) map, f, bytes, indexst.st_size / bytes);
 
 		munmap(map, indexst.st_size);
 		fclose(f);
@@ -708,7 +715,7 @@ next_feature:
 		exit(EXIT_FAILURE);
 	}
 
-	struct index *index = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfd, 0);
+	struct index *index = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfd, 0);
 	if (index == MAP_FAILED) {
 		perror("mmap index");
 		exit(EXIT_FAILURE);
@@ -765,7 +772,7 @@ int main(int argc, char **argv) {
 	int force = 0;
 	double droprate = 2.5;
 	int buffer = 5;
-	char *tmpdir = "/tmp";
+	const char *tmpdir = "/tmp";
 
 	struct pool exclude, include;
 	pool_init(&exclude, 0);
