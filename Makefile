@@ -3,6 +3,7 @@ PREFIX ?= /usr/local
 all: tippecanoe enumerate decode
 
 install: tippecanoe
+	mkdir -p $(PREFIX)/bin
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
 
 vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
