@@ -14,6 +14,7 @@
 struct pool;
 
 void deserialize_int(char **f, int *n);
+void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
 struct pool_val *deserialize_string(char **f, struct pool *p, int type);
 

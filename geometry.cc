@@ -28,9 +28,9 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 		}
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
-			int wx, wy;
-			deserialize_int(meta, &wx);
-			deserialize_int(meta, &wy);
+			unsigned wx, wy;
+			deserialize_uint(meta, &wx);
+			deserialize_uint(meta, &wy);
 
 			long long wwx = (unsigned) wx;
 			long long wwy = (unsigned) wy;

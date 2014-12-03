@@ -179,6 +179,11 @@ void deserialize_int(char **f, int *n) {
 	*f += sizeof(int);
 }
 
+void deserialize_uint(char **f, unsigned *n) {
+	memcpy(n, *f, sizeof(unsigned));
+	*f += sizeof(unsigned);
+}
+
 void deserialize_byte(char **f, signed char *n) {
 	memcpy(n, *f, sizeof(signed char));
 	*f += sizeof(signed char);
