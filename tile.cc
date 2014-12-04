@@ -412,7 +412,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
 				if (geom.size() > 0) {
 					if (!within) {
-						printf("writing %d/%u/%u\n", z, tx, ty);
 						serialize_int(geomfile, z, &geompos, fname, jp);
 						serialize_uint(geomfile, tx, &geompos, fname, jp);
 						serialize_uint(geomfile, ty, &geompos, fname, jp);
@@ -554,7 +553,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
 				}
 			} else {
-				printf("output %d/%u/%u\n", z, tx, ty);
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 				return count;
 			}

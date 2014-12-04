@@ -308,7 +308,9 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 			}
 
 			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
-				out.push_back(draw(VT_CLOSEPATH, 0, 0));
+				if (out.size() > 0 && out[out.size() - 1].op != VT_CLOSEPATH) {
+					out.push_back(draw(VT_CLOSEPATH, 0, 0));
+				}
 				i = j;
 			} else {
 				i = j - 1;
@@ -374,7 +376,13 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			i = j;
 		} else {
-			fprintf(stderr, "how did we get here with %d?\n", geom[i].op);
+			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
+
+			for (unsigned n = 0; n < geom.size(); n++) {
+				fprintf(stderr, "%d/%lld/%lld ", geom[n].op, geom[n].x, geom[n].y);
+			}
+			fprintf(stderr, "\n");
+
 			out.push_back(geom[i]);
 		}
 	}
