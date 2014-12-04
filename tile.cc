@@ -370,7 +370,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		while (1) {
 			int t;
 			deserialize_int(geoms, &t);
-			printf("geometry %d\n", t);
 			if (t < 0) {
 				break;
 			}
@@ -420,6 +419,13 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						within = 1;
 					}
 
+					// Offset from tile coordinates back to world coordinates
+					unsigned sx = 0, sy = 0;
+					if (z != 0) {
+						sx = tx << (32 - z);
+						sy = ty << (32 - z);
+					}
+
 					//printf("type %d, meta %lld\n", t, metastart);
 					serialize_int(geomfile, t, &geompos, fname, jp);
 					serialize_long_long(geomfile, metastart, &geompos, fname, jp);
@@ -428,8 +434,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						serialize_byte(geomfile, geom[u].op, &geompos, fname, jp);
 
 						if (geom[u].op != VT_CLOSEPATH) {
-							serialize_uint(geomfile, geom[u].x, &geompos, fname, jp);
-							serialize_uint(geomfile, geom[u].y, &geompos, fname, jp);
+							serialize_uint(geomfile, geom[u].x + sx, &geompos, fname, jp);
+							serialize_uint(geomfile, geom[u].y + sy, &geompos, fname, jp);
 						}
 					}
 
@@ -548,6 +554,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
 				}
 			} else {
+				printf("output %d/%u/%u\n", z, tx, ty);
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 				return count;
 			}

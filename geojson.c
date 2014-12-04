@@ -212,7 +212,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 
 void check(int geomfd, off_t geom_size, char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, const char *tmpdir) {
 	int i;
-	for (i = 0; i < maxzoom; i++) {
+	for (i = 0; i <= maxzoom; i++) {
 		fprintf(stderr, "\n");
 		long long most = 0;
 
