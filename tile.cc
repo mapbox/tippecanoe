@@ -342,9 +342,11 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile) {
 	int line_detail;
 	static bool evaluated = false;
+
+	char *og = *geoms;
 
 	for (line_detail = detail; line_detail >= MIN_DETAIL || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -360,39 +362,90 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		std::vector<coalesce> features;
 
-		struct index *i;
-		for (i = start; i < end; i++) {
-			int t = i->type;
+		int within = 0;
+		long long geompos = 0;
 
-			if (z > i->maxzoom) {
-				continue;
-			}
-			if ((t == VT_LINE && z + line_detail <= i->minzoom) ||
-			    (t == VT_POINT && z < i->minzoom)) {
-				continue;
+		*geoms = og;
+
+		while (1) {
+			int t;
+			deserialize_int(geoms, &t);
+			printf("geometry %d\n", t);
+			if (t < 0) {
+				break;
 			}
 
+#if 0
 			if (i->candup) {
 				if (dup.count(i->fpos) != 0) {
 					continue;
 				}
 				dup.insert(i->fpos);
 			}
+#endif
 
-			char *meta = metabase + i->fpos;
-			drawvec geom = decode_geometry(&meta, z, tx, ty, line_detail);
+			long long metastart;
+			deserialize_long_long(geoms, &metastart);
+			char *meta = metabase + metastart;
+
+			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail);
+
+			signed char minzoom;
+			deserialize_byte(geoms, &minzoom);
+
+#if 0
+			if (z > i->maxzoom) {
+				continue;
+			}
+#endif
+			if (t == VT_LINE) {
+				geom = clip_lines(geom, z, line_detail, buffer);
+			}
+			if (t == VT_POLYGON) {
+				geom = clip_poly(geom, z, line_detail, buffer);
+			}
+			if (t == VT_POINT) {
+				geom = clip_point(geom, z, line_detail, buffer);
+			}
+
+			geom = remove_noop(geom, t);
+
+			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
+				if (geom.size() > 0) {
+					if (!within) {
+						printf("writing %d/%u/%u\n", z, tx, ty);
+						serialize_int(geomfile, z, &geompos, fname, jp);
+						serialize_uint(geomfile, tx, &geompos, fname, jp);
+						serialize_uint(geomfile, ty, &geompos, fname, jp);
+						within = 1;
+					}
+
+					//printf("type %d, meta %lld\n", t, metastart);
+					serialize_int(geomfile, t, &geompos, fname, jp);
+					serialize_long_long(geomfile, metastart, &geompos, fname, jp);
+
+					for (unsigned u = 0; u < geom.size(); u++) {
+						serialize_byte(geomfile, geom[u].op, &geompos, fname, jp);
+
+						if (geom[u].op != VT_CLOSEPATH) {
+							serialize_uint(geomfile, geom[u].x, &geompos, fname, jp);
+							serialize_uint(geomfile, geom[u].y, &geompos, fname, jp);
+						}
+					}
+
+					serialize_byte(geomfile, VT_END, &geompos, fname, jp);
+					serialize_byte(geomfile, minzoom, &geompos, fname, jp);
+				}
+			}
+
+			if ((t == VT_LINE && z + line_detail <= minzoom) ||
+			    (t == VT_POINT && z < minzoom)) {
+				continue;
+			}
 
 			bool reduced = false;
 			if (t == VT_POLYGON) {
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
-			}
-
-			if (t == VT_LINE) {
-				geom = clip_lines(geom, z, line_detail, buffer);
-			}
-
-			if (t == VT_POLYGON) {
-				geom = clip_poly(geom, z, line_detail, buffer);
 			}
 
 			if (t == VT_LINE || t == VT_POLYGON) {
@@ -428,8 +481,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 						c.index2 = ~0LL;
 					}
 				} else {
-					c.index = i->index;
-					c.index2 = i->index;
+					c.index = 0;
+					c.index2 = 0;
 				}
 				c.geom = geom;
 				c.metasrc = meta;
@@ -438,6 +491,11 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
 				features.push_back(c);
 			}
+		}
+
+		if (within) {
+			serialize_int(geomfile, -2, &geompos, fname, jp);
+			within = 0;
 		}
 
 		std::sort(features.begin(), features.end());

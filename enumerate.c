@@ -24,7 +24,7 @@ void enumerate(char *fname) {
 		long long x = sqlite3_column_int(stmt, 1);
 		long long y = sqlite3_column_int(stmt, 2);
 
-		y = (1LL << zoom) - y;
+		y = (1LL << zoom) - 1 - y;
 		printf("%s %lld %lld %lld\n", fname, zoom, x, y);
 	}
 

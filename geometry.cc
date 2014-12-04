@@ -382,10 +382,40 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
+drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
+	drawvec out;
+	unsigned i;
+
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
+
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].x >= min && geom[i].y >= min && geom[i].x <= area && geom[i].y <= area) {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
 
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 	unsigned i;
+
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
 
 	for (i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
@@ -394,15 +424,6 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
-
-			long long min = 0;
-			long long area = 0xFFFFFFFF;
-			if (z != 0) {
-				area = 1LL << (32 - z);
-
-				min -= buffer * area / 256;
-				area += buffer * area / 256;
-			}
 
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
