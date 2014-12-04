@@ -569,6 +569,10 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 drawvec reorder_lines(drawvec &geom) {
 	// Only reorder simple linestrings with a single moveto
 
+	if (geom.size() == 0) {
+		return geom;
+	}
+
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
