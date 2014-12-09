@@ -3,6 +3,13 @@ tippecanoe
 
 Build vector tilesets from large collections of GeoJSON features.
 
+Installation
+------------
+
+The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
+
+    brew install tippecanoe
+
 Usage
 -----
 
