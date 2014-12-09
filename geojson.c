@@ -163,7 +163,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 			serialize_uint(out, x, fpos, fname, source);
 			serialize_uint(out, y, fpos, fname, source);
 		} else {
-			fprintf(stderr, "%s:%d: malformed point", fname, source->line);
+			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
 		}
 	}
 
