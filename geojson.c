@@ -138,11 +138,20 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source);
 		}
 	} else {
-		if (j->length == 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
 			unsigned x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			latlon2tile(lat, lon, 32, &x, &y);
+
+			if (j->length > 2) {
+				static int warned = 0;
+
+				if (!warned) {
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, source->line);
+					warned = 1;
+				}
+			}
 
 			if (bbox != NULL) {
 				if (x < bbox[0]) {
@@ -360,8 +369,19 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		}
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
-		if (geometry_type == NULL || geometry_type->type != JSON_STRING) {
-			fprintf(stderr, "%s:%d: geometry without type string\n", fname, jp->line);
+		if (geometry_type == NULL) {
+			static int warned = 0;
+			if (!warned) {
+				fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", fname, jp->line);
+				warned = 1;
+			}
+
+			json_free(j);
+			continue;
+		}
+
+		if (geometry_type->type != JSON_STRING) {
+			fprintf(stderr, "%s:%d: geometry without type\n", fname, jp->line);
 			json_free(j);
 			continue;
 		}
