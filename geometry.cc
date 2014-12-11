@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <sqlite3.h>
+#include <limits.h>
 #include "geometry.hh"
 
 extern "C" {
@@ -16,8 +17,13 @@ extern "C" {
 	#include "projection.h"
 }
 
-drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail) {
+drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox) {
 	drawvec out;
+
+	bbox[0] = LONG_LONG_MAX;
+	bbox[1] = LONG_LONG_MAX;
+	bbox[2] = LONG_LONG_MIN;
+	bbox[3] = LONG_LONG_MIN;
 
 	while (1) {
 		draw d;
@@ -38,6 +44,19 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 			if (z != 0) {
 				wwx -= tx << (32 - z);
 				wwy -= ty << (32 - z);
+			}
+
+			if (wwx < bbox[0]) {
+				bbox[0] = wwx;
+			}
+			if (wwy < bbox[1]) {
+				bbox[1] = wwy;
+			}
+			if (wwx > bbox[2]) {
+				bbox[2] = wwx;
+			}
+			if (wwy > bbox[3]) {
+				bbox[3] = wwy;
 			}
 
 			d.x = wwx;
@@ -410,6 +429,33 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	}
 
 	return out;
+}
+
+int quick_check(long long *bbox, int z, int detail, long long buffer) {
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
+
+	// bbox entirely outside the tile
+	if (bbox[0] > area || bbox[1] > area) {
+		return 0;
+	}
+	if (bbox[2] < min || bbox[3] < min) {
+		return 0;
+	}
+
+	// bbox entirely within the tile
+	if (bbox[0] > min && bbox[1] > min && bbox[2] < area && bbox[3] < area) {
+		return 1;
+	}
+
+	// some overlap of edge
+	return 2;
 }
 
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {

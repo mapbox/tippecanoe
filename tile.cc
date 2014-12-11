@@ -386,25 +386,34 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
 			char *meta = metabase + metastart;
+			long long bbox[4];
 
-			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail);
+			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
 
 			signed char minzoom;
 			deserialize_byte(geoms, &minzoom);
+
+			int quick = quick_check(bbox, z, line_detail, buffer);
+			if (quick == 0) {
+				continue;
+			}
 
 #if 0
 			if (z > i->maxzoom) {
 				continue;
 			}
 #endif
-			if (t == VT_LINE) {
-				geom = clip_lines(geom, z, line_detail, buffer);
-			}
-			if (t == VT_POLYGON) {
-				geom = clip_poly(geom, z, line_detail, buffer);
-			}
-			if (t == VT_POINT) {
-				geom = clip_point(geom, z, line_detail, buffer);
+
+			if (quick != 1) {
+				if (t == VT_LINE) {
+					geom = clip_lines(geom, z, line_detail, buffer);
+				}
+				if (t == VT_POLYGON) {
+					geom = clip_poly(geom, z, line_detail, buffer);
+				}
+				if (t == VT_POINT) {
+					geom = clip_point(geom, z, line_detail, buffer);
+				}
 			}
 
 			geom = remove_noop(geom, t);
