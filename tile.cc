@@ -414,9 +414,9 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				if (t == VT_POINT) {
 					geom = clip_point(geom, z, line_detail, buffer);
 				}
-			}
 
-			geom = remove_noop(geom, t);
+				geom = remove_noop(geom, t);
+			}
 
 			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
 				if (geom.size() > 0) {
