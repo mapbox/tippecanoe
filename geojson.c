@@ -213,7 +213,6 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, const char *tmpdir) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
-		fprintf(stderr, "\n");
 		long long most = 0;
 
 		FILE *sub[4];
@@ -236,6 +235,12 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 			unlink(geomname);
 		}
 
+		long long todo = 0;
+		long long along = 0;
+		for (j = 0; j < 4; j++) {
+			todo += geom_size[j];
+		}
+
 		for (j = 0; j < 4; j++) {
 			if (geomfd[j] < 0) {
 				// only one source file for zoom level 0
@@ -245,7 +250,7 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 				continue;
 			}
 
-			printf("%lld of geom_size\n", (long long) geom_size[j]);
+			// printf("%lld of geom_size\n", (long long) geom_size[j]);
 
 			char *geom = mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
 			if (geom == MAP_FAILED) {
@@ -253,6 +258,7 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 				exit(EXIT_FAILURE);
 			}
 
+			char *geomstart = geom;
 			char *end = geom + geom_size[j];
 
 			while (geom < end) {
@@ -263,9 +269,10 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 				deserialize_uint(&geom, &x);
 				deserialize_uint(&geom, &y);
 
-				fprintf(stderr, "%d/%u/%u\n", z, x, y);
+				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				// fprintf(stderr, "  %3.1f%%   %d/%u/%u  \r", (((i - ix) + (j - ix)) / 2.0 / n + (maxzoom - z)) / (maxzoom - minzoom + 1) * 100, z, tx, ty);
+				fprintf(stderr, "  %3.1f%%   %d/%u/%u  \r",
+					(((geom - geomstart + along) / (double) todo) + z) / (maxzoom + 1) * 100, z, x, y);
 
 				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, jp, sub);
 
@@ -274,11 +281,10 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 					*midy = y;
 					most = len;
 				}
-
-				fprintf(stderr, "\n");
 			}
 
 			munmap(geom, geom_size[j]);
+			along += geom_size[j];
 		}
 
 		for (j = 0; j < 4; j++) {
@@ -295,6 +301,8 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 			geom_size[j] = geomst.st_size;
 		}
 	}
+
+	fprintf(stderr, "\n");
 }
 
 struct merge {
@@ -786,6 +794,8 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		fd[j] = -1;
 		size[j] = 0;
 	}
+
+	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, geomst.st_size, metast.st_size);
 
 	check(fd, size, meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir);
 

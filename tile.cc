@@ -446,8 +446,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						int quick2 = quick_check(bbox2, z + 1, line_detail, buffer);
 						if (quick2 != 0) {
 							if (!within[j]) {
-								printf("begin %d/%d/%d\n", z + 1, tx * 2 + xo, ty * 2 + yo);
-
 								serialize_int(geomfile[j], z + 1, &geompos[j], fname, jp);
 								serialize_uint(geomfile[j], tx * 2 + xo, &geompos[j], fname, jp);
 								serialize_uint(geomfile[j], ty * 2 + yo, &geompos[j], fname, jp);
