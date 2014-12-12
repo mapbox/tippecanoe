@@ -815,7 +815,7 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		size[j] = 0;
 	}
 
-	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, geomst.st_size, metast.st_size);
+	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
 	check(fd, size, meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir);
 
