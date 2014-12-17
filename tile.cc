@@ -374,15 +374,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				break;
 			}
 
-#if 0
-			if (i->candup) {
-				if (dup.count(i->fpos) != 0) {
-					continue;
-				}
-				dup.insert(i->fpos);
-			}
-#endif
-
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
 			char *meta = metabase + metastart;
@@ -397,12 +388,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			if (quick == 0) {
 				continue;
 			}
-
-#if 0
-			if (z > i->maxzoom) {
-				continue;
-			}
-#endif
 
 			if (quick != 1) {
 				if (t == VT_LINE) {

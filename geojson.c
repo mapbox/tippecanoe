@@ -58,31 +58,6 @@ int mb_geometry[GEOM_TYPES] = {
 	VT_POLYGON,
 };
 
-int indexcmp(const void *v1, const void *v2) {
-	const struct index *i1 = (const struct index *) v1;
-	const struct index *i2 = (const struct index *) v2;
-
-	if (i1->index < i2->index) {
-		return -1;
-	} else if (i1->index > i2->index) {
-		return 1;
-	}
-
-	if (i1->fpos < i2->fpos) {
-		return -1;
-	} else if (i1->fpos > i2->fpos) {
-		return 1;
-	}
-
-	if (i1->maxzoom < i2->maxzoom) {
-		return -1;
-	} else if (i1->maxzoom > i2->maxzoom) {
-		return 1;
-	}
-
-	return 0;
-}
-
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname, json_pull *source) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
@@ -314,57 +289,6 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 	fprintf(stderr, "\n");
 }
 
-struct merge {
-	long long start;
-	long long end;
-
-	struct merge *next;
-};
-
-#if 0
-static void insert(struct merge *m, struct merge **head, unsigned char *map, int bytes) {
-	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
-		head = &((*head)->next);
-	}
-
-	m->next = *head;
-	*head = m;
-}
-
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec) {
-	int i;
-	struct merge *head = NULL;
-	long long along = 0;
-	long long reported = -1;
-
-	for (i = 0; i < nmerges; i++) {
-		if (merges[i].start < merges[i].end) {
-			insert(&(merges[i]), &head, map, bytes);
-		}
-	}
-
-	while (head != NULL) {
-		fwrite(map + head->start, bytes, 1, f);
-		head->start += bytes;
-
-		struct merge *m = head;
-		head = m->next;
-		m->next = NULL;
-
-		if (m->start < m->end) {
-			insert(m, &head, map, bytes);
-		}
-
-		along++;
-		long long report = 100 * along / nrec;
-		if (report != reported) {
-			fprintf(stderr, "Merging: %lld%%\r", report);
-			reported = report;
-		}
-	}
-}
-#endif
-
 void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir) {
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
@@ -534,10 +458,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 			parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
 			serialize_byte(geomfile, VT_END, &geompos, fname, jp);
 
-#if 0
-			int z = maxzoom;
-#endif
-
 			/*
 			 * Note that minzoom for lines is the dimension
 			 * of the geometry in world coordinates, but
@@ -567,73 +487,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 			}
 
 			serialize_byte(geomfile, minzoom, &geompos, fname, jp);
-
-#if 0
-			unsigned cx = bbox[0] / 2 + bbox[2] / 2;
-			unsigned cy = bbox[1] / 2 + bbox[3] / 2;
-
-			/* XXX do proper overlap instead of whole bounding box */
-			if (z == 0) {
-				struct index ix;
-				ix.index = encode(cx, cy);
-				ix.fpos = start;
-				ix.type = mb_geometry[t];
-				ix.maxzoom = z;
-				ix.minzoom = minzoom;
-				fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
-			} else {
-				int pass;
-				int instances = 0;
-
-				for (pass = 0; pass < 2; pass++) {
-					for (z = maxzoom; z >= 1; z--) {
-						unsigned x, y;
-						for (x = (bbox[0] - (buffer << (32 - z - 8))) >> (32 - z); x <= (bbox[2] + (buffer << (32 - z - 8))) >> (32 - z); x++) {
-							for (y = (bbox[1] - (buffer << (32 - z - 8))) >> (32 - z); y <= (bbox[3] + (buffer << (32 - z - 8))) >> (32 - z); y++) {
-								if (z != maxzoom) {
-									// There must be a clearer way to write this, but the intent is
-									// not to add an additional index for a low-zoom tile
-									// if one of its children was already part of the
-									// buffered bounding box for the child's zoom.
-
-									// So we are comparing this tile's x and y to the edges of the
-									// bounding box at the next zoom down, but divided by two
-									// to get it back into this zoom's tile coordinate scheme
-
-									if ((x >= ((bbox[0] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-									    (x <= ((bbox[2] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-									    (y >= ((bbox[1] - (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1)) &&
-									    (y <= ((bbox[3] + (buffer << (32 - (z + 1) - 8))) >> (32 - (z + 1)) >> 1))) {
-										continue;
-									}
-								}
-
-								if (pass == 0) {
-									instances++;
-									if (instances > 1) {
-										break;
-									}
-								} else {
-									struct index ix;
-
-									if (x == cx >> (32 - z) && y == cy >> (32 - z)) {
-										ix.index = encode(cx, cy);
-									} else {
-										ix.index = encode(x << (32 - z), y << (32 - z));
-									}
-									ix.fpos = start;
-									ix.type = mb_geometry[t];
-									ix.maxzoom = z;
-									ix.candup = (instances > 1);
-									ix.minzoom = minzoom;
-									fwrite_check(&ix, sizeof(struct index), 1, indexfile, fname, jp);
-								}
-							}
-						}
-					}
-				}
-			}
-#endif
 
 			for (i = 0; i < 2; i++) {
 				if (bbox[i] < file_bbox[i]) {
@@ -722,86 +575,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 		printf("using layer name %s\n", trunc);
 	}
-
-#if 0
-	{
-		int bytes = sizeof(struct index);
-
-		fprintf(stderr,
-		 	"Sorting %lld indices for %lld features\n",
-			(long long) indexst.st_size / bytes,
-			seq);
-
-		int page = sysconf(_SC_PAGESIZE);
-		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
-		while (unit % page != 0) {
-			unit += bytes;
-		}
-
-		int nmerges = (indexst.st_size + unit - 1) / unit;
-		struct merge merges[nmerges];
-
-		long long start;
-		for (start = 0; start < indexst.st_size; start += unit) {
-			long long end = start + unit;
-			if (end > indexst.st_size) {
-				end = indexst.st_size;
-			}
-
-			if (nmerges != 1) {
-				fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
-			}
-
-			merges[start / unit].start = start;
-			merges[start / unit].end = end;
-			merges[start / unit].next = NULL;
-
-			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, indexfd, start);
-			if (map == MAP_FAILED) {
-				perror("mmap");
-				exit(EXIT_FAILURE);
-			}
-
-			qsort(map, (end - start) / bytes, bytes, indexcmp);
-
-			// Sorting and then copying avoids the need to
-			// write out intermediate stages of the sort.
-
-			void *map2 = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, start);
-			if (map2 == MAP_FAILED) {
-				perror("mmap (write)");
-				exit(EXIT_FAILURE);
-			}
-
-			memcpy(map2, map, end - start);
-
-			munmap(map, end - start);
-			munmap(map2, end - start);
-		}
-
-		if (nmerges != 1) {
-			fprintf(stderr, "\n");
-		}
-
-		void *map = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap");
-			exit(EXIT_FAILURE);
-		}
-
-		FILE *f = fopen(indexname, "w");
-		if (f == NULL) {
-			perror(indexname);
-			exit(EXIT_FAILURE);
-		}
-
-		merge(merges, nmerges, (unsigned char *) map, f, bytes, indexst.st_size / bytes);
-
-		munmap(map, indexst.st_size);
-		fclose(f);
-		close(indexfd);
-	}
-#endif
 
 	int fd[4];
 	off_t size[4];
