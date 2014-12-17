@@ -377,7 +377,7 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
-		if (properties == NULL || properties->type != JSON_HASH) {
+		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
 			fprintf(stderr, "%s:%d: feature without properties hash\n", fname, jp->line);
 			json_free(j);
 			continue;
@@ -405,14 +405,19 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		{
 			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 
+			int nprop = 0;
+			if (properties->type == JSON_HASH) {
+				nprop = properties->length;
+			}
+
 			long long metastart = metapos;
-			char *metakey[properties->length];
-			char *metaval[properties->length];
-			int metatype[properties->length];
+			char *metakey[nprop];
+			char *metaval[nprop];
+			int metatype[nprop];
 			int m = 0;
 
 			int i;
-			for (i = 0; i < properties->length; i++) {
+			for (i = 0; i < nprop; i++) {
 				if (properties->keys[i]->type == JSON_STRING) {
 					if (exclude_all) {
 						if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
