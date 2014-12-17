@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom) {
 	int line_detail;
 	static bool evaluated = false;
 
@@ -419,7 +419,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 
 			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
-				if (geom.size() > 0) {
+				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
 					int j;
 					for (j = 0; j < 4; j++) {
 						int xo = j & 1;
