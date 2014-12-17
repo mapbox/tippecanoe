@@ -302,7 +302,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		exit(EXIT_FAILURE);
 	}
 	int geomfd = mkstemp(geomname);
-	printf("%s\n", geomname);
 	if (geomfd < 0) {
 		perror(geomname);
 		exit(EXIT_FAILURE);
@@ -521,8 +520,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 	json_end(jp);
 	fclose(metafile);
 	fclose(geomfile);
-
-	printf("bbox: %x %x %x %x\n", file_bbox[0], file_bbox[1], file_bbox[2], file_bbox[3]);
 
 	struct stat geomst;
 	struct stat metast;
