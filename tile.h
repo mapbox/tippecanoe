@@ -36,4 +36,4 @@ struct index {
 	int candup : 1;
 };
 
-long long write_tile(char **geom, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, FILE *geomfile[4]);
+long long write_tile(char **geom, char *metabase, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, FILE *geomfile[4], int file_minzoom);

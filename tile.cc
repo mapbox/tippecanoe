@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4]) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom) {
 	int line_detail;
 	static bool evaluated = false;
 
@@ -390,8 +390,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
 
-			signed char minzoom;
-			deserialize_byte(geoms, &minzoom);
+			signed char feature_minzoom;
+			deserialize_byte(geoms, &feature_minzoom);
 
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {
@@ -473,14 +473,18 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 							}
 
 							serialize_byte(geomfile[j], VT_END, &geompos[j], fname, jp);
-							serialize_byte(geomfile[j], minzoom, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname, jp);
 						}
 					}
 				}
 			}
 
-			if ((t == VT_LINE && z + line_detail <= minzoom) ||
-			    (t == VT_POINT && z < minzoom)) {
+			if (z < file_minzoom) {
+				continue;
+			}
+
+			if ((t == VT_LINE && z + line_detail <= feature_minzoom) ||
+			    (t == VT_POINT && z < feature_minzoom)) {
 				continue;
 			}
 
