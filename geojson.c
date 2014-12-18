@@ -264,7 +264,9 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 				}
 			}
 
-			munmap(geom, geom_size[j]);
+			if (munmap(geomstart, geom_size[j]) != 0) {
+				perror("munmap geom");
+			}
 			along += geom_size[j];
 		}
 
@@ -591,7 +593,9 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 	check(fd, size, meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir);
 
-	munmap(meta, metast.st_size);
+	if (munmap(meta, metast.st_size) != 0) {
+		perror("munmap meta");
+	}
 
 	close(geomfd);
 	close(metafd);
