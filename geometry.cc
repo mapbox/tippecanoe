@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <sqlite3.h>
+#include <limits.h>
 #include "geometry.hh"
 
 extern "C" {
@@ -16,8 +17,13 @@ extern "C" {
 	#include "projection.h"
 }
 
-drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail) {
+drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox) {
 	drawvec out;
+
+	bbox[0] = LONG_LONG_MAX;
+	bbox[1] = LONG_LONG_MAX;
+	bbox[2] = LONG_LONG_MIN;
+	bbox[3] = LONG_LONG_MIN;
 
 	while (1) {
 		draw d;
@@ -28,9 +34,9 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 		}
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
-			int wx, wy;
-			deserialize_int(meta, &wx);
-			deserialize_int(meta, &wy);
+			unsigned wx, wy;
+			deserialize_uint(meta, &wx);
+			deserialize_uint(meta, &wy);
 
 			long long wwx = (unsigned) wx;
 			long long wwy = (unsigned) wy;
@@ -38,6 +44,19 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 			if (z != 0) {
 				wwx -= tx << (32 - z);
 				wwy -= ty << (32 - z);
+			}
+
+			if (wwx < bbox[0]) {
+				bbox[0] = wwx;
+			}
+			if (wwy < bbox[1]) {
+				bbox[1] = wwy;
+			}
+			if (wwx > bbox[2]) {
+				bbox[2] = wwx;
+			}
+			if (wwy > bbox[3]) {
+				bbox[3] = wwy;
 			}
 
 			d.x = wwx;
@@ -308,7 +327,9 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 			}
 
 			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
-				out.push_back(draw(VT_CLOSEPATH, 0, 0));
+				if (out.size() > 0 && out[out.size() - 1].op != VT_CLOSEPATH) {
+					out.push_back(draw(VT_CLOSEPATH, 0, 0));
+				}
 				i = j;
 			} else {
 				i = j - 1;
@@ -374,7 +395,13 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			i = j;
 		} else {
-			fprintf(stderr, "how did we get here with %d?\n", geom[i].op);
+			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
+
+			for (unsigned n = 0; n < geom.size(); n++) {
+				fprintf(stderr, "%d/%lld/%lld ", geom[n].op, geom[n].x, geom[n].y);
+			}
+			fprintf(stderr, "\n");
+
 			out.push_back(geom[i]);
 		}
 	}
@@ -382,10 +409,67 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
+drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
+	drawvec out;
+	unsigned i;
+
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
+
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].x >= min && geom[i].y >= min && geom[i].x <= area && geom[i].y <= area) {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
+
+int quick_check(long long *bbox, int z, int detail, long long buffer) {
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
+
+	// bbox entirely outside the tile
+	if (bbox[0] > area || bbox[1] > area) {
+		return 0;
+	}
+	if (bbox[2] < min || bbox[3] < min) {
+		return 0;
+	}
+
+	// bbox entirely within the tile
+	if (bbox[0] > min && bbox[1] > min && bbox[2] < area && bbox[3] < area) {
+		return 1;
+	}
+
+	// some overlap of edge
+	return 2;
+}
 
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 	unsigned i;
+
+	long long min = 0;
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+
+		min -= buffer * area / 256;
+		area += buffer * area / 256;
+	}
 
 	for (i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
@@ -394,15 +478,6 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
-
-			long long min = 0;
-			long long area = 0xFFFFFFFF;
-			if (z != 0) {
-				area = 1LL << (32 - z);
-
-				min -= buffer * area / 256;
-				area += buffer * area / 256;
-			}
 
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 

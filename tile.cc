@@ -342,9 +342,12 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(struct index *start, struct index *end, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along) {
 	int line_detail;
 	static bool evaluated = false;
+	double oprogress = 0;
+
+	char *og = *geoms;
 
 	for (line_detail = detail; line_detail >= MIN_DETAIL || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -360,39 +363,126 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 		std::vector<coalesce> features;
 
-		struct index *i;
-		for (i = start; i < end; i++) {
-			int t = i->type;
+		int within[4] = { 0 };
+		long long geompos[4] = { 0 };
 
-			if (z > i->maxzoom) {
+		*geoms = og;
+
+		while (1) {
+			int t;
+			deserialize_int(geoms, &t);
+			if (t < 0) {
+				break;
+			}
+
+			long long metastart;
+			deserialize_long_long(geoms, &metastart);
+			char *meta = metabase + metastart;
+			long long bbox[4];
+
+			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
+
+			signed char feature_minzoom;
+			deserialize_byte(geoms, &feature_minzoom);
+
+			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			if (progress != oprogress) {
+				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+				oprogress = progress;
+			}
+
+			int quick = quick_check(bbox, z, line_detail, buffer);
+			if (quick == 0) {
 				continue;
 			}
-			if ((t == VT_LINE && z + line_detail <= i->minzoom) ||
-			    (t == VT_POINT && z < i->minzoom)) {
-				continue;
-			}
 
-			if (i->candup) {
-				if (dup.count(i->fpos) != 0) {
-					continue;
+			if (quick != 1) {
+				if (t == VT_LINE) {
+					geom = clip_lines(geom, z, line_detail, buffer);
 				}
-				dup.insert(i->fpos);
+				if (t == VT_POLYGON) {
+					geom = clip_poly(geom, z, line_detail, buffer);
+				}
+				if (t == VT_POINT) {
+					geom = clip_point(geom, z, line_detail, buffer);
+				}
+
+				geom = remove_noop(geom, t);
 			}
 
-			char *meta = metabase + i->fpos;
-			drawvec geom = decode_geometry(&meta, z, tx, ty, line_detail);
+			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
+				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
+					int j;
+					for (j = 0; j < 4; j++) {
+						int xo = j & 1;
+						int yo = (j >> 1) & 1;
+
+						long long bbox2[4];
+						int k;
+						for (k = 0; k < 4; k++) {
+							bbox2[k] = bbox[k];
+						}
+						if (z != 0) {
+							// Offset back to world-relative
+							bbox2[0] += tx << (32 - z);
+							bbox2[1] += ty << (32 - z);
+							bbox2[2] += tx << (32 - z);
+							bbox2[3] += ty << (32 - z);
+						}
+						// Offset to child tile-relative
+						bbox2[0] -= (tx * 2 + xo) << (32 - (z + 1));
+						bbox2[1] -= (ty * 2 + yo) << (32 - (z + 1));
+						bbox2[2] -= (tx * 2 + xo) << (32 - (z + 1));
+						bbox2[3] -= (ty * 2 + yo) << (32 - (z + 1));
+
+						int quick2 = quick_check(bbox2, z + 1, line_detail, buffer);
+						if (quick2 != 0) {
+							if (!within[j]) {
+								serialize_int(geomfile[j], z + 1, &geompos[j], fname, jp);
+								serialize_uint(geomfile[j], tx * 2 + xo, &geompos[j], fname, jp);
+								serialize_uint(geomfile[j], ty * 2 + yo, &geompos[j], fname, jp);
+								within[j] = 1;
+							}
+
+							// Offset from tile coordinates back to world coordinates
+							unsigned sx = 0, sy = 0;
+							if (z != 0) {
+								sx = tx << (32 - z);
+								sy = ty << (32 - z);
+							}
+
+							//printf("type %d, meta %lld\n", t, metastart);
+							serialize_int(geomfile[j], t, &geompos[j], fname, jp);
+							serialize_long_long(geomfile[j], metastart, &geompos[j], fname, jp);
+
+							for (unsigned u = 0; u < geom.size(); u++) {
+								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname, jp);
+
+								if (geom[u].op != VT_CLOSEPATH) {
+									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname, jp);
+									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname, jp);
+								}
+							}
+
+							serialize_byte(geomfile[j], VT_END, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname, jp);
+						}
+					}
+				}
+			}
+
+			if (z < file_minzoom) {
+				continue;
+			}
+
+			if ((t == VT_LINE && z + line_detail <= feature_minzoom) ||
+			    (t == VT_POINT && z < feature_minzoom)) {
+				continue;
+			}
 
 			bool reduced = false;
 			if (t == VT_POLYGON) {
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
-			}
-
-			if (t == VT_LINE) {
-				geom = clip_lines(geom, z, line_detail, buffer);
-			}
-
-			if (t == VT_POLYGON) {
-				geom = clip_poly(geom, z, line_detail, buffer);
 			}
 
 			if (t == VT_LINE || t == VT_POLYGON) {
@@ -428,8 +518,8 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 						c.index2 = ~0LL;
 					}
 				} else {
-					c.index = i->index;
-					c.index2 = i->index;
+					c.index = 0;
+					c.index2 = 0;
 				}
 				c.geom = geom;
 				c.metasrc = meta;
@@ -437,6 +527,14 @@ long long write_tile(struct index *start, struct index *end, char *metabase, uns
 
 				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
 				features.push_back(c);
+			}
+		}
+
+		int j;
+		for (j = 0; j < 4; j++) {
+			if (within[j]) {
+				serialize_int(geomfile[j], -2, &geompos[j], fname, jp);
+				within[j] = 0;
 			}
 		}
 
