@@ -342,9 +342,10 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along) {
 	int line_detail;
 	static bool evaluated = false;
+	double oprogress = 0;
 
 	char *og = *geoms;
 
@@ -383,6 +384,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
+
+			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			if (progress != oprogress) {
+				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+			}
 
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {

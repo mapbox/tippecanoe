@@ -255,10 +255,7 @@ void check(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbo
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				fprintf(stderr, "  %3.1f%%   %d/%u/%u  \r",
-					(((geom - geomstart + along) / (double) todo) + z) / (maxzoom + 1) * 100, z, x, y);
-
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, jp, sub, minzoom, maxzoom);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, jp, sub, minzoom, maxzoom, todo, geomstart, along);
 
 				if (z == maxzoom && len > most) {
 					*midx = x;
