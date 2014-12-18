@@ -388,6 +388,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
 			if (progress != oprogress) {
 				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+				oprogress = progress;
 			}
 
 			int quick = quick_check(bbox, z, line_detail, buffer);
