@@ -569,6 +569,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		if (features.size() > 0) {
+			if (features.size() > 200000) {
+				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, (long long) features.size());
+				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
+				exit(EXIT_FAILURE);
+			}
+
 			mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
 
 			pool_free(&keys);
