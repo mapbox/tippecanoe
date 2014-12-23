@@ -8,6 +8,7 @@ struct draw {
 		this->op = op;
 		this->x = x;
 		this->y = y;
+		this->necessary = 0;
 	}
 
 	draw() { }
