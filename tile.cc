@@ -410,6 +410,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				geom = remove_noop(geom, t);
 			}
 
+			if (z == 0 && (t == VT_LINE || t == VT_POLYGON)) {
+				presimplify_lines(geom);
+			}
+
 			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
 				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
 					int j;
@@ -461,6 +465,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 								if (geom[u].op != VT_CLOSEPATH) {
 									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname, jp);
 									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname, jp);
+									serialize_byte(geomfile[j], geom[u].necessary, &geompos[j], fname, jp);
 								}
 							}
 
@@ -487,6 +492,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			if (t == VT_LINE || t == VT_POLYGON) {
 				if (!reduced) {
+					// already presimplified
 					geom = simplify_lines(geom, z, line_detail);
 				}
 			}
@@ -564,6 +570,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		for (x = 0; x < features.size(); x++) {
 			if (features[x].coalesced && features[x].type == VT_LINE) {
 				features[x].geom = remove_noop(features[x].geom, features[x].type);
+				presimplify_lines(features[x].geom);
 				features[x].geom = simplify_lines(features[x].geom, 32, 0);
 			}
 		}

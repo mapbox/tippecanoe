@@ -35,8 +35,10 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
 			unsigned wx, wy;
+			signed char necessary;
 			deserialize_uint(meta, &wx);
 			deserialize_uint(meta, &wy);
+			deserialize_byte(meta, &necessary);
 
 			long long wwx = (unsigned) wx;
 			long long wwy = (unsigned) wy;
@@ -61,6 +63,7 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 
 			d.x = wwx;
 			d.y = wwy;
+			d.necessary = necessary;
 		}
 
 		out.push_back(d);
@@ -520,8 +523,9 @@ static double square_distance_from_line(long long point_x, long long point_y, lo
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n, double e) {
-	e = e * e;
+static void douglas_peucker(drawvec &geom, int start, int n) {
+	// int res = 1 << (32 - detail - z);
+
 	std::stack<int> recursion_stack;
 
 	{
@@ -529,7 +533,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 		int right_border = 1;
 		// Sweep linerarily over array and identify those ranges that need to be checked
 		do {
-			if (geom[start + right_border].necessary) {
+			if (geom[start + right_border].necessary >= 0) {
 				recursion_stack.push(left_border);
 				recursion_stack.push(right_border);
 				left_border = right_border;
@@ -557,15 +561,20 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 
 			double distance = fabs(temp_dist);
 
-			if (distance > e && distance > max_distance) {
+			if (distance > 0 && distance > max_distance) {
 				farthest_element_index = i;
 				max_distance = distance;
 			}
 		}
 
-		if (max_distance > e) {
+		if (max_distance > 0) {
 			// mark idx as necessary
-			geom[start + farthest_element_index].necessary = 1;
+			int z = 32 - ceil(log(sqrt(max_distance)) / log(2.0));
+			if (z < 0) {
+				z = 0;
+			}
+			geom[start + farthest_element_index].necessary = z;
+			//printf("distance %f so zoom %d\n", max_distance, z);
 
 			if (1 < farthest_element_index - first) {
 				recursion_stack.push(first);
@@ -579,17 +588,15 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	}
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail) {
-	int res = 1 << (32 - detail - z);
-
+void presimplify_lines(drawvec &geom) {
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			geom[i].necessary = 1;
-		} else if (geom[i].op == VT_LINETO) {
 			geom[i].necessary = 0;
+		} else if (geom[i].op == VT_LINETO) {
+			geom[i].necessary = -1;
 		} else {
-			geom[i].necessary = 1;
+			geom[i].necessary = 0;
 		}
 	}
 
@@ -602,17 +609,21 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 				}
 			}
 
-			geom[i].necessary = 1;
-			geom[j - 1].necessary = 1;
+			geom[i].necessary = 0;
+			geom[j - 1].necessary = 0;
 
-			douglas_peucker(geom, i, j - i, res);
+			douglas_peucker(geom, i, j - i);
 			i = j - 1;
 		}
 	}
+}
 
+drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	drawvec out;
+	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
-		if (geom[i].necessary) {
+		//printf("%d %llx %llx  %d\n", geom[i].op, geom[i].x, geom[i].y, geom[i].necessary);
+		if (geom[i].necessary <= detail + z) {
 			out.push_back(geom[i]);
 		}
 	}
