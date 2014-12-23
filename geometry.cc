@@ -523,8 +523,9 @@ static double square_distance_from_line(long long point_x, long long point_y, lo
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n) {
-	// int res = 1 << (32 - detail - z);
+static void douglas_peucker(drawvec &geom, int start, int n, int maxdetail) {
+	double res = 1LL << (32 - maxdetail);
+	res = res * res;
 
 	std::stack<int> recursion_stack;
 
@@ -561,13 +562,13 @@ static void douglas_peucker(drawvec &geom, int start, int n) {
 
 			double distance = fabs(temp_dist);
 
-			if (distance > 0 && distance > max_distance) {
+			if (distance > res && distance > max_distance) {
 				farthest_element_index = i;
 				max_distance = distance;
 			}
 		}
 
-		if (max_distance > 0) {
+		if (max_distance > res) {
 			// mark idx as necessary
 			int z = 32 - ceil(log(sqrt(max_distance)) / log(2.0));
 			if (z < 0) {
@@ -588,7 +589,7 @@ static void douglas_peucker(drawvec &geom, int start, int n) {
 	}
 }
 
-void presimplify_lines(drawvec &geom) {
+void presimplify_lines(drawvec &geom, int maxdetail) {
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -612,7 +613,7 @@ void presimplify_lines(drawvec &geom) {
 			geom[i].necessary = 0;
 			geom[j - 1].necessary = 0;
 
-			douglas_peucker(geom, i, j - i);
+			douglas_peucker(geom, i, j - i, maxdetail);
 			i = j - 1;
 		}
 	}
@@ -623,7 +624,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
 		//printf("%d %llx %llx  %d\n", geom[i].op, geom[i].x, geom[i].y, geom[i].necessary);
-		if (geom[i].necessary <= detail + z) {
+		if (geom[i].necessary >= 0 && geom[i].necessary <= detail + z) {
 			out.push_back(geom[i]);
 		}
 	}

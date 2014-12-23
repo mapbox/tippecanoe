@@ -411,7 +411,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 
 			if (z == 0 && (t == VT_LINE || t == VT_POLYGON)) {
-				presimplify_lines(geom);
+				presimplify_lines(geom, 26); // XXX
 			}
 
 			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
@@ -570,7 +570,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		for (x = 0; x < features.size(); x++) {
 			if (features[x].coalesced && features[x].type == VT_LINE) {
 				features[x].geom = remove_noop(features[x].geom, features[x].type);
-				presimplify_lines(features[x].geom);
+				presimplify_lines(features[x].geom, 32);
 				features[x].geom = simplify_lines(features[x].geom, 32, 0);
 			}
 		}

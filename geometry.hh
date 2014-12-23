@@ -24,6 +24,6 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer);
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer);
 int quick_check(long long *bbox, int z, int detail, long long buffer);
-void presimplify_lines(drawvec &geom);
+void presimplify_lines(drawvec &geom, int max_detail);
 drawvec simplify_lines(drawvec &geom, int z, int detail);
 drawvec reorder_lines(drawvec &geom);
