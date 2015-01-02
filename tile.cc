@@ -366,12 +366,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		int within[4] = { 0 };
 		long long geompos[4] = { 0 };
 
-		int *dupcount = (int *) malloc((1 << line_detail) * (1 << line_detail) * sizeof(int));
+		int *dupcount = (int *) malloc((2 << line_detail) * (2 << line_detail) * sizeof(int));
 		if (dupcount == NULL) {
 			perror("memory allocation for duplicates");
 			exit(EXIT_FAILURE);
 		}
-		memset(dupcount, '\0', (1 << line_detail) * (1 << line_detail) * sizeof(int));
+		memset(dupcount, '\0', (2 << line_detail) * (2 << line_detail) * sizeof(int));
 
 		*geoms = og;
 
@@ -511,7 +511,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			to_tile_scale(geom, z, line_detail);
 
 			if (t == VT_POINT) {
-				geom = trim_dup_points(geom, dupcount, 1 << line_detail, maxdup);
+				geom = trim_dup_points(geom, dupcount, 2 << line_detail, maxdup);
 			}
 
 			if (t == VT_POINT || to_feature(geom, NULL)) {

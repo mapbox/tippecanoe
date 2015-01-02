@@ -668,11 +668,14 @@ drawvec trim_dup_points(drawvec &geom, int *grid, int size, int max) {
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
-			if (geom[i].x < 0 || geom[i].y < 0 || geom[i].x >= size || geom[i].y >= size) {
+			long long x = geom[i].x + size / 4;
+			long long y = geom[i].y + size / 4;
+
+			if (x < 0 || y < 0 || x >= size || y >= size) {
 				out.push_back(geom[i]);
 			} else {
-				if (grid[geom[i].y * size + geom[i].x] < max) {
-					grid[geom[i].y * size + geom[i].x]++;
+				if (grid[y * size + x] < max) {
+					grid[y * size + x]++;
 					out.push_back(geom[i]);
 				}
 			}
