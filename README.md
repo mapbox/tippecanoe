@@ -37,6 +37,7 @@ Options
  * -f: Delete the mbtiles file if it already exists instead of giving an error
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
  * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
+ * -m <i>max</i>: Drop additional points at the same location after <i>max</i> points overlap
 
 Example
 -------

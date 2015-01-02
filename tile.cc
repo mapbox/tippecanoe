@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, int maxdup) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -365,6 +365,13 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 		int within[4] = { 0 };
 		long long geompos[4] = { 0 };
+
+		int *dupcount = (int *) malloc((1 << line_detail) * (1 << line_detail) * sizeof(int));
+		if (dupcount == NULL) {
+			perror("memory allocation for duplicates");
+			exit(EXIT_FAILURE);
+		}
+		memset(dupcount, '\0', (1 << line_detail) * (1 << line_detail) * sizeof(int));
 
 		*geoms = og;
 
@@ -503,6 +510,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			to_tile_scale(geom, z, line_detail);
 
+			if (t == VT_POINT) {
+				geom = trim_dup_points(geom, dupcount, 1 << line_detail, maxdup);
+			}
+
 			if (t == VT_POINT || to_feature(geom, NULL)) {
 				struct coalesce c;
 
@@ -526,7 +537,9 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				c.coalesced = false;
 
 				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
-				features.push_back(c);
+				if (geom.size() > 0) {
+					features.push_back(c);
+				}
 			}
 		}
 
@@ -537,6 +550,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				within[j] = 0;
 			}
 		}
+
+		free(dupcount);
 
 		std::sort(features.begin(), features.end());
 
@@ -570,32 +585,35 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 		if (features.size() > 0) {
 			if (features.size() > 200000) {
-				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, (long long) features.size());
-				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
-				exit(EXIT_FAILURE);
-			}
+				fprintf(stderr, "tile %d/%u/%u has %lld features with detail %d, >200000    \n", z, tx, ty, (long long) features.size(), line_detail);
+				fprintf(stderr, "Try using -z to set a higher base zoom level or lower -m to eliminate duplicate points.\n");
 
-			mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
-
-			pool_free(&keys);
-			pool_free(&values);
-
-			std::string s;
-			std::string compressed;
-
-			tile.SerializeToString(&s);
-			compress(s, compressed);
-
-			if (compressed.size() > 500000) {
-				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
-
-				if (line_detail == MIN_DETAIL || !evaluated) {
-					evaluated = true;
-					evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
-				}
+				// Don't return, to try the next smaller grid size
 			} else {
-				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
-				return count;
+				mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+
+				pool_free(&keys);
+				pool_free(&values);
+
+				std::string s;
+				std::string compressed;
+
+				tile.SerializeToString(&s);
+				compress(s, compressed);
+
+				if (compressed.size() > 500000) {
+					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+
+					if (line_detail == MIN_DETAIL || !evaluated) {
+						evaluated = true;
+						evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
+					}
+
+					// Don't return, to try the next smaller grid size
+				} else {
+					mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					return count;
+				}
 			}
 		} else {
 			return count;

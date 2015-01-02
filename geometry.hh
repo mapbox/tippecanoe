@@ -25,3 +25,4 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer);
 int quick_check(long long *bbox, int z, int detail, long long buffer);
 drawvec simplify_lines(drawvec &geom, int z, int detail);
 drawvec reorder_lines(drawvec &geom);
+drawvec trim_dup_points(drawvec &geom, int *grid, int size, int max);
