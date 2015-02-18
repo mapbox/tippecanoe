@@ -58,6 +58,257 @@ int mb_geometry[GEOM_TYPES] = {
 	VT_POLYGON,
 };
 
+struct geo_attribute {
+	int type; /* JSON_STRING, JSON_NUMBER, JSON_TRUE, JSON_FALSE, JSON_NULL */
+	char *key;
+	char *value;
+};
+
+struct geo_geometry {
+	int op; /* VT_MOVETO, VT_LINETO, VT_CLOSEPATH */
+	double lat;
+	double lon;
+
+	struct geo_geometry *next;
+};
+
+struct geo {
+	int type; /* VT_POINT, VT_LINE, VT_POLYGON */
+	int nattributes;
+	struct geo_attribute *attributes;
+	struct geo_geometry *geometries;
+};
+
+void geo_free(struct geo *geo) {
+	int i;
+	for (i = 0; i < geo->nattributes; i++) {
+		free(geo->attributes[i].key);
+		free(geo->attributes[i].value);
+	}
+	free(geo->attributes);
+	while (geo->geometries != NULL) {
+		struct geo_geometry *next = geo->geometries->next;
+		free(geo->geometries);
+		geo->geometries = next;
+	}
+	free(geo);
+}
+
+struct geo_geometry **geo_parse(int t, json_object *j, int op, const char *fname, json_pull *source, struct geo_geometry **geom) {
+	if (j == NULL || j->type != JSON_ARRAY) {
+		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
+		return geom;
+	}
+
+	int within = geometry_within[t];
+	struct geo_geometry **began = geom;
+	if (within >= 0) {
+		int i;
+		for (i = 0; i < j->length; i++) {
+			if (within == GEOM_POINT) {
+				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
+					op = VT_MOVETO;
+				} else {
+					op = VT_LINETO;
+				}
+			}
+
+			geom = geo_parse(within, j->array[i], op, fname, source, geom);
+		}
+	} else {
+		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+			unsigned x, y;
+			double lon = j->array[0]->number;
+			double lat = j->array[1]->number;
+			latlon2tile(lat, lon, 32, &x, &y);
+
+			if (j->length > 2) {
+				static int warned = 0;
+
+				if (!warned) {
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, source->line);
+					warned = 1;
+				}
+			}
+
+
+			*geom = malloc(sizeof(struct geo_geometry));
+			(*geom)->op = op;
+			(*geom)->lat = lat;
+			(*geom)->lon = lon;
+			(*geom)->next = NULL;
+			geom = &((*geom)->next);
+		} else {
+			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
+		}
+	}
+
+	if (t == GEOM_POLYGON) {
+		if (geom != began) {
+			*geom = malloc(sizeof(struct geo_geometry));
+			(*geom)->op = VT_CLOSEPATH;
+			(*geom)->lat = 0;
+			(*geom)->lon = 0;
+			(*geom)->next = NULL;
+			geom = &((*geom)->next);
+		}
+	}
+
+	return geom;
+}
+
+void parse_outer(FILE *f, char *fname) {
+	json_pull *jp = json_begin_file(f);
+	long long seq = 0;
+
+	while (1) {
+		json_object *j = json_read(jp);
+		if (j == NULL) {
+			if (jp->error != NULL) {
+				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
+			}
+
+			json_free(jp->root);
+			break;
+		}
+
+		json_object *type = json_hash_get(j, "type");
+		if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
+			continue;
+		}
+
+		json_object *geometry = json_hash_get(j, "geometry");
+		if (geometry == NULL) {
+			fprintf(stderr, "%s:%d: feature with no geometry\n", fname, jp->line);
+			json_free(j);
+			continue;
+		}
+
+		json_object *geometry_type = json_hash_get(geometry, "type");
+		if (geometry_type == NULL) {
+			static int warned = 0;
+			if (!warned) {
+				fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", fname, jp->line);
+				warned = 1;
+			}
+
+			json_free(j);
+			continue;
+		}
+
+		if (geometry_type->type != JSON_STRING) {
+			fprintf(stderr, "%s:%d: geometry without type\n", fname, jp->line);
+			json_free(j);
+			continue;
+		}
+
+		json_object *properties = json_hash_get(j, "properties");
+		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
+			fprintf(stderr, "%s:%d: feature without properties hash\n", fname, jp->line);
+			json_free(j);
+			continue;
+		}
+
+		json_object *coordinates = json_hash_get(geometry, "coordinates");
+		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
+			fprintf(stderr, "%s:%d: feature without coordinates array\n", fname, jp->line);
+			json_free(j);
+			continue;
+		}
+
+		int t;
+		for (t = 0; t < GEOM_TYPES; t++) {
+			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+				break;
+			}
+		}
+		if (t >= GEOM_TYPES) {
+			fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", fname, jp->line, geometry_type->string);
+			json_free(j);
+			continue;
+		}
+
+		struct geo *g = malloc(sizeof(struct geo));
+		g->attributes = NULL;
+		g->geometries = NULL;
+		g->nattributes = 0;
+
+		int nprop = 0;
+		if (properties->type == JSON_HASH) {
+			nprop = properties->length;
+		}
+
+		g->attributes = malloc(nprop * sizeof(struct geo_attribute));
+		int m = 0;
+
+		int i;
+		for (i = 0; i < nprop; i++) {
+			if (properties->keys[i]->type == JSON_STRING) {
+				g->attributes[m].key = strdup(properties->keys[i]->string);
+
+				if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+					g->attributes[m].type = VT_STRING;
+					g->attributes[m].value = strdup(properties->values[i]->string);
+					m++;
+				} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
+					g->attributes[m].type = VT_NUMBER;
+					g->attributes[m].value = strdup(properties->values[i]->string);
+					m++;
+				} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
+					g->attributes[m].type = VT_BOOLEAN;
+					g->attributes[m].value = strdup(properties->values[i]->string);
+					m++;
+				} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
+					;
+				} else {
+					fprintf(stderr, "%s:%d: Unsupported property type for %s\n", fname, jp->line, properties->keys[i]->string);
+					json_free(j);
+					continue;
+				}
+			}
+		}
+
+		g->nattributes = m;
+		geo_parse(t, coordinates, VT_MOVETO, fname, jp, &(g->geometries));
+
+		if (seq % 10000 == 0) {
+			fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
+		}
+		seq++;
+
+		json_free(j);
+
+		/* XXX check for any non-features in the outer object */
+	}
+
+	json_end(jp);
+}
+
+/*
+			if (bbox != NULL) {
+				if (x < bbox[0]) {
+					bbox[0] = x;
+				}
+				if (y < bbox[1]) {
+					bbox[1] = y;
+				}
+				if (x > bbox[2]) {
+					bbox[2] = x;
+				}
+				if (y > bbox[3]) {
+					bbox[3] = y;
+				}
+			}
+*/
+
+
+
+
+
+
+
+
+
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname, json_pull *source) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
