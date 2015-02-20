@@ -58,28 +58,28 @@ int mb_geometry[GEOM_TYPES] = {
 	VT_POLYGON,
 };
 
-struct geo_attribute {
+struct feature_attribute {
 	int type; /* JSON_STRING, JSON_NUMBER, JSON_TRUE, JSON_FALSE, JSON_NULL */
 	char *key;
 	char *value;
 };
 
-struct geo_geometry {
+struct feature_geometry {
 	int op; /* VT_MOVETO, VT_LINETO, VT_CLOSEPATH */
 	double lat;
 	double lon;
 
-	struct geo_geometry *next;
+	struct feature_geometry *next;
 };
 
-struct geo {
+struct feature {
 	int type; /* VT_POINT, VT_LINE, VT_POLYGON */
 	int nattributes;
-	struct geo_attribute *attributes;
-	struct geo_geometry *geometries;
+	struct feature_attribute *attributes;
+	struct feature_geometry *geometries;
 };
 
-void geo_free(struct geo *geo) {
+void geo_free(struct feature *geo) {
 	int i;
 	for (i = 0; i < geo->nattributes; i++) {
 		free(geo->attributes[i].key);
@@ -87,21 +87,51 @@ void geo_free(struct geo *geo) {
 	}
 	free(geo->attributes);
 	while (geo->geometries != NULL) {
-		struct geo_geometry *next = geo->geometries->next;
+		struct feature_geometry *next = geo->geometries->next;
 		free(geo->geometries);
 		geo->geometries = next;
 	}
 	free(geo);
 }
 
-struct geo_geometry **geo_parse(int t, json_object *j, int op, const char *fname, int line, struct geo_geometry **geom) {
+void geo_print(struct feature *geo) {
+	printf("{ \"type\": \"Feature\", \"properties\": {");
+	int i;
+	for (i = 0; i < geo->nattributes; i++) {
+		if (i != 0) {
+			printf(", ");
+		}
+		printf("\"%s\": \"%s\"", geo->attributes[i].key, geo->attributes[i].value);
+	}
+	printf("}, \"geometry\": { \"type\": \"%s\", \"coordinates\": ",
+		geo->type == VT_POLYGON ? "MultiPolygon" :
+		geo->type == VT_LINE ? "MultiLineString" :
+		geo->type == VT_POINT ? "MultiPoint" :
+		"???");
+
+	struct feature_geometry *g;
+	if (geo->type == VT_POINT) {
+		printf("[ [");
+		for (g = geo->geometries; g != NULL; g = g->next) {
+			printf(" [ %f, %f ]", g->lon, g->lat);
+			if (g->next != NULL) {
+				printf(",");
+			}
+		}
+		printf(" ] ]");
+	}
+
+	printf(" } }\n");
+}
+
+struct feature_geometry **geo_parse(int t, json_object *j, int op, const char *fname, int line, struct feature_geometry **geom) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
 		return geom;
 	}
 
 	int within = geometry_within[t];
-	struct geo_geometry **began = geom;
+	struct feature_geometry **began = geom;
 	if (within >= 0) {
 		int i;
 		for (i = 0; i < j->length; i++) {
@@ -132,7 +162,7 @@ struct geo_geometry **geo_parse(int t, json_object *j, int op, const char *fname
 			}
 
 
-			*geom = malloc(sizeof(struct geo_geometry));
+			*geom = malloc(sizeof(struct feature_geometry));
 			(*geom)->op = op;
 			(*geom)->lat = lat;
 			(*geom)->lon = lon;
@@ -145,7 +175,7 @@ struct geo_geometry **geo_parse(int t, json_object *j, int op, const char *fname
 
 	if (t == GEOM_POLYGON) {
 		if (geom != began) {
-			*geom = malloc(sizeof(struct geo_geometry));
+			*geom = malloc(sizeof(struct feature_geometry));
 			(*geom)->op = VT_CLOSEPATH;
 			(*geom)->lat = 0;
 			(*geom)->lon = 0;
@@ -157,7 +187,7 @@ struct geo_geometry **geo_parse(int t, json_object *j, int op, const char *fname
 	return geom;
 }
 
-struct geo *parse_feature(json_object *geometry, json_object *properties, const char *fname, int line) {
+struct feature *parse_feature(json_object *geometry, json_object *properties, const char *fname, int line) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -196,7 +226,8 @@ struct geo *parse_feature(json_object *geometry, json_object *properties, const 
 		return NULL;
 	}
 
-	struct geo *g = malloc(sizeof(struct geo));
+	struct feature *g = malloc(sizeof(struct feature));
+	g->type = t;
 	g->attributes = NULL;
 	g->geometries = NULL;
 	g->nattributes = 0;
@@ -206,7 +237,7 @@ struct geo *parse_feature(json_object *geometry, json_object *properties, const 
 		nprop = properties->length;
 	}
 
-	g->attributes = malloc(nprop * sizeof(struct geo_attribute));
+	g->attributes = malloc(nprop * sizeof(struct feature_attribute));
 	int m = 0;
 
 	int i;
@@ -287,8 +318,9 @@ void parse_outer(FILE *f, char *fname) {
 		if (type != NULL && type->type == JSON_STRING && strcmp(type->string, "Feature") == 0 &&
 		    geometry != NULL && geometry->type == JSON_HASH &&
 		    properties != NULL && properties->type == JSON_HASH) {
-			struct geo *g = parse_feature(geometry, properties, fname, jp->line);
+			struct feature *g = parse_feature(geometry, properties, fname, jp->line);
 			json_free(j);
+			geo_print(g);
 			geo_free(g);
 
 			if (seq % 10000 == 0) {
@@ -300,6 +332,12 @@ void parse_outer(FILE *f, char *fname) {
 
 	json_end(jp);
 }
+
+int main(int argc, char **argv) {
+	parse_outer(stdin, "standard input");
+}
+
+#define main xmain
 
 
 
