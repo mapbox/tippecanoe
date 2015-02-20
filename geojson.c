@@ -111,14 +111,16 @@ void geo_print(struct feature *geo) {
 
 	struct feature_geometry *g;
 	if (geo->type == VT_POINT) {
-		printf("[ [");
+		printf("[");
 		for (g = geo->geometries; g != NULL; g = g->next) {
 			printf(" [ %f, %f ]", g->lon, g->lat);
 			if (g->next != NULL) {
 				printf(",");
 			}
 		}
-		printf(" ] ]");
+		printf(" ]");
+	} else if (geo->type == VT_LINE) {
+
 	}
 
 	printf(" } }\n");
@@ -227,7 +229,7 @@ struct feature *parse_feature(json_object *geometry, json_object *properties, co
 	}
 
 	struct feature *g = malloc(sizeof(struct feature));
-	g->type = t;
+	g->type = mb_geometry[t];
 	g->attributes = NULL;
 	g->geometries = NULL;
 	g->nattributes = 0;
