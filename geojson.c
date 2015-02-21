@@ -103,7 +103,7 @@ void geo_print(struct feature *geo) {
 		}
 		printf("\"%s\": \"%s\"", geo->attributes[i].key, geo->attributes[i].value);
 	}
-	printf("}, \"geometry\": { \"type\": \"%s\", \"coordinates\": ",
+	printf("}, \"geometry\": { \"type\": \"%s\", \"coordinates\": [",
 		geo->type == VT_POLYGON ? "MultiPolygon" :
 		geo->type == VT_LINE ? "MultiLineString" :
 		geo->type == VT_POINT ? "MultiPoint" :
@@ -111,19 +111,26 @@ void geo_print(struct feature *geo) {
 
 	struct feature_geometry *g;
 	if (geo->type == VT_POINT) {
-		printf("[");
 		for (g = geo->geometries; g != NULL; g = g->next) {
 			printf(" [ %f, %f ]", g->lon, g->lat);
 			if (g->next != NULL) {
 				printf(",");
 			}
 		}
-		printf(" ]");
 	} else if (geo->type == VT_LINE) {
-
+		printf(" [");
+		for (g = geo->geometries; g != NULL; g = g->next) {
+			printf(" [ %f, %f ]", g->lon, g->lat);
+			if (g->next != NULL && g->next->op == VT_MOVETO) {
+				printf(" ], [");
+			} else if (g->next != NULL) {
+				printf(",");
+			}
+		}
+		printf(" ] ");
 	}
 
-	printf(" } }\n");
+	printf("] } }\n");
 }
 
 struct feature_geometry **geo_parse(int t, json_object *j, int op, const char *fname, int line, struct feature_geometry **geom) {
