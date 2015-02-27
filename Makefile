@@ -1,6 +1,6 @@
 PREFIX ?= /usr/local
 
-all: tippecanoe enumerate decode
+all: tippecanoe enumerate decode simplify
 
 install: tippecanoe
 	mkdir -p $(PREFIX)/bin
@@ -24,6 +24,9 @@ enumerate: enumerate.o
 
 decode: decode.o vector_tile.pb.o projection.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
+
+simplify: simplify.o projection.o
+	gcc $(PG) $(LIBS) -O3 -g -Wall -o $@ $^
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
