@@ -28,6 +28,16 @@ double cubert(double x) {
 	}
 }
 
+void out(unsigned long long index) {
+	unsigned x, y;
+	decode(index, &x, &y);
+
+	double lat, lon;
+	tile2latlon(x, y, 32, &lat, &lon);
+
+	printf("%.6f,%.6f", lat, lon);
+}
+
 int main() {
 	char s[2000];
 	long long seq = 0;
@@ -73,63 +83,36 @@ int main() {
 
 	qsort(geom, size, sizeof(unsigned long long), cmp);
 
+	// in other words, a z15 pixel, about 12.5 feet
+	double scale = (double) (1LL << (64 - 2 * (15 + 8)));
 	long long i;
-	double error = 0;
-	double zerror = 0;
-	long long prev = 0;
 
-	for (i = 0; i < size - 1; i++) {
-		if (geom[i + 1] == geom[i]) {
-			long long j;
-			for (j = i; j < size; j++) {
-				if (geom[j] != geom[i]) {
-					break;
-				}
-			}
+	out(geom[0]);
+	printf("\n");
 
-			double want = cubert(j - i) + zerror;
-			long long n = floor(want);
-			zerror = want - n;
+	for (i = 1; i < size; i++) {
+		long long dist = geom[i] - geom[i - 1];
 
-			long long m;
-			for (m = 0; m < n; m++) {
-				unsigned x, y;
-				decode(geom[i], &x, &y);
-				double lat, lon;
-				tile2latlon(x, y, 32, &lat, &lon);
-				printf("%.6f,%.6f // %lld from %lld\n", lat, lon, n, j - i);
-			}
-
-			i = j - 1;
+		if (dist >= scale) {
+			out(geom[i]);
+			printf(" // far enough %lld vs %lf\n", dist, scale);
+		} else if (dist == 0) {
+			// eliminate exact duplicates.
+			// or should we produce them, but fewer?
 		} else {
-			if (prev == 0) {
-				unsigned x, y;
-				decode(geom[i], &x, &y);
-				double lat, lon;
-				tile2latlon(x, y, 32, &lat, &lon);
-				printf("%.6f,%.6f // initial\n", lat, lon);
-				prev = geom[i];
-			} else {
-				double want = 1.0 / cubert((geom[i + 1] - geom[i]) / (double) (1 << 20));
-				double density = 1.0 / ((geom[i] - prev) / (double) (1 << 20));
+			double gap = dist / scale;
+			long long oi = i;
+			long long count = 0;
 
-				if (want + error >= density) {
-					unsigned x, y;
-					decode(geom[i], &x, &y);
-					double lat, lon;
-					tile2latlon(x, y, 32, &lat, &lon);
-					printf("%.6f,%.6f // %f from %f\n", lat, lon, density, want);
-					prev = geom[i];
-					error = 0; // want + error - density;
-				} else {
-					unsigned x, y;
-					decode(geom[i], &x, &y);
-					double lat, lon;
-					tile2latlon(x, y, 32, &lat, &lon);
-					printf("skipping %.6f,%.6f // %f from %f error %f\n", lat, lon, density, want, error);
+			while (pow((geom[i] - geom[oi - 1]) / scale, 2) < gap && i < size) {
+				printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, 2), gap);
+				i++;
+				count++;
+			}
 
-					error += want;
-				}
+			if (i < size) {
+				out(geom[i]);
+				printf(" // sum of %lld: %lf\n", count, gap);
 			}
 		}
 	}
