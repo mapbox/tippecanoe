@@ -35,7 +35,7 @@ int main() {
 	while (fgets(s, 2000, stdin)) {
 		double lat, lon;
 		if (sscanf(s, "%lf,%lf", &lat, &lon) != 2) {
-			fprintf(stderr, "Couldn't understand %s", s);
+			//fprintf(stderr, "Couldn't understand %s", s);
 			continue;
 		}
 
@@ -66,6 +66,7 @@ int main() {
 	long long i;
 	double error = 0;
 	double zerror = 0;
+	long long prev = 0;
 
 	for (i = 0; i < size - 1; i++) {
 		if (geom[i + 1] == geom[i]) {
@@ -91,7 +92,35 @@ int main() {
 
 			i = j - 1;
 		} else {
-			printf("density %lf\n", 1.0 / (geom[i + 1] - geom[i]));
+			if (prev == 0) {
+				unsigned x, y;
+				decode(geom[i], &x, &y);
+				double lat, lon;
+				tile2latlon(x, y, 32, &lat, &lon);
+				printf("%.6f,%.6f // initial\n", lat, lon);
+				prev = geom[i];
+			} else {
+				double want = 1.0 / (geom[i + 1] - geom[i]);
+				double density = 1.0 / (geom[i] - prev);
+
+				if (want + error >= density) {
+					unsigned x, y;
+					decode(geom[i], &x, &y);
+					double lat, lon;
+					tile2latlon(x, y, 32, &lat, &lon);
+					printf("%.6f,%.6f // %f from %f\n", lat, lon, density, want);
+					prev = geom[i];
+					error = density - (want + error);
+				} else {
+					unsigned x, y;
+					decode(geom[i], &x, &y);
+					double lat, lon;
+					tile2latlon(x, y, 32, &lat, &lon);
+					printf("skipping %.6f,%.6f // %f from %f error %f\n", lat, lon, density, want, error);
+
+					error += want;
+				}
+			}
 		}
 	}
 }
