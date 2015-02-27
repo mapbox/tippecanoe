@@ -18,6 +18,16 @@ int cmp(const void *v1, const void *v2) {
 	}
 }
 
+double cubert(double x) {
+	if (x == 0) {
+		return 0;
+	} else if (x < 0) {
+		return -exp(log(-x) / 3);
+	} else {
+		return exp(log(x) / 3);
+	}
+}
+
 int main() {
 	char s[2000];
 	long long seq = 0;
@@ -77,7 +87,7 @@ int main() {
 				}
 			}
 
-			double want = sqrt(j - i) + zerror;
+			double want = cubert(j - i) + zerror;
 			long long n = floor(want);
 			zerror = want - n;
 
@@ -100,8 +110,8 @@ int main() {
 				printf("%.6f,%.6f // initial\n", lat, lon);
 				prev = geom[i];
 			} else {
-				double want = 1.0 / (geom[i + 1] - geom[i]);
-				double density = 1.0 / (geom[i] - prev);
+				double want = 1.0 / cubert((geom[i + 1] - geom[i]) / (double) (1 << 20));
+				double density = 1.0 / ((geom[i] - prev) / (double) (1 << 20));
 
 				if (want + error >= density) {
 					unsigned x, y;
@@ -110,7 +120,7 @@ int main() {
 					tile2latlon(x, y, 32, &lat, &lon);
 					printf("%.6f,%.6f // %f from %f\n", lat, lon, density, want);
 					prev = geom[i];
-					error = density - (want + error);
+					error = 0; // want + error - density;
 				} else {
 					unsigned x, y;
 					decode(geom[i], &x, &y);
