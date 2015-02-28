@@ -88,6 +88,9 @@ int main() {
 	out(geom[0]);
 	printf("\n");
 
+	double error = 0;
+	double exponent = 2.5;
+
 	for (i = 1; i < size; i++) {
 		long long dist = geom[i] - geom[i - 1];
 
@@ -102,13 +105,20 @@ int main() {
 			long long oi = i;
 			long long count = 0;
 
-			while (fpow((geom[i] - geom[oi - 1]) / scale, 2.5) <= gap && i < size) {
-				printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, 2), gap);
+			while (fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error <= gap && i < size) {
+				//printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, exponent) - error, gap);
 				i++;
 				count++;
 			}
 
 			if (i < size) {
+				//printf("gap: actual %f vs requested %f\n", fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error, gap);
+				error = fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error - gap;
+				if (error > 1) {
+					error = 0;
+				}
+				//printf("so error is %f\n", error);
+
 				out(geom[i]);
 				printf(" // sum of %lld: %lf\n", count, gap);
 			}
