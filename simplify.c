@@ -89,7 +89,7 @@ int main() {
 	printf("\n");
 
 	double error = 0;
-	double exponent = 2.5;
+	double exponent = 2.3;
 
 	for (i = 1; i < size; i++) {
 		long long dist = geom[i] - geom[i - 1];
