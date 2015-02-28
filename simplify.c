@@ -18,13 +18,11 @@ int cmp(const void *v1, const void *v2) {
 	}
 }
 
-double cubert(double x) {
-	if (x == 0) {
+inline double fpow(double val, double e) {
+	if (val == 0) {
 		return 0;
-	} else if (x < 0) {
-		return -exp(log(-x) / 3);
 	} else {
-		return exp(log(x) / 3);
+		return exp(log(val) * e);
 	}
 }
 
@@ -104,7 +102,7 @@ int main() {
 			long long oi = i;
 			long long count = 0;
 
-			while (pow((geom[i] - geom[oi - 1]) / scale, 2) <= gap && i < size) {
+			while (fpow((geom[i] - geom[oi - 1]) / scale, 2.5) <= gap && i < size) {
 				printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, 2), gap);
 				i++;
 				count++;
