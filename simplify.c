@@ -83,8 +83,8 @@ int main() {
 
 	qsort(geom, size, sizeof(unsigned long long), cmp);
 
-	// in other words, a z15 pixel, about 12.5 feet
-	double scale = (double) (1LL << (64 - 2 * (15 + 8)));
+	// in other words, a z14 pixel, about 25 feet
+	double scale = (double) (1LL << (64 - 2 * (14 + 8)));
 	long long i;
 
 	out(geom[0]);
@@ -104,7 +104,7 @@ int main() {
 			long long oi = i;
 			long long count = 0;
 
-			while (pow((geom[i] - geom[oi - 1]) / scale, 2) < gap && i < size) {
+			while (pow((geom[i] - geom[oi - 1]) / scale, 2) <= gap && i < size) {
 				printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, 2), gap);
 				i++;
 				count++;
