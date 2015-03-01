@@ -36,6 +36,36 @@ void out(unsigned long long index) {
 	printf("%.6f,%.6f", lat, lon);
 }
 
+// in other words, a z14 pixel, about 25 feet
+double scale = (double) (1LL << (64 - 2 * (14 + 8)));
+
+void test() {
+	srandomdev();
+	int i;
+	for (i = 0; i < 50000; i++) {
+		unsigned long long r1 = random() << 32;
+		r1 |= random();
+		unsigned long long r2 = r1 + scale;
+
+		unsigned x1, y1, x2, y2;
+		decode(r1, &x1, &y1);
+		decode(r2, &x2, &y2);
+
+		double lat1, lon1, lat2, lon2;
+		tile2latlon(x1, y1, 32, &lat1, &lon1);
+		tile2latlon(x2, y2, 32, &lat2, &lon2);
+
+		double rat = cos(lat1 + M_PI / 180);
+		double latd = lat1 - lat2;
+		double lond = (lon1 - lon2) * rat;
+		double d = sqrt(latd * latd + lond * lond) / .00000274;
+
+		if (d != 0) {
+			printf("%.6f\n", d);
+		}
+	}
+}
+
 int main() {
 	char s[2000];
 	long long seq = 0;
@@ -81,15 +111,12 @@ int main() {
 
 	qsort(geom, size, sizeof(unsigned long long), cmp);
 
-	// in other words, a z14 pixel, about 25 feet
-	double scale = (double) (1LL << (64 - 2 * (14 + 8)));
 	long long i;
+	double error = 0;
+	double exponent = 2.3;
 
 	out(geom[0]);
 	printf("\n");
-
-	double error = 0;
-	double exponent = 2.3;
 
 	for (i = 1; i < size; i++) {
 		long long dist = geom[i] - geom[i - 1];
@@ -105,22 +132,19 @@ int main() {
 			long long oi = i;
 			long long count = 0;
 
-			while (fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error <= gap && i < size) {
-				//printf("not enough: %lf vs %lf\n", pow((geom[i] - geom[oi - 1]) / scale, exponent) - error, gap);
+			while (fpow((geom[i] - geom[oi - 1]) / scale, exponent) + error <= gap && i < size) {
 				i++;
 				count++;
 			}
 
 			if (i < size) {
-				//printf("gap: actual %f vs requested %f\n", fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error, gap);
-				error = fpow((geom[i] - geom[oi - 1]) / scale, exponent) - error - gap;
+				error = fpow((geom[i] - geom[oi - 1]) / scale, exponent) + error - gap;
 				if (error > 1) {
 					error = 0;
 				}
-				//printf("so error is %f\n", error);
 
 				out(geom[i]);
-				printf(" // sum of %lld: %lf\n", count, gap);
+				printf(" // skipped %lld\n", (i - oi));
 			}
 		}
 	}
