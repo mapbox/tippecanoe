@@ -112,8 +112,7 @@ int main() {
 	qsort(geom, size, sizeof(unsigned long long), cmp);
 
 	long long i;
-	double error = 0;
-	double exponent = 2.3;
+	double exponent = 2.5;
 
 	out(geom[0]);
 	printf("\n");
@@ -132,17 +131,15 @@ int main() {
 			long long oi = i;
 			long long count = 0;
 
-			while (fpow((geom[i] - geom[oi - 1]) / scale, exponent) + error <= gap && i < size) {
+			while (fpow((geom[i] - geom[oi - 1]) / scale, exponent) <= gap && i < size) {
 				i++;
 				count++;
 			}
 
 			if (i < size) {
-				error = fpow((geom[i] - geom[oi - 1]) / scale, exponent) + error - gap;
-				if (error > 1) {
-					error = 0;
+				if ((i > oi) && (seq++ % 2 == 0)) {
+					i--;
 				}
-
 				out(geom[i]);
 				printf(" // skipped %lld\n", (i - oi));
 			}
