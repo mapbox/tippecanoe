@@ -112,7 +112,7 @@ int main() {
 	qsort(geom, size, sizeof(unsigned long long), cmp);
 
 	long long i;
-	double exponent = 2.5;
+	double exponent = 2.3;
 
 	out(geom[0]);
 	printf("\n");
