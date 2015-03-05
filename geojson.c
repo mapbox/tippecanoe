@@ -288,12 +288,81 @@ void traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned 
 	fprintf(stderr, "\n");
 }
 
+struct index {
+	long long fpos;
+	unsigned long long index;
+};
+
+int indexcmp(const void *v1, const void *v2) {
+	const struct index *i1 = (const struct index *) v1;
+	const struct index *i2 = (const struct index *) v2;
+
+	if (i1->index < i2->index) {
+		return -1;
+	} else if (i1->index > i2->index) {
+		return 1;
+	}
+
+	return 0;
+}
+
+struct merge {
+	long long start;
+	long long end;
+
+	struct merge *next;
+};
+
+static void insert(struct merge *m, struct merge **head, unsigned char *map, int bytes) {
+	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
+		head = &((*head)->next);
+	}
+
+	m->next = *head;
+	*head = m;
+}
+
+static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec) {
+	int i;
+	struct merge *head = NULL;
+	long long along = 0;
+	long long reported = -1;
+
+	for (i = 0; i < nmerges; i++) {
+		if (merges[i].start < merges[i].end) {
+			insert(&(merges[i]), &head, map, bytes);
+		}
+	}
+
+	while (head != NULL) {
+		fwrite(map + head->start, bytes, 1, f);
+		head->start += bytes;
+
+		struct merge *m = head;
+		head = m->next;
+		m->next = NULL;
+
+		if (m->start < m->end) {
+			insert(m, &head, map, bytes);
+		}
+
+		along++;
+		long long report = 100 * along / nrec;
+		if (report != reported) {
+			fprintf(stderr, "Merging: %lld%%\r", report);
+			reported = report;
+		}
+	}
+}
+
 void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir) {
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
 	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
 	int metafd = mkstemp(metaname);
 	if (metafd < 0) {
@@ -303,6 +372,11 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 	int geomfd = mkstemp(geomname);
 	if (geomfd < 0) {
 		perror(geomname);
+		exit(EXIT_FAILURE);
+	}
+	int indexfd = mkstemp(indexname);
+	if (indexfd < 0) {
+		perror(indexname);
 		exit(EXIT_FAILURE);
 	}
 
@@ -316,11 +390,18 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		perror(geomname);
 		exit(EXIT_FAILURE);
 	}
+	FILE *indexfile = fopen(indexname, "wb");
+	if (indexfile == NULL) {
+		perror(indexname);
+		exit(EXIT_FAILURE);
+	}
 	long long metapos = 0;
 	long long geompos = 0;
+	long long indexpos = 0;
 
 	unlink(metaname);
 	unlink(geomname);
+	unlink(indexname);
 
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 	unsigned midx = 0, midy = 0;
@@ -456,10 +537,18 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 				serialize_string(metafile, metaval[i], &metapos, fname, jp);
 			}
 
+			long long geomstart = geompos;
+
 			serialize_int(geomfile, mb_geometry[t], &geompos, fname, jp);
 			serialize_long_long(geomfile, metastart, &geompos, fname, jp);
 			parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
 			serialize_byte(geomfile, VT_END, &geompos, fname, jp);
+
+			struct index index;
+			index.fpos = geomstart;
+			index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+			fwrite_check(&index, sizeof(struct index), 1, indexfile, fname, jp);
+			indexpos += sizeof(struct index);
 
 			/*
 			 * Note that minzoom for lines is the dimension
@@ -519,6 +608,7 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 	json_end(jp);
 	fclose(metafile);
 	fclose(geomfile);
+	fclose(indexfile);
 
 	struct stat geomst;
 	struct stat metast;
@@ -575,6 +665,84 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		*out = '\0';
 
 		printf("using layer name %s\n", trunc);
+	}
+
+	{
+		int bytes = sizeof(struct index);
+
+		fprintf(stderr,
+			"Sorting %lld indices for %lld features\n",
+			(long long) indexpos / bytes,
+			seq);
+
+		int page = sysconf(_SC_PAGESIZE);
+		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
+		while (unit % page != 0) {
+			unit += bytes;
+		}
+
+		int nmerges = (indexpos + unit - 1) / unit;
+		struct merge merges[nmerges];
+
+		long long start;
+		for (start = 0; start < indexpos; start += unit) {
+			long long end = start + unit;
+			if (end > indexpos) {
+				end = indexpos;
+			}
+
+			if (nmerges != 1) {
+				fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
+			}
+
+			merges[start / unit].start = start;
+			merges[start / unit].end = end;
+			merges[start / unit].next = NULL;
+
+			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, indexfd, start);
+			if (map == MAP_FAILED) {
+				perror("mmap");
+				exit(EXIT_FAILURE);
+			}
+
+			qsort(map, (end - start) / bytes, bytes, indexcmp);
+
+			// Sorting and then copying avoids the need to
+			// write out intermediate stages of the sort.
+
+			void *map2 = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, start);
+			if (map2 == MAP_FAILED) {
+				perror("mmap (write)");
+				exit(EXIT_FAILURE);
+			}
+
+			memcpy(map2, map, end - start);
+
+			munmap(map, end - start);
+			munmap(map2, end - start);
+		}
+
+		if (nmerges != 1) {
+			fprintf(stderr, "\n");
+		}
+
+		void *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+
+		FILE *f = fopen(indexname, "w");
+		if (f == NULL) {
+			perror(indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		merge(merges, nmerges, (unsigned char *) map, f, bytes, indexpos / bytes);
+
+		munmap(map, indexpos);
+		fclose(f);
+		close(indexfd);
 	}
 
 	int fd[4];
