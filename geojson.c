@@ -765,9 +765,9 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		perror("munmap meta");
 	}
 
-	close(geomfd);
-	close(metafd);
-
+	if (close(metafd) < 0) {
+		perror("close meta");
+	}
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
