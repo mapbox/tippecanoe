@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -360,6 +360,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		long long count = 0;
 		//long long along = 0;
 		double accum_area = 0;
+
+		double interval = 0;
+		double seq = 0;
+		if (z < basezoom) {
+			interval = exp(log(droprate) * (basezoom - z));
+		}
 
 		std::vector<coalesce> features;
 
@@ -475,9 +481,21 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				continue;
 			}
 
-			if ((t == VT_LINE && z + line_detail <= feature_minzoom) ||
-			    (t == VT_POINT && z < feature_minzoom)) {
+			if (t == VT_LINE && z + line_detail <= feature_minzoom) {
 				continue;
+			}
+
+			if (t == VT_POINT && z < feature_minzoom && gamma == 0) {
+				continue;
+			}
+
+			if (t == VT_POINT && gamma != 0) {
+				seq++;
+				if (seq >= 0) {
+					seq -= interval;
+				} else {
+					continue;
+				}
 			}
 
 			bool reduced = false;
