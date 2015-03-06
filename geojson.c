@@ -893,7 +893,7 @@ int main(int argc, char **argv) {
 	pool_init(&include, 0);
 	int exclude_all = 0;
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:g:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -950,6 +950,10 @@ int main(int argc, char **argv) {
 
 		case 't':
 			tmpdir = optarg;
+			break;
+
+		case 'g':
+			gamma = atof(optarg);
 			break;
 
 		default:

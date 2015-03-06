@@ -367,6 +367,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			interval = exp(log(droprate) * (basezoom - z));
 		}
 
+		unsigned long long previndex = 0;
+		double scale = (double) (1LL << (64 - 2 * (z + 8)));
+		double gap = 0;
+
 		std::vector<coalesce> features;
 
 		int within[4] = { 0 };
@@ -496,6 +500,33 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				} else {
 					continue;
 				}
+
+				unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+				if (gap > 0) {
+					if (index == previndex) {
+						continue; // Exact duplicate: can't fulfil the gap requirement
+					}
+
+					if (exp(log((index - previndex) / scale) * gamma) >= gap) {
+						// Dot is further from the previous than the nth root of the gap,
+						// so produce it, and choose a new gap at the next point.
+						gap = 0;
+					} else {
+						continue;
+					}
+				} else {
+					gap = (index - previndex) / scale;
+
+					if (gap == 0) {
+						continue; // Exact duplicate: skip
+					} else if (gap < 1) {
+						continue; // Narrow dot spacing: need to stretch out
+					} else {
+						gap = 0; // Wider spacing than minimum: so pass through unchanged
+					}
+				}
+
+				previndex = index;
 			}
 
 			bool reduced = false;
