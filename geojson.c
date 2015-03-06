@@ -782,9 +782,16 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 		long long i;
 		long long sum = 0;
+		long long progress = 0;
 		for (i = 0; i < indexpos / sizeof(struct index); i++) {
 			fwrite_check(geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname, jp);
 			sum += index_map[i].end - index_map[i].start;
+
+			long long p = 1000 * i / (indexpos / sizeof(struct index));
+			if (p != progress) {
+				fprintf(stderr, "Reordering geometry: %3.1f%%\r", p / 10.0);
+				progress = p;
+			}
 		}
 
 		/* end of tile */
