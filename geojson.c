@@ -665,11 +665,7 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 	{
 		int bytes = sizeof(struct index);
-
-		fprintf(stderr,
-			"Sorting %lld indices for %lld features, %lld bytes of geometry\n",
-			(long long) indexpos / bytes,
-			seq, (long long) geomst.st_size);
+		fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
 
 		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
