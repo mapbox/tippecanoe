@@ -289,7 +289,8 @@ void traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned 
 }
 
 struct index {
-	long long fpos;
+	long long start;
+	long long end;
 	unsigned long long index;
 };
 
@@ -408,11 +409,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 	json_pull *jp = json_begin_file(f);
 	long long seq = 0;
-
-	/* initial tile is 0/0/0 */
-	serialize_int(geomfile, 0, &geompos, fname, jp);
-	serialize_uint(geomfile, 0, &geompos, fname, jp);
-	serialize_uint(geomfile, 0, &geompos, fname, jp);
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -544,12 +540,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 			parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
 			serialize_byte(geomfile, VT_END, &geompos, fname, jp);
 
-			struct index index;
-			index.fpos = geomstart;
-			index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
-			fwrite_check(&index, sizeof(struct index), 1, indexfile, fname, jp);
-			indexpos += sizeof(struct index);
-
 			/*
 			 * Note that minzoom for lines is the dimension
 			 * of the geometry in world coordinates, but
@@ -580,6 +570,13 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 			serialize_byte(geomfile, minzoom, &geompos, fname, jp);
 
+			struct index index;
+			index.start = geomstart;
+			index.end = geompos;
+			index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+			fwrite_check(&index, sizeof(struct index), 1, indexfile, fname, jp);
+			indexpos += sizeof(struct index);
+
 			for (i = 0; i < 2; i++) {
 				if (bbox[i] < file_bbox[i]) {
 					file_bbox[i] = bbox[i];
@@ -601,9 +598,6 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 
 		/* XXX check for any non-features in the outer object */
 	}
-
-	/* end of tile */
-	serialize_int(geomfile, -2, &geompos, fname, jp);
 
 	json_end(jp);
 	fclose(metafile);
@@ -667,13 +661,15 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		printf("using layer name %s\n", trunc);
 	}
 
+	/* Sort the index by geometry */
+
 	{
 		int bytes = sizeof(struct index);
 
 		fprintf(stderr,
-			"Sorting %lld indices for %lld features\n",
+			"Sorting %lld indices for %lld features, %lld bytes of geometry\n",
 			(long long) indexpos / bytes,
-			seq);
+			seq, (long long) geomst.st_size);
 
 		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
@@ -743,6 +739,84 @@ void read_json(FILE *f, const char *fname, const char *layername, int maxzoom, i
 		munmap(map, indexpos);
 		fclose(f);
 		close(indexfd);
+	}
+
+	/* Copy geometries to a new file in index order */
+
+	indexfd = open(indexname, O_RDONLY);
+	if (indexfd < 0) {
+		perror("reopen sorted index");
+		exit(EXIT_FAILURE);
+	}
+	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+	if (index_map == MAP_FAILED) {
+		perror("mmap index");
+		exit(EXIT_FAILURE);
+	}
+	unlink(indexname);
+
+	char *geom_map = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfd, 0);
+	if (geom_map == MAP_FAILED) {
+		perror("mmap unsorted geometry");
+		exit(EXIT_FAILURE);
+	}
+	if (close(geomfd) != 0) {
+		perror("close unsorted geometry");
+	}
+
+	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+	geomfd = mkstemp(geomname);
+	if (geomfd < 0) {
+		perror(geomname);
+		exit(EXIT_FAILURE);
+	}
+	geomfile = fopen(geomname, "wb");
+	if (geomfile == NULL) {
+		perror(geomname);
+		exit(EXIT_FAILURE);
+	}
+
+	{
+		geompos = 0;
+
+		/* initial tile is 0/0/0 */
+		serialize_int(geomfile, 0, &geompos, fname, jp);
+		serialize_uint(geomfile, 0, &geompos, fname, jp);
+		serialize_uint(geomfile, 0, &geompos, fname, jp);
+
+		long long i;
+		long long sum = 0;
+		for (i = 0; i < indexpos / sizeof(struct index); i++) {
+			fwrite_check(geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname, jp);
+			sum += index_map[i].end - index_map[i].start;
+		}
+
+		/* end of tile */
+		serialize_int(geomfile, -2, &geompos, fname, jp);
+		fclose(geomfile);
+	}
+
+	if (munmap(index_map, indexpos) != 0) {
+		perror("unmap sorted index");
+	}
+	if (munmap(geom_map, geomst.st_size) != 0) {
+		perror("unmap unsorted geometry");
+	}
+	if (close(indexfd) != 0) {
+		perror("close sorted index");
+	}
+
+	/* Traverse and split the geometries for each zoom level */
+
+	geomfd = open(geomname, O_RDONLY);
+	if (geomfd < 0) {
+		perror("reopen sorted geometry");
+		exit(EXIT_FAILURE);
+	}
+	unlink(geomname);
+	if (fstat(geomfd, &geomst) != 0) {
+		perror("stat sorted geom\n");
+		exit(EXIT_FAILURE);
 	}
 
 	int fd[4];
