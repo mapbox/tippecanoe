@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -360,6 +360,16 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		long long count = 0;
 		//long long along = 0;
 		double accum_area = 0;
+
+		double interval = 0;
+		double seq = 0;
+		if (z < basezoom) {
+			interval = exp(log(droprate) * (basezoom - z));
+		}
+
+		unsigned long long previndex = 0;
+		double scale = (double) (1LL << (64 - 2 * (z + 8)));
+		double gap = 0;
 
 		std::vector<coalesce> features;
 
@@ -475,9 +485,48 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				continue;
 			}
 
-			if ((t == VT_LINE && z + line_detail <= feature_minzoom) ||
-			    (t == VT_POINT && z < feature_minzoom)) {
+			if (t == VT_LINE && z + line_detail <= feature_minzoom) {
 				continue;
+			}
+
+			if (t == VT_POINT && z < feature_minzoom && gamma == 0) {
+				continue;
+			}
+
+			if (t == VT_POINT && gamma != 0) {
+				seq++;
+				if (seq >= 0) {
+					seq -= interval;
+				} else {
+					continue;
+				}
+
+				unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+				if (gap > 0) {
+					if (index == previndex) {
+						continue; // Exact duplicate: can't fulfil the gap requirement
+					}
+
+					if (exp(log((index - previndex) / scale) * gamma) >= gap) {
+						// Dot is further from the previous than the nth root of the gap,
+						// so produce it, and choose a new gap at the next point.
+						gap = 0;
+					} else {
+						continue;
+					}
+				} else {
+					gap = (index - previndex) / scale;
+
+					if (gap == 0) {
+						continue; // Exact duplicate: skip
+					} else if (gap < 1) {
+						continue; // Narrow dot spacing: need to stretch out
+					} else {
+						gap = 0; // Wider spacing than minimum: so pass through unchanged
+					}
+				}
+
+				previndex = index;
 			}
 
 			bool reduced = false;
@@ -572,7 +621,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			if (features.size() > 200000) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, (long long) features.size());
 				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
-				exit(EXIT_FAILURE);
+				return -1;
 			}
 
 			mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
@@ -603,6 +652,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	}
 
 	fprintf(stderr, "could not make tile %d/%u/%u small enough\n", z, tx, ty);
-	exit(EXIT_FAILURE);
+	return -1;
 }
 
