@@ -58,7 +58,7 @@ Options
  * -f: Delete the mbtiles file if it already exists instead of giving an error
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
  * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
- * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 1, for no effect). A gamma of 2 reduces the number of dots duplicating the same pixel to the square root of their original number.
+ * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 1, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 Example
 -------
@@ -78,8 +78,8 @@ I don't know why 2.5 is the appropriate number, but the densities of many differ
 data sets fall off at about this same rate. You can use -r to specify a different rate.
 
 You can use the gamma option to thin out especially dense clusters of points.
-For any area that is denser than one point per pixel (at whatever zoom level),
-a gamma of 3, for example, will reduce these clusters to 1/3 of their original density.
+For any area that where dots are closer than one pixel together (at whatever zoom level),
+a gamma of 3, for example, will reduce these clusters to the cube root of their original density.
 
 For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark (and too dense for the 500K tile limit,
