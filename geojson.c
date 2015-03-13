@@ -128,6 +128,24 @@ void geo_print(struct feature *geo) {
 			}
 		}
 		printf(" ] ");
+	} else if (geo->type == VT_POLYGON) {
+		printf(" [ [");
+		for (g = geo->geometries; g != NULL; g = g->next) {
+			if (g->op == VT_CLOSEPATH) {
+				if (g->next != NULL) {
+					printf(" ], [");
+				}
+			} else {
+				printf(" [ %f, %f ]", g->lon, g->lat);
+				if (g->next != NULL && g->next->op == VT_MOVETO) {
+					printf(" ], [");
+				} else if (g->next != NULL && g->next->op != VT_CLOSEPATH) {
+					printf(",");
+				}
+			}
+		}
+
+		printf("] ] ");
 	}
 
 	printf("] } }\n");
