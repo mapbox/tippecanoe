@@ -48,8 +48,8 @@ Options
 
  * -l <i>name</i>: Layer name (default "file" if source is file.json)
  * -n <i>name</i>: Human-readable name (default file.json)
- * -z <i>zoom</i>: Base zoom level (default 14)
- * -Z <i>zoom</i>: Lowest zoom level (default 0)
+ * -z <i>zoom</i>: Base (maxzoom) zoom level (default 14)
+ * -Z <i>zoom</i>: Lowest (minzoom) zoom level (default 0)
  * -d <i>detail</i>: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
  * -D <i>detail</i>: Detail at lower zoom levels (default 10, for tile resolution of 1024) 
  * -x <i>name</i>: Exclude the named properties from all features
