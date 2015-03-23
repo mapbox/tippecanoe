@@ -346,16 +346,19 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
+	int nlayers = 1; // XXX
 
 	char *og = *geoms;
 
 	for (line_detail = detail; line_detail >= MIN_DETAIL || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-		struct pool keys, values;
-		pool_init(&keys, 0);
-		pool_init(&values, 0);
-		std::set<long long> dup;
+		struct pool keys[nlayers], values[nlayers];
+		int i;
+		for (i = 0; i < nlayers; i++) {
+			pool_init(&keys[i], 0);
+			pool_init(&values[i], 0);
+		}
 
 		long long count = 0;
 		//long long along = 0;
@@ -371,7 +374,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
 		double gap = 0;
 
-		std::vector<coalesce> features;
+		std::vector<std::vector<coalesce> > features;
+		for (i = 0; i < nlayers; i++) {
+			features.push_back(std::vector<coalesce>());
+		}
 
 		int within[4] = { 0 };
 		long long geompos[4] = { 0 };
@@ -384,6 +390,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			if (t < 0) {
 				break;
 			}
+
+			int layer = 0; // XXX layer
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
@@ -574,8 +582,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				c.metasrc = meta;
 				c.coalesced = false;
 
-				decode_meta(&meta, &keys, &values, file_keys, &c.meta, NULL);
-				features.push_back(c);
+				decode_meta(&meta, &keys[layer], &values[layer], file_keys, &c.meta, NULL);
+				features[layer].push_back(c);
 			}
 		}
 
@@ -587,47 +595,57 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 		}
 
-		std::sort(features.begin(), features.end());
+		for (j = 0; j < nlayers; j++) {
+			std::sort(features[j].begin(), features[j].end());
 
-		std::vector<coalesce> out;
-		unsigned x;
-		for (x = 0; x < features.size(); x++) {
-			unsigned y = out.size() - 1;
+			std::vector<coalesce> out;
+			unsigned x;
+			for (x = 0; x < features[j].size(); x++) {
+				unsigned y = out.size() - 1;
 
-			if (out.size() > 0 && coalcmp(&features[x], &out[y]) < 0) {
-				fprintf(stderr, "\nfeature out of order\n");
-			}
-
-			if (out.size() > 0 && out[y].geom.size() + features[x].geom.size() < 20000 && coalcmp(&features[x], &out[y]) == 0 && features[x].type != VT_POINT) {
-				unsigned z;
-				for (z = 0; z < features[x].geom.size(); z++) {
-					out[y].geom.push_back(features[x].geom[z]);
+				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
+					fprintf(stderr, "\nfeature out of order\n");
 				}
-				out[y].coalesced = true;
-			} else {
-				out.push_back(features[x]);
+
+				if (out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+					unsigned z;
+					for (z = 0; z < features[j][x].geom.size(); z++) {
+						out[y].geom.push_back(features[j][x].geom[z]);
+					}
+					out[y].coalesced = true;
+				} else {
+					out.push_back(features[j][x]);
+				}
+			}
+			features[j] = out;
+
+			for (x = 0; x < features[j].size(); x++) {
+				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
+					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type);
+					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
+				}
 			}
 		}
-		features = out;
 
-		for (x = 0; x < features.size(); x++) {
-			if (features[x].coalesced && features[x].type == VT_LINE) {
-				features[x].geom = remove_noop(features[x].geom, features[x].type);
-				features[x].geom = simplify_lines(features[x].geom, 32, 0);
-			}
+		long long totalsize = 0;
+		for (j = 0; j < nlayers; j++) {
+			totalsize += features[j].size();
 		}
 
-		if (features.size() > 0) {
-			if (features.size() > 200000) {
-				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, (long long) features.size());
+		if (totalsize > 0) {
+			if (totalsize > 200000) {
+				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
 				return -1;
 			}
 
-			mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values);
+			mapnik::vector::tile tile = create_tile(layername, line_detail, features[0], &count, &keys[0], &values[0]); // XXX layer
 
-			pool_free(&keys);
-			pool_free(&values);
+			int i;
+			for (i = 0; i < nlayers; i++) {
+				pool_free(&keys[i]);
+				pool_free(&values[i]);
+			}
 
 			std::string s;
 			std::string compressed;
@@ -640,7 +658,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 				if (line_detail == MIN_DETAIL || !evaluated) {
 					evaluated = true;
-					evaluate(features, metabase, file_keys, layername, line_detail, compressed.size());
+					evaluate(features[0], metabase, file_keys, layername, line_detail, compressed.size()); // XXX layer
 				}
 			} else {
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
