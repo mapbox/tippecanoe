@@ -107,7 +107,7 @@ static void aprintf(char **buf, const char *format, ...) {
 	free(tmp);
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, const char *layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, const char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -174,27 +174,38 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, const char *layer
 	sqlite3_free(sql);
 
 	char *buf = strdup("{");
-	aprintf(&buf, "\"vector_layers\": [ { \"id\": \"");
-	quote(&buf, layername);
-	aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
+	aprintf(&buf, "\"vector_layers\": [ ");
 
-	struct pool_val *pv;
-	for (pv = file_keys[0]->head; pv != NULL; pv = pv->next) { // XXX layers
-		aprintf(&buf, "\"");
-		quote(&buf, pv->s);
-
-		if (pv->type == VT_NUMBER) { 
-			aprintf(&buf, "\": \"Number\"");
-		} else {
-			aprintf(&buf, "\": \"String\"");
-		}
-
-		if (pv->next != NULL) {
+	int i;
+	for (i = 0; i < nlayers; i++) {
+		if (i != 0) {
 			aprintf(&buf, ", ");
 		}
+
+		aprintf(&buf, "{ \"id\": \"");
+		quote(&buf, layername[i]);
+		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
+
+		struct pool_val *pv;
+		for (pv = file_keys[i]->head; pv != NULL; pv = pv->next) {
+			aprintf(&buf, "\"");
+			quote(&buf, pv->s);
+
+			if (pv->type == VT_NUMBER) {
+				aprintf(&buf, "\": \"Number\"");
+			} else {
+				aprintf(&buf, "\": \"String\"");
+			}
+
+			if (pv->next != NULL) {
+				aprintf(&buf, ", ");
+			}
+		}
+
+		aprintf(&buf, "} }");
 	}
 
-	aprintf(&buf, "} } ] }");
+	aprintf(&buf, " ] }");
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf);
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {

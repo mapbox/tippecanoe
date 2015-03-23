@@ -891,7 +891,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys);
+	mbtiles_write_metadata(outdb, fname, &layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers); // XXX layers
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
