@@ -385,13 +385,14 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		*geoms = og;
 
 		while (1) {
-			int t;
-			deserialize_int(geoms, &t);
+			signed char t;
+			deserialize_byte(geoms, &t);
 			if (t < 0) {
 				break;
 			}
 
-			int layer = 0; // XXX layer
+			signed char layer;
+			deserialize_byte(geoms, &layer);
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
@@ -470,7 +471,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 							}
 
 							//printf("type %d, meta %lld\n", t, metastart);
-							serialize_int(geomfile[j], t, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], t, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], layer, &geompos[j], fname, jp);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname, jp);
 
 							for (unsigned u = 0; u < geom.size(); u++) {
@@ -590,7 +592,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		int j;
 		for (j = 0; j < 4; j++) {
 			if (within[j]) {
-				serialize_int(geomfile[j], -2, &geompos[j], fname, jp);
+				serialize_byte(geomfile[j], -2, &geompos[j], fname, jp);
 				within[j] = 0;
 			}
 		}

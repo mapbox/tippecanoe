@@ -542,7 +542,8 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 
 			long long geomstart = geompos;
 
-			serialize_int(geomfile, mb_geometry[t], &geompos, fname, jp);
+			serialize_byte(geomfile, mb_geometry[t], &geompos, fname, jp);
+			serialize_byte(geomfile, 0, &geompos, fname, jp); // XXX layer
 			serialize_long_long(geomfile, metastart, &geompos, fname, jp);
 			parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
 			serialize_byte(geomfile, VT_END, &geompos, fname, jp);
@@ -809,7 +810,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		}
 
 		/* end of tile */
-		serialize_int(geomfile, -2, &geompos, fname, jp);
+		serialize_byte(geomfile, -2, &geompos, fname, jp);
 		fclose(geomfile);
 	}
 
