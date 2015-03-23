@@ -901,7 +901,7 @@ int main(int argc, char **argv) {
 	int minzoom = 0;
 	int force = 0;
 	double droprate = 2.5;
-	double gamma = 1;
+	double gamma = 0;
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
 
