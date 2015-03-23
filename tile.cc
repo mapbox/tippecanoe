@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool *file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -582,7 +582,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				c.metasrc = meta;
 				c.coalesced = false;
 
-				decode_meta(&meta, &keys[layer], &values[layer], file_keys, &c.meta, NULL);
+				decode_meta(&meta, &keys[layer], &values[layer], file_keys[layer], &c.meta, NULL);
 				features[layer].push_back(c);
 			}
 		}
@@ -658,7 +658,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 				if (line_detail == MIN_DETAIL || !evaluated) {
 					evaluated = true;
-					evaluate(features[0], metabase, file_keys, layername, line_detail, compressed.size()); // XXX layer
+					evaluate(features[0], metabase, file_keys[0], layername, line_detail, compressed.size()); // XXX layer
 				}
 			} else {
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());

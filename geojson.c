@@ -194,7 +194,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool *file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, const char *tmpdir, double gamma) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, const char *tmpdir, double gamma) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -634,8 +634,15 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		exit(EXIT_FAILURE);
 	}
 
-	struct pool file_keys;
-	pool_init(&file_keys, 0);
+	int nlayers = 1; // XXX layers
+
+	struct pool file_keys1[nlayers];
+	struct pool *file_keys[nlayers];
+	int i;
+	for (i = 0; i < nlayers; i++) {
+		pool_init(&file_keys1[i], 0);
+		file_keys[i] = &file_keys1[i];
+	}
 
 	char trunc[strlen(fname) + 1];
 	if (layername == NULL) {
@@ -843,7 +850,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 
 	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, &file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir, gamma);
+	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir, gamma);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -883,9 +890,11 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, &file_keys);
+	mbtiles_write_metadata(outdb, fname, layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys);
 
-	pool_free_strings(&file_keys);
+	for (i = 0; i < nlayers; i++) {
+		pool_free_strings(&file_keys1[i]);
+	}
 	return ret;
 }
 
