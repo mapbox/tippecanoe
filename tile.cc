@@ -342,7 +342,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, json_pull *jp, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -457,9 +457,9 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						int quick2 = quick_check(bbox2, z + 1, line_detail, buffer);
 						if (quick2 != 0) {
 							if (!within[j]) {
-								serialize_int(geomfile[j], z + 1, &geompos[j], fname, jp);
-								serialize_uint(geomfile[j], tx * 2 + xo, &geompos[j], fname, jp);
-								serialize_uint(geomfile[j], ty * 2 + yo, &geompos[j], fname, jp);
+								serialize_int(geomfile[j], z + 1, &geompos[j], fname);
+								serialize_uint(geomfile[j], tx * 2 + xo, &geompos[j], fname);
+								serialize_uint(geomfile[j], ty * 2 + yo, &geompos[j], fname);
 								within[j] = 1;
 							}
 
@@ -471,21 +471,21 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 							}
 
 							//printf("type %d, meta %lld\n", t, metastart);
-							serialize_byte(geomfile[j], t, &geompos[j], fname, jp);
-							serialize_byte(geomfile[j], layer, &geompos[j], fname, jp);
-							serialize_long_long(geomfile[j], metastart, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], t, &geompos[j], fname);
+							serialize_byte(geomfile[j], layer, &geompos[j], fname);
+							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 
 							for (unsigned u = 0; u < geom.size(); u++) {
-								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname, jp);
+								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 								if (geom[u].op != VT_CLOSEPATH) {
-									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname, jp);
-									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname, jp);
+									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname);
+									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname);
 								}
 							}
 
-							serialize_byte(geomfile[j], VT_END, &geompos[j], fname, jp);
-							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname, jp);
+							serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
+							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
 						}
 					}
 				}
@@ -592,7 +592,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		int j;
 		for (j = 0; j < 4; j++) {
 			if (within[j]) {
-				serialize_byte(geomfile[j], -2, &geompos[j], fname, jp);
+				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
 			}
 		}

@@ -58,41 +58,41 @@ int mb_geometry[GEOM_TYPES] = {
 	VT_POLYGON,
 };
 
-size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname, json_pull *source) {
+size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
-		fprintf(stderr, "%s:%d: Write to temporary file failed: %s\n", fname, source->line, strerror(errno));
+		fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 	return w;
 }
 
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname, json_pull *source) {
-	fwrite_check(&n, sizeof(int), 1, out, fname, source);
+void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(int), 1, out, fname);
 	*fpos += sizeof(int);
 }
 
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname, json_pull *source) {
-	fwrite_check(&n, sizeof(long long), 1, out, fname, source);
+void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(long long), 1, out, fname);
 	*fpos += sizeof(long long);
 }
 
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname, json_pull *source) {
-	fwrite_check(&n, sizeof(signed char), 1, out, fname, source);
+void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(signed char), 1, out, fname);
 	*fpos += sizeof(signed char);
 }
 
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname, json_pull *source) {
-	fwrite_check(&n, sizeof(unsigned), 1, out, fname, source);
+void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
 	*fpos += sizeof(unsigned);
 }
 
-void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname, json_pull *source) {
+void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname) {
 	int len = strlen(s);
 
-	serialize_int(out, len + 1, fpos, fname, source);
-	fwrite_check(s, sizeof(char), len, out, fname, source);
-	fwrite_check("", sizeof(char), 1, out, fname, source);
+	serialize_int(out, len + 1, fpos, fname);
+	fwrite_check(s, sizeof(char), len, out, fname);
+	fwrite_check("", sizeof(char), 1, out, fname);
 	*fpos += len + 1;
 }
 
@@ -148,9 +148,9 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			serialize_byte(out, op, fpos, fname, source);
-			serialize_uint(out, x, fpos, fname, source);
-			serialize_uint(out, y, fpos, fname, source);
+			serialize_byte(out, op, fpos, fname);
+			serialize_uint(out, x, fpos, fname);
+			serialize_uint(out, y, fpos, fname);
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
 		}
@@ -158,7 +158,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 
 	if (t == GEOM_POLYGON) {
 		if (*fpos != began) {
-			serialize_byte(out, VT_CLOSEPATH, fpos, fname, source);
+			serialize_byte(out, VT_CLOSEPATH, fpos, fname);
 		}
 	}
 }
@@ -194,7 +194,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, struct json_pull *jp, const char *tmpdir, double gamma) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -255,7 +255,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, jp, sub, minzoom, maxzoom, todo, geomstart, along, gamma);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma);
 
 				if (len < 0) {
 					return i - 1;
@@ -361,7 +361,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
-int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -413,201 +413,227 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 
 	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
 	unsigned midx = 0, midy = 0;
-
-	json_pull *jp = json_begin_file(f);
 	long long seq = 0;
 
-	while (1) {
-		json_object *j = json_read(jp);
-		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
-			}
-
-			json_free(jp->root);
-			break;
-		}
-
-		json_object *type = json_hash_get(j, "type");
-		if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
-			continue;
-		}
-
-		json_object *geometry = json_hash_get(j, "geometry");
-		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", fname, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		json_object *geometry_type = json_hash_get(geometry, "type");
-		if (geometry_type == NULL) {
-			static int warned = 0;
-			if (!warned) {
-				fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", fname, jp->line);
-				warned = 1;
-			}
-
-			json_free(j);
-			continue;
-		}
-
-		if (geometry_type->type != JSON_STRING) {
-			fprintf(stderr, "%s:%d: geometry without type\n", fname, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		json_object *properties = json_hash_get(j, "properties");
-		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", fname, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		json_object *coordinates = json_hash_get(geometry, "coordinates"); 
-		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-			fprintf(stderr, "%s:%d: feature without coordinates array\n", fname, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		int t;
-		for (t = 0; t < GEOM_TYPES; t++) {
-			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
-				break;
-			}
-		}
-		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", fname, jp->line, geometry_type->string);
-			json_free(j);
-			continue;
-		}
-
-		{
-			unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
-
-			int nprop = 0;
-			if (properties->type == JSON_HASH) {
-				nprop = properties->length;
-			}
-
-			long long metastart = metapos;
-			char *metakey[nprop];
-			char *metaval[nprop];
-			int metatype[nprop];
-			int m = 0;
-
-			int i;
-			for (i = 0; i < nprop; i++) {
-				if (properties->keys[i]->type == JSON_STRING) {
-					if (exclude_all) {
-						if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
-							continue;
-						}
-					} else if (is_pooled(exclude, properties->keys[i]->string, VT_STRING)) {
-						continue;
-					}
-
-					metakey[m] = properties->keys[i]->string;
-
-					if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-						metatype[m] = VT_STRING;
-						metaval[m] = properties->values[i]->string;
-						m++;
-					} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-						metatype[m] = VT_NUMBER;
-						metaval[m] = properties->values[i]->string;
-						m++;
-					} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-						metatype[m] = VT_BOOLEAN;
-						metaval[m] = properties->values[i]->string;
-						m++;
-					} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
-						;
-					} else {
-						fprintf(stderr, "%s:%d: Unsupported property type for %s\n", fname, jp->line, properties->keys[i]->string);
-						json_free(j);
-						continue;
-					}
-				}
-			}
-
-			serialize_int(metafile, m, &metapos, fname, jp);
-			for (i = 0; i < m; i++) {
-				serialize_int(metafile, metatype[i], &metapos, fname, jp);
-				serialize_string(metafile, metakey[i], &metapos, fname, jp);
-				serialize_string(metafile, metaval[i], &metapos, fname, jp);
-			}
-
-			long long geomstart = geompos;
-
-			serialize_byte(geomfile, mb_geometry[t], &geompos, fname, jp);
-			serialize_byte(geomfile, 0, &geompos, fname, jp); // XXX layer
-			serialize_long_long(geomfile, metastart, &geompos, fname, jp);
-			parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
-			serialize_byte(geomfile, VT_END, &geompos, fname, jp);
-
-			/*
-			 * Note that minzoom for lines is the dimension
-			 * of the geometry in world coordinates, but
-			 * for points is the lowest zoom level (in tiles,
-			 * not in pixels) at which it should be drawn.
-			 *
-			 * So a line that is too small for, say, z8
-			 * will have minzoom of 18 (if tile detail is 10),
-			 * not 8.
-			 */
-			int minzoom = 0;
-			if (mb_geometry[t] == VT_LINE) {
-				for (minzoom = 0; minzoom < 31; minzoom++) {
-					unsigned mask = 1 << (32 - (minzoom + 1));
-
-					if (((bbox[0] & mask) != (bbox[2] & mask)) ||
-					    ((bbox[1] & mask) != (bbox[3] & mask))) {
-						break;
-					}
-				}
-			} else if (mb_geometry[t] == VT_POINT) {
-				double r = ((double) rand()) / RAND_MAX;
-				if (r == 0) {
-					r = .00000001;
-				}
-				minzoom = maxzoom - floor(log(r) / - log(droprate));
-			}
-
-			serialize_byte(geomfile, minzoom, &geompos, fname, jp);
-
-			struct index index;
-			index.start = geomstart;
-			index.end = geompos;
-			index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
-			fwrite_check(&index, sizeof(struct index), 1, indexfile, fname, jp);
-			indexpos += sizeof(struct index);
-
-			for (i = 0; i < 2; i++) {
-				if (bbox[i] < file_bbox[i]) {
-					file_bbox[i] = bbox[i];
-				}
-			}
-			for (i = 2; i < 4; i++) {
-				if (bbox[i] > file_bbox[i]) {
-					file_bbox[i] = bbox[i];
-				}
-			}
-			
-			if (seq % 10000 == 0) {
-				fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
-			}
-			seq++;
-		}
-
-		json_free(j);
-
-		/* XXX check for any non-features in the outer object */
+	int nlayers = argc;
+	if (nlayers == 0) {
+		nlayers = 1;
 	}
 
-	json_end(jp);
+	int n;
+	for (n = 0; n < nlayers; n++) {
+		json_pull *jp;
+		const char *reading;
+		FILE *fp;
+
+		if (n >= argc) {
+			reading = "standard input";
+			fp = stdin;
+		} else {
+			reading = argv[n];
+			fp = fopen(argv[n], "r");
+			if (fp == NULL) {
+				perror(argv[n]);
+				continue;
+			}
+		}
+
+		jp = json_begin_file(fp);
+
+		while (1) {
+			json_object *j = json_read(jp);
+			if (j == NULL) {
+				if (jp->error != NULL) {
+					fprintf(stderr, "%s:%d: %s\n", reading, jp->line, jp->error);
+				}
+
+				json_free(jp->root);
+				break;
+			}
+
+			json_object *type = json_hash_get(j, "type");
+			if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
+				continue;
+			}
+
+			json_object *geometry = json_hash_get(j, "geometry");
+			if (geometry == NULL) {
+				fprintf(stderr, "%s:%d: feature with no geometry\n", reading, jp->line);
+				json_free(j);
+				continue;
+			}
+
+			json_object *geometry_type = json_hash_get(geometry, "type");
+			if (geometry_type == NULL) {
+				static int warned = 0;
+				if (!warned) {
+					fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, jp->line);
+					warned = 1;
+				}
+
+				json_free(j);
+				continue;
+			}
+
+			if (geometry_type->type != JSON_STRING) {
+				fprintf(stderr, "%s:%d: geometry without type\n", reading, jp->line);
+				json_free(j);
+				continue;
+			}
+
+			json_object *properties = json_hash_get(j, "properties");
+			if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
+				fprintf(stderr, "%s:%d: feature without properties hash\n", reading, jp->line);
+				json_free(j);
+				continue;
+			}
+
+			json_object *coordinates = json_hash_get(geometry, "coordinates");
+			if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
+				fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, jp->line);
+				json_free(j);
+				continue;
+			}
+
+			int t;
+			for (t = 0; t < GEOM_TYPES; t++) {
+				if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+					break;
+				}
+			}
+			if (t >= GEOM_TYPES) {
+				fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, jp->line, geometry_type->string);
+				json_free(j);
+				continue;
+			}
+
+			{
+				unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+
+				int nprop = 0;
+				if (properties->type == JSON_HASH) {
+					nprop = properties->length;
+				}
+
+				long long metastart = metapos;
+				char *metakey[nprop];
+				char *metaval[nprop];
+				int metatype[nprop];
+				int m = 0;
+
+				int i;
+				for (i = 0; i < nprop; i++) {
+					if (properties->keys[i]->type == JSON_STRING) {
+						if (exclude_all) {
+							if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
+								continue;
+							}
+						} else if (is_pooled(exclude, properties->keys[i]->string, VT_STRING)) {
+							continue;
+						}
+
+						metakey[m] = properties->keys[i]->string;
+
+						if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
+							metatype[m] = VT_STRING;
+							metaval[m] = properties->values[i]->string;
+							m++;
+						} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
+							metatype[m] = VT_NUMBER;
+							metaval[m] = properties->values[i]->string;
+							m++;
+						} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
+							metatype[m] = VT_BOOLEAN;
+							metaval[m] = properties->values[i]->string;
+							m++;
+						} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
+							;
+						} else {
+							fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, jp->line, properties->keys[i]->string);
+							json_free(j);
+							continue;
+						}
+					}
+				}
+
+				serialize_int(metafile, m, &metapos, fname);
+				for (i = 0; i < m; i++) {
+					serialize_int(metafile, metatype[i], &metapos, fname);
+					serialize_string(metafile, metakey[i], &metapos, fname);
+					serialize_string(metafile, metaval[i], &metapos, fname);
+				}
+
+				long long geomstart = geompos;
+
+				serialize_byte(geomfile, mb_geometry[t], &geompos, fname);
+				serialize_byte(geomfile, n, &geompos, fname);
+				serialize_long_long(geomfile, metastart, &geompos, fname);
+				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
+				serialize_byte(geomfile, VT_END, &geompos, fname);
+
+				/*
+				 * Note that minzoom for lines is the dimension
+				 * of the geometry in world coordinates, but
+				 * for points is the lowest zoom level (in tiles,
+				 * not in pixels) at which it should be drawn.
+				 *
+				 * So a line that is too small for, say, z8
+				 * will have minzoom of 18 (if tile detail is 10),
+				 * not 8.
+				 */
+				int minzoom = 0;
+				if (mb_geometry[t] == VT_LINE) {
+					for (minzoom = 0; minzoom < 31; minzoom++) {
+						unsigned mask = 1 << (32 - (minzoom + 1));
+
+						if (((bbox[0] & mask) != (bbox[2] & mask)) ||
+						    ((bbox[1] & mask) != (bbox[3] & mask))) {
+							break;
+						}
+					}
+				} else if (mb_geometry[t] == VT_POINT) {
+					double r = ((double) rand()) / RAND_MAX;
+					if (r == 0) {
+						r = .00000001;
+					}
+					minzoom = maxzoom - floor(log(r) / - log(droprate));
+				}
+
+				serialize_byte(geomfile, minzoom, &geompos, fname);
+
+				struct index index;
+				index.start = geomstart;
+				index.end = geompos;
+				index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+				fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
+				indexpos += sizeof(struct index);
+
+				for (i = 0; i < 2; i++) {
+					if (bbox[i] < file_bbox[i]) {
+						file_bbox[i] = bbox[i];
+					}
+				}
+				for (i = 2; i < 4; i++) {
+					if (bbox[i] > file_bbox[i]) {
+						file_bbox[i] = bbox[i];
+					}
+				}
+			
+				if (seq % 10000 == 0) {
+					fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
+				}
+				seq++;
+			}
+
+			json_free(j);
+
+			/* XXX check for any non-features in the outer object */
+		}
+
+		json_end(jp);
+		fclose(fp);
+	}
+
 	fclose(metafile);
 	fclose(geomfile);
 	fclose(indexfile);
@@ -625,7 +651,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 	}
 
 	if (geomst.st_size == 0 || metast.st_size == 0) {
-		fprintf(stderr, "%s: did not read any valid geometries\n", fname);
+		fprintf(stderr, "did not read any valid geometries\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -634,8 +660,6 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
-
-	int nlayers = 1; // XXX layers
 
 	struct pool file_keys1[nlayers];
 	struct pool *file_keys[nlayers];
@@ -791,15 +815,15 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		geompos = 0;
 
 		/* initial tile is 0/0/0 */
-		serialize_int(geomfile, 0, &geompos, fname, jp);
-		serialize_uint(geomfile, 0, &geompos, fname, jp);
-		serialize_uint(geomfile, 0, &geompos, fname, jp);
+		serialize_int(geomfile, 0, &geompos, fname);
+		serialize_uint(geomfile, 0, &geompos, fname);
+		serialize_uint(geomfile, 0, &geompos, fname);
 
 		long long i;
 		long long sum = 0;
 		long long progress = 0;
 		for (i = 0; i < indexpos / sizeof(struct index); i++) {
-			fwrite_check(geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname, jp);
+			fwrite_check(geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname);
 			sum += index_map[i].end - index_map[i].start;
 
 			long long p = 1000 * i / (indexpos / sizeof(struct index));
@@ -810,7 +834,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 		}
 
 		/* end of tile */
-		serialize_byte(geomfile, -2, &geompos, fname, jp);
+		serialize_byte(geomfile, -2, &geompos, fname);
 		fclose(geomfile);
 	}
 
@@ -851,7 +875,7 @@ int read_json(FILE *f, const char *fname, const char *layername, int maxzoom, in
 
 	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, jp, tmpdir, gamma);
+	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -935,7 +959,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'Z':
-			minzoom = atoi(optarg);	
+			minzoom = atoi(optarg);
 			break;
 
 		case 'd':
@@ -1007,24 +1031,8 @@ int main(int argc, char **argv) {
 
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
-	
-	if (argc == optind + 1) {
-		int i;
-		for (i = optind; i < argc; i++) {
-			FILE *f = fopen(argv[i], "r");
-			if (f == NULL) {
-				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
-			} else {
-				ret = read_json(f, name ? name : argv[i], layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma);
-				fclose(f);
-			}
-		}
-	} else if (argc > optind) {
-		fprintf(stderr, "%s: Only accepts one input file\n", argv[0]);
-		exit(EXIT_FAILURE);
-	} else {
-		ret = read_json(stdin, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma);
-	}
+
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma);
 
 	mbtiles_close(outdb, argv);
 	return ret;
