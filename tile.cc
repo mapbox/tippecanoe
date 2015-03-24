@@ -342,11 +342,10 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 	pool_free(&keys);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, const char *layername, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
-	int nlayers = 1; // XXX
 
 	char *og = *geoms;
 

@@ -194,7 +194,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -255,7 +255,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers);
 
 				if (len < 0) {
 					return i - 1;
@@ -669,35 +669,41 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		file_keys[i] = &file_keys1[i];
 	}
 
-	char trunc[strlen(fname) + 1];
-	if (layername == NULL) {
-		const char *ocp, *use = fname;
-		for (ocp = fname; *ocp; ocp++) {
-			if (*ocp == '/' && ocp[1] != '\0') {
-				use = ocp + 1;
+	char *layernames[nlayers];
+	for (i = 0; i < nlayers; i++) {
+		if (argc == 1 && layername != NULL) {
+			layernames[i] = strdup(layername);
+		} else {
+			char *trunc = layernames[i] = malloc(strlen(argv[i]) + 1);
+
+			const char *ocp, *use = argv[i];
+			for (ocp = argv[i]; *ocp; ocp++) {
+				if (*ocp == '/' && ocp[1] != '\0') {
+					use = ocp + 1;
+				}
 			}
-		}
-		strcpy(trunc, use);
+			strcpy(trunc, use);
 
-		char *cp = strstr(trunc, ".json");
-		if (cp != NULL) {
-			*cp = '\0';
-		}
-		cp = strstr(trunc, ".mbtiles");
-		if (cp != NULL) {
-			*cp = '\0';
-		}
-		layername = trunc;
-
-		char *out = trunc;
-		for (cp = trunc; *cp; cp++) {
-			if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
-				*out++ = *cp;
+			char *cp = strstr(trunc, ".json");
+			if (cp != NULL) {
+				*cp = '\0';
 			}
-		}
-		*out = '\0';
+			cp = strstr(trunc, ".mbtiles");
+			if (cp != NULL) {
+				*cp = '\0';
+			}
+			layername = trunc;
 
-		printf("using layer name %s\n", trunc);
+			char *out = trunc;
+			for (cp = trunc; *cp; cp++) {
+				if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
+					*out++ = *cp;
+				}
+			}
+			*out = '\0';
+
+			printf("using layer %d name %s\n", i, trunc);
+		}
 	}
 
 	/* Sort the index by geometry */
@@ -875,7 +881,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma);
+	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -915,10 +921,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, &layername, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers); // XXX layers
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers); // XXX layers
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
+		free(layernames[i]);
 	}
 	return ret;
 }

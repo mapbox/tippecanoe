@@ -107,7 +107,7 @@ static void aprintf(char **buf, const char *format, ...) {
 	free(tmp);
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, const char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
