@@ -671,13 +671,17 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	char *layernames[nlayers];
 	for (i = 0; i < nlayers; i++) {
-		if (argc == 1 && layername != NULL) {
+		if (argc <= 1 && layername != NULL) {
 			layernames[i] = strdup(layername);
 		} else {
-			char *trunc = layernames[i] = malloc(strlen(argv[i]) + 1);
+			char *src = argv[i];
+			if (argc < 1) {
+				src = fname;
+			}
 
-			const char *ocp, *use = argv[i];
-			for (ocp = argv[i]; *ocp; ocp++) {
+			char *trunc = layernames[i] = malloc(strlen(src) + 1);
+			const char *ocp, *use = src;
+			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {
 					use = ocp + 1;
 				}
