@@ -194,7 +194,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -255,7 +255,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layername, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers);
 
 				if (len < 0) {
 					return i - 1;
@@ -881,7 +881,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layername, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers);
+	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
