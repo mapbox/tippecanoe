@@ -58,7 +58,7 @@ Options
  * -f: Delete the mbtiles file if it already exists instead of giving an error
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
  * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
- * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 1, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+ * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 Example
 -------

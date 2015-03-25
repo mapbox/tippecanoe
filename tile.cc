@@ -508,11 +508,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				continue;
 			}
 
-			if (t == VT_POINT && z < feature_minzoom && gamma == 0) {
+			if (t == VT_POINT && z < feature_minzoom && gamma < 0) {
 				continue;
 			}
 
-			if (t == VT_POINT && gamma != 0) {
+			if (t == VT_POINT && gamma >= 0) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -520,32 +520,34 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					continue;
 				}
 
-				unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
-				if (gap > 0) {
-					if (index == previndex) {
-						continue; // Exact duplicate: can't fulfil the gap requirement
+				if (gamma > 0) {
+					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+					if (gap > 0) {
+						if (index == previndex) {
+							continue; // Exact duplicate: can't fulfil the gap requirement
+						}
+
+						if (exp(log((index - previndex) / scale) * gamma) >= gap) {
+							// Dot is further from the previous than the nth root of the gap,
+							// so produce it, and choose a new gap at the next point.
+							gap = 0;
+						} else {
+							continue;
+						}
+					} else {
+						gap = (index - previndex) / scale;
+
+						if (gap == 0) {
+							continue; // Exact duplicate: skip
+						} else if (gap < 1) {
+							continue; // Narrow dot spacing: need to stretch out
+						} else {
+							gap = 0; // Wider spacing than minimum: so pass through unchanged
+						}
 					}
 
-					if (exp(log((index - previndex) / scale) * gamma) >= gap) {
-						// Dot is further from the previous than the nth root of the gap,
-						// so produce it, and choose a new gap at the next point.
-						gap = 0;
-					} else {
-						continue;
-					}
-				} else {
-					gap = (index - previndex) / scale;
-
-					if (gap == 0) {
-						continue; // Exact duplicate: skip
-					} else if (gap < 1) {
-						continue; // Narrow dot spacing: need to stretch out
-					} else {
-						gap = 0; // Wider spacing than minimum: so pass through unchanged
-					}
+					previndex = index;
 				}
-
-				previndex = index;
 			}
 
 			bool reduced = false;
