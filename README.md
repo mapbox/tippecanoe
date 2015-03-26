@@ -75,6 +75,9 @@ coordinated with the base zoom level and dot-dropping rate. You can use this she
 calculate the appropriate marker-width at high zoom levels to match the fraction of dots
 that were dropped at low zoom levels.
 
+If you used <code>-z</code> to change the base zoom level or <code>-r</code> to change the
+dot-dropping rate, replace them in the <code>basezoom</code> and <code>rate</code> below.
+
     awk 'BEGIN {
         dotsize = 2;    # up to you to decide
         basezoom = 14;  # tippecanoe -z 14
