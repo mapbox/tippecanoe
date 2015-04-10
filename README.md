@@ -76,6 +76,14 @@ Options
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
  * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
+### Doing less
+
+ * -ps: Don't simplify lines
+ * -pr: Don't reverse the direction of lines to make them coalesce better
+ * -pc: Don't coalesce features with the same properties
+ * -pf: Don't limit tiles to 200,000 features
+ * -pk: Don't limit tiles to 500K bytes
+
 Example
 -------
 

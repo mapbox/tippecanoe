@@ -348,7 +348,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -555,7 +555,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
 			}
 
-			if (t == VT_LINE || t == VT_POLYGON) {
+			if ((t == VT_LINE || t == VT_POLYGON) && !prevent['s' & 0xFF]) {
 				if (!reduced) {
 					geom = simplify_lines(geom, z, line_detail);
 				}
@@ -567,7 +567,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 #endif
 
-			if (t == VT_LINE) {
+			if (t == VT_LINE && !prevent['r' & 0xFF]) {
 				geom = reorder_lines(geom);
 			}
 
@@ -620,7 +620,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					fprintf(stderr, "\nfeature out of order\n");
 				}
 
-				if (out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (!prevent['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -646,7 +646,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		if (totalsize > 0) {
-			if (totalsize > 200000) {
+			if (totalsize > 200000 && !prevent['f' & 0xFF]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
 				return -1;
@@ -666,7 +666,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			tile.SerializeToString(&s);
 			compress(s, compressed);
 
-			if (compressed.size() > 500000) {
+			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
 				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
 				if (line_detail == MIN_DETAIL || !evaluated) {
