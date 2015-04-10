@@ -34,9 +34,10 @@ The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/)
 Usage
 -----
 
-    tippecanoe -o file.mbtiles [file.json]
+    tippecanoe -o file.mbtiles [file.json ...]
 
-If the file is not specified, it reads GeoJSON from the standard input.
+If no files are specified, it reads GeoJSON from the standard input.
+If multiple files are specified, each is placed in its own layer.
 
 The GeoJSON features need not be wrapped in a FeatureCollection.
 You can concatenate multiple GeoJSON features or files together,
@@ -46,18 +47,33 @@ it encounters.
 Options
 -------
 
- * -l <i>name</i>: Layer name (default "file" if source is file.json)
+### Naming
+
+ * -l <i>name</i>: Layer name (default "file" if source is file.json or output is file.mbtiles). Only works if there is only one layer.
  * -n <i>name</i>: Human-readable name (default file.json)
+
+### File control
+
+ * -o <i>file</i>.mbtiles: Name the output file.
+ * -f: Delete the mbtiles file if it already exists instead of giving an error
+
+### Zoom levels and resolution
+
  * -z <i>zoom</i>: Base (maxzoom) zoom level (default 14)
  * -Z <i>zoom</i>: Lowest (minzoom) zoom level (default 0)
  * -d <i>detail</i>: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
  * -D <i>detail</i>: Detail at lower zoom levels (default 10, for tile resolution of 1024) 
+ * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
+
+### Properties
+
  * -x <i>name</i>: Exclude the named properties from all features
  * -y <i>name</i>: Include the named properties in all features, excluding all those not explicitly named
  * -X: Exclude all properties and encode only geometries
- * -f: Delete the mbtiles file if it already exists instead of giving an error
+
+### Point simplification
+
  * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
- * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
  * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 Example
