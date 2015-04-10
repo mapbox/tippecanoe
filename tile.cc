@@ -261,6 +261,8 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 
 			if (pv->type == VT_NUMBER) {
 				tv->set_double_value(atof(pv->s));
+			} else if (pv->type == VT_BOOLEAN) {
+				tv->set_bool_value(pv->s[0] == 't');
 			} else {
 				tv->set_string_value(pv->s);
 			}

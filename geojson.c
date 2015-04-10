@@ -544,7 +544,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 							m++;
 						} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
 							metatype[m] = VT_BOOLEAN;
-							metaval[m] = properties->values[i]->string;
+							metaval[m] = properties->values[i]->type == JSON_TRUE ? "true" : "false";
 							m++;
 						} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 							;

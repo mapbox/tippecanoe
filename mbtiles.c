@@ -193,6 +193,8 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 
 			if (pv->type == VT_NUMBER) {
 				aprintf(&buf, "\": \"Number\"");
+			} else if (pv->type == VT_BOOLEAN) {
+				aprintf(&buf, "\": \"Boolean\"");
 			} else {
 				aprintf(&buf, "\": \"String\"");
 			}
