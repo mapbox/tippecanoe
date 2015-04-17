@@ -425,6 +425,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		json_pull *jp;
 		const char *reading;
 		FILE *fp;
+		long long found_hashes = 0;
+		long long found_features = 0;
 
 		if (n >= argc) {
 			reading = "standard input";
@@ -451,10 +453,21 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				break;
 			}
 
+			if (j->type == JSON_HASH) {
+				found_hashes++;
+
+				if (found_hashes == 50 && found_features == 0) {
+					fprintf(stderr, "%s:%d: Not finding any GeoJSON features in input. Is your file just bare geometries?\n", reading, jp->line);
+					break;
+				}
+			}
+
 			json_object *type = json_hash_get(j, "type");
 			if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
 				continue;
 			}
+
+			found_features++;
 
 			json_object *geometry = json_hash_get(j, "geometry");
 			if (geometry == NULL) {
