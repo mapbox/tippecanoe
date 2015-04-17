@@ -151,8 +151,9 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires protoc (brew install protobuf or apt-get install libprotobuf-dev),
-and sqlite3 (apt-get install libsqlite3-dev). To build:
+Requires protoc (<code>brew install protobuf</code> or
+<code>apt-get install libprotobuf-dev</code> and <code>protobuf-compiler</code>),
+and sqlite3 (<code>apt-get install libsqlite3-dev</code>). To build:
 
     make
 
