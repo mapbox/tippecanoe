@@ -514,7 +514,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				continue;
 			}
 
-			if (t == VT_POINT && gamma >= 0) {
+			if (gamma >= 0 && (t == VT_POINT || (prevent['l' & 0xFF] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -611,16 +611,20 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			std::sort(features[j].begin(), features[j].end());
+			if (!prevent['o'] & 0xFF) {
+				std::sort(features[j].begin(), features[j].end());
+			}
 
 			std::vector<coalesce> out;
 			unsigned x;
 			for (x = 0; x < features[j].size(); x++) {
 				unsigned y = out.size() - 1;
 
+#if 0
 				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
 					fprintf(stderr, "\nfeature out of order\n");
 				}
+#endif
 
 				if (!prevent['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
