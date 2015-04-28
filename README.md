@@ -83,6 +83,8 @@ Options
  * -pc: Don't coalesce features with the same properties
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
+ * -po: Don't reorder features to put the same properties in sequence
+ * -pl: Let "dot" simplification apply to lines too
 
 Example
 -------
