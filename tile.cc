@@ -443,7 +443,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				geom = remove_noop(geom, t);
 			}
 
-			if (line_detail == detail) { /* only write out the next zoom once, even if we retry */
+			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
 				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
 					int j;
 					for (j = 0; j < 4; j++) {
@@ -692,8 +692,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				}
 
 				if (prevent['d' & 0xFF]) {
-					fraction = fraction * 500000 / compressed.size();
+					// The 95% is a guess to avoid too many retries
+					// and probably actually varies based on how much duplicated metadata there is
+
+					fraction = fraction * 500000 / compressed.size() * 0.95;
 					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					line_detail++; // to keep it the same when the loop decrements it
 				}
 			} else {
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
