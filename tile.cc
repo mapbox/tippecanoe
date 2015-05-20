@@ -354,6 +354,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
+	double fraction = 1;
 
 	char *og = *geoms;
 
@@ -380,6 +381,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		if (z < basezoom) {
 			interval = exp(log(droprate) * (basezoom - z));
 		}
+
+		double fraction_accum = 0;
 
 		unsigned long long previndex = 0;
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
@@ -552,6 +555,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				}
 			}
 
+			fraction_accum += fraction;
+			if (fraction_accum < 1) {
+				continue;
+			}
+			fraction_accum -= 1;
+
 			bool reduced = false;
 			if (t == VT_POLYGON) {
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
@@ -611,7 +620,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			if (!prevent['o'] & 0xFF) {
+			if (!prevent['o' & 0xFF]) {
 				std::sort(features[j].begin(), features[j].end());
 			}
 
@@ -680,6 +689,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 #if 0
 					evaluate(features[0], metabase, file_keys[0], layername, line_detail, compressed.size()); // XXX layer
 #endif
+				}
+
+				if (prevent['d' & 0xFF]) {
+					fraction = fraction * 500000 / compressed.size();
+					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 				}
 			} else {
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
