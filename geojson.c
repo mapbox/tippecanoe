@@ -341,7 +341,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 
 	while (head != NULL) {
-		fwrite(map + head->start, bytes, 1, f);
+		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
 		head->start += bytes;
 
 		struct merge *m = head;
