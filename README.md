@@ -1,7 +1,8 @@
 tippecanoe
 ==========
 
-Builds vector tilesets from large collections of GeoJSON features.
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large collections of [GeoJSON](http://geojson.org/)
+features. This is a tool for [making maps from huge datasets](MADE_WITH.md).
 
 Intent
 ------
@@ -162,6 +163,11 @@ and sqlite3 (<code>apt-get install libsqlite3-dev</code>). To build:
 and perhaps
 
     make install
+
+Examples
+------
+
+Check out [some examples of maps made with tippecanoe](MADE_WITH.md)
 
 Name
 ----
