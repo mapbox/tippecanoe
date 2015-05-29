@@ -30,12 +30,16 @@ Installation
 
 The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
 
-    brew install tippecanoe
+```js
+$ brew install tippecanoe
+```
 
 Usage
 -----
 
-    tippecanoe -o file.mbtiles [file.json ...]
+```sh
+$ tippecanoe -o file.mbtiles [file.json ...]
+```
 
 If no files are specified, it reads GeoJSON from the standard input.
 If multiple files are specified, each is placed in its own layer.
@@ -50,32 +54,32 @@ Options
 
 ### Naming
 
- * -l <i>name</i>: Layer name (default "file" if source is file.json or output is file.mbtiles). Only works if there is only one layer.
- * -n <i>name</i>: Human-readable name (default file.json)
+ * -l _name_: Layer name (default "file" if source is file.json or output is file.mbtiles). Only works if there is only one layer.
+ * -n _name_: Human-readable name (default file.json)
 
 ### File control
 
- * -o <i>file</i>.mbtiles: Name the output file.
+ * -o _file_.mbtiles: Name the output file.
  * -f: Delete the mbtiles file if it already exists instead of giving an error
 
 ### Zoom levels and resolution
 
- * -z <i>zoom</i>: Base (maxzoom) zoom level (default 14)
- * -Z <i>zoom</i>: Lowest (minzoom) zoom level (default 0)
- * -d <i>detail</i>: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
- * -D <i>detail</i>: Detail at lower zoom levels (default 10, for tile resolution of 1024) 
- * -b <i>pixels</i>: Buffer size where features are duplicated from adjacent tiles (default 5)
+ * -z _zoom_: Base (maxzoom) zoom level (default 14)
+ * -Z _zoom_: Lowest (minzoom) zoom level (default 0)
+ * -d _detail_: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
+ * -D _detail_: Detail at lower zoom levels (default 10, for tile resolution of 1024)
+ * -b _pixels_: Buffer size where features are duplicated from adjacent tiles (default 5)
 
 ### Properties
 
- * -x <i>name</i>: Exclude the named properties from all features
- * -y <i>name</i>: Include the named properties in all features, excluding all those not explicitly named
+ * -x _name_: Exclude the named properties from all features
+ * -y _name_: Include the named properties in all features, excluding all those not explicitly named
  * -X: Exclude all properties and encode only geometries
 
 ### Point simplification
 
- * -r <i>rate</i>: Rate at which dots are dropped at lower zoom levels (default 2.5)
- * -g <i>gamma</i>: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+ * -r _rate_: Rate at which dots are dropped at lower zoom levels (default 2.5)
+ * -g _gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 ### Doing less
 
@@ -90,9 +94,13 @@ Options
 Example
 -------
 
-    tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 tl_2014_06001_roads.json
+```sh
+$ tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 tl_2014_06001_roads.json
+```
 
-    cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
+```
+$ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
+```
 
 Point styling
 -------------
@@ -102,8 +110,8 @@ coordinated with the base zoom level and dot-dropping rate. You can use this she
 calculate the appropriate marker-width at high zoom levels to match the fraction of dots
 that were dropped at low zoom levels.
 
-If you used <code>-z</code> to change the base zoom level or <code>-r</code> to change the
-dot-dropping rate, replace them in the <code>basezoom</code> and <code>rate</code> below.
+If you used `-z` to change the base zoom level or `-r` to change the
+dot-dropping rate, replace them in the `basezoom` and `rate` below.
 
     awk 'BEGIN {
         dotsize = 2;    # up to you to decide
@@ -154,9 +162,9 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires protoc (<code>brew install protobuf</code> or
-<code>apt-get install libprotobuf-dev</code> and <code>protobuf-compiler</code>),
-and sqlite3 (<code>apt-get install libsqlite3-dev</code>). To build:
+Requires protoc (`brew install protobuf` or
+`apt-get install libprotobuf-dev` and `protobuf-compiler`),
+and sqlite3 (`apt-get install libsqlite3-dev`). To build:
 
     make
 
