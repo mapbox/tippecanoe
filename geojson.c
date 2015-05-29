@@ -19,6 +19,7 @@
 #include "pool.h"
 #include "mbtiles.h"
 #include "projection.h"
+#include "version.h"
 
 int low_detail = 10;
 int full_detail = -1;
@@ -973,7 +974,7 @@ int main(int argc, char **argv) {
 		prevent[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:g:p:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:g:p:v")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1044,6 +1045,10 @@ int main(int argc, char **argv) {
 				}
 			}
 			break;
+
+		case 'v':
+			fprintf(stderr, VERSION);
+			exit(EXIT_FAILURE);
 
 		default:
 			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-p rcfs] [file.json ...]\n", argv[0]);
