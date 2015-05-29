@@ -6,7 +6,7 @@
 
 ![](https://farm8.staticflickr.com/7505/15869589271_8a02e84c24_b.jpg)
 
-## [Superpowering Runkeeper's 1.5 million walks, runs, and bike rides](Superpowering Runkeeper’s 1.5 million walks, runs, and bike rides)
+## [Superpowering Runkeeper's 1.5 million walks, runs, and bike rides](https://www.mapbox.com/blog/runkeeper-million-routes/)
 
 ![](https://c1.staticflickr.com/9/8605/15852245980_1ecf0894b8_b.jpg)
 
