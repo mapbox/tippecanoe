@@ -1,10 +1,13 @@
 PREFIX ?= /usr/local
 
-all: tippecanoe enumerate decode
+all: tippecanoe enumerate decode man/tippecanoe.1
 
 install: tippecanoe
 	mkdir -p $(PREFIX)/bin
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
+
+man/tippecanoe.1: README.md
+	md2man-roff README.md > man/tippecanoe.1
 
 vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
 	protoc --cpp_out=. vector_tile.proto

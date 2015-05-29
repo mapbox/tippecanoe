@@ -164,7 +164,8 @@ Development
 
 Requires protoc (`brew install protobuf` or
 `apt-get install libprotobuf-dev` and `protobuf-compiler`),
-and sqlite3 (`apt-get install libsqlite3-dev`). To build:
+`md2man` (`gem install md2man`), and sqlite3 (`apt-get install libsqlite3-dev`).
+To build:
 
     make
 
