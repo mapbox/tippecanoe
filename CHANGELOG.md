@@ -7,3 +7,4 @@
 * Added flags that let you optionally avoid simplifying lines, restricting
   maximum tile sizes, and coalescing features [#30](https://github.com/mapbox/tippecanoe/pull/30)
 * Added check that minimum zoom level is less than maximum zoom level
+* Added `-v` flag to check tippecanoe's version
