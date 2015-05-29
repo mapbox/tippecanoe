@@ -1051,7 +1051,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (minzoom >= maxzoom) {
+	if (minzoom > maxzoom) {
 		fprintf(stderr, "minimum zoom -Z cannot be greater than maxzoom -z\n");
 		exit(EXIT_FAILURE);
 	}
