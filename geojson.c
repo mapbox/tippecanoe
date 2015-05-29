@@ -1051,6 +1051,11 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if (minzoom > maxzoom) {
+		fprintf(stderr, "minimum zoom -Z cannot be greater than maxzoom -z\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (full_detail <= 0) {
 		// ~0.5m accuracy at whatever zoom
 		// 12 bits (4096 units) at z14
