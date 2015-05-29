@@ -13,3 +13,7 @@
 ## [Geotagger's world atlas](https://www.mapbox.com/blog/geotaggers-world-atlas/) by Eric Fischer
 
 ![](http://farm8.staticflickr.com/7634/17040546408_0a14752e6d_b.jpg)
+
+## [Atmospheric River](https://www.mapbox.com/blog/atmospheric-river/)
+
+![](http://farm9.staticflickr.com/8630/16253097589_4dfc706b22_b.jpg)
