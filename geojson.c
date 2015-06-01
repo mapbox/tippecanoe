@@ -23,6 +23,7 @@
 
 int low_detail = 10;
 int full_detail = -1;
+int min_detail = 7;
 
 #define GEOM_POINT 0                /* array of positions */
 #define GEOM_MULTIPOINT 1           /* array of arrays of positions */
@@ -256,7 +257,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
 
 				if (len < 0) {
 					return i - 1;
@@ -974,7 +975,7 @@ int main(int argc, char **argv) {
 		prevent[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:o:x:y:r:b:fXt:g:p:v")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:v")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -998,6 +999,10 @@ int main(int argc, char **argv) {
 
 		case 'D':
 			low_detail = atoi(optarg);
+			break;
+
+		case 'm':
+			min_detail = atoi(optarg);
 			break;
 
 		case 'o':
@@ -1051,7 +1056,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-p rcfs] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-p rcfs] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1066,6 +1071,11 @@ int main(int argc, char **argv) {
 		// 12 bits (4096 units) at z14
 
 		full_detail = 26 - maxzoom;
+	}
+
+	if (full_detail < min_detail || low_detail < min_detail) {
+		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
 	if (outdir == NULL) {
