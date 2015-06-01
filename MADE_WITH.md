@@ -10,7 +10,7 @@
 
 ![](https://c1.staticflickr.com/9/8605/15852245980_1ecf0894b8_b.jpg)
 
-## [Geotagger's world atlas](https://www.mapbox.com/blog/geotaggers-world-atlas/) by Eric Fischer
+## [The Geotaggers' World Atlas](https://www.mapbox.com/blog/geotaggers-world-atlas/) by Eric Fischer
 
 ![](http://farm8.staticflickr.com/7634/17040546408_0a14752e6d_b.jpg)
 
