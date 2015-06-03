@@ -17,6 +17,7 @@ vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
 PG=
 
 H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
+C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
 
 INCLUDES = -I/usr/local/include
 LIBS = -L/usr/local/lib
@@ -42,3 +43,6 @@ libjsonpull.a: jsonpull.o
 
 clean:
 	rm tippecanoe *.o
+
+indent:
+	for i in $(C) $(H); do clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $$i; done

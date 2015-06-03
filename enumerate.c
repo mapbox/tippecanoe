@@ -7,7 +7,7 @@ void enumerate(char *fname) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
-		fprintf(stderr, "%s: %s\n", fname,  sqlite3_errmsg(db));
+		fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
 
@@ -30,10 +30,10 @@ void enumerate(char *fname) {
 
 	sqlite3_finalize(stmt);
 
-        if (sqlite3_close(db) != SQLITE_OK) {
-                fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
-                exit(EXIT_FAILURE);
-        }
+	if (sqlite3_close(db) != SQLITE_OK) {
+		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
+		exit(EXIT_FAILURE);
+	}
 }
 
 void usage(char **argv) {
@@ -43,7 +43,7 @@ void usage(char **argv) {
 
 int main(int argc, char **argv) {
 	extern int optind;
-	//extern char *optarg;
+	// extern char *optarg;
 	int i;
 
 	while ((i = getopt(argc, argv, "")) != -1) {

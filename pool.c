@@ -62,7 +62,6 @@ int is_pooled(struct pool *p, char *s, int type) {
 	return 0;
 }
 
-
 struct pool_val *pool(struct pool *p, char *s, int type) {
 	return pool1(p, s, type, strcmp);
 }

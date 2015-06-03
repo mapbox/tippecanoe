@@ -25,39 +25,29 @@ int low_detail = 10;
 int full_detail = -1;
 int min_detail = 7;
 
-#define GEOM_POINT 0                /* array of positions */
-#define GEOM_MULTIPOINT 1           /* array of arrays of positions */
-#define GEOM_LINESTRING 2           /* array of arrays of positions */
-#define GEOM_MULTILINESTRING 3      /* array of arrays of arrays of positions */
-#define GEOM_POLYGON 4              /* array of arrays of arrays of positions */
-#define GEOM_MULTIPOLYGON 5         /* array of arrays of arrays of arrays of positions */
+#define GEOM_POINT 0	   /* array of positions */
+#define GEOM_MULTIPOINT 1      /* array of arrays of positions */
+#define GEOM_LINESTRING 2      /* array of arrays of positions */
+#define GEOM_MULTILINESTRING 3 /* array of arrays of arrays of positions */
+#define GEOM_POLYGON 4	 /* array of arrays of arrays of positions */
+#define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
 const char *geometry_names[GEOM_TYPES] = {
-	"Point",
-	"MultiPoint",
-	"LineString",
-	"MultiLineString",
-	"Polygon",
-	"MultiPolygon",
+	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
 };
 
 int geometry_within[GEOM_TYPES] = {
-	-1,                /* point */
-	GEOM_POINT,        /* multipoint */
-	GEOM_POINT,        /* linestring */
-	GEOM_LINESTRING,   /* multilinestring */
-	GEOM_LINESTRING,   /* polygon */
-	GEOM_POLYGON,      /* multipolygon */
+	-1,		 /* point */
+	GEOM_POINT,      /* multipoint */
+	GEOM_POINT,      /* linestring */
+	GEOM_LINESTRING, /* multilinestring */
+	GEOM_LINESTRING, /* polygon */
+	GEOM_POLYGON,    /* multipolygon */
 };
 
 int mb_geometry[GEOM_TYPES] = {
-	VT_POINT,
-	VT_POINT,
-	VT_LINE,
-	VT_LINE,
-	VT_POLYGON,
-	VT_POLYGON,
+	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
@@ -208,7 +198,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
-			//printf("%s\n", geomname);
+			// printf("%s\n", geomname);
 			if (subfd[j] < 0) {
 				perror(geomname);
 				exit(EXIT_FAILURE);
@@ -413,7 +403,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	unlink(geomname);
 	unlink(indexname);
 
-	unsigned file_bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+	unsigned file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 	unsigned midx = 0, midy = 0;
 	long long seq = 0;
 
@@ -523,7 +513,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			{
-				unsigned bbox[] = { UINT_MAX, UINT_MAX, 0, 0 };
+				unsigned bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 
 				int nprop = 0;
 				if (properties->type == JSON_HASH) {
@@ -601,8 +591,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					for (minzoom = 0; minzoom < 31; minzoom++) {
 						unsigned mask = 1 << (32 - (minzoom + 1));
 
-						if (((bbox[0] & mask) != (bbox[2] & mask)) ||
-						    ((bbox[1] & mask) != (bbox[3] & mask))) {
+						if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
 							break;
 						}
 					}
@@ -611,7 +600,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					if (r == 0) {
 						r = .00000001;
 					}
-					minzoom = maxzoom - floor(log(r) / - log(droprate));
+					minzoom = maxzoom - floor(log(r) / -log(droprate));
 				}
 
 				serialize_byte(geomfile, minzoom, &geompos, fname);
@@ -633,7 +622,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 						file_bbox[i] = bbox[i];
 					}
 				}
-			
+
 				if (seq % 10000 == 0) {
 					fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
 				}
@@ -940,7 +929,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers); // XXX layers
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers);  // XXX layers
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -1042,14 +1031,12 @@ int main(int argc, char **argv) {
 			gamma = atof(optarg);
 			break;
 
-		case 'p':
-			{
-				char *cp;
-				for (cp = optarg; *cp != '\0'; cp++) {
-					prevent[*cp & 0xFF] = 1;
-				}
+		case 'p': {
+			char *cp;
+			for (cp = optarg; *cp != '\0'; cp++) {
+				prevent[*cp & 0xFF] = 1;
 			}
-			break;
+		} break;
 
 		case 'v':
 			fprintf(stderr, VERSION);
