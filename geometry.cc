@@ -12,9 +12,9 @@
 #include "geometry.hh"
 
 extern "C" {
-	#include "tile.h"
-	#include "clip.h"
-	#include "projection.h"
+#include "tile.h"
+#include "clip.h"
+#include "projection.h"
 }
 
 drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox) {
@@ -115,7 +115,7 @@ drawvec remove_noop(drawvec geom, int type) {
 			}
 
 			if (geom[i + 1].op == VT_CLOSEPATH) {
-				i++; // also remove unused closepath
+				i++;  // also remove unused closepath
 				continue;
 			}
 		}
@@ -202,17 +202,17 @@ static bool inside(draw d, int edge, long long area, long long buffer) {
 	long long clip_buffer = buffer * area / 256;
 
 	switch (edge) {
-		case 0: // top
-			return d.y > -clip_buffer;
+	case 0:  // top
+		return d.y > -clip_buffer;
 
-		case 1: // right
-			return d.x < area + clip_buffer;
+	case 1:  // right
+		return d.x < area + clip_buffer;
 
-		case 2: // bottom
-			return d.y < area + clip_buffer;
+	case 2:  // bottom
+		return d.y < area + clip_buffer;
 
-		case 3: // left
-			return d.x > -clip_buffer;
+	case 3:  // left
+		return d.x > -clip_buffer;
 	}
 
 	fprintf(stderr, "internal error inside\n");
@@ -227,8 +227,8 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	double s2_y = p3.y - p2.y;
 
 	double t;
-	//s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-	t = ( s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
 }
@@ -237,21 +237,21 @@ static draw intersect(draw a, draw b, int edge, long long area, long long buffer
 	long long clip_buffer = buffer * area / 256;
 
 	switch (edge) {
-		case 0: // top
-			return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
-			break;
+	case 0:  // top
+		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
+		break;
 
-		case 1: // right
-			return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
-			break;
+	case 1:  // right
+		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
+		break;
 
-		case 2: // bottom 
-			return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
-			break;
+	case 2:  // bottom
+		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
+		break;
 
-		case 3: // left
-			return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
-			break;
+	case 3:  // left
+		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
+		break;
 	}
 
 	fprintf(stderr, "internal error intersecting\n");
@@ -369,7 +369,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 			area = fabs(area / 2);
 
 			if (area <= pixel * pixel) {
-				//printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
+				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
 				*accum_area += area;
 				if (*accum_area > pixel * pixel) {
@@ -384,7 +384,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 					*accum_area -= pixel * pixel;
 				}
 			} else {
-				//printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
+				// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
 
 				for (unsigned k = i; k <= j && k < geom.size(); k++) {
 					out.push_back(geom[k]);
@@ -481,13 +481,13 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
-			if (c > 1) { // clipped
+			if (c > 1) {  // clipped
 				out.push_back(draw(VT_MOVETO, x1, y1));
 				out.push_back(draw(VT_LINETO, x2, y2));
 				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
-			} else if (c == 1) { // unchanged
+			} else if (c == 1) {  // unchanged
 				out.push_back(geom[i]);
-			} else { // clipped away entirely
+			} else {  // clipped away entirely
 				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 			}
 		} else {
@@ -551,9 +551,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 		// find index idx of element with max_distance
 		int i;
 		for (i = first + 1; i < second; i++) {
-			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y,
-				geom[start + first].x, geom[start + first].y,
-				geom[start + second].x, geom[start + second].y);
+			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y, geom[start + first].x, geom[start + first].y, geom[start + second].x, geom[start + second].y);
 
 			double distance = fabs(temp_dist);
 

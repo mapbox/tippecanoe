@@ -12,7 +12,7 @@ sqlite3 *mbtiles_open(char *dbname, char **argv) {
 	sqlite3 *outdb;
 
 	if (sqlite3_open(dbname, &outdb) != SQLITE_OK) {
-		fprintf(stderr, "%s: %s: %s\n", argv[0], dbname,  sqlite3_errmsg(outdb));
+		fprintf(stderr, "%s: %s: %s\n", argv[0], dbname, sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
 	}
 

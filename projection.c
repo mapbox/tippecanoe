@@ -7,7 +7,7 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 	unsigned long long n = 1LL << zoom;
 
 	long long llx = n * ((lon + 180) / 360);
-	long long lly = n * (1 - (log(tan(lat_rad) + 1/cos(lat_rad)) / M_PI)) / 2;
+	long long lly = n * (1 - (log(tan(lat_rad) + 1 / cos(lat_rad)) / M_PI)) / 2;
 
 	if (lat >= 85.0511) {
 		lly = 0;
@@ -52,7 +52,6 @@ unsigned long long encode(unsigned int wx, unsigned int wy) {
 
 		out |= v;
 	}
-
 
 	return out;
 }

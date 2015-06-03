@@ -17,17 +17,17 @@
 #include "geometry.hh"
 
 extern "C" {
-	#include "tile.h"
-	#include "pool.h"
-	#include "clip.h"
-	#include "mbtiles.h"
-	#include "projection.h"
+#include "tile.h"
+#include "pool.h"
+#include "clip.h"
+#include "mbtiles.h"
+#include "projection.h"
 }
 
 #define CMD_BITS 3
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-static inline int compress(std::string const& input, std::string& output) {
+static inline int compress(std::string const &input, std::string &output) {
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
@@ -35,14 +35,14 @@ static inline int compress(std::string const& input, std::string& output) {
 	deflate_s.avail_in = 0;
 	deflate_s.next_in = Z_NULL;
 	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
-	deflate_s.next_in = (Bytef *)input.data();
+	deflate_s.next_in = (Bytef *) input.data();
 	deflate_s.avail_in = input.size();
 	size_t length = 0;
 	do {
 		size_t increase = input.size() / 2 + 1024;
 		output.resize(length + increase);
 		deflate_s.avail_out = increase;
-		deflate_s.next_out = (Bytef *)(output.data() + length);
+		deflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
 			return -1;
@@ -129,7 +129,7 @@ struct coalesce {
 	char *metasrc;
 	bool coalesced;
 
-	bool operator< (const coalesce &o) const {
+	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
 		if (cmp < 0) {
 			return true;
@@ -272,10 +272,10 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 }
 
 struct sll {
-	char *name;	
+	char *name;
 	long long val;
 
-	bool operator< (const sll &o) const {
+	bool operator<(const sll &o) const {
 		if (this->val < o.val) {
 			return true;
 		} else {
@@ -372,7 +372,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		long long count = 0;
-		//long long along = 0;
+		// long long along = 0;
 		double accum_area = 0;
 
 		double interval = 0;
@@ -392,8 +392,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			features.push_back(std::vector<coalesce>());
 		}
 
-		int within[4] = { 0 };
-		long long geompos[4] = { 0 };
+		int within[4] = {0};
+		long long geompos[4] = {0};
 
 		*geoms = og;
 
@@ -483,7 +483,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 								sy = ty << (32 - z);
 							}
 
-							//printf("type %d, meta %lld\n", t, metastart);
+							// printf("type %d, meta %lld\n", t, metastart);
 							serialize_byte(geomfile[j], t, &geompos[j], fname);
 							serialize_byte(geomfile[j], layer, &geompos[j], fname);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
@@ -528,7 +528,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 					if (gap > 0) {
 						if (index == previndex) {
-							continue; // Exact duplicate: can't fulfil the gap requirement
+							continue;  // Exact duplicate: can't fulfil the gap requirement
 						}
 
 						if (exp(log((index - previndex) / scale) * gamma) >= gap) {
@@ -542,11 +542,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						gap = (index - previndex) / scale;
 
 						if (gap == 0) {
-							continue; // Exact duplicate: skip
+							continue;  // Exact duplicate: skip
 						} else if (gap < 1) {
-							continue; // Narrow dot spacing: need to stretch out
+							continue;  // Narrow dot spacing: need to stretch out
 						} else {
-							gap = 0; // Wider spacing than minimum: so pass through unchanged
+							gap = 0;  // Wider spacing than minimum: so pass through unchanged
 						}
 					}
 
@@ -696,7 +696,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 					fraction = fraction * 500000 / compressed.size() * 0.95;
 					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
-					line_detail++; // to keep it the same when the loop decrements it
+					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
@@ -710,4 +710,3 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	fprintf(stderr, "could not make tile %d/%u/%u small enough\n", z, tx, ty);
 	return -1;
 }
-

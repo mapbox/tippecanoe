@@ -10,7 +10,8 @@ struct draw {
 		this->y = y;
 	}
 
-	draw() { }
+	draw() {
+	}
 };
 
 typedef std::vector<draw> drawvec;

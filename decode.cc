@@ -8,18 +8,16 @@
 #include "vector_tile.pb.h"
 
 extern "C" {
-	#include "projection.h"
+#include "projection.h"
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline bool is_compressed(std::string const& data) {
-	return data.size() > 2 &&
-		(((uint8_t)data[0] == 0x78 && (uint8_t)data[1] == 0x9C) ||
-		 ((uint8_t)data[0] == 0x1F && (uint8_t)data[1] == 0x8B));
+inline bool is_compressed(std::string const &data) {
+	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline int decompress(std::string const& input, std::string & output) {
+inline int decompress(std::string const &input, std::string &output) {
 	z_stream inflate_s;
 	inflate_s.zalloc = Z_NULL;
 	inflate_s.zfree = Z_NULL;
@@ -29,13 +27,13 @@ inline int decompress(std::string const& input, std::string & output) {
 	if (inflateInit2(&inflate_s, 32 + 15) != Z_OK) {
 		fprintf(stderr, "error: %s\n", inflate_s.msg);
 	}
-	inflate_s.next_in = (Bytef *)input.data();
+	inflate_s.next_in = (Bytef *) input.data();
 	inflate_s.avail_in = input.size();
 	size_t length = 0;
 	do {
 		output.resize(length + 2 * input.size());
 		inflate_s.avail_out = 2 * input.size();
-		inflate_s.next_out = (Bytef *)(output.data() + length);
+		inflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
 			fprintf(stderr, "error: %s\n", inflate_s.msg);
@@ -61,7 +59,7 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 
 	if (is_compressed(message)) {
 		std::string uncompressed;
-		decompress(message,uncompressed);
+		decompress(message, uncompressed);
 		if (!tile.ParseFromString(uncompressed)) {
 			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
@@ -114,7 +112,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	unsigned ox = x, oy = y;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
-		fprintf(stderr, "%s: %s\n", fname,  sqlite3_errmsg(db));
+		fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
 
@@ -150,10 +148,10 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 		y /= 2;
 	}
 
-        if (sqlite3_close(db) != SQLITE_OK) {
-                fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
-                exit(EXIT_FAILURE);
-        }
+	if (sqlite3_close(db) != SQLITE_OK) {
+		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
+		exit(EXIT_FAILURE);
+	}
 }
 
 void usage(char **argv) {
