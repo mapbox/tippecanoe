@@ -90,6 +90,7 @@ Options
  * -pk: Don't limit tiles to 500K bytes
  * -po: Don't reorder features to put the same properties in sequence
  * -pl: Let "dot" simplification apply to lines too
+ * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
 
 Example
 -------
