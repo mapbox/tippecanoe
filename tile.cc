@@ -25,7 +25,6 @@ extern "C" {
 }
 
 #define CMD_BITS 3
-#define MIN_DETAIL 7
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const& input, std::string& output) {
@@ -350,7 +349,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -358,7 +357,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 	char *og = *geoms;
 
-	for (line_detail = detail; line_detail >= MIN_DETAIL || line_detail == detail; line_detail--) {
+	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 		struct pool keys1[nlayers], values1[nlayers];
@@ -684,7 +683,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
 				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
-				if (line_detail == MIN_DETAIL || !evaluated) {
+				if (line_detail == min_detail || !evaluated) {
 					evaluated = true;
 #if 0
 					evaluate(features[0], metabase, file_keys[0], layername, line_detail, compressed.size()); // XXX layer

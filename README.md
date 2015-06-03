@@ -68,6 +68,7 @@ Options
  * -Z _zoom_: Lowest (minzoom) zoom level (default 0)
  * -d _detail_: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
  * -D _detail_: Detail at lower zoom levels (default 10, for tile resolution of 1024)
+ * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_: Buffer size where features are duplicated from adjacent tiles (default 5)
 
 ### Properties
