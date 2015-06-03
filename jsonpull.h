@@ -48,10 +48,7 @@ typedef struct json_pull {
 } json_pull;
 
 json_pull *json_begin_file(FILE *f);
-
-#if 0
 json_pull *json_begin_string(char *s);
-#endif
 
 json_pull *json_begin(int (*read)(struct json_pull *, char *buffer, int n), void *source);
 void json_end(json_pull *p);

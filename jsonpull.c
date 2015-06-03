@@ -58,29 +58,22 @@ json_pull *json_begin_file(FILE *f) {
 	return json_begin(read_file, f);
 }
 
-#if 0
-static int read_string(json_pull *j) {
+static int read_string(json_pull *j, char *buffer, int n) {
 	char *cp = j->source;
-	if (*cp == '\0') {
-		return EOF;
-	}
-	int c = (unsigned char) *cp;
-	j->source = cp + 1;
-	return c;
-}
+	int out = 0;
 
-static int peek_string(json_pull *p) {
-	char *cp = p->source;
-	if (*cp == '\0') {
-		return EOF;
+	while (out < n && cp[out] != '\0') {
+		buffer[out] = cp[out];
+		out++;
 	}
-	return (unsigned char) *cp;
+
+	j->source = cp + out;
+	return out;
 }
 
 json_pull *json_begin_string(char *s) {
-	return json_begin(read_string, peek_string, s);
+	return json_begin(read_string, s);
 }
-#endif
 
 void json_end(json_pull *p) {
 	free(p->buffer);
