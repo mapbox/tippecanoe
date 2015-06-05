@@ -665,7 +665,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 		if (z == 0 && unclipped_features < original_features / 2) {
 			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
-			fprintf(stderr, "Is your data in the wrong projection? (Not WGS84/EPSG:4326)\n");
+			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
 		}
 
 		long long totalsize = 0;
