@@ -11,6 +11,7 @@
 #include <zlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <math.h>
 #include <sqlite3.h>
 #include "vector_tile.pb.h"
@@ -723,4 +724,103 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 	fprintf(stderr, "could not make tile %d/%u/%u small enough\n", z, tx, ty);
 	return -1;
+}
+
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail) {
+	int i;
+	for (i = 0; i <= maxzoom; i++) {
+		long long most = 0;
+
+		FILE *sub[4];
+		int subfd[4];
+		int j;
+		for (j = 0; j < 4; j++) {
+			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
+			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
+			subfd[j] = mkstemp(geomname);
+			// printf("%s\n", geomname);
+			if (subfd[j] < 0) {
+				perror(geomname);
+				exit(EXIT_FAILURE);
+			}
+			sub[j] = fopen(geomname, "wb");
+			if (sub[j] == NULL) {
+				perror(geomname);
+				exit(EXIT_FAILURE);
+			}
+			unlink(geomname);
+		}
+
+		long long todo = 0;
+		long long along = 0;
+		for (j = 0; j < 4; j++) {
+			todo += geom_size[j];
+		}
+
+		for (j = 0; j < 4; j++) {
+			if (geomfd[j] < 0) {
+				// only one source file for zoom level 0
+				continue;
+			}
+			if (geom_size[j] == 0) {
+				continue;
+			}
+
+			// printf("%lld of geom_size\n", (long long) geom_size[j]);
+
+			char *geom = (char *) mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
+			if (geom == MAP_FAILED) {
+				perror("mmap geom");
+				exit(EXIT_FAILURE);
+			}
+
+			char *geomstart = geom;
+			char *end = geom + geom_size[j];
+
+			while (geom < end) {
+				int z;
+				unsigned x, y;
+
+				deserialize_int(&geom, &z);
+				deserialize_uint(&geom, &x);
+				deserialize_uint(&geom, &y);
+
+				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
+
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+
+				if (len < 0) {
+					return i - 1;
+				}
+
+				if (z == maxzoom && len > most) {
+					*midx = x;
+					*midy = y;
+					most = len;
+				}
+			}
+
+			if (munmap(geomstart, geom_size[j]) != 0) {
+				perror("munmap geom");
+			}
+			along += geom_size[j];
+		}
+
+		for (j = 0; j < 4; j++) {
+			close(geomfd[j]);
+			fclose(sub[j]);
+
+			struct stat geomst;
+			if (fstat(subfd[j], &geomst) != 0) {
+				perror("stat geom\n");
+				exit(EXIT_FAILURE);
+			}
+
+			geomfd[j] = subfd[j];
+			geom_size[j] = geomst.st_size;
+		}
+	}
+
+	fprintf(stderr, "\n");
+	return maxzoom;
 }
