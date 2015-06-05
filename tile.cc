@@ -387,6 +387,9 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
 		double gap = 0;
 
+		long long original_features = 0;
+		long long unclipped_features = 0;
+
 		std::vector<std::vector<coalesce> > features;
 		for (i = 0; i < nlayers; i++) {
 			features.push_back(std::vector<coalesce>());
@@ -423,6 +426,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				oprogress = progress;
 			}
 
+			original_features++;
+
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {
 				continue;
@@ -440,6 +445,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				}
 
 				geom = remove_noop(geom, t);
+			}
+
+			if (geom.size() > 0) {
+				unclipped_features++;
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
@@ -652,6 +661,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
 				}
 			}
+		}
+
+		if (z == 0 && unclipped_features < original_features / 2) {
+			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
+			fprintf(stderr, "Is your data in the wrong projection? (Not WGS84/EPSG:4326)\n");
 		}
 
 		long long totalsize = 0;
