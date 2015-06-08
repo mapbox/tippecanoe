@@ -474,6 +474,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				serialize_byte(geomfile, mb_geometry[t], &geompos, fname);
 				serialize_byte(geomfile, n, &geompos, fname);
 				serialize_long_long(geomfile, metastart, &geompos, fname);
+				serialize_long_long(geomfile, seq, &geompos, fname);
 				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
 				serialize_byte(geomfile, VT_END, &geompos, fname);
 

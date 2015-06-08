@@ -414,8 +414,11 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
 			char *meta = metabase + metastart;
-			long long bbox[4];
 
+			long long featureid;
+			deserialize_long_long(geoms, &featureid);
+
+			long long bbox[4];
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
 
 			signed char feature_minzoom;
@@ -497,6 +500,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 							serialize_byte(geomfile[j], t, &geompos[j], fname);
 							serialize_byte(geomfile[j], layer, &geompos[j], fname);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+							serialize_long_long(geomfile[j], featureid, &geompos[j], fname);
 
 							for (unsigned u = 0; u < geom.size(); u++) {
 								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
