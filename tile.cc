@@ -350,7 +350,11 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+bool bit_isset(char *field, long long val) {
+	return (field[val / 8] & (1 << (val % 8))) != 0;
+}
+
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, char *dropped) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -456,7 +460,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
+				if (geom.size() > 0 && z + 1 <= file_maxzoom && !preflight) {
 					int j;
 					for (j = 0; j < 4; j++) {
 						int xo = j & 1;
@@ -516,6 +520,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 						}
 					}
 				}
+			}
+
+			if (dropped != NULL && bit_isset(dropped, featureid)) {
+				continue;
 			}
 
 			if (z < file_minzoom) {
@@ -668,6 +676,10 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 		}
 
+		if (preflight) {
+			return count;
+		}
+
 		if (z == 0 && unclipped_features < original_features / 2) {
 			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
 			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
@@ -791,7 +803,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, NULL);
 
 				if (len < 0) {
 					return i - 1;
