@@ -350,11 +350,11 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-bool bit_isset(char *field, long long val) {
+bool bit_isset(std::vector<char> &field, long long val) {
 	return (field[val / 8] & (1 << (val % 8))) != 0;
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, char *dropped) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, std::vector<char> *dropped) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -522,7 +522,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				}
 			}
 
-			if (dropped != NULL && bit_isset(dropped, featureid)) {
+			if (dropped != NULL && bit_isset(*dropped, featureid)) {
 				continue;
 			}
 
@@ -742,10 +742,12 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	return -1;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail, long long featurecount) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
+
+		std::vector<char> dropped((featurecount + 7) / 8, 0);
 
 		FILE *sub[4];
 		int subfd[4];
@@ -803,7 +805,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, NULL);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, &dropped);
 
 				if (len < 0) {
 					return i - 1;

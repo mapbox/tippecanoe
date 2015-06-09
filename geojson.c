@@ -791,7 +791,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, full_detail, low_detail, min_detail);
+	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, full_detail, low_detail, min_detail, seq);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
