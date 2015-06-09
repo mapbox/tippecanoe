@@ -354,7 +354,11 @@ bool bit_isset(std::vector<char> &field, long long val) {
 	return (field[val / 8] & (1 << (val % 8))) != 0;
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, std::vector<char> *dropped) {
+void bit_set(std::vector<char> &field, long long val) {
+	field[val / 8] |= 1 << (val % 8);
+}
+
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, std::vector<char> *dropped, long long featurecount) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -364,6 +368,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+		std::vector<char> willdrop((featurecount + 7) / 8, 0);
 
 		struct pool keys1[nlayers], values1[nlayers];
 		struct pool *keys[nlayers], *values[nlayers];
@@ -578,6 +584,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			fraction_accum += fraction;
 			if (fraction_accum < 1) {
+				bit_set(willdrop, featureid);
 				continue;
 			}
 			fraction_accum -= 1;
@@ -676,10 +683,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 		}
 
-		if (preflight) {
-			return count;
-		}
-
 		if (z == 0 && unclipped_features < original_features / 2) {
 			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
 			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
@@ -730,6 +733,17 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
+				if (dropped != NULL) {
+					int i;
+					for (i = 0; i < (featurecount + 7) / 8; i++) {
+						(*dropped)[i] |= willdrop[i];
+					}
+				}
+
+				if (preflight) {
+					return count;
+				}
+
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 				return count;
 			}
@@ -805,7 +819,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, &dropped);
+				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, &dropped, featurecount);
 
 				if (len < 0) {
 					return i - 1;
