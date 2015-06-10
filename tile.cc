@@ -809,26 +809,31 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 			char *geomstart = geom;
 			char *end = geom + geom_size[j];
 
-			while (geom < end) {
-				int z;
-				unsigned x, y;
+			int pass;
+			for (pass = 0; pass < 2; pass++) {
+				geom = geomstart;
 
-				deserialize_int(&geom, &z);
-				deserialize_uint(&geom, &x);
-				deserialize_uint(&geom, &y);
+				while (geom < end) {
+					int z;
+					unsigned x, y;
 
-				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
+					deserialize_int(&geom, &z);
+					deserialize_uint(&geom, &x);
+					deserialize_uint(&geom, &y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, false, &dropped, featurecount);
+					// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				if (len < 0) {
-					return i - 1;
-				}
+					long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, pass == 0, &dropped, featurecount);
 
-				if (z == maxzoom && len > most) {
-					*midx = x;
-					*midy = y;
-					most = len;
+					if (len < 0) {
+						return i - 1;
+					}
+
+					if (z == maxzoom && len > most) {
+						*midx = x;
+						*midy = y;
+						most = len;
+					}
 				}
 			}
 
