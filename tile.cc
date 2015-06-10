@@ -789,6 +789,9 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 			todo += geom_size[j];
 		}
 
+		char *geomstart[4];
+		char *geomend[4];
+
 		for (j = 0; j < 4; j++) {
 			if (geomfd[j] < 0) {
 				// only one source file for zoom level 0
@@ -806,14 +809,19 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 				exit(EXIT_FAILURE);
 			}
 
-			char *geomstart = geom;
-			char *end = geom + geom_size[j];
+			geomstart[j] = geom;
+			geomend[j] = geom + geom_size[j];
+		}
 
-			int pass;
-			for (pass = 0; pass < 2; pass++) {
-				geom = geomstart;
+		int pass;
+		for (pass = 0; pass < 2; pass++) {
+			for (j = 0; j < 4; j++) {
+				if (geom_size[j] == 0) {
+					continue;
+				}
 
-				while (geom < end) {
+				char *geom = geomstart[j];
+				while (geom < geomend[j]) {
 					int z;
 					unsigned x, y;
 
@@ -823,7 +831,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 					// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-					long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, pass == 0, &dropped, featurecount);
+					long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart[j], along, gamma, nlayers, prevent, pass == 0, &dropped, featurecount);
 
 					if (len < 0) {
 						return i - 1;
@@ -835,15 +843,20 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 						most = len;
 					}
 				}
-			}
 
-			if (munmap(geomstart, geom_size[j]) != 0) {
-				perror("munmap geom");
+				if (pass == 1) {
+					along += geom_size[j];
+				}
 			}
-			along += geom_size[j];
 		}
 
 		for (j = 0; j < 4; j++) {
+			if (geom_size[j] != 0) {
+				if (munmap(geomstart[j], geom_size[j]) != 0) {
+					perror("munmap geom");
+				}
+			}
+
 			close(geomfd[j]);
 			fclose(sub[j]);
 
