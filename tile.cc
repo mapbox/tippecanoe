@@ -714,8 +714,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			tile.SerializeToString(&s);
 			compress(s, compressed);
 
-			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
-				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+			if (compressed.size() > 200000 && !prevent['k' & 0xFF]) {
+				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >200000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 
 				if (line_detail == min_detail || !evaluated) {
 					evaluated = true;
@@ -728,7 +728,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
-					fraction = fraction * 500000 / compressed.size() * 0.95;
+					fraction = fraction * 200000 / compressed.size() * 0.95;
 					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
