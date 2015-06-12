@@ -505,12 +505,15 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					minzoom = maxzoom - floor(log(r) / -log(droprate));
 				}
 
+				unsigned long long ix = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+
 				serialize_byte(geomfile, minzoom, &geompos, fname);
+				serialize_long_long(geomfile, (long long) ix, &geompos, fname);
 
 				struct index index;
 				index.start = geomstart;
 				index.end = geompos;
-				index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+				index.index = ix;
 				fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 				indexpos += sizeof(struct index);
 

@@ -364,6 +364,17 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	double oprogress = 0;
 	double fraction = 1;
 
+	unsigned long long tilestart, tileend;
+	if (z == 0) {
+		tilestart = 0;
+		tileend = ULONG_LONG_MAX;
+	} else {
+		tilestart = encode(tx << (32 - z), ty << (32 - z));
+		tileend = tilestart + (1LL << ((32 - z) * 2));
+	}
+
+	printf("%d %u %u: %llx %llx\n", z, tx, ty, tilestart, tileend);
+
 	char *og = *geoms;
 
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
@@ -433,6 +444,14 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
+
+			long long index;
+			deserialize_long_long(geoms, &index);
+			unsigned long long uindex = index;
+
+			if (uindex < tilestart || uindex > tileend) {
+				printf("beyond %llx %llx: %llx\n", tilestart, tileend, uindex);
+			}
 
 			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
 			if (progress != oprogress) {
@@ -523,6 +542,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 							serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
 							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+							serialize_long_long(geomfile[j], index, &geompos[j], fname);
 						}
 					}
 				}
