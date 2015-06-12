@@ -363,17 +363,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 	static bool evaluated = false;
 	double oprogress = 0;
 	double fraction = 1;
-
-	unsigned long long tilestart, tileend;
-	if (z == 0) {
-		tilestart = 0;
-		tileend = ULONG_LONG_MAX;
-	} else {
-		tilestart = encode(tx << (32 - z), ty << (32 - z));
-		tileend = tilestart + (1LL << ((32 - z) * 2));
-	}
-
-	printf("%d %u %u: %llx %llx\n", z, tx, ty, tilestart, tileend);
+	unsigned long long mingap = 0;
 
 	char *og = *geoms;
 
@@ -404,6 +394,8 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 		}
 
 		double fraction_accum = 0;
+		unsigned long long prevuindex = 0;
+		std::vector<unsigned long long> indices;
 
 		unsigned long long previndex = 0;
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
@@ -448,10 +440,6 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			long long index;
 			deserialize_long_long(geoms, &index);
 			unsigned long long uindex = index;
-
-			if (uindex < tilestart || uindex > tileend) {
-				printf("beyond %llx %llx: %llx\n", tilestart, tileend, uindex);
-			}
 
 			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
 			if (progress != oprogress) {
@@ -602,12 +590,23 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				}
 			}
 
+			{
+				indices.push_back(uindex - prevuindex);
+				if (uindex - prevuindex < mingap) {
+					bit_set(willdrop, featureid);
+					continue;
+				}
+				prevuindex = uindex;
+			}
+
+#if 0
 			fraction_accum += fraction;
 			if (fraction_accum < 1) {
 				bit_set(willdrop, featureid);
 				continue;
 			}
 			fraction_accum -= 1;
+#endif
 
 			bool reduced = false;
 			if (t == VT_POLYGON) {
@@ -750,6 +749,15 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 					fraction = fraction * 200000 / compressed.size() * 0.95;
 					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+
+					std::sort(indices.begin(), indices.end());
+					unsigned n = indices.size() * (1 - fraction);
+					if (n >= indices.size()) {
+						n = indices.size() - 1;
+					}
+					mingap = indices[n];
+					fprintf(stderr, "which means excluding %u of %u for a minimum gap of %llu\n", n, (unsigned) indices.size(), mingap);
+
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
