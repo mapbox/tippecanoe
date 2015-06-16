@@ -358,12 +358,11 @@ void bit_set(std::vector<char> &field, long long val) {
 	field[val / 8] |= 1 << (val % 8);
 }
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, bool preflight, std::vector<char> *dropped, long long featurecount) {
+long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, int pass, std::vector<char> *dropped, long long featurecount, unsigned long long *mingap) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
 	double fraction = 1;
-	unsigned long long mingap = 0;
 
 	char *og = *geoms;
 
@@ -473,7 +472,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				if (geom.size() > 0 && z + 1 <= file_maxzoom && !preflight) {
+				if (geom.size() > 0 && z + 1 <= file_maxzoom && pass == 1) {
 					int j;
 					for (j = 0; j < 4; j++) {
 						int xo = j & 1;
@@ -592,7 +591,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 
 			{
 				indices.push_back(uindex - prevuindex);
-				if (uindex - prevuindex < mingap) {
+				if (uindex - prevuindex < *mingap) {
 					bit_set(willdrop, featureid);
 					continue;
 				}
@@ -755,20 +754,22 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 					if (n >= indices.size()) {
 						n = indices.size() - 1;
 					}
-					mingap = indices[n];
-					fprintf(stderr, "which means excluding %u of %u for a minimum gap of %llu\n", n, (unsigned) indices.size(), mingap);
+					*mingap = indices[n];
+					fprintf(stderr, "which means excluding %u of %u for a minimum gap of %llu\n", n, (unsigned) indices.size(), *mingap);
 
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
-				if (dropped != NULL) {
+#if 0
+				if (dropped != NULL && pass == 2) {
 					int i;
 					for (i = 0; i < (featurecount + 7) / 8; i++) {
 						(*dropped)[i] |= willdrop[i];
 					}
 				}
+#endif
 
-				if (preflight) {
+				if (pass != 1) {
 					return count;
 				}
 
@@ -790,6 +791,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 		long long most = 0;
 
 		std::vector<char> dropped((featurecount + 7) / 8, 0);
+		unsigned long long thresh = 0;
 
 		FILE *sub[4];
 		int subfd[4];
@@ -859,7 +861,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 					// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-					long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart[j], along, gamma, nlayers, prevent, pass == 0, &dropped, featurecount);
+					long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart[j], along, gamma, nlayers, prevent, pass, &dropped, featurecount, &thresh);
 
 					if (len < 0) {
 						return i - 1;
