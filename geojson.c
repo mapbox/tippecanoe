@@ -60,13 +60,25 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 }
 
 void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(int), 1, out, fname);
-	*fpos += sizeof(int);
+	serialize_long_long(out, n, fpos, fname);
 }
 
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(long long), 1, out, fname);
-	*fpos += sizeof(long long);
+	unsigned long long zigzag = (n << 1) ^ (n >> 63);
+
+	while (1) {
+		unsigned char b = zigzag & 0x7F;
+		if ((zigzag >> 7) != 0) {
+			b |= 0x80;
+			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			*fpos += 1;
+			zigzag >>= 7;
+		} else {
+			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			*fpos += 1;
+			break;
+		}
+	}
 }
 
 void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
@@ -156,13 +168,29 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 }
 
 void deserialize_int(char **f, int *n) {
-	memcpy(n, *f, sizeof(int));
-	*f += sizeof(int);
+	long long ll;
+	deserialize_long_long(f, &ll);
+	*n = ll;
 }
 
 void deserialize_long_long(char **f, long long *n) {
-	memcpy(n, *f, sizeof(long long));
-	*f += sizeof(long long);
+	unsigned long long zigzag = 0;
+	int shift = 0;
+
+	while (1) {
+		if ((**f & 0x80) == 0) {
+			zigzag |= ((unsigned long long) **f) << shift;
+			*f += 1;
+			shift += 7;
+			break;
+		} else {
+			zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
+			*f += 1;
+			shift += 7;
+		}
+	}
+
+	*n = (zigzag >> 1) ^ (-(zigzag & 1));
 }
 
 void deserialize_uint(char **f, unsigned *n) {
