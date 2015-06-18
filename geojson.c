@@ -396,7 +396,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 }
 
 struct stringpool {
-	char *s; // first byte is type
+	char *s;  // first byte is type
 	struct stringpool *left;
 	struct stringpool *right;
 	long long off;
