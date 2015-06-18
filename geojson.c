@@ -403,7 +403,7 @@ long long addpool(FILE *poolfile, long long *poolpos, char *s) {
 	}
 
 	*sp = malloc(sizeof(struct stringpool));
-	(*sp)->s = strdup(s); // XXX really should be mapped from the pool itself
+	(*sp)->s = strdup(s);  // XXX really should be mapped from the pool itself
 	(*sp)->left = NULL;
 	(*sp)->right = NULL;
 	(*sp)->off = *poolpos;

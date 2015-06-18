@@ -187,13 +187,13 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 }
 
 struct pool_val *retrieve_string(char **f, struct pool *p, int type, char *stringpool) {
-        struct pool_val *ret;
+	struct pool_val *ret;
 	long long off;
 
-        deserialize_long_long(f, &off);
-        ret = pool(p, stringpool + off, type);
+	deserialize_long_long(f, &off);
+	ret = pool(p, stringpool + off, type);
 
-        return ret;
+	return ret;
 }
 
 void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
