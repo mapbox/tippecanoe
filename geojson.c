@@ -26,6 +26,7 @@ int full_detail = -1;
 int min_detail = 7;
 
 unsigned initial_x = 0, initial_y = 0;
+int geometry_scale = 0;
 int initialized = 0;
 
 #define GEOM_POINT 0	   /* array of positions */
@@ -164,8 +165,8 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 			}
 
 			serialize_byte(out, op, fpos, fname);
-			serialize_long_long(out, x - *wx, fpos, fname);
-			serialize_long_long(out, y - *wy, fpos, fname);
+			serialize_long_long(out, (x >> geometry_scale) - (*wx >> geometry_scale), fpos, fname);
+			serialize_long_long(out, (y >> geometry_scale) - (*wy >> geometry_scale), fpos, fname);
 			*wx = x;
 			*wy = y;
 		} else {
@@ -494,7 +495,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	long long indexpos = 0;
 
 	unlink(metaname);
-	unlink(poolname);
+	//unlink(poolname);
 	unlink(geomname);
 	unlink(indexname);
 
@@ -1181,6 +1182,9 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	geometry_scale = 32 - (full_detail + maxzoom);
+	printf("geometry scale is %d\n", geometry_scale);
 
 	if (outdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);

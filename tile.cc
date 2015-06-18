@@ -510,8 +510,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 								if (geom[u].op != VT_CLOSEPATH) {
-									serialize_long_long(geomfile[j], geom[u].x + sx - wx, &geompos[j], fname);
-									serialize_long_long(geomfile[j], geom[u].y + sy - wy, &geompos[j], fname);
+									serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
+									serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
 									wx = geom[u].x + sx;
 									wy = geom[u].y + sy;
 								}

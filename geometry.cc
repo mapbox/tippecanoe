@@ -41,8 +41,8 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 			deserialize_long_long(meta, &dx);
 			deserialize_long_long(meta, &dy);
 
-			wx += dx;
-			wy += dy;
+			wx += dx << geometry_scale;
+			wy += dy << geometry_scale;
 
 			long long wwx = wx;
 			long long wwy = wy;
