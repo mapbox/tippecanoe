@@ -403,22 +403,22 @@ struct stringpool {
 };
 long long pooltree = 0;
 
-long long addpool(struct memfile *poolfile, char *s, char type) {
+long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, char type) {
 	long long *sp = &pooltree;
 
 	while (*sp != 0) {
-		int cmp = strcmp(s, poolfile->map + ((struct stringpool *) (poolfile->map + *sp))->off + 1);
+		int cmp = strcmp(s, poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off + 1);
 
 		if (cmp == 0) {
-			cmp = type - (poolfile->map + ((struct stringpool *) (poolfile->map + *sp))->off)[0];
+			cmp = type - (poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off)[0];
 		}
 
 		if (cmp < 0) {
-			sp = &(((struct stringpool *) (poolfile->map + *sp))->left);
+			sp = &(((struct stringpool *) (treefile->map + *sp))->left);
 		} else if (cmp > 0) {
-			sp = &(((struct stringpool *) (poolfile->map + *sp))->right);
+			sp = &(((struct stringpool *) (treefile->map + *sp))->right);
 		} else {
-			return ((struct stringpool *) (poolfile->map + *sp))->off;
+			return ((struct stringpool *) (treefile->map + *sp))->off;
 		}
 	}
 
@@ -427,7 +427,7 @@ long long addpool(struct memfile *poolfile, char *s, char type) {
 	if (sp == &pooltree) {
 		ssp = -1;
 	} else {
-		ssp = ((char *) sp) - poolfile->map;
+		ssp = ((char *) sp) - treefile->map;
 	}
 
 	long long off = poolfile->off;
@@ -445,13 +445,8 @@ long long addpool(struct memfile *poolfile, char *s, char type) {
 	tsp.right = 0;
 	tsp.off = off;
 
-	// alignment
-	while (poolfile->off % sizeof(long long) != 0) {
-		memfile_write(poolfile, "", 1);
-	}
-
-	long long p = poolfile->off;
-	if (memfile_write(poolfile, &tsp, sizeof(struct stringpool)) < 0) {
+	long long p = treefile->off;
+	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
 	}
@@ -459,7 +454,7 @@ long long addpool(struct memfile *poolfile, char *s, char type) {
 	if (ssp == -1) {
 		pooltree = p;
 	} else {
-		*((long long *) (poolfile->map + ssp)) = p;
+		*((long long *) (treefile->map + ssp)) = p;
 	}
 	return off;
 }
@@ -469,11 +464,13 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+	char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
 	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+	sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
@@ -485,6 +482,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	int poolfd = mkstemp(poolname);
 	if (poolfd < 0) {
 		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+	int treefd = mkstemp(treename);
+	if (treefd < 0) {
+		perror(treename);
 		exit(EXIT_FAILURE);
 	}
 	int geomfd = mkstemp(geomname);
@@ -508,6 +510,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror(poolname);
 		exit(EXIT_FAILURE);
 	}
+	struct memfile *treefile = memfile_open(treefd);
+	if (treefile == NULL) {
+		perror(treename);
+		exit(EXIT_FAILURE);
+	}
 	FILE *geomfile = fopen(geomname, "wb");
 	if (geomfile == NULL) {
 		perror(geomname);
@@ -524,11 +531,15 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	unlink(metaname);
 	unlink(poolname);
+	unlink(treename);
 	unlink(geomname);
 	unlink(indexname);
 
 	// To distinguish a null value
-	memfile_write(poolfile, "", 1);
+	{
+		struct stringpool p;
+		memfile_write(treefile, &p, sizeof(struct stringpool));
+	}
 
 	unsigned file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 	unsigned midx = 0, midy = 0;
@@ -690,8 +701,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				serialize_int(metafile, m, &metapos, fname);
 				for (i = 0; i < m; i++) {
-					serialize_long_long(metafile, addpool(poolfile, metakey[i], VT_STRING), &metapos, fname);
-					serialize_long_long(metafile, addpool(poolfile, metaval[i], metatype[i]), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), &metapos, fname);
 				}
 
 				long long geomstart = geompos;
@@ -768,6 +779,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	fclose(metafile);
 	fclose(geomfile);
 	fclose(indexfile);
+	memfile_close(treefile);
 
 	struct stat geomst;
 	struct stat metast;
