@@ -186,12 +186,12 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-struct pool_val *retrieve_string(char **f, struct pool *p, int type, char *stringpool) {
+struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
 	struct pool_val *ret;
 	long long off;
 
 	deserialize_long_long(f, &off);
-	ret = pool(p, stringpool + off, type);
+	ret = pool(p, stringpool + off + 1, stringpool[off]);
 
 	return ret;
 }
@@ -202,22 +202,20 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 
 	int i;
 	for (i = 0; i < m; i++) {
-		int t;
-		deserialize_int(meta, &t);
-		struct pool_val *key = retrieve_string(meta, keys, VT_STRING, stringpool);
+		struct pool_val *key = retrieve_string(meta, keys, stringpool);
 
 		if (only != NULL && (strcmp(key->s, only) != 0)) {
-			deserialize_int(meta, &t);
-			*meta += t;
+			// XXX if evaluate ever works again, check whether this is sufficient
+			(void) retrieve_string(meta, values, stringpool);
 		} else {
-			struct pool_val *value = retrieve_string(meta, values, t, stringpool);
+			struct pool_val *value = retrieve_string(meta, values, stringpool);
 
 			intmeta->push_back(key->n);
 			intmeta->push_back(value->n);
 
-			if (!is_pooled(file_keys, key->s, t)) {
+			if (!is_pooled(file_keys, key->s, value->type)) {
 				// Dup to retain after munmap
-				pool(file_keys, strdup(key->s), t);
+				pool(file_keys, strdup(key->s), value->type);
 			}
 		}
 	}

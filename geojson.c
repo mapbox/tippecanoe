@@ -395,17 +395,22 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 }
 
 struct stringpool {
-	char *s;
+	char *s; // first byte is type
 	struct stringpool *left;
 	struct stringpool *right;
 	long long off;
 } *pooltree = NULL;
 
-long long addpool(FILE *poolfile, long long *poolpos, char *s) {
+long long addpool(FILE *poolfile, long long *poolpos, char *s, char type) {
 	struct stringpool **sp = &pooltree;
 
 	while (*sp != NULL) {
-		int cmp = strcmp(s, (*sp)->s);
+		int cmp = strcmp(s, (*sp)->s + 1);
+
+		if (cmp == 0) {
+			cmp = type - (*sp)->s[0];
+		}
+
 		if (cmp < 0) {
 			sp = &((*sp)->left);
 		} else if (cmp > 0) {
@@ -416,13 +421,15 @@ long long addpool(FILE *poolfile, long long *poolpos, char *s) {
 	}
 
 	*sp = malloc(sizeof(struct stringpool));
-	(*sp)->s = strdup(s);  // XXX really should be mapped from the pool itself
+	(*sp)->s = malloc(strlen(s) + 2);
+	(*sp)->s[0] = type;
+	strcpy((*sp)->s + 1, s);  // XXX really should be mapped from the pool itself
 	(*sp)->left = NULL;
 	(*sp)->right = NULL;
 	(*sp)->off = *poolpos;
 
-	fwrite_check(s, strlen(s) + 1, sizeof(char), poolfile, "string pool");
-	*poolpos += strlen(s) + 1;
+	fwrite_check((*sp)->s, strlen(s) + 2, sizeof(char), poolfile, "string pool");
+	*poolpos += strlen(s) + 2;
 
 	return (*sp)->off;
 }
@@ -655,9 +662,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				serialize_int(metafile, m, &metapos, fname);
 				for (i = 0; i < m; i++) {
-					serialize_int(metafile, metatype[i], &metapos, fname);
-					serialize_long_long(metafile, addpool(poolfile, &poolpos, metakey[i]), &metapos, fname);
-					serialize_long_long(metafile, addpool(poolfile, &poolpos, metaval[i]), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, &poolpos, metakey[i], VT_STRING), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, &poolpos, metaval[i], metatype[i]), &metapos, fname);
 				}
 
 				long long geomstart = geompos;
