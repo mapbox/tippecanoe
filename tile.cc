@@ -506,13 +506,16 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 							serialize_byte(geomfile[j], t, &geompos[j], fname);
 							serialize_byte(geomfile[j], layer, &geompos[j], fname);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+							long long wx = 0, wy = 0;
 
 							for (unsigned u = 0; u < geom.size(); u++) {
 								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 								if (geom[u].op != VT_CLOSEPATH) {
-									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname);
-									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname);
+									serialize_long_long(geomfile[j], geom[u].x + sx - wx, &geompos[j], fname);
+									serialize_long_long(geomfile[j], geom[u].y + sy - wy, &geompos[j], fname);
+									wx = geom[u].x + sx;
+									wy = geom[u].y + sy;
 								}
 							}
 
