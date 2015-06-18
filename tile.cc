@@ -186,7 +186,17 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
+struct pool_val *retrieve_string(char **f, struct pool *p, int type, char *stringpool) {
+        struct pool_val *ret;
+	long long off;
+
+        deserialize_long_long(f, &off);
+        ret = pool(p, stringpool + off, type);
+
+        return ret;
+}
+
+void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
 	int m;
 	deserialize_int(meta, &m);
 
@@ -194,13 +204,13 @@ void decode_meta(char **meta, struct pool *keys, struct pool *values, struct poo
 	for (i = 0; i < m; i++) {
 		int t;
 		deserialize_int(meta, &t);
-		struct pool_val *key = deserialize_string(meta, keys, VT_STRING);
+		struct pool_val *key = retrieve_string(meta, keys, VT_STRING, stringpool);
 
 		if (only != NULL && (strcmp(key->s, only) != 0)) {
 			deserialize_int(meta, &t);
 			*meta += t;
 		} else {
-			struct pool_val *value = deserialize_string(meta, values, t);
+			struct pool_val *value = retrieve_string(meta, values, t, stringpool);
 
 			intmeta->push_back(key->n);
 			intmeta->push_back(value->n);
@@ -349,7 +359,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -614,7 +624,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				c.metasrc = meta;
 				c.coalesced = false;
 
-				decode_meta(&meta, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
+				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
 				features[layer].push_back(c);
 			}
 		}

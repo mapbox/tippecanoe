@@ -214,7 +214,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -275,7 +275,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
 
 				if (len < 0) {
 					return i - 1;
@@ -381,20 +381,60 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
+struct stringpool {
+	char *s;
+	struct stringpool *left;
+	struct stringpool *right;
+	long long off;
+} *pooltree = NULL;
+
+long long addpool(FILE *poolfile, long long *poolpos, char *s) {
+	struct stringpool **sp = &pooltree;
+
+	while (*sp != NULL) {
+		int cmp = strcmp(s, (*sp)->s);
+		if (cmp < 0) {
+			sp = &((*sp)->left);
+		} else if (cmp > 0) {
+			sp = &((*sp)->right);
+		} else {
+			return (*sp)->off;
+		}
+	}
+
+	*sp = malloc(sizeof(struct stringpool));
+	(*sp)->s = strdup(s); // XXX really should be mapped from the pool itself
+	(*sp)->left = NULL;
+	(*sp)->right = NULL;
+	(*sp)->off = *poolpos;
+
+	fwrite_check(s, strlen(s) + 1, sizeof(char), poolfile, "string pool");
+	*poolpos += strlen(s) + 1;
+
+	return (*sp)->off;
+}
+
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
 	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
 	int metafd = mkstemp(metaname);
 	if (metafd < 0) {
 		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+	int poolfd = mkstemp(poolname);
+	if (poolfd < 0) {
+		perror(poolname);
 		exit(EXIT_FAILURE);
 	}
 	int geomfd = mkstemp(geomname);
@@ -413,6 +453,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror(metaname);
 		exit(EXIT_FAILURE);
 	}
+	FILE *poolfile = fopen(poolname, "wb");
+	if (poolfile == NULL) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
 	FILE *geomfile = fopen(geomname, "wb");
 	if (geomfile == NULL) {
 		perror(geomname);
@@ -424,12 +469,18 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 	long long metapos = 0;
+	long long poolpos = 0;
 	long long geompos = 0;
 	long long indexpos = 0;
 
 	unlink(metaname);
+	unlink(poolname);
 	unlink(geomname);
 	unlink(indexname);
+
+	// So we still have a legitimate map even if no metadata
+	fprintf(poolfile, "\n");
+	poolpos++;
 
 	unsigned file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 	unsigned midx = 0, midy = 0;
@@ -592,8 +643,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				serialize_int(metafile, m, &metapos, fname);
 				for (i = 0; i < m; i++) {
 					serialize_int(metafile, metatype[i], &metapos, fname);
-					serialize_string(metafile, metakey[i], &metapos, fname);
-					serialize_string(metafile, metaval[i], &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, &poolpos, metakey[i]), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, &poolpos, metaval[i]), &metapos, fname);
 				}
 
 				long long geomstart = geompos;
@@ -667,11 +718,13 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 
 	fclose(metafile);
+	fclose(poolfile);
 	fclose(geomfile);
 	fclose(indexfile);
 
 	struct stat geomst;
 	struct stat metast;
+	struct stat poolst;
 
 	if (fstat(geomfd, &geomst) != 0) {
 		perror("stat geom\n");
@@ -679,6 +732,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 	if (fstat(metafd, &metast) != 0) {
 		perror("stat meta\n");
+		exit(EXIT_FAILURE);
+	}
+	if (fstat(poolfd, &poolst) != 0) {
+		perror("stat pool\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -690,6 +747,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
+		exit(EXIT_FAILURE);
+	}
+
+	char *stringpool = (char *) mmap(NULL, poolst.st_size, PROT_READ, MAP_PRIVATE, poolfd, 0);
+	if (stringpool == MAP_FAILED) {
+		perror("mmap stringpool");
 		exit(EXIT_FAILURE);
 	}
 
@@ -915,9 +978,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		size[j] = 0;
 	}
 
-	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
+	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, (long long) poolst.st_size);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -928,9 +991,15 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (munmap(meta, metast.st_size) != 0) {
 		perror("munmap meta");
 	}
-
 	if (close(metafd) < 0) {
 		perror("close meta");
+	}
+
+	if (munmap(stringpool, poolst.st_size) != 0) {
+		perror("munmap pool");
+	}
+	if (close(poolfd) < 0) {
+		perror("close pool");
 	}
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
