@@ -25,6 +25,9 @@ int low_detail = 10;
 int full_detail = -1;
 int min_detail = 7;
 
+unsigned initial_x = 0, initial_y = 0;
+int initialized = 0;
+
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
 #define GEOM_LINESTRING 2      /* array of arrays of positions */
@@ -100,7 +103,7 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
 		return;
@@ -119,7 +122,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source, wx, wy);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source, wx, wy, initialized);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -150,6 +153,14 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				if (y > bbox[3]) {
 					bbox[3] = y;
 				}
+			}
+
+			if (!*initialized) {
+				initial_x = x;
+				initial_y = y;
+				*wx = x;
+				*wy = y;
+				*initialized = 1;
 			}
 
 			serialize_byte(out, op, fpos, fname);
@@ -654,8 +665,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				serialize_byte(geomfile, mb_geometry[t], &geompos, fname);
 				serialize_byte(geomfile, n, &geompos, fname);
 				serialize_long_long(geomfile, metastart, &geompos, fname);
-				long long wx = 0, wy = 0;
-				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy);
+				long long wx = initial_x, wy = initial_y;
+				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy, &initialized);
 				serialize_byte(geomfile, VT_END, &geompos, fname);
 
 				/*

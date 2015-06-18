@@ -506,7 +506,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 							serialize_byte(geomfile[j], t, &geompos[j], fname);
 							serialize_byte(geomfile[j], layer, &geompos[j], fname);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
-							long long wx = 0, wy = 0;
+							long long wx = initial_x, wy = initial_y;
 
 							for (unsigned u = 0; u < geom.size(); u++) {
 								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);

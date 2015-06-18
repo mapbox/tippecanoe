@@ -25,7 +25,7 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 	bbox[2] = LONG_LONG_MIN;
 	bbox[3] = LONG_LONG_MIN;
 
-	long long wx = 0, wy = 0;
+	long long wx = initial_x, wy = initial_y;
 
 	while (1) {
 		draw d;
