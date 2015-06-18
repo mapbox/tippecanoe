@@ -22,7 +22,7 @@ C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
 INCLUDES = -I/usr/local/include
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o
+tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 enumerate: enumerate.o
