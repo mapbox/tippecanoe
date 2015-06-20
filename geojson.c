@@ -20,10 +20,15 @@
 #include "mbtiles.h"
 #include "projection.h"
 #include "version.h"
+#include "memfile.h"
 
 int low_detail = 10;
 int full_detail = -1;
 int min_detail = 7;
+
+unsigned initial_x = 0, initial_y = 0;
+int geometry_scale = 0;
+int initialized = 0;
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -60,13 +65,25 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 }
 
 void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(int), 1, out, fname);
-	*fpos += sizeof(int);
+	serialize_long_long(out, n, fpos, fname);
 }
 
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(long long), 1, out, fname);
-	*fpos += sizeof(long long);
+	unsigned long long zigzag = (n << 1) ^ (n >> 63);
+
+	while (1) {
+		unsigned char b = zigzag & 0x7F;
+		if ((zigzag >> 7) != 0) {
+			b |= 0x80;
+			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			*fpos += 1;
+			zigzag >>= 7;
+		} else {
+			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			*fpos += 1;
+			break;
+		}
+	}
 }
 
 void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
@@ -88,7 +105,7 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
 		return;
@@ -107,7 +124,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source, wx, wy, initialized);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -140,9 +157,19 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
+			if (!*initialized) {
+				initial_x = x;
+				initial_y = y;
+				*wx = x;
+				*wy = y;
+				*initialized = 1;
+			}
+
 			serialize_byte(out, op, fpos, fname);
-			serialize_uint(out, x, fpos, fname);
-			serialize_uint(out, y, fpos, fname);
+			serialize_long_long(out, (x >> geometry_scale) - (*wx >> geometry_scale), fpos, fname);
+			serialize_long_long(out, (y >> geometry_scale) - (*wy >> geometry_scale), fpos, fname);
+			*wx = x;
+			*wy = y;
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
 		}
@@ -156,13 +183,29 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 }
 
 void deserialize_int(char **f, int *n) {
-	memcpy(n, *f, sizeof(int));
-	*f += sizeof(int);
+	long long ll;
+	deserialize_long_long(f, &ll);
+	*n = ll;
 }
 
 void deserialize_long_long(char **f, long long *n) {
-	memcpy(n, *f, sizeof(long long));
-	*f += sizeof(long long);
+	unsigned long long zigzag = 0;
+	int shift = 0;
+
+	while (1) {
+		if ((**f & 0x80) == 0) {
+			zigzag |= ((unsigned long long) **f) << shift;
+			*f += 1;
+			shift += 7;
+			break;
+		} else {
+			zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
+			*f += 1;
+			shift += 7;
+		}
+	}
+
+	*n = (zigzag >> 1) ^ (-(zigzag & 1));
 }
 
 void deserialize_uint(char **f, unsigned *n) {
@@ -186,7 +229,7 @@ struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
 	return ret;
 }
 
-int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent) {
+int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -247,7 +290,7 @@ int traverse_zooms(int geomfd[4], off_t geom_size[4], char *metabase, unsigned *
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
 
 				if (len < 0) {
 					return i - 1;
@@ -353,20 +396,133 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
+struct stringpool {
+	long long left;
+	long long right;
+	long long off;
+};
+long long pooltree = 0;
+
+static unsigned char swizzle[256] = {
+	0x00, 0xBF, 0x18, 0xDE, 0x93, 0xC9, 0xB1, 0x5E, 0xDF, 0xBE, 0x72, 0x5A, 0xBB, 0x42, 0x64, 0xC6,
+	0xD8, 0xB7, 0x15, 0x74, 0x1C, 0x8B, 0x91, 0xF5, 0x29, 0x46, 0xEC, 0x6F, 0xCA, 0x20, 0xF0, 0x06,
+	0x27, 0x61, 0x87, 0xE0, 0x6E, 0x43, 0x50, 0xC5, 0x1B, 0xB4, 0x37, 0xC3, 0x69, 0xA6, 0xEE, 0x80,
+	0xAF, 0x9B, 0xA1, 0x76, 0x23, 0x24, 0x53, 0xF3, 0x5B, 0x65, 0x19, 0xF4, 0xFC, 0xDD, 0x26, 0xE8,
+	0x10, 0xF7, 0xCE, 0x92, 0x48, 0xF6, 0x94, 0x60, 0x07, 0xC4, 0xB9, 0x97, 0x6D, 0xA4, 0x11, 0x0D,
+	0x1F, 0x4D, 0x13, 0xB0, 0x5D, 0xBA, 0x31, 0xD5, 0x8D, 0x51, 0x36, 0x96, 0x7A, 0x03, 0x7F, 0xDA,
+	0x17, 0xDB, 0xD4, 0x83, 0xE2, 0x79, 0x6A, 0xE1, 0x95, 0x38, 0xFF, 0x28, 0xB2, 0xB3, 0xA7, 0xAE,
+	0xF8, 0x54, 0xCC, 0xDC, 0x9A, 0x6B, 0xFB, 0x3F, 0xD7, 0xBC, 0x21, 0xC8, 0x71, 0x09, 0x16, 0xAC,
+	0x3C, 0x8A, 0x62, 0x05, 0xC2, 0x8C, 0x32, 0x4E, 0x35, 0x9C, 0x5F, 0x75, 0xCD, 0x2E, 0xA2, 0x3E,
+	0x1A, 0xC1, 0x8E, 0x14, 0xA0, 0xD3, 0x7D, 0xD9, 0xEB, 0x5C, 0x70, 0xE6, 0x9E, 0x12, 0x3B, 0xEF,
+	0x1E, 0x49, 0xD2, 0x98, 0x39, 0x7E, 0x44, 0x4B, 0x6C, 0x88, 0x02, 0x2C, 0xAD, 0xE5, 0x9F, 0x40,
+	0x7B, 0x4A, 0x3D, 0xA9, 0xAB, 0x0B, 0xD6, 0x2F, 0x90, 0x2A, 0xB6, 0x1D, 0xC7, 0x22, 0x55, 0x34,
+	0x0A, 0xD0, 0xB5, 0x68, 0xE3, 0x59, 0xFD, 0xFA, 0x57, 0x77, 0x25, 0xA3, 0x04, 0xB8, 0x33, 0x89,
+	0x78, 0x82, 0xE4, 0xC0, 0x0E, 0x8F, 0x85, 0xD1, 0x84, 0x08, 0x67, 0x47, 0x9D, 0xCB, 0x58, 0x4C,
+	0xAA, 0xED, 0x52, 0xF2, 0x4F, 0xF1, 0x66, 0xCF, 0xA5, 0x56, 0xEA, 0x7C, 0xE9, 0x63, 0xE7, 0x01,
+	0xF9, 0xFE, 0x0C, 0x99, 0x2D, 0x0F, 0x3A, 0x41, 0x45, 0xA8, 0x30, 0x2B, 0x73, 0xBD, 0x86, 0x81,
+};
+
+int swizzlecmp(char *a, char *b) {
+	while (*a || *b) {
+		int aa = swizzle[(unsigned char) *a];
+		int bb = swizzle[(unsigned char) *b];
+
+		int cmp = aa - bb;
+		if (cmp != 0) {
+			return cmp;
+		}
+
+		a++;
+		b++;
+	}
+
+	return 0;
+}
+
+long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, char type) {
+	long long *sp = &pooltree;
+
+	while (*sp != 0) {
+		int cmp = swizzlecmp(s, poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off + 1);
+
+		if (cmp == 0) {
+			cmp = type - (poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off)[0];
+		}
+
+		if (cmp < 0) {
+			sp = &(((struct stringpool *) (treefile->map + *sp))->left);
+		} else if (cmp > 0) {
+			sp = &(((struct stringpool *) (treefile->map + *sp))->right);
+		} else {
+			return ((struct stringpool *) (treefile->map + *sp))->off;
+		}
+	}
+
+	// *sp is probably in the memory-mapped file, and will move if the file grows.
+	long long ssp;
+	if (sp == &pooltree) {
+		ssp = -1;
+	} else {
+		ssp = ((char *) sp) - treefile->map;
+	}
+
+	long long off = poolfile->off;
+	if (memfile_write(poolfile, &type, 1) < 0) {
+		perror("memfile write");
+		exit(EXIT_FAILURE);
+	}
+	if (memfile_write(poolfile, s, strlen(s) + 1) < 0) {
+		perror("memfile write");
+		exit(EXIT_FAILURE);
+	}
+
+	struct stringpool tsp;
+	tsp.left = 0;
+	tsp.right = 0;
+	tsp.off = off;
+
+	long long p = treefile->off;
+	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
+		perror("memfile write");
+		exit(EXIT_FAILURE);
+	}
+
+	if (ssp == -1) {
+		pooltree = p;
+	} else {
+		*((long long *) (treefile->map + ssp)) = p;
+	}
+	return off;
+}
+
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+	char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
 	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+	sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
 	int metafd = mkstemp(metaname);
 	if (metafd < 0) {
 		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+	int poolfd = mkstemp(poolname);
+	if (poolfd < 0) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+	int treefd = mkstemp(treename);
+	if (treefd < 0) {
+		perror(treename);
 		exit(EXIT_FAILURE);
 	}
 	int geomfd = mkstemp(geomname);
@@ -385,6 +541,16 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror(metaname);
 		exit(EXIT_FAILURE);
 	}
+	struct memfile *poolfile = memfile_open(poolfd);
+	if (poolfile == NULL) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+	struct memfile *treefile = memfile_open(treefd);
+	if (treefile == NULL) {
+		perror(treename);
+		exit(EXIT_FAILURE);
+	}
 	FILE *geomfile = fopen(geomname, "wb");
 	if (geomfile == NULL) {
 		perror(geomname);
@@ -400,8 +566,16 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	long long indexpos = 0;
 
 	unlink(metaname);
+	unlink(poolname);
+	unlink(treename);
 	unlink(geomname);
 	unlink(indexname);
+
+	// To distinguish a null value
+	{
+		struct stringpool p;
+		memfile_write(treefile, &p, sizeof(struct stringpool));
+	}
 
 	unsigned file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 	unsigned midx = 0, midy = 0;
@@ -563,9 +737,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				serialize_int(metafile, m, &metapos, fname);
 				for (i = 0; i < m; i++) {
-					serialize_int(metafile, metatype[i], &metapos, fname);
-					serialize_string(metafile, metakey[i], &metapos, fname);
-					serialize_string(metafile, metaval[i], &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), &metapos, fname);
+					serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), &metapos, fname);
 				}
 
 				long long geomstart = geompos;
@@ -573,7 +746,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				serialize_byte(geomfile, mb_geometry[t], &geompos, fname);
 				serialize_byte(geomfile, n, &geompos, fname);
 				serialize_long_long(geomfile, metastart, &geompos, fname);
-				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp);
+				long long wx = initial_x, wy = initial_y;
+				parse_geometry(t, coordinates, bbox, &geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy, &initialized);
 				serialize_byte(geomfile, VT_END, &geompos, fname);
 
 				/*
@@ -641,6 +815,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	fclose(metafile);
 	fclose(geomfile);
 	fclose(indexfile);
+	memfile_close(treefile);
 
 	struct stat geomst;
 	struct stat metast;
@@ -664,6 +839,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
+
+	char *stringpool = poolfile->map;
 
 	struct pool file_keys1[nlayers];
 	struct pool *file_keys[nlayers];
@@ -744,6 +921,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			merges[start / unit].end = end;
 			merges[start / unit].next = NULL;
 
+			// MAP_PRIVATE to avoid disk writes if it fits in memory
 			void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, indexfd, start);
 			if (map == MAP_FAILED) {
 				perror("mmap");
@@ -887,9 +1065,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		size[j] = 0;
 	}
 
-	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata\n", seq, (long long) geomst.st_size, (long long) metast.st_size);
+	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
 
-	int written = traverse_zooms(fd, size, meta, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -900,9 +1078,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (munmap(meta, metast.st_size) != 0) {
 		perror("munmap meta");
 	}
-
 	if (close(metafd) < 0) {
 		perror("close meta");
+	}
+
+	if (memfile_close(poolfile) != 0) {
+		perror("close pool");
 	}
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
@@ -1064,6 +1245,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	geometry_scale = 32 - (full_detail + maxzoom);
 
 	if (outdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);

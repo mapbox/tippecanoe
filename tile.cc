@@ -186,28 +186,36 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-void decode_meta(char **meta, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
+struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
+	struct pool_val *ret;
+	long long off;
+
+	deserialize_long_long(f, &off);
+	ret = pool(p, stringpool + off + 1, stringpool[off]);
+
+	return ret;
+}
+
+void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
 	int m;
 	deserialize_int(meta, &m);
 
 	int i;
 	for (i = 0; i < m; i++) {
-		int t;
-		deserialize_int(meta, &t);
-		struct pool_val *key = deserialize_string(meta, keys, VT_STRING);
+		struct pool_val *key = retrieve_string(meta, keys, stringpool);
 
 		if (only != NULL && (strcmp(key->s, only) != 0)) {
-			deserialize_int(meta, &t);
-			*meta += t;
+			// XXX if evaluate ever works again, check whether this is sufficient
+			(void) retrieve_string(meta, values, stringpool);
 		} else {
-			struct pool_val *value = deserialize_string(meta, values, t);
+			struct pool_val *value = retrieve_string(meta, values, stringpool);
 
 			intmeta->push_back(key->n);
 			intmeta->push_back(value->n);
 
-			if (!is_pooled(file_keys, key->s, t)) {
+			if (!is_pooled(file_keys, key->s, value->type)) {
 				// Dup to retain after munmap
-				pool(file_keys, strdup(key->s), t);
+				pool(file_keys, strdup(key->s), value->type);
 			}
 		}
 	}
@@ -349,7 +357,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE *geomfile[4], int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -496,13 +504,16 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 							serialize_byte(geomfile[j], t, &geompos[j], fname);
 							serialize_byte(geomfile[j], layer, &geompos[j], fname);
 							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+							long long wx = initial_x, wy = initial_y;
 
 							for (unsigned u = 0; u < geom.size(); u++) {
 								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 								if (geom[u].op != VT_CLOSEPATH) {
-									serialize_uint(geomfile[j], geom[u].x + sx, &geompos[j], fname);
-									serialize_uint(geomfile[j], geom[u].y + sy, &geompos[j], fname);
+									serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
+									serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
+									wx = geom[u].x + sx;
+									wy = geom[u].y + sy;
 								}
 							}
 
@@ -614,7 +625,7 @@ long long write_tile(char **geoms, char *metabase, unsigned *file_bbox, int z, u
 				c.metasrc = meta;
 				c.coalesced = false;
 
-				decode_meta(&meta, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
+				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
 				features[layer].push_back(c);
 			}
 		}
