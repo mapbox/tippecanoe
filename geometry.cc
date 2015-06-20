@@ -25,6 +25,8 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 	bbox[2] = LONG_LONG_MIN;
 	bbox[3] = LONG_LONG_MIN;
 
+	long long wx = initial_x, wy = initial_y;
+
 	while (1) {
 		draw d;
 
@@ -34,12 +36,16 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 		}
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
-			unsigned wx, wy;
-			deserialize_uint(meta, &wx);
-			deserialize_uint(meta, &wy);
+			long long dx, dy;
 
-			long long wwx = (unsigned) wx;
-			long long wwy = (unsigned) wy;
+			deserialize_long_long(meta, &dx);
+			deserialize_long_long(meta, &dy);
+
+			wx += dx << geometry_scale;
+			wy += dy << geometry_scale;
+
+			long long wwx = wx;
+			long long wwy = wy;
 
 			if (z != 0) {
 				wwx -= tx << (32 - z);
