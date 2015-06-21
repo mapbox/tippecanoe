@@ -75,19 +75,25 @@ static void quote(char **buf, const char *s) {
 	char *out = tmp;
 
 	for (; *s != '\0'; s++) {
-		if (*s == '\\' || *s == '\"') {
+		unsigned char ch = (unsigned char) *s;
+
+		if (ch == '\\' || ch == '\"') {
 			*out++ = '\\';
-			*out++ = *s;
-		} else if (*s < ' ') {
-			sprintf(out, "\\u%04x", *s);
+			*out++ = ch;
+		} else if (ch < ' ') {
+			sprintf(out, "\\u%04x", ch);
 			out = out + strlen(out);
 		} else {
-			*out++ = *s;
+			*out++ = ch;
 		}
 	}
 
 	*out = '\0';
 	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	if (*buf == NULL) {
+		perror("realloc");
+		exit(EXIT_FAILURE);
+	}
 	strcat(*buf, tmp);
 }
 
