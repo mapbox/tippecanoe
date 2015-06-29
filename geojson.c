@@ -954,14 +954,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-	int fd[4];
-	off_t size[4];
+	int fd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
+	off_t size[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
 
 	fd[0] = geomfd;
 	size[0] = geomst.st_size;
 
 	int j;
-	for (j = 1; j < 4; j++) {
+	for (j = 1; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 		fd[j] = -1;
 		size[j] = 0;
 	}
