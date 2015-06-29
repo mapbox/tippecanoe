@@ -366,6 +366,15 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 	char *og = *geoms;
 
+	int nextzoom = z + 1;
+	if (nextzoom < file_minzoom) {
+		if (z + MAX_ZOOM_INCREMENT > file_minzoom) {
+			nextzoom = file_minzoom;
+		} else {
+			nextzoom = z + MAX_ZOOM_INCREMENT;
+		}
+	}
+
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -404,8 +413,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			features.push_back(std::vector<coalesce>());
 		}
 
-		int within[4] = {0};
-		long long geompos[4] = {0};
+		int within[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
+		long long geompos[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
 
 		*geoms = og;
 
@@ -461,65 +470,68 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				if (geom.size() > 0 && z + 1 <= file_maxzoom) {
-					int j;
-					for (j = 0; j < 4; j++) {
-						int xo = j & 1;
-						int yo = (j >> 1) & 1;
+				if (geom.size() > 0 && nextzoom <= file_maxzoom) {
+					int xo, yo;
+					int span = 1 << (nextzoom - z);
 
-						long long bbox2[4];
-						int k;
-						for (k = 0; k < 4; k++) {
-							bbox2[k] = bbox[k];
-						}
-						if (z != 0) {
-							// Offset back to world-relative
-							bbox2[0] += tx << (32 - z);
-							bbox2[1] += ty << (32 - z);
-							bbox2[2] += tx << (32 - z);
-							bbox2[3] += ty << (32 - z);
-						}
-						// Offset to child tile-relative
-						bbox2[0] -= (tx * 2 + xo) << (32 - (z + 1));
-						bbox2[1] -= (ty * 2 + yo) << (32 - (z + 1));
-						bbox2[2] -= (tx * 2 + xo) << (32 - (z + 1));
-						bbox2[3] -= (ty * 2 + yo) << (32 - (z + 1));
+					for (xo = 0; xo < span; xo++) {
+						for (yo = 0; yo < span; yo++) {
+							int j = xo * span + yo;
 
-						int quick2 = quick_check(bbox2, z + 1, line_detail, buffer);
-						if (quick2 != 0) {
-							if (!within[j]) {
-								serialize_int(geomfile[j], z + 1, &geompos[j], fname);
-								serialize_uint(geomfile[j], tx * 2 + xo, &geompos[j], fname);
-								serialize_uint(geomfile[j], ty * 2 + yo, &geompos[j], fname);
-								within[j] = 1;
+							long long bbox2[span * span];
+							int k;
+							for (k = 0; k < span * span; k++) {
+								bbox2[k] = bbox[k];
 							}
-
-							// Offset from tile coordinates back to world coordinates
-							unsigned sx = 0, sy = 0;
 							if (z != 0) {
-								sx = tx << (32 - z);
-								sy = ty << (32 - z);
+								// Offset back to world-relative
+								bbox2[0] += tx << (32 - z);
+								bbox2[1] += ty << (32 - z);
+								bbox2[2] += tx << (32 - z);
+								bbox2[3] += ty << (32 - z);
 							}
+							// Offset to child tile-relative
+							bbox2[0] -= (tx * span + xo) << (32 - nextzoom);
+							bbox2[1] -= (ty * span + yo) << (32 - nextzoom);
+							bbox2[2] -= (tx * span + xo) << (32 - nextzoom);
+							bbox2[3] -= (ty * span + yo) << (32 - nextzoom);
 
-							// printf("type %d, meta %lld\n", t, metastart);
-							serialize_byte(geomfile[j], t, &geompos[j], fname);
-							serialize_byte(geomfile[j], layer, &geompos[j], fname);
-							serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
-							long long wx = initial_x, wy = initial_y;
-
-							for (unsigned u = 0; u < geom.size(); u++) {
-								serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
-
-								if (geom[u].op != VT_CLOSEPATH) {
-									serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
-									serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
-									wx = geom[u].x + sx;
-									wy = geom[u].y + sy;
+							int quick2 = quick_check(bbox2, nextzoom, line_detail, buffer);
+							if (quick2 != 0) {
+								if (!within[j]) {
+									serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
+									serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
+									serialize_uint(geomfile[j], ty * span + yo, &geompos[j], fname);
+									within[j] = 1;
 								}
-							}
 
-							serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
-							serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+								// Offset from tile coordinates back to world coordinates
+								unsigned sx = 0, sy = 0;
+								if (z != 0) {
+									sx = tx << (32 - z);
+									sy = ty << (32 - z);
+								}
+
+								// printf("type %d, meta %lld\n", t, metastart);
+								serialize_byte(geomfile[j], t, &geompos[j], fname);
+								serialize_byte(geomfile[j], layer, &geompos[j], fname);
+								serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+								long long wx = initial_x, wy = initial_y;
+
+								for (unsigned u = 0; u < geom.size(); u++) {
+									serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
+
+									if (geom[u].op != VT_CLOSEPATH) {
+										serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
+										serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
+										wx = geom[u].x + sx;
+										wy = geom[u].y + sy;
+									}
+								}
+
+								serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
+								serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+							}
 						}
 					}
 				}
@@ -632,7 +644,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 		}
 
 		int j;
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 			if (within[j]) {
 				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
@@ -742,10 +754,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
 
-		FILE *sub[4];
-		int subfd[4];
+		FILE *sub[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
+		int subfd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
 		int j;
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
@@ -764,11 +776,11 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		long long todo = 0;
 		long long along = 0;
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 			todo += geom_size[j];
 		}
 
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 			if (geomfd[j] < 0) {
 				// only one source file for zoom level 0
 				continue;
@@ -817,7 +829,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			along += geom_size[j];
 		}
 
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 			close(geomfd[j]);
 			fclose(sub[j]);
 
