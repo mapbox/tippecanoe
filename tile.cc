@@ -358,6 +358,74 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, signed char layer, long long metastart, signed char feature_minzoom) {
+	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
+		int xo, yo;
+		int span = 1 << (nextzoom - z);
+
+		for (xo = 0; xo < span; xo++) {
+			for (yo = 0; yo < span; yo++) {
+				int j = xo * span + yo;
+
+				long long bbox2[4];
+				int k;
+				for (k = 0; k < 4; k++) {
+					bbox2[k] = bbox[k];
+				}
+				if (z != 0) {
+					// Offset back to world-relative
+					bbox2[0] += tx << (32 - z);
+					bbox2[1] += ty << (32 - z);
+					bbox2[2] += tx << (32 - z);
+					bbox2[3] += ty << (32 - z);
+				}
+				// Offset to child tile-relative
+				bbox2[0] -= (tx * span + xo) << (32 - nextzoom);
+				bbox2[1] -= (ty * span + yo) << (32 - nextzoom);
+				bbox2[2] -= (tx * span + xo) << (32 - nextzoom);
+				bbox2[3] -= (ty * span + yo) << (32 - nextzoom);
+
+				int quick2 = quick_check(bbox2, nextzoom, line_detail, buffer);
+				if (quick2 != 0) {
+					if (!within[j]) {
+						serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
+						serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
+						serialize_uint(geomfile[j], ty * span + yo, &geompos[j], fname);
+						within[j] = 1;
+					}
+
+					// Offset from tile coordinates back to world coordinates
+					unsigned sx = 0, sy = 0;
+					if (z != 0) {
+						sx = tx << (32 - z);
+						sy = ty << (32 - z);
+					}
+
+					// printf("type %d, meta %lld\n", t, metastart);
+					serialize_byte(geomfile[j], t, &geompos[j], fname);
+					serialize_byte(geomfile[j], layer, &geompos[j], fname);
+					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+					long long wx = initial_x, wy = initial_y;
+
+					for (unsigned u = 0; u < geom.size(); u++) {
+						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
+
+						if (geom[u].op != VT_CLOSEPATH) {
+							serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
+							serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
+							wx = geom[u].x + sx;
+							wy = geom[u].y + sy;
+						}
+					}
+
+					serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
+					serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+				}
+			}
+		}
+	}
+}
+
 long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
 	int line_detail;
 	static bool evaluated = false;
@@ -470,71 +538,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				if (geom.size() > 0 && nextzoom <= file_maxzoom) {
-					int xo, yo;
-					int span = 1 << (nextzoom - z);
-
-					for (xo = 0; xo < span; xo++) {
-						for (yo = 0; yo < span; yo++) {
-							int j = xo * span + yo;
-
-							long long bbox2[4];
-							int k;
-							for (k = 0; k < 4; k++) {
-								bbox2[k] = bbox[k];
-							}
-							if (z != 0) {
-								// Offset back to world-relative
-								bbox2[0] += tx << (32 - z);
-								bbox2[1] += ty << (32 - z);
-								bbox2[2] += tx << (32 - z);
-								bbox2[3] += ty << (32 - z);
-							}
-							// Offset to child tile-relative
-							bbox2[0] -= (tx * span + xo) << (32 - nextzoom);
-							bbox2[1] -= (ty * span + yo) << (32 - nextzoom);
-							bbox2[2] -= (tx * span + xo) << (32 - nextzoom);
-							bbox2[3] -= (ty * span + yo) << (32 - nextzoom);
-
-							int quick2 = quick_check(bbox2, nextzoom, line_detail, buffer);
-							if (quick2 != 0) {
-								if (!within[j]) {
-									serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
-									serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
-									serialize_uint(geomfile[j], ty * span + yo, &geompos[j], fname);
-									within[j] = 1;
-								}
-
-								// Offset from tile coordinates back to world coordinates
-								unsigned sx = 0, sy = 0;
-								if (z != 0) {
-									sx = tx << (32 - z);
-									sy = ty << (32 - z);
-								}
-
-								// printf("type %d, meta %lld\n", t, metastart);
-								serialize_byte(geomfile[j], t, &geompos[j], fname);
-								serialize_byte(geomfile[j], layer, &geompos[j], fname);
-								serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
-								long long wx = initial_x, wy = initial_y;
-
-								for (unsigned u = 0; u < geom.size(); u++) {
-									serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
-
-									if (geom[u].op != VT_CLOSEPATH) {
-										serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
-										serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
-										wx = geom[u].x + sx;
-										wy = geom[u].y + sy;
-									}
-								}
-
-								serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
-								serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
-							}
-						}
-					}
-				}
+				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom);
 			}
 
 			if (z < file_minzoom) {
