@@ -75,11 +75,17 @@ void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fn
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
 			b |= 0x80;
-			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			if (putc(b, out) == EOF) {
+				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
+				exit(EXIT_FAILURE);
+			}
 			*fpos += 1;
 			zigzag >>= 7;
 		} else {
-			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			if (putc(b, out) == EOF) {
+				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
+				exit(EXIT_FAILURE);
+			}
 			*fpos += 1;
 			break;
 		}
