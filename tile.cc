@@ -478,9 +478,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 						for (yo = 0; yo < span; yo++) {
 							int j = xo * span + yo;
 
-							long long bbox2[span * span];
+							long long bbox2[4];
 							int k;
-							for (k = 0; k < span * span; k++) {
+							for (k = 0; k < 4; k++) {
 								bbox2[k] = bbox[k];
 							}
 							if (z != 0) {
