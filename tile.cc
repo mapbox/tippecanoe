@@ -365,7 +365,23 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 		for (xo = 0; xo < span; xo++) {
 			for (yo = 0; yo < span; yo++) {
-				int j = xo * span + yo;
+				unsigned jx = tx * span + xo;
+				unsigned jy = ty * span + yo;
+
+				// j is the shard that the child tile's data is being written to.
+				//
+				// Be careful: We can't jump more zoom levels than MAX_ZOOM_INCREMENT
+				// because that could break the constraint that each of the children
+				// of the current tile must have its own shard, because the data for
+				// the child tile must be contiguous within the shard.
+				//
+				// But it's OK to spread children across all the shards, not just
+				// the four that would normally result from splitting one tile,
+				// because it will go through all the shards when it does the
+				// next zoom.
+
+				int j = ((jx & ((1 << MAX_ZOOM_INCREMENT) - 1)) << MAX_ZOOM_INCREMENT) |
+				        ((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
 
 				long long bbox2[4];
 				int k;
