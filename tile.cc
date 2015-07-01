@@ -363,8 +363,32 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
 
-		for (xo = 0; xo < span; xo++) {
-			for (yo = 0; yo < span; yo++) {
+		// Get the feature bounding box in pixel (256) coordinates at the child zoom
+		// in order to calculate which sub-tiles it can touch including the buffer.
+		long long bbox2[4];
+		int k;
+		for (k = 0; k < 4; k++) {
+			// Division instead of right-shift because coordinates can be negative
+			bbox2[k] = bbox[k] / (1 << (32 - nextzoom - 8));
+		}
+		bbox2[0] -= buffer;
+		bbox2[1] -= buffer;
+		bbox2[2] += buffer;
+		bbox2[3] += buffer;
+
+		for (k = 0; k < 4; k++) {
+			if (bbox2[k] < 0) {
+				bbox2[k] = 0;
+			}
+			if (bbox2[k] >= 256 * span) {
+				bbox2[k] = 256 * (span - 1);
+			}
+
+			bbox2[k] /= 256;
+		}
+
+		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
+			for (yo = bbox2[1]; yo <= bbox2[3]; yo++) {
 				unsigned jx = tx * span + xo;
 				unsigned jy = ty * span + yo;
 
@@ -383,26 +407,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 				int j = ((jx & ((1 << MAX_ZOOM_INCREMENT) - 1)) << MAX_ZOOM_INCREMENT) |
 				        ((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
 
-				long long bbox2[4];
-				int k;
-				for (k = 0; k < 4; k++) {
-					bbox2[k] = bbox[k];
-				}
-				if (z != 0) {
-					// Offset back to world-relative
-					bbox2[0] += tx << (32 - z);
-					bbox2[1] += ty << (32 - z);
-					bbox2[2] += tx << (32 - z);
-					bbox2[3] += ty << (32 - z);
-				}
-				// Offset to child tile-relative
-				bbox2[0] -= (tx * span + xo) << (32 - nextzoom);
-				bbox2[1] -= (ty * span + yo) << (32 - nextzoom);
-				bbox2[2] -= (tx * span + xo) << (32 - nextzoom);
-				bbox2[3] -= (ty * span + yo) << (32 - nextzoom);
-
-				int quick2 = quick_check(bbox2, nextzoom, line_detail, buffer);
-				if (quick2 != 0) {
+				{
 					if (!within[j]) {
 						serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
 						serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
