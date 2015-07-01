@@ -236,7 +236,7 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 		unsigned x;
 		for (x = 0; x < features[i].size(); x++) {
 			if (features[i][x].type == VT_LINE || features[i][x].type == VT_POLYGON) {
-				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type);
+				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
 			}
 
 			mapnik::vector::tile_feature *feature = layer->add_features();
@@ -546,7 +546,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					geom = clip_point(geom, z, line_detail, buffer);
 				}
 
-				geom = remove_noop(geom, t);
+				geom = remove_noop(geom, t, 0);
 			}
 
 			if (geom.size() > 0) {
@@ -620,6 +620,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 			if ((t == VT_LINE || t == VT_POLYGON) && !prevent['s' & 0xFF]) {
 				if (!reduced) {
+					if (t == VT_LINE) {
+						geom = remove_noop(geom, t, 32 - z - line_detail);
+					}
+
 					geom = simplify_lines(geom, z, line_detail);
 				}
 			}
@@ -701,7 +705,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 			for (x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
-					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type);
+					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
 				}
 			}

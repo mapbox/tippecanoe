@@ -84,7 +84,7 @@ void to_tile_scale(drawvec &geom, int z, int detail) {
 	}
 }
 
-drawvec remove_noop(drawvec geom, int type) {
+drawvec remove_noop(drawvec geom, int type, int shift) {
 	// first pass: remove empty linetos
 
 	long long x = 0, y = 0;
@@ -92,7 +92,7 @@ drawvec remove_noop(drawvec geom, int type) {
 	unsigned i;
 
 	for (i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_LINETO && geom[i].x == x && geom[i].y == y) {
+		if (geom[i].op == VT_LINETO && (geom[i].x >> shift) == x && (geom[i].y >> shift) == y) {
 			continue;
 		}
 
@@ -100,8 +100,8 @@ drawvec remove_noop(drawvec geom, int type) {
 			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
 			out.push_back(geom[i]);
-			x = geom[i].x;
-			y = geom[i].y;
+			x = geom[i].x >> shift;
+			y = geom[i].y >> shift;
 		}
 	}
 
@@ -137,7 +137,7 @@ drawvec remove_noop(drawvec geom, int type) {
 
 		for (i = 0; i < geom.size(); i++) {
 			if (geom[i].op == VT_MOVETO) {
-				if (i > 0 && geom[i - 1].op == VT_LINETO && geom[i - 1].x == geom[i].x && geom[i - 1].y == geom[i].y) {
+				if (i > 0 && geom[i - 1].op == VT_LINETO && (geom[i - 1].x >> shift) == (geom[i].x >> shift) && (geom[i - 1].y >> shift) == (geom[i].y >> shift)) {
 					continue;
 				}
 			}
