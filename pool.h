@@ -10,7 +10,7 @@ struct pool_val {
 };
 
 struct pool {
-	struct pool_val *vals;
+	struct pool_val **vals;
 
 	struct pool_val *head;
 	struct pool_val *tail;
