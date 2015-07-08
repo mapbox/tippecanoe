@@ -529,7 +529,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
 			if (progress != oprogress) {
-				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+				if (!quiet) {
+					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+				}
 				oprogress = progress;
 			}
 
@@ -748,7 +750,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			compress(s, compressed);
 
 			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
-				fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+				if (!quiet) {
+					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+				}
 
 				if (line_detail == min_detail || !evaluated) {
 					evaluated = true;
@@ -762,7 +766,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					// and probably actually varies based on how much duplicated metadata there is
 
 					fraction = fraction * 500000 / compressed.size() * 0.95;
-					fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
@@ -873,6 +879,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 	}
 
-	fprintf(stderr, "\n");
+	if (!quiet) {
+		fprintf(stderr, "\n");
+	}
 	return maxzoom;
 }
