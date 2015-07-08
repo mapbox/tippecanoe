@@ -78,7 +78,7 @@ it encounters.
 .IP \(bu 2
 \-m \fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 .IP \(bu 2
-\-b \fIpixels\fP: Buffer size where features are duplicated from adjacent tiles (default 5)
+\-b \fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
 .RE
 .SS Properties
 .RS
@@ -114,6 +114,8 @@ it encounters.
 \-pl: Let "dot" simplification apply to lines too
 .IP \(bu 2
 \-pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+.IP \(bu 2
+\-q: Work quietly instead of reporting progress
 .RE
 .SH Example
 .PP

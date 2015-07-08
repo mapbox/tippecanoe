@@ -31,5 +31,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 extern unsigned initial_x, initial_y;
 extern int geometry_scale;
+extern int quiet;
 
 #define MAX_ZOOM_INCREMENT 3
