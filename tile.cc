@@ -358,7 +358,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, signed char layer, long long metastart, signed char feature_minzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, signed char layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -394,7 +394,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 				// j is the shard that the child tile's data is being written to.
 				//
-				// Be careful: We can't jump more zoom levels than MAX_ZOOM_INCREMENT
+				// Be careful: We can't jump more zoom levels than max_zoom_increment
 				// because that could break the constraint that each of the children
 				// of the current tile must have its own shard, because the data for
 				// the child tile must be contiguous within the shard.
@@ -403,9 +403,13 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 				// the four that would normally result from splitting one tile,
 				// because it will go through all the shards when it does the
 				// next zoom.
+				//
+				// If child_shards is a power of 2 but not a power of 4, this will
+				// shard X more widely than Y. XXX Is there a better way to do this
+				// without causing collisions?
 
-				int j = ((jx & ((1 << MAX_ZOOM_INCREMENT) - 1)) << MAX_ZOOM_INCREMENT) |
-					((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
+			       int j = ((jx << max_zoom_increment) |
+				        ((jy & ((1 << max_zoom_increment) - 1)))) & (child_shards - 1);
 
 				{
 					if (!within[j]) {
@@ -447,7 +451,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, int child_shards) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -455,12 +459,23 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 	char *og = *geoms;
 
+	// XXX is there a way to do this without floating point?
+	int max_zoom_increment = log(child_shards) / log(4);
+	if (child_shards < 4 || max_zoom_increment < 1) {
+		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
+		exit(EXIT_FAILURE);
+	}
+	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
+		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
+		exit(EXIT_FAILURE);
+	}
+
 	int nextzoom = z + 1;
 	if (nextzoom < file_minzoom) {
-		if (z + MAX_ZOOM_INCREMENT > file_minzoom) {
+		if (z + max_zoom_increment > file_minzoom) {
 			nextzoom = file_minzoom;
 		} else {
-			nextzoom = z + MAX_ZOOM_INCREMENT;
+			nextzoom = z + max_zoom_increment;
 		}
 	}
 
@@ -502,8 +517,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			features.push_back(std::vector<coalesce>());
 		}
 
-		int within[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
-		long long geompos[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
+		int within[child_shards];
+		long long geompos[child_shards];
+		memset(within, '\0', sizeof(within));
+		memset(geompos, '\0', sizeof(geompos));
 
 		*geoms = og;
 
@@ -559,7 +576,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom);
+				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment);
 			}
 
 			if (z < file_minzoom) {
@@ -673,7 +690,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 		}
 
 		int j;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < child_shards; j++) {
 			if (within[j]) {
 				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
@@ -783,10 +800,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
 
-		FILE *sub[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
-		int subfd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
+		FILE *sub[TEMP_FILES];
+		int subfd[TEMP_FILES];
 		int j;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < TEMP_FILES; j++) {
 			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
@@ -805,11 +822,23 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		long long todo = 0;
 		long long along = 0;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
+			printf("%d", geom_size[j] != 0);
 		}
+		printf("\n");
 
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		// XXX Should be the number of temp files that have data,
+		// capped by the number of processor threads we can actually run
+		// or by the number of temp files divided by 4, or by
+		// some number larger than 4 if we are trying to skip zooms.
+		//
+		// Will need to be a power of 2 to make sharding come out right.
+		int threads = 1;
+
+		int thread = 0;
+
+		for (j = 0; j < TEMP_FILES; j++) {
 			if (geomfd[j] < 0) {
 				// only one source file for zoom level 0
 				continue;
@@ -839,10 +868,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub + thread * (TEMP_FILES / threads), minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, TEMP_FILES / threads);
 
 				if (len < 0) {
-					return i - 1;
+					return z - 1;
 				}
 
 				if (z == maxzoom && len > most) {
@@ -858,7 +887,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			along += geom_size[j];
 		}
 
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < TEMP_FILES; j++) {
 			close(geomfd[j]);
 			fclose(sub[j]);
 
