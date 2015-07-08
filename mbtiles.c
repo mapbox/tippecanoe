@@ -231,10 +231,6 @@ void mbtiles_close(sqlite3 *outdb, char **argv) {
 		fprintf(stderr, "%s: ANALYZE failed: %s\n", argv[0], err);
 		exit(EXIT_FAILURE);
 	}
-	if (sqlite3_exec(outdb, "VACUUM;", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: VACUUM failed: %s\n", argv[0], err);
-		exit(EXIT_FAILURE);
-	}
 	if (sqlite3_close(outdb) != SQLITE_OK) {
 		fprintf(stderr, "%s: could not close database: %s\n", argv[0], sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
