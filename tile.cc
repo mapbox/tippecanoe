@@ -405,7 +405,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 				// next zoom.
 
 				int j = ((jx & ((1 << MAX_ZOOM_INCREMENT) - 1)) << MAX_ZOOM_INCREMENT) |
-				        ((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
+					((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
 
 				{
 					if (!within[j]) {
@@ -876,4 +876,3 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 	fprintf(stderr, "\n");
 	return maxzoom;
 }
-
