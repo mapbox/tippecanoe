@@ -408,8 +408,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 				// shard X more widely than Y. XXX Is there a better way to do this
 				// without causing collisions?
 
-			       int j = ((jx << max_zoom_increment) |
-				        ((jy & ((1 << max_zoom_increment) - 1)))) & (child_shards - 1);
+				int j = ((jx << max_zoom_increment) |
+					 ((jy & ((1 << max_zoom_increment) - 1)))) &
+					(child_shards - 1);
 
 				{
 					if (!within[j]) {
