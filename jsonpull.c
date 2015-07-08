@@ -499,7 +499,6 @@ again:
 
 		json_object *s = add_object(j, JSON_STRING);
 		if (s != NULL) {
-			val.buf = realloc(val.buf, val.n + 1);
 			s->string = val.buf;
 			s->length = val.n;
 		} else {

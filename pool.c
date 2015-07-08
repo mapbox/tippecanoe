@@ -2,11 +2,23 @@
 #include <string.h>
 #include "pool.h"
 
-static struct pool_val *pool1(struct pool *p, char *s, int type, int (*compare)(const char *, const char *)) {
-	struct pool_val **v = &(p->vals);
+#define POOL_WIDTH 256
+
+static int hash(char *s) {
+	int h = 0;
+	for (; *s; s++) {
+		h = h * 37 + *s;
+	}
+	h = h & 0xFF;
+	return h;
+}
+
+struct pool_val *pool(struct pool *p, char *s, int type) {
+	int h = hash(s);
+	struct pool_val **v = &(p->vals[h]);
 
 	while (*v != NULL) {
-		int cmp = compare(s, (*v)->s);
+		int cmp = strcmp(s, (*v)->s);
 
 		if (cmp == 0) {
 			cmp = type - (*v)->type;
@@ -41,7 +53,8 @@ static struct pool_val *pool1(struct pool *p, char *s, int type, int (*compare)(
 }
 
 int is_pooled(struct pool *p, char *s, int type) {
-	struct pool_val **v = &(p->vals);
+	int h = hash(s);
+	struct pool_val **v = &(p->vals[h]);
 
 	while (*v != NULL) {
 		int cmp = strcmp(s, (*v)->s);
@@ -62,10 +75,6 @@ int is_pooled(struct pool *p, char *s, int type) {
 	return 0;
 }
 
-struct pool_val *pool(struct pool *p, char *s, int type) {
-	return pool1(p, s, type, strcmp);
-}
-
 void pool_free1(struct pool *p, void (*func)(void *)) {
 	while (p->head != NULL) {
 		if (func != NULL) {
@@ -79,6 +88,8 @@ void pool_free1(struct pool *p, void (*func)(void *)) {
 
 	p->head = NULL;
 	p->tail = NULL;
+
+	free(p->vals);
 	p->vals = NULL;
 }
 
@@ -92,7 +103,7 @@ void pool_free_strings(struct pool *p) {
 
 void pool_init(struct pool *p, int n) {
 	p->n = n;
-	p->vals = NULL;
+	p->vals = calloc(POOL_WIDTH, sizeof(struct pool_val *));
 	p->head = NULL;
 	p->tail = NULL;
 }

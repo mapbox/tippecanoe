@@ -75,11 +75,17 @@ void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fn
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
 			b |= 0x80;
-			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			if (putc(b, out) == EOF) {
+				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
+				exit(EXIT_FAILURE);
+			}
 			*fpos += 1;
 			zigzag >>= 7;
 		} else {
-			fwrite_check(&b, sizeof(unsigned char), 1, out, fname);
+			if (putc(b, out) == EOF) {
+				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
+				exit(EXIT_FAILURE);
+			}
 			*fpos += 1;
 			break;
 		}
@@ -954,14 +960,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-	int fd[4];
-	off_t size[4];
+	int fd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
+	off_t size[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
 
 	fd[0] = geomfd;
 	size[0] = geomst.st_size;
 
 	int j;
-	for (j = 1; j < 4; j++) {
+	for (j = 1; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
 		fd[j] = -1;
 		size[j] = 0;
 	}
