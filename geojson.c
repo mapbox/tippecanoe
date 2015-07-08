@@ -25,6 +25,7 @@
 int low_detail = 10;
 int full_detail = -1;
 int min_detail = 7;
+int quiet = 0;
 
 unsigned initial_x = 0, initial_y = 0;
 int geometry_scale = 0;
@@ -297,7 +298,9 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		along++;
 		long long report = 100 * along / nrec;
 		if (report != reported) {
-			fprintf(stderr, "Merging: %lld%%\r", report);
+			if (!quiet) {
+				fprintf(stderr, "Merging: %lld%%\r", report);
+			}
 			reported = report;
 		}
 	}
@@ -705,7 +708,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				}
 
 				if (seq % 10000 == 0) {
-					fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
+					if (!quiet) {
+						fprintf(stderr, "Read %.2f million features\r", seq / 1000000.0);
+					}
 				}
 				seq++;
 			}
@@ -794,7 +799,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 			*out = '\0';
 
-			printf("using layer %d name %s\n", i, trunc);
+			if (!quiet) {
+				printf("using layer %d name %s\n", i, trunc);
+			}
 		}
 	}
 
@@ -802,7 +809,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	{
 		int bytes = sizeof(struct index);
-		fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
+		if (!quiet) {
+			fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
+		}
 
 		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
@@ -821,7 +830,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			if (nmerges != 1) {
-				fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
+				if (!quiet) {
+					fprintf(stderr, "Sorting part %lld of %d\r", start / unit + 1, nmerges);
+				}
 			}
 
 			merges[start / unit].start = start;
@@ -853,7 +864,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (nmerges != 1) {
-			fprintf(stderr, "\n");
+			if (!quiet) {
+				fprintf(stderr, "\n");
+			}
 		}
 
 		void *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
@@ -927,7 +940,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			long long p = 1000 * i / (indexpos / sizeof(struct index));
 			if (p != progress) {
-				fprintf(stderr, "Reordering geometry: %3.1f%%\r", p / 10.0);
+				if (!quiet) {
+					fprintf(stderr, "Reordering geometry: %3.1f%%\r", p / 10.0);
+				}
 				progress = p;
 			}
 		}
@@ -972,7 +987,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		size[j] = 0;
 	}
 
-	fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
+	if (!quiet) {
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
+	}
 
 	int written = traverse_zooms(fd, size, meta, stringpool, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, full_detail, low_detail, min_detail);
 
@@ -1052,7 +1069,7 @@ int main(int argc, char **argv) {
 		prevent[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:v")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vq")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1117,6 +1134,10 @@ int main(int argc, char **argv) {
 
 		case 'g':
 			gamma = atof(optarg);
+			break;
+
+		case 'q':
+			quiet = 1;
 			break;
 
 		case 'p': {
