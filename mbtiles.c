@@ -228,11 +228,11 @@ void mbtiles_close(sqlite3 *outdb, char **argv) {
 	char *err;
 
 	if (sqlite3_exec(outdb, "ANALYZE;", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
+		fprintf(stderr, "%s: ANALYZE failed: %s\n", argv[0], err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "VACUUM;", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
+		fprintf(stderr, "%s: VACUUM failed: %s\n", argv[0], err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_close(outdb) != SQLITE_OK) {
