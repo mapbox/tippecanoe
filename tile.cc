@@ -899,66 +899,62 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 			here->next = *d;
 			*d = here;
-
-
-			printf("to do: ");
-
-			dispatch *a;
-			for (a = dispatch_head; a != NULL; a = a->next) {
-				printf("%lld ", a->todo);
-			}
-			printf("\n");
 		}
 
-		int thread = 0;
+		int thread;
+		for (thread = 0; thread < threads; thread++) {
+			struct task *task;
 
-		for (j = 0; j < TEMP_FILES; j++) {
-			if (geomfd[j] < 0) {
-				// only one source file for zoom level 0
-				continue;
-			}
-			if (geom_size[j] == 0) {
-				continue;
-			}
+			for (task = dispatches[thread].tasks; task != NULL; task = task->next) {
+				int j = task->fileno;
 
-			// printf("%lld of geom_size\n", (long long) geom_size[j]);
-
-			char *geom = (char *) mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
-			if (geom == MAP_FAILED) {
-				perror("mmap geom");
-				exit(EXIT_FAILURE);
-			}
-
-			char *geomstart = geom;
-			char *end = geom + geom_size[j];
-
-			while (geom < end) {
-				int z;
-				unsigned x, y;
-
-				deserialize_int(&geom, &z);
-				deserialize_uint(&geom, &x);
-				deserialize_uint(&geom, &y);
-
-				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
-
-				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub + thread * (TEMP_FILES / threads), minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, TEMP_FILES / threads);
-
-				if (len < 0) {
-					return z - 1;
+				if (geomfd[j] < 0) {
+					// only one source file for zoom level 0
+					continue;
+				}
+				if (geom_size[j] == 0) {
+					continue;
 				}
 
-				if (z == maxzoom && len > most) {
-					*midx = x;
-					*midy = y;
-					most = len;
-				}
-			}
+				// printf("%lld of geom_size\n", (long long) geom_size[j]);
 
-			if (munmap(geomstart, geom_size[j]) != 0) {
-				perror("munmap geom");
+				char *geom = (char *) mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
+				if (geom == MAP_FAILED) {
+					perror("mmap geom");
+					exit(EXIT_FAILURE);
+				}
+
+				char *geomstart = geom;
+				char *end = geom + geom_size[j];
+
+				while (geom < end) {
+					int z;
+					unsigned x, y;
+
+					deserialize_int(&geom, &z);
+					deserialize_uint(&geom, &x);
+					deserialize_uint(&geom, &y);
+
+					// fprintf(stderr, "%d/%u/%u\n", z, x, y);
+
+					long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub + thread * (TEMP_FILES / threads), minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, TEMP_FILES / threads);
+
+					if (len < 0) {
+						return z - 1;
+					}
+
+					if (z == maxzoom && len > most) {
+						*midx = x;
+						*midy = y;
+						most = len;
+					}
+				}
+
+				if (munmap(geomstart, geom_size[j]) != 0) {
+					perror("munmap geom");
+				}
+				along += geom_size[j];
 			}
-			along += geom_size[j];
 		}
 
 		for (j = 0; j < TEMP_FILES; j++) {
