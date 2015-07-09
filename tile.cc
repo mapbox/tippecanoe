@@ -827,21 +827,32 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			unlink(geomname);
 		}
 
+		int useful_threads = 0;
 		long long todo = 0;
 		long long along = 0;
 		for (j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
 			printf("%d", geom_size[j] != 0);
+			if (geom_size[j] > 0) {
+				useful_threads++;
+			}
 		}
 		printf("\n");
 
-		// XXX Should be the number of temp files that have data,
-		// capped by the number of processor threads we can actually run
-		// or by the number of temp files divided by 4, or by
-		// some number larger than 4 if we are trying to skip zooms.
-		//
-		// Will need to be a power of 2 to make sharding come out right.
-		int threads = 1;
+#define MAX_THREADS 20 // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
+
+		int threads = MAX_THREADS;
+		if (threads > TEMP_FILES / 4) {
+			threads = TEMP_FILES / 4;
+		}
+		// XXX is it useful to divide further if we know we are skipping
+		// some zoom levels? Is it faster to have fewer CPUs working on
+		// sharding, but more deeply, or fewer CPUs, less deeply?
+		if (threads > useful_threads) {
+			threads = useful_threads;
+		}
+		// Round down to a power of 2
+		threads = 1 << (int)(log(threads) / log(2));
 
 		int thread = 0;
 
