@@ -854,6 +854,62 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		// Round down to a power of 2
 		threads = 1 << (int)(log(threads) / log(2));
 
+		// Assign temporary files to threads
+
+		struct task {
+			int fileno;
+			struct task *next;
+		} tasks[TEMP_FILES];
+
+		struct dispatch {
+			struct task *tasks;
+			long long todo;
+			struct dispatch *next;
+		} dispatches[threads];
+		struct dispatch *dispatch_head = &dispatches[0];
+		for (j = 0; j < threads; j++) {
+			dispatches[j].tasks = NULL;
+			dispatches[j].todo = 0;
+			if (j + 1 < threads) {
+				dispatches[j].next = &dispatches[j + 1];
+			} else {
+				dispatches[j].next = NULL;
+			}
+		}
+
+		for (j = 0; j < TEMP_FILES; j++) {
+			if (geom_size[j] == 0) {
+				continue;
+			}
+
+			tasks[j].fileno = j;
+			tasks[j].next = dispatch_head->tasks;
+			dispatch_head->tasks = &tasks[j];
+			dispatch_head->todo += geom_size[j];
+
+			struct dispatch *here = dispatch_head;
+			dispatch_head = dispatch_head->next;
+
+			dispatch **d;
+			for (d = &dispatch_head; *d != NULL; d = &((*d)->next)) {
+				if (here->todo < (*d)->todo) {
+					break;
+				}
+			}
+
+			here->next = *d;
+			*d = here;
+
+
+			printf("to do: ");
+
+			dispatch *a;
+			for (a = dispatch_head; a != NULL; a = a->next) {
+				printf("%lld ", a->todo);
+			}
+			printf("\n");
+		}
+
 		int thread = 0;
 
 		for (j = 0; j < TEMP_FILES; j++) {
