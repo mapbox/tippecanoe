@@ -639,7 +639,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 							;
 						} else {
 							fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, jp->line, properties->keys[i]->string);
-							json_free(j);
 							continue;
 						}
 					}
