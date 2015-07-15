@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -26,6 +27,9 @@ extern "C" {
 }
 
 #define CMD_BITS 3
+
+#define XSTRINGIFY(s) STRINGIFY(s)
+#define STRINGIFY(s) #s
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const &input, std::string &output) {
@@ -793,7 +797,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int subfd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
 		int j;
 		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
-			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
+			char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX" XSTRINGIFY(INT_MAX)) + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
 			// printf("%s\n", geomname);
