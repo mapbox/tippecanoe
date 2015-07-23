@@ -802,6 +802,100 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 	return -1;
 }
 
+struct task {
+	int fileno;
+	struct task *next;
+} tasks[TEMP_FILES];
+
+struct write_tile_args {
+	struct task *tasks;
+	char *metabase;
+	char *stringpool;
+	unsigned *file_bbox;
+	int min_detail;
+	int basezoom;
+	struct pool **file_keys;
+	char **layernames;
+	sqlite3 *outdb;
+	double droprate;
+	int buffer;
+	const char *fname;
+	FILE **geomfile;
+	int file_minzoom;
+	int file_maxzoom;
+	double todo;
+	long long *along;
+	double gamma;
+	int nlayers;
+	char *prevent;
+	int child_shards;
+	int *geomfd;
+	off_t *geom_size;
+	unsigned *midx;
+	unsigned *midy;
+	int maxzoom;
+	int minzoom;
+	int full_detail;
+	int low_detail;
+	long long *most;
+};
+
+void run_thread(write_tile_args *arg) {
+	struct task *task;
+
+	for (task = arg->tasks; task != NULL; task = task->next) {
+		int j = task->fileno;
+
+		if (arg->geomfd[j] < 0) {
+			// only one source file for zoom level 0
+			continue;
+		}
+		if (arg->geom_size[j] == 0) {
+			continue;
+		}
+
+		// printf("%lld of geom_size\n", (long long) geom_size[j]);
+
+		char *geom = (char *) mmap(NULL, arg->geom_size[j], PROT_READ, MAP_PRIVATE, arg->geomfd[j], 0);
+		if (geom == MAP_FAILED) {
+			perror("mmap geom");
+			exit(EXIT_FAILURE);
+		}
+
+		char *geomstart = geom;
+		char *end = geom + arg->geom_size[j];
+
+		while (geom < end) {
+			int z;
+			unsigned x, y;
+
+			deserialize_int(&geom, &z);
+			deserialize_uint(&geom, &x);
+			deserialize_uint(&geom, &y);
+
+			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
+
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, arg->file_bbox, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, *arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->child_shards);
+
+			if (len < 0) {
+				return; // XXX how to report errors from threads?
+				// return z - 1;
+			}
+
+			if (z == arg->maxzoom && len > *arg->most) {
+				*arg->midx = x;
+				*arg->midy = y;
+				*arg->most = len;
+			}
+		}
+
+		if (munmap(geomstart, arg->geom_size[j]) != 0) {
+			perror("munmap geom");
+		}
+		*arg->along += arg->geom_size[j];
+	}
+}
+
 int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
@@ -856,11 +950,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		// Assign temporary files to threads
 
-		struct task {
-			int fileno;
-			struct task *next;
-		} tasks[TEMP_FILES];
-
 		struct dispatch {
 			struct task *tasks;
 			long long todo;
@@ -903,58 +992,43 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		int thread;
 		for (thread = 0; thread < threads; thread++) {
-			struct task *task;
+			write_tile_args args;
 
-			for (task = dispatches[thread].tasks; task != NULL; task = task->next) {
-				int j = task->fileno;
+			args.tasks = tasks;
+			args.metabase = metabase;
+			args.stringpool = stringpool;
+			args.file_bbox = file_bbox; // XXX locking
+			args.min_detail = min_detail;
+			args.basezoom = maxzoom; // XXX rename?
+			args.file_keys = file_keys; // XXX locking
+			args.layernames = layernames;
+			args.outdb = outdb; // XXX locking
+			args.droprate = droprate;
+			args.buffer = buffer;
+			args.fname = fname;
+			args.geomfile = sub + thread * (TEMP_FILES / threads);
+			args.file_minzoom = minzoom;
+			args.file_maxzoom = maxzoom;
+			args.todo = todo;
+			args.along = &along; // XXX locking
+			args.gamma = gamma;
+			args.nlayers = nlayers;
+			args.prevent = prevent;
+			args.child_shards = TEMP_FILES / threads;
 
-				if (geomfd[j] < 0) {
-					// only one source file for zoom level 0
-					continue;
-				}
-				if (geom_size[j] == 0) {
-					continue;
-				}
+			args.geomfd = geomfd;
+			args.geom_size = geom_size;
+			args.midx = midx; // XXX locking
+			args.midy = midy; // XXX locking
+			args.maxzoom = maxzoom;
+			args.minzoom = minzoom;
+			args.full_detail = full_detail;
+			args.low_detail = low_detail;
+			args.most = &most; // XXX locking
 
-				// printf("%lld of geom_size\n", (long long) geom_size[j]);
+			args.tasks = dispatches[thread].tasks;
 
-				char *geom = (char *) mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
-				if (geom == MAP_FAILED) {
-					perror("mmap geom");
-					exit(EXIT_FAILURE);
-				}
-
-				char *geomstart = geom;
-				char *end = geom + geom_size[j];
-
-				while (geom < end) {
-					int z;
-					unsigned x, y;
-
-					deserialize_int(&geom, &z);
-					deserialize_uint(&geom, &x);
-					deserialize_uint(&geom, &y);
-
-					// fprintf(stderr, "%d/%u/%u\n", z, x, y);
-
-					long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub + thread * (TEMP_FILES / threads), minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, TEMP_FILES / threads);
-
-					if (len < 0) {
-						return z - 1;
-					}
-
-					if (z == maxzoom && len > most) {
-						*midx = x;
-						*midy = y;
-						most = len;
-					}
-				}
-
-				if (munmap(geomstart, geom_size[j]) != 0) {
-					perror("munmap geom");
-				}
-				along += geom_size[j];
-			}
+			run_thread(&args);
 		}
 
 		for (j = 0; j < TEMP_FILES; j++) {
