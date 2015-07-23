@@ -994,7 +994,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		for (thread = 0; thread < threads; thread++) {
 			write_tile_args args;
 
-			args.tasks = tasks;
 			args.metabase = metabase;
 			args.stringpool = stringpool;
 			args.file_bbox = file_bbox; // XXX locking
