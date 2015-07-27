@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "pool.h"
@@ -34,6 +35,10 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 	}
 
 	*v = malloc(sizeof(struct pool_val));
+	if (*v == NULL) {
+		fprintf(stderr, "out of memory making string pool\n");
+		exit(EXIT_FAILURE);
+	}
 	(*v)->left = NULL;
 	(*v)->right = NULL;
 	(*v)->next = NULL;
@@ -104,6 +109,10 @@ void pool_free_strings(struct pool *p) {
 void pool_init(struct pool *p, int n) {
 	p->n = n;
 	p->vals = calloc(POOL_WIDTH, sizeof(struct pool_val *));
+	if (p->vals == NULL) {
+		fprintf(stderr, "out of memory creating string pool\n");
+		exit(EXIT_FAILURE);
+	}
 	p->head = NULL;
 	p->tail = NULL;
 }
