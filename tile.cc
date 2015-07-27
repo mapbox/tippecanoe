@@ -362,7 +362,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, signed char layer, long long metastart, signed char feature_minzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -428,7 +428,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 					// printf("type %d, meta %lld\n", t, metastart);
 					serialize_byte(geomfile[j], t, &geompos[j], fname);
-					serialize_byte(geomfile[j], layer, &geompos[j], fname);
+					serialize_long_long(geomfile[j], layer, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x, wy = initial_y;
 
@@ -518,8 +518,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				break;
 			}
 
-			signed char layer;
-			deserialize_byte(geoms, &layer);
+			long long layer;
+			deserialize_long_long(geoms, &layer);
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
