@@ -187,10 +187,29 @@ If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
 .SH Development
 .PP
-Requires protoc (\fB\fCbrew install protobuf\fR or
-\fB\fCapt\-get install libprotobuf\-dev\fR and \fB\fCprotobuf\-compiler\fR),
-\fB\fCmd2man\fR (\fB\fCgem install md2man\fR), and sqlite3 (\fB\fCapt\-get install libsqlite3\-dev\fR).
-To build:
+Requires protoc and sqlite3. Rebuilding the manpage
+uses md2man (\fB\fCgem install md2man\fR).
+.PP
+MacOS:
+.PP
+.RS
+.nf
+brew install protobuf
+brew install sqlite
+.fi
+.RE
+.PP
+Linux:
+.PP
+.RS
+.nf
+sudo apt\-get install libprotobuf\-dev
+sudo apt\-get install protobuf\-compiler
+sudo apt\-get install libsqlite3\-dev
+.fi
+.RE
+.PP
+Then build:
 .PP
 .RS
 .nf
@@ -212,4 +231,4 @@ Check out some examples of maps made with tippecanoe
 .SH Name
 .PP
 The name is a joking reference
-\[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to making tiles.
+\[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.

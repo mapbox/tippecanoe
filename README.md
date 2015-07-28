@@ -165,10 +165,21 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires protoc (`brew install protobuf` or
-`apt-get install libprotobuf-dev` and `protobuf-compiler`),
-`md2man` (`gem install md2man`), and sqlite3 (`apt-get install libsqlite3-dev`).
-To build:
+Requires protoc and sqlite3. Rebuilding the manpage
+uses md2man (`gem install md2man`).
+
+MacOS:
+
+    brew install protobuf
+    brew install sqlite
+
+Linux:
+
+    sudo apt-get install libprotobuf-dev
+    sudo apt-get install protobuf-compiler
+    sudo apt-get install libsqlite3-dev
+
+Then build:
 
     make
 
@@ -184,4 +195,4 @@ Check out [some examples of maps made with tippecanoe](MADE_WITH.md)
 Name
 ----
 
-The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too) to making tiles.
+The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too) to a "tiler" for making map tiles.
