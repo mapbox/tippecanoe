@@ -171,7 +171,6 @@ uses md2man (`gem install md2man`).
 MacOS:
 
     brew install protobuf
-    brew install sqlite
 
 Linux:
 

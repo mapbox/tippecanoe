@@ -1,7 +1,9 @@
 PREFIX ?= /usr/local
 MANDIR ?= /usr/share/man/man1/
 
-all: tippecanoe enumerate decode man/tippecanoe.1
+all: tippecanoe enumerate decode
+
+docs: man/tippecanoe.1
 
 install: tippecanoe
 	mkdir -p $(PREFIX)/bin
