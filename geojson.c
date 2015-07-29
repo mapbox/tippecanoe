@@ -1,3 +1,7 @@
+#ifdef MTRACE
+	#include <mcheck.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -1043,6 +1047,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 }
 
 int main(int argc, char **argv) {
+#ifdef MTRACE
+	mtrace();
+#endif
+
 	extern int optind;
 	extern char *optarg;
 	int i;
@@ -1190,5 +1198,10 @@ int main(int argc, char **argv) {
 	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent);
 
 	mbtiles_close(outdb, argv);
+
+#ifdef MTRACE
+	muntrace();
+#endif
+
 	return ret;
 }

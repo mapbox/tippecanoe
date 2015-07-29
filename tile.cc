@@ -780,6 +780,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				return count;
 			}
 		} else {
+			int i;
+			for (i = 0; i < nlayers; i++) {
+				pool_free(&keys1[i]);
+				pool_free(&values1[i]);
+			}
+
 			return count;
 		}
 	}
