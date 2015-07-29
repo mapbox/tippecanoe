@@ -1,4 +1,4 @@
-#ifdef MEMTRACE
+#ifdef MTRACE
 	#include <mcheck.h>
 #endif
 
