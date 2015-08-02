@@ -146,6 +146,32 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		}
 	}
 
+	// remove degenerate polygons
+
+	if (type == VT_POLYGON) {
+		geom = out;
+		out.resize(0);
+
+		for (i = 0; i < geom.size(); i++) {
+			if (geom[i].op == VT_MOVETO) {
+				if (i + 1 < geom.size() && (geom[i + 1].op == VT_MOVETO || geom[i + 1].op == VT_CLOSEPATH)) {
+					i += 1;
+					continue; // no lineto
+				}
+				if (i + 2 < geom.size() && (geom[i + 2].op == VT_MOVETO || geom[i + 2].op == VT_CLOSEPATH)) {
+					i += 2;
+					continue; // just one lineto
+				}
+				if (i + 3 < geom.size() && (geom[i + 3].op == VT_MOVETO)) {
+					i += 3;
+					continue; // just two linetos. two linetos and a closepath is ok
+				}
+			}
+
+			out.push_back(geom[i]);
+		}
+	}
+
 	return out;
 }
 
