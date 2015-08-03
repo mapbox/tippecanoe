@@ -51,6 +51,16 @@ int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
 }
 
+void out(const char *s) {
+	for (; *s; s++) {
+		if (*s == ':' || *s == '=') {
+			putchar('_');
+		} else {
+			putchar(*s);
+		}
+	}
+}
+
 void handle(std::string message, int z, unsigned x, unsigned y) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -76,6 +86,8 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 		for (int f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
 			int px = 0, py = 0;
+			int within = 0;
+			double startlat = 0, startlon = 0;
 
 			for (int g = 0; g < feat.geometry_size(); g++) {
 				uint32_t geom = feat.geometry(g);
@@ -84,8 +96,33 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 
 				if (op == 1 || op == 2) {
 					if (op == 1) {
-						printf("\n");
+						if (feat.type() == 3) {
+							if (g == 0) {
+								printf("outer ");
+							} else {
+								printf("\ninner ");
+							}
+
+							for (int m = 0; m + 1 < feat.tags_size(); m += 2) {
+								int k = feat.tags(m);
+								int v = feat.tags(m + 1);
+
+								out(layer.keys(k).c_str());
+								printf("=");
+								mapnik::vector::tile_value const &value = layer.values(v);
+								if (value.has_string_value()) {
+									out(value.string_value().c_str());
+								}
+
+								printf(" ");
+							}
+
+							printf(": ");
+						} else {
+							printf("\n");
+						}
 					}
+
 
 					for (unsigned k = 0; k < count; k++) {
 						px += dezig(feat.geometry(g + 1));
@@ -99,9 +136,28 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 						double lat, lon;
 						tile2latlon(wx, wy, 32, &lat, &lon);
 						printf("%f,%f ", lat, lon);
+
+						if (op == 1) {
+							startlat = lat;
+							startlon = lon;
+						}
 					}
 				}
 			}
+
+
+#if 0
+			printf(": ");
+
+			for (int m = 0; m + 1 < feat.tags_size(); m += 2) {
+				int k = feat.tags(m);
+				int v = feat.tags(m + 1);
+
+				printf("%s ", layer.keys(k).c_str());
+			}
+#endif
+
+			printf("\n");
 		}
 	}
 }
