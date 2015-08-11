@@ -689,9 +689,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (j->type == JSON_HASH) {
 				found_hashes++;
 
-				if (0 && found_hashes == 50 && found_features == 0) {
-					fprintf(stderr, "%s:%d: Not finding any GeoJSON features in input. Is your file just bare geometries?\n", reading, jp->line);
-					break;
+				if (found_hashes == 50 && found_features == 0) {
+					fprintf(stderr, "%s:%d: Not finding any GeoJSON features in input after 50 objects. Is your file just bare geometries?\n", reading, jp->line);
 				}
 			}
 
