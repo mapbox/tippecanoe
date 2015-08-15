@@ -143,7 +143,7 @@ I don't know why 2.5 is the appropriate number, but the densities of many differ
 data sets fall off at about this same rate. You can use -r to specify a different rate.
 
 You can use the gamma option to thin out especially dense clusters of points.
-For any area that where dots are closer than one pixel together (at whatever zoom level),
+For any area where dots are closer than one pixel together (at whatever zoom level),
 a gamma of 3, for example, will reduce these clusters to the cube root of their original density.
 
 For line features, it drops any features that are too small to draw at all.
