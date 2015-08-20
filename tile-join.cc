@@ -52,7 +52,7 @@ int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool *file_keys) {
+void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -79,6 +79,23 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool *fil
 		outlayer->set_version(layer.version());
 		outlayer->set_extent(layer.extent());
 
+		const char *ln = layer.name().c_str();
+
+		int ll;
+		for (ll = 0; ll < *nlayers; ll++) {
+			if (strcmp((*layernames)[ll], ln) == 0) {
+				break;
+			}
+		}
+		if (ll == *nlayers) {
+			*file_keys = (struct pool *) realloc(*file_keys, (ll + 1) * sizeof(struct pool));
+			*layernames = (char **) realloc(*layernames, (ll + 1) * sizeof(char *));
+
+			pool_init(file_keys[ll], 0);
+			(*layernames)[ll] = strdup(ln);
+			*nlayers = ll + 1;
+		}
+
 		for (int f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
 			mapnik::vector::tile_feature *outfeature = outlayer->add_features();
@@ -92,7 +109,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool *fil
 	}
 }
 
-void decode(char *fname, char *map, struct pool *file_keys) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -118,7 +135,7 @@ void decode(char *fname, char *map, struct pool *file_keys) {
 
 		printf("found %lld/%lld/%lld\n", zoom, x, y);
 
-		handle(std::string(s, len), zoom, x, y, file_keys);
+		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers);
 	}
 
 	sqlite3_finalize(stmt);
@@ -161,12 +178,15 @@ int main(int argc, char **argv) {
 		usage(argv);
 	}
 
-	struct pool file_keys;
-	pool_init(&file_keys, 0);
+	struct pool *file_keys = NULL;
+	char **layernames = NULL;
+	int nlayers = 0;
 
-	decode(argv[optind], argv[optind + 1], &file_keys);
+	decode(argv[optind], argv[optind + 1], &file_keys, &layernames, &nlayers);
 
-	pool_free(&file_keys);
+	for (i = 0; i < nlayers; i++) {
+		printf("%s\n", layernames[i]);
+	}
 
 	return 0;
 }
