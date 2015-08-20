@@ -53,11 +53,35 @@ inline int decompress(std::string const &input, std::string &output) {
 	return 1;
 }
 
-int dezig(unsigned n) {
-	return (n >> 1) ^ (-(n & 1));
+// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
+static inline int compress(std::string const &input, std::string &output) {
+	z_stream deflate_s;
+	deflate_s.zalloc = Z_NULL;
+	deflate_s.zfree = Z_NULL;
+	deflate_s.opaque = Z_NULL;
+	deflate_s.avail_in = 0;
+	deflate_s.next_in = Z_NULL;
+	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
+	deflate_s.next_in = (Bytef *) input.data();
+	deflate_s.avail_in = input.size();
+	size_t length = 0;
+	do {
+		size_t increase = input.size() / 2 + 1024;
+		output.resize(length + increase);
+		deflate_s.avail_out = increase;
+		deflate_s.next_out = (Bytef *) (output.data() + length);
+		int ret = deflate(&deflate_s, Z_FINISH);
+		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
+			return -1;
+		}
+		length += (increase - deflate_s.avail_out);
+	} while (deflate_s.avail_out == 0);
+	deflateEnd(&deflate_s);
+	output.resize(length);
+	return 0;
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers) {
+void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -175,12 +199,36 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			}
 		}
 
+		struct pool_val *pv;
+		for (pv = keys.head; pv != NULL; pv = pv->next) {
+			outlayer->add_keys(pv->s, strlen(pv->s));
+		}
+		for (pv = values.head; pv != NULL; pv = pv->next) {
+			mapnik::vector::tile_value *tv = outlayer->add_values();
+
+			if (pv->type == VT_NUMBER) {
+				tv->set_double_value(atof(pv->s));
+			} else if (pv->type == VT_BOOLEAN) {
+				tv->set_bool_value(pv->s[0] == 't');
+			} else {
+				tv->set_string_value(pv->s);
+			}
+		}
+
 		pool_free_strings(&keys);
 		pool_free_strings(&values);
 	}
+
+	std::string s;
+	std::string compressed;
+
+	outtile.SerializeToString(&s);
+	compress(s, compressed);
+
+	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -204,9 +252,9 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 		int len = sqlite3_column_bytes(stmt, 3);
 		const char *s = (const char *) sqlite3_column_blob(stmt, 3);
 
-		printf("%lld/%lld/%lld   \r", zoom, x, y);
+		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
 
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers);
+		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb);
 	}
 
 	sqlite3_finalize(stmt);
@@ -259,7 +307,7 @@ int main(int argc, char **argv) {
 	char **layernames = NULL;
 	int nlayers = 0;
 
-	decode(argv[optind], argv[optind + 1], &file_keys, &layernames, &nlayers);
+	decode(argv[optind], argv[optind + 1], &file_keys, &layernames, &nlayers, outdb);
 
 	for (i = 0; i < nlayers; i++) {
 		printf("%s\n", layernames[i]);
