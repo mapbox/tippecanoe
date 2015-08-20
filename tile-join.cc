@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include <vector>
 #include <string>
+#include <map>
 #include <zlib.h>
 #include <math.h>
 #include "vector_tile.pb.h"
@@ -88,7 +90,7 @@ static inline int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb) {
+void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -244,7 +246,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -270,7 +272,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
 
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb);
+		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping);
 	}
 
 	sqlite3_finalize(stmt);
@@ -313,10 +315,65 @@ void usage(char **argv) {
 	exit(EXIT_FAILURE);
 }
 
+#define MAXLINE 10000 /* XXX */
+
+std::vector<std::string> split(char *s) {
+	std::vector<std::string> ret;
+
+	while (*s && *s != '\n') {
+		char *start = s;
+		int within = 0;
+
+		for (; *s && *s != '\n'; s++) {
+			if (*s == '"') {
+				within = !within;
+			}
+
+			if (*s == ',' && !within) {
+				break;
+			}
+		}
+
+		std::string v = std::string(start, s - start);
+		ret.push_back(v);
+
+		if (*s == ',') {
+			s++;
+		}
+	}
+
+	return ret;
+}
+
+void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
+	FILE *f = fopen(fn, "r");
+	if (f == NULL) {
+		perror(fn);
+		exit(EXIT_FAILURE);
+	}
+
+	char s[MAXLINE];
+	if (fgets(s, MAXLINE, f)) {
+		header = split(s);
+	}
+	while (fgets(s, MAXLINE, f)) {
+		std::vector<std::string> line = split(s);
+
+		for (int i = 0; i < line.size() && i < header.size(); i++) {
+			mapping.insert(std::pair<std::string, std::vector<std::string> >(line[0], line));
+		}
+	}
+
+	fclose(f);
+}
+
 int main(int argc, char **argv) {
 	char *outfile = NULL;
 	char *csv = NULL;
 	int force = 0;
+
+	std::vector<std::string> header;
+	std::map<std::string, std::vector<std::string> > mapping;
 
 	extern int optind;
 	extern char *optarg;
@@ -333,7 +390,13 @@ int main(int argc, char **argv) {
 				break;
 
 			case 'c':
+				if (csv != NULL) {
+					fprintf(stderr, "Only one -c for now\n");
+					exit(EXIT_FAILURE);
+				}
+
 				csv = optarg;
+				readcsv(csv, header, mapping);
 				break;
 
 			default:
@@ -358,7 +421,7 @@ int main(int argc, char **argv) {
 	int nlayers = 0;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st);
+		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping);
 	}
 
 	for (i = 0; i < nlayers; i++) {
