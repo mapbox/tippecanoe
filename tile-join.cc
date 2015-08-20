@@ -120,7 +120,16 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			*file_keys = (struct pool *) realloc(*file_keys, (ll + 1) * sizeof(struct pool));
 			*layernames = (char **) realloc(*layernames, (ll + 1) * sizeof(char *));
 
-			pool_init(file_keys[ll], 0);
+			if (*file_keys == NULL) {
+				perror("realloc file_keys");
+				exit(EXIT_FAILURE);
+			}
+			if (*layernames == NULL) {
+				perror("realloc layernames");
+				exit(EXIT_FAILURE);
+			}
+
+			pool_init(&((*file_keys)[ll]), 0);
 			(*layernames)[ll] = strdup(ln);
 			*nlayers = ll + 1;
 		}
@@ -175,8 +184,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					continue;
 				}
 
-				if (!is_pooled(file_keys[ll], key, type)) {
-					pool(file_keys[ll], strdup(key), type);
+				if (!is_pooled(&((*file_keys)[ll]), key, type)) {
+					pool(&((*file_keys)[ll]), strdup(key), type);
 				}
 
 				struct pool_val *k, *v;
@@ -266,19 +275,20 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] -o new.mbtiles source.mbtiles map.csv\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv) {
 	char *outfile = NULL;
+	char *csv = NULL;
 	int force = 0;
 
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:")) != -1) {
 		switch (i) {
 			case 'o':
 				outfile = optarg;
@@ -288,12 +298,16 @@ int main(int argc, char **argv) {
 				force = 1;
 				break;
 
+			case 'c':
+				csv = optarg;
+				break;
+
 			default:
 				usage(argv);
 		}
 	}
 
-	if (argc != optind + 2 || outfile == NULL) {
+	if (argc - optind < 1 || outfile == NULL) {
 		usage(argv);
 	}
 
@@ -307,13 +321,20 @@ int main(int argc, char **argv) {
 	char **layernames = NULL;
 	int nlayers = 0;
 
-	decode(argv[optind], argv[optind + 1], &file_keys, &layernames, &nlayers, outdb);
+	for (i = optind; i < argc; i++) {
+		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb);
+	}
 
 	for (i = 0; i < nlayers; i++) {
 		printf("%s\n", layernames[i]);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, 0, 0, 0, 0, 0, 0, 0, 0, &file_keys, nlayers);
+	struct pool *fk[nlayers];
+	for (i = 0; i < nlayers; i++) {
+		fk[i] = &(file_keys[i]);
+	}
+
+	mbtiles_write_metadata(outdb, outfile, layernames, 0, 0, 0, 0, 0, 0, 0, 0, fk, nlayers);
 	mbtiles_close(outdb, argv);
 
 	return 0;
