@@ -21,4 +21,4 @@ struct pool_val *pool(struct pool *p, char *s, int type);
 void pool_free(struct pool *p);
 void pool_free_strings(struct pool *p);
 void pool_init(struct pool *p, int n);
-int is_pooled(struct pool *p, char *s, int type);
+int is_pooled(struct pool *p, const char *s, int type);

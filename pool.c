@@ -5,7 +5,7 @@
 
 #define POOL_WIDTH 256
 
-static int hash(char *s) {
+static int hash(const char *s) {
 	int h = 0;
 	for (; *s; s++) {
 		h = h * 37 + *s;
@@ -57,7 +57,7 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 	return *v;
 }
 
-int is_pooled(struct pool *p, char *s, int type) {
+int is_pooled(struct pool *p, const char *s, int type) {
 	int h = hash(s);
 	struct pool_val **v = &(p->vals[h]);
 

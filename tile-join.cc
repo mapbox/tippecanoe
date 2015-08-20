@@ -1,3 +1,6 @@
+// for vasprintf() on Linux
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,6 +9,7 @@
 #include <zlib.h>
 #include <math.h>
 #include "vector_tile.pb.h"
+#include "tile.h"
 
 extern "C" {
 #include "projection.h"
@@ -104,6 +108,50 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 			for (int g = 0; g < feat.geometry_size(); g++) {
 				outfeature->add_geometry(feat.geometry(g));
+			}
+
+			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
+				if (feat.tags(t) >= layer.keys_size() || feat.tags(t + 1) >= layer.values_size()) {
+					printf("out of range: %d=%d\n", feat.tags(t), feat.tags(t + 1));
+					continue;
+				}
+
+				const char *key = layer.keys(feat.tags(t)).c_str();
+				mapnik::vector::tile_value const &val = layer.values(feat.tags(t + 1));
+				char *value;
+				int type;
+
+				if (val.has_string_value()) {
+					value = strdup(val.string_value().c_str());
+					type = VT_STRING;
+				} else if (val.has_int_value()) {
+					asprintf(&value, "%lld", val.int_value());
+					type = VT_NUMBER;
+				} else if (val.has_double_value()) {
+					asprintf(&value, "%g", val.double_value());
+					type = VT_NUMBER;
+				} else if (val.has_float_value()) {
+					asprintf(&value, "%g", val.float_value());
+					type = VT_NUMBER;
+				} else if (val.has_bool_value()) {
+					asprintf(&value, "%s", val.bool_value() ? "true" : "false");
+					type = VT_BOOLEAN;
+				} else if (val.has_sint_value()) {
+					asprintf(&value, "%lld", val.sint_value());
+					type = VT_NUMBER;
+				} else if (val.has_uint_value()) {
+					asprintf(&value, "%llu", val.uint_value());
+					type = VT_NUMBER;
+				} else {
+					continue;
+				}
+
+				if (!is_pooled(file_keys[ll], key, type)) {
+					pool(file_keys[ll], strdup(key), type);
+				}
+
+				printf("%d: %s=%s\n", type, key, value);
+				free(value);
 			}
 		}
 	}
