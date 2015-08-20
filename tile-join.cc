@@ -17,6 +17,13 @@ extern "C" {
 #include "mbtiles.h"
 }
 
+struct stats {
+	int minzoom;
+	int maxzoom;
+	double midlat, midlon;
+	double minlat, minlon, maxlat, maxlon;
+};
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 inline bool is_compressed(std::string const &data) {
 	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
@@ -237,7 +244,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -267,6 +274,33 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 	}
 
 	sqlite3_finalize(stmt);
+
+	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			st->minzoom = sqlite3_column_int(stmt, 0);
+		}
+		sqlite3_finalize(stmt);
+	}
+	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			st->maxzoom = sqlite3_column_int(stmt, 0);
+		}
+		sqlite3_finalize(stmt);
+	}
+	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'center'", -1, &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			const unsigned char *s = sqlite3_column_text(stmt, 0);
+			sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+		}
+		sqlite3_finalize(stmt);
+	}
+	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'bounds'", -1, &stmt, NULL) == SQLITE_OK) {
+		if (sqlite3_step(stmt) == SQLITE_ROW) {
+			const unsigned char *s = sqlite3_column_text(stmt, 0);
+			sscanf((char *) s, "%lf,%lf,%lf,%lf", &st->minlon, &st->minlat, &st->maxlon, &st->maxlat);
+		}
+		sqlite3_finalize(stmt);
+	}
 
 	if (sqlite3_close(db) != SQLITE_OK) {
 		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
@@ -316,13 +350,15 @@ int main(int argc, char **argv) {
 	}
 
 	sqlite3 *outdb = mbtiles_open(outfile, argv);
+	struct stats st;
+	memset(&st, 0, sizeof(st));
 
 	struct pool *file_keys = NULL;
 	char **layernames = NULL;
 	int nlayers = 0;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb);
+		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st);
 	}
 
 	for (i = 0; i < nlayers; i++) {
@@ -334,7 +370,7 @@ int main(int argc, char **argv) {
 		fk[i] = &(file_keys[i]);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, 0, 0, 0, 0, 0, 0, 0, 0, fk, nlayers);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers);
 	mbtiles_close(outdb, argv);
 
 	return 0;
