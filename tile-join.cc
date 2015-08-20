@@ -309,7 +309,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] -o new.mbtiles source.mbtiles\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -341,7 +341,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (argc - optind < 1 || outfile == NULL) {
+	if (argc - optind != 1 || outfile == NULL) {
 		usage(argv);
 	}
 
