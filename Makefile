@@ -33,7 +33,7 @@ enumerate: enumerate.o
 decode: decode.o vector_tile.pb.o projection.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
-tile-join: tile-join.o vector_tile.pb.o projection.o pool.o
+tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o

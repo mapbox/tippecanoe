@@ -14,6 +14,7 @@
 extern "C" {
 #include "projection.h"
 #include "pool.h"
+#include "mbtiles.h"
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -170,8 +171,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 				outfeature->add_tags(k->n);
 				outfeature->add_tags(v->n);
-
-				printf("%d: %s=%s  %d=%d\n", type, key, value, k->n, v->n);
 				free(value);
 			}
 		}
@@ -205,7 +204,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 		int len = sqlite3_column_bytes(stmt, 3);
 		const char *s = (const char *) sqlite3_column_blob(stmt, 3);
 
-		printf("found %lld/%lld/%lld\n", zoom, x, y);
+		printf("%lld/%lld/%lld   \r", zoom, x, y);
 
 		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers);
 	}
@@ -250,6 +249,12 @@ int main(int argc, char **argv) {
 		usage(argv);
 	}
 
+	if (force) {
+		unlink(outfile);
+	}
+
+	sqlite3 *outdb = mbtiles_open(outfile, argv);
+
 	struct pool *file_keys = NULL;
 	char **layernames = NULL;
 	int nlayers = 0;
@@ -259,6 +264,9 @@ int main(int argc, char **argv) {
 	for (i = 0; i < nlayers; i++) {
 		printf("%s\n", layernames[i]);
 	}
+
+	mbtiles_write_metadata(outdb, outfile, layernames, 0, 0, 0, 0, 0, 0, 0, 0, &file_keys, nlayers);
+	mbtiles_close(outdb, argv);
 
 	return 0;
 }
