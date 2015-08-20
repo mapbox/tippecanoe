@@ -1,5 +1,5 @@
 struct pool_val {
-	char *s;
+	const char *s;
 	int type;
 	int n;
 
@@ -17,7 +17,7 @@ struct pool {
 	int n;
 };
 
-struct pool_val *pool(struct pool *p, char *s, int type);
+struct pool_val *pool(struct pool *p, const char *s, int type);
 void pool_free(struct pool *p);
 void pool_free_strings(struct pool *p);
 void pool_init(struct pool *p, int n);

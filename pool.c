@@ -14,7 +14,7 @@ static int hash(const char *s) {
 	return h;
 }
 
-struct pool_val *pool(struct pool *p, char *s, int type) {
+struct pool_val *pool(struct pool *p, const char *s, int type) {
 	int h = hash(s);
 	struct pool_val **v = &(p->vals[h]);
 
@@ -83,7 +83,7 @@ int is_pooled(struct pool *p, const char *s, int type) {
 void pool_free1(struct pool *p, void (*func)(void *)) {
 	while (p->head != NULL) {
 		if (func != NULL) {
-			func(p->head->s);
+			func((void *) p->head->s);
 		}
 
 		struct pool_val *next = p->head->next;

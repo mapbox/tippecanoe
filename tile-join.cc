@@ -100,6 +100,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			*nlayers = ll + 1;
 		}
 
+		struct pool keys, values;
+		pool_init(&keys, 0);
+		pool_init(&values, 0);
+
 		for (int f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
 			mapnik::vector::tile_feature *outfeature = outlayer->add_features();
@@ -150,10 +154,30 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					pool(file_keys[ll], strdup(key), type);
 				}
 
-				printf("%d: %s=%s\n", type, key, value);
+				struct pool_val *k, *v;
+
+				if (is_pooled(&keys, key, VT_STRING)) {
+					k = pool(&keys, key, VT_STRING);
+				} else {
+					k = pool(&keys, strdup(key), VT_STRING);
+				}
+
+				if (is_pooled(&values, value, type)) {
+					v = pool(&values, value, type);
+				} else {
+					v = pool(&values, strdup(value), type);
+				}
+
+				outfeature->add_tags(k->n);
+				outfeature->add_tags(v->n);
+
+				printf("%d: %s=%s  %d=%d\n", type, key, value, k->n, v->n);
 				free(value);
 			}
 		}
+
+		pool_free_strings(&keys);
+		pool_free_strings(&values);
 	}
 }
 
