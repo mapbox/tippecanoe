@@ -292,6 +292,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	outtile.SerializeToString(&s);
 	compress(s, compressed);
 
+	if (compressed.size() > 500000) {
+		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());
+		return;
+	}
+
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
