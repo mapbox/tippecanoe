@@ -19,6 +19,8 @@ extern "C" {
 #include "mbtiles.h"
 }
 
+std::string dequote(std::string s);
+
 struct stats {
 	int minzoom;
 	int maxzoom;
@@ -213,6 +215,52 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 				outfeature->add_tags(k->n);
 				outfeature->add_tags(v->n);
+
+				if (strcmp(key, header[0].c_str()) == 0) {
+					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(std::string(value));
+
+					if (ii != mapping.end()) {
+						std::vector<std::string> fields = ii->second;
+
+						for (int i = 1; i < fields.size(); i++) {
+							std::string joinkey = header[i];
+							std::string joinval = fields[i];
+							int type = VT_STRING;
+
+							if (joinval.size() > 0) {
+								if (joinval[0] == '"') {
+									joinval = dequote(joinval);
+								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
+									type = VT_NUMBER;
+								}
+							}
+
+							const char *sjoinkey = joinkey.c_str();
+							const char *sjoinval = joinval.c_str();
+
+							if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
+								pool(&((*file_keys)[ll]), strdup(sjoinkey), type);
+							}
+
+							if (is_pooled(&keys, sjoinkey, VT_STRING)) {
+								k = pool(&keys, sjoinkey, VT_STRING);
+							} else {
+								k = pool(&keys, strdup(sjoinkey), VT_STRING);
+							}
+
+							if (is_pooled(&values, sjoinval, type)) {
+								v = pool(&values, sjoinval, type);
+							} else {
+								v = pool(&values, strdup(sjoinval), type);
+							}
+
+							outfeature->add_tags(k->n);
+							outfeature->add_tags(v->n);
+						}
+					}
+
+				}
+
 				free(value);
 			}
 		}
@@ -345,6 +393,21 @@ std::vector<std::string> split(char *s) {
 	return ret;
 }
 
+std::string dequote(std::string s) {
+	std::string out;
+	int i;
+	for (i = 0; i < s.size(); i++) {
+		if (s[i] == '"') {
+			if (i + 1 < s.size() && s[i + 1] == '"') {
+				out.push_back('"');
+			}
+		} else {
+			out.push_back(s[i]);
+		}
+	}
+	return out;
+}
+
 void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
@@ -355,11 +418,19 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	char s[MAXLINE];
 	if (fgets(s, MAXLINE, f)) {
 		header = split(s);
+
+		for (int i = 0; i < header.size(); i++) {
+			header[i] = dequote(header[i]);
+		}
 	}
 	while (fgets(s, MAXLINE, f)) {
 		std::vector<std::string> line = split(s);
+		if (line.size() > 0) {
+			line[0] = dequote(line[0]);
+		}
 
 		for (int i = 0; i < line.size() && i < header.size(); i++) {
+			// printf("putting %s\n", line[0].c_str());
 			mapping.insert(std::pair<std::string, std::vector<std::string> >(line[0], line));
 		}
 	}
