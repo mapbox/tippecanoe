@@ -260,7 +260,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 							outfeature->add_tags(v->n);
 						}
 					}
-
 				}
 
 				free(value);
@@ -312,10 +311,10 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-                long long zoom = sqlite3_column_int(stmt, 0);
-                long long x = sqlite3_column_int(stmt, 1);
-                long long y = sqlite3_column_int(stmt, 2);
-                y = (1LL << zoom) - 1 - y;
+		long long zoom = sqlite3_column_int(stmt, 0);
+		long long x = sqlite3_column_int(stmt, 1);
+		long long y = sqlite3_column_int(stmt, 2);
+		y = (1LL << zoom) - 1 - y;
 
 		int len = sqlite3_column_bytes(stmt, 3);
 		const char *s = (const char *) sqlite3_column_blob(stmt, 3);
@@ -454,26 +453,26 @@ int main(int argc, char **argv) {
 
 	while ((i = getopt(argc, argv, "fo:c:")) != -1) {
 		switch (i) {
-			case 'o':
-				outfile = optarg;
-				break;
+		case 'o':
+			outfile = optarg;
+			break;
 
-			case 'f':
-				force = 1;
-				break;
+		case 'f':
+			force = 1;
+			break;
 
-			case 'c':
-				if (csv != NULL) {
-					fprintf(stderr, "Only one -c for now\n");
-					exit(EXIT_FAILURE);
-				}
+		case 'c':
+			if (csv != NULL) {
+				fprintf(stderr, "Only one -c for now\n");
+				exit(EXIT_FAILURE);
+			}
 
-				csv = optarg;
-				readcsv(csv, header, mapping);
-				break;
+			csv = optarg;
+			readcsv(csv, header, mapping);
+			break;
 
-			default:
-				usage(argv);
+		default:
+			usage(argv);
 		}
 	}
 
