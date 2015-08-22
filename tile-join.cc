@@ -89,7 +89,7 @@ static inline int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
+void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -197,26 +197,28 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					continue;
 				}
 
-				if (!is_pooled(&((*file_keys)[ll]), key, type)) {
-					pool(&((*file_keys)[ll]), strdup(key), type);
+				if (!is_pooled(exclude, key, VT_STRING)) {
+					if (!is_pooled(&((*file_keys)[ll]), key, type)) {
+						pool(&((*file_keys)[ll]), strdup(key), type);
+					}
+
+					struct pool_val *k, *v;
+
+					if (is_pooled(&keys, key, VT_STRING)) {
+						k = pool(&keys, key, VT_STRING);
+					} else {
+						k = pool(&keys, strdup(key), VT_STRING);
+					}
+
+					if (is_pooled(&values, value, type)) {
+						v = pool(&values, value, type);
+					} else {
+						v = pool(&values, strdup(value), type);
+					}
+
+					outfeature->add_tags(k->n);
+					outfeature->add_tags(v->n);
 				}
-
-				struct pool_val *k, *v;
-
-				if (is_pooled(&keys, key, VT_STRING)) {
-					k = pool(&keys, key, VT_STRING);
-				} else {
-					k = pool(&keys, strdup(key), VT_STRING);
-				}
-
-				if (is_pooled(&values, value, type)) {
-					v = pool(&values, value, type);
-				} else {
-					v = pool(&values, strdup(value), type);
-				}
-
-				outfeature->add_tags(k->n);
-				outfeature->add_tags(v->n);
 
 				if (strcmp(key, header[0].c_str()) == 0) {
 					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(std::string(value));
@@ -240,24 +242,28 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 							const char *sjoinkey = joinkey.c_str();
 							const char *sjoinval = joinval.c_str();
 
-							if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
-								pool(&((*file_keys)[ll]), strdup(sjoinkey), type);
-							}
+							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
+								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
+									pool(&((*file_keys)[ll]), strdup(sjoinkey), type);
+								}
 
-							if (is_pooled(&keys, sjoinkey, VT_STRING)) {
-								k = pool(&keys, sjoinkey, VT_STRING);
-							} else {
-								k = pool(&keys, strdup(sjoinkey), VT_STRING);
-							}
+								struct pool_val *k, *v;
 
-							if (is_pooled(&values, sjoinval, type)) {
-								v = pool(&values, sjoinval, type);
-							} else {
-								v = pool(&values, strdup(sjoinval), type);
-							}
+								if (is_pooled(&keys, sjoinkey, VT_STRING)) {
+									k = pool(&keys, sjoinkey, VT_STRING);
+								} else {
+									k = pool(&keys, strdup(sjoinkey), VT_STRING);
+								}
 
-							outfeature->add_tags(k->n);
-							outfeature->add_tags(v->n);
+								if (is_pooled(&values, sjoinval, type)) {
+									v = pool(&values, sjoinval, type);
+								} else {
+									v = pool(&values, strdup(sjoinval), type);
+								}
+
+								outfeature->add_tags(k->n);
+								outfeature->add_tags(v->n);
+							}
 						}
 					}
 				}
@@ -300,7 +306,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -326,7 +332,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
 
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping);
+		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping, exclude);
 	}
 
 	sqlite3_finalize(stmt);
@@ -365,7 +371,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] -o new.mbtiles source.mbtiles\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -452,11 +458,14 @@ int main(int argc, char **argv) {
 	std::vector<std::string> header;
 	std::map<std::string, std::vector<std::string> > mapping;
 
+	struct pool exclude;
+	pool_init(&exclude, 0);
+
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -474,6 +483,10 @@ int main(int argc, char **argv) {
 
 			csv = optarg;
 			readcsv(csv, header, mapping);
+			break;
+
+		case 'x':
+			pool(&exclude, optarg, VT_STRING);
 			break;
 
 		default:
@@ -498,7 +511,7 @@ int main(int argc, char **argv) {
 	int nlayers = 0;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping);
+		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping, &exclude);
 	}
 
 	for (i = 0; i < nlayers; i++) {
