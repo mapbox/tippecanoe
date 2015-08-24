@@ -89,7 +89,7 @@ static inline int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude) {
+void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -148,13 +148,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 		for (int f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
-			mapnik::vector::tile_feature *outfeature = outlayer->add_features();
-
-			outfeature->set_type(feat.type());
-
-			for (int g = 0; g < feat.geometry_size(); g++) {
-				outfeature->add_geometry(feat.geometry(g));
-			}
+			std::vector<int> feature_tags;
+			int matched = 0;
 
 			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
 				const char *key = layer.keys(feat.tags(t)).c_str();
@@ -216,8 +211,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						v = pool(&values, strdup(value), type);
 					}
 
-					outfeature->add_tags(k->n);
-					outfeature->add_tags(v->n);
+					feature_tags.push_back(k->n);
+					feature_tags.push_back(v->n);
 				}
 
 				if (strcmp(key, header[0].c_str()) == 0) {
@@ -225,6 +220,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 					if (ii != mapping.end()) {
 						std::vector<std::string> fields = ii->second;
+						matched = 1;
 
 						for (unsigned i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
@@ -261,14 +257,27 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 									v = pool(&values, strdup(sjoinval), type);
 								}
 
-								outfeature->add_tags(k->n);
-								outfeature->add_tags(v->n);
+								feature_tags.push_back(k->n);
+								feature_tags.push_back(v->n);
 							}
 						}
 					}
 				}
 
 				free(value);
+			}
+
+			if (matched || !ifmatched) {
+				mapnik::vector::tile_feature *outfeature = outlayer->add_features();
+				outfeature->set_type(feat.type());
+
+				for (int g = 0; g < feat.geometry_size(); g++) {
+					outfeature->add_geometry(feat.geometry(g));
+				}
+
+				for (unsigned i = 0; i < feature_tags.size(); i++) {
+					outfeature->add_tags(feature_tags[i]);
+				}
 			}
 		}
 
@@ -306,7 +315,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude) {
+void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -332,7 +341,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
 
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping, exclude);
+		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched);
 	}
 
 	sqlite3_finalize(stmt);
@@ -371,7 +380,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -454,6 +463,7 @@ int main(int argc, char **argv) {
 	char *outfile = NULL;
 	char *csv = NULL;
 	int force = 0;
+	int ifmatched = 0;
 
 	std::vector<std::string> header;
 	std::map<std::string, std::vector<std::string> > mapping;
@@ -465,7 +475,7 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:i")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -473,6 +483,10 @@ int main(int argc, char **argv) {
 
 		case 'f':
 			force = 1;
+			break;
+
+		case 'i':
+			ifmatched = 1;
 			break;
 
 		case 'c':
@@ -511,11 +525,7 @@ int main(int argc, char **argv) {
 	int nlayers = 0;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping, &exclude);
-	}
-
-	for (i = 0; i < nlayers; i++) {
-		printf("%s\n", layernames[i]);
+		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping, &exclude, ifmatched);
 	}
 
 	struct pool *fk[nlayers];
