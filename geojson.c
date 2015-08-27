@@ -562,7 +562,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -1001,7 +1001,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
 	}
 
-	int written = traverse_zooms(fd, size, meta, stringpool, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, full_detail, low_detail, min_detail);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_bbox, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1073,6 +1073,7 @@ int main(int argc, char **argv) {
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
 	char prevent[256];
+	char additional[256];
 
 	struct pool exclude, include;
 	pool_init(&exclude, 0);
@@ -1081,9 +1082,10 @@ int main(int argc, char **argv) {
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
+		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vq")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1161,12 +1163,19 @@ int main(int argc, char **argv) {
 			}
 		} break;
 
+		case 'a': {
+			char *cp;
+			for (cp = optarg; *cp != '\0'; cp++) {
+				additional[*cp & 0xFF] = 1;
+			}
+		} break;
+
 		case 'v':
 			fprintf(stderr, VERSION);
 			exit(EXIT_FAILURE);
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-p rcfs] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1177,8 +1186,13 @@ int main(int argc, char **argv) {
 	}
 
 	if (full_detail <= 0) {
-		// ~0.5m accuracy at whatever zoom
-		// 12 bits (4096 units) at z14
+		if (maxzoom >= 14) {
+			// ~0.5m accuracy at z14
+			full_detail = 12;
+		} else {
+			// as good as we can get without breaking GL
+			full_detail = 13;
+		}
 
 		full_detail = 26 - maxzoom;
 	}
@@ -1202,7 +1216,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
 
 	mbtiles_close(outdb, argv);
 

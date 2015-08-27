@@ -61,12 +61,13 @@ Options
 
  * -o _file_.mbtiles: Name the output file.
  * -f: Delete the mbtiles file if it already exists instead of giving an error
+ * -t _directory_: Put the temporary files in _directory_.
 
 ### Zoom levels and resolution
 
  * -z _zoom_: Base (maxzoom) zoom level (default 14)
  * -Z _zoom_: Lowest (minzoom) zoom level (default 0)
- * -d _detail_: Detail at base zoom level (default 26-basezoom, ~0.5m, for tile resolution of 4096 if -z14)
+ * -d _detail_: Detail at base zoom level (default 12 at -z14 or higher, or 13 at -z13 or lower. Detail beyond 13 has rendering problems with Mapbox GL.)
  * -D _detail_: Detail at lower zoom levels (default 10, for tile resolution of 1024)
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
@@ -82,15 +83,18 @@ Options
  * -r _rate_: Rate at which dots are dropped at lower zoom levels (default 2.5)
  * -g _gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
+### Doing more
+
+ * -ac: Coalesce adjacent line and polygon features that have the same properties
+ * -ar: Try reversing the directions of lines to make them coalesce and compress better
+ * -ao: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
+ * -al: Let "dot" dropping at lower zooms apply to lines too
+
 ### Doing less
 
  * -ps: Don't simplify lines
- * -pr: Don't reverse the direction of lines to make them coalesce better
- * -pc: Don't coalesce features with the same properties
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
- * -po: Don't reorder features to put the same properties in sequence
- * -pl: Let "dot" simplification apply to lines too
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
  * -q: Work quietly instead of reporting progress
 
