@@ -451,7 +451,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, char *additional) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -580,7 +580,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				continue;
 			}
 
-			if (gamma >= 0 && (t == VT_POINT || (prevent['l' & 0xFF] && t == VT_LINE))) {
+			if (gamma >= 0 && (t == VT_POINT || (additional['l' & 0xFF] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -645,7 +645,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 #endif
 
-			if (t == VT_LINE && !prevent['r' & 0xFF]) {
+			if (t == VT_LINE && additional['r' & 0xFF]) {
 				geom = reorder_lines(geom);
 			}
 
@@ -687,7 +687,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			if (!prevent['o' & 0xFF]) {
+			if (additional['o' & 0xFF]) {
 				std::sort(features[j].begin(), features[j].end());
 			}
 
@@ -702,7 +702,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				}
 #endif
 
-				if (!prevent['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (additional['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -794,7 +794,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 	return -1;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -855,7 +855,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent);
+				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, additional);
 
 				if (len < 0) {
 					return i - 1;
