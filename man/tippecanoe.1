@@ -64,6 +64,8 @@ it encounters.
 \-o \fIfile\fP\&.mbtiles: Name the output file.
 .IP \(bu 2
 \-f: Delete the mbtiles file if it already exists instead of giving an error
+.IP \(bu 2
+\-t \fIdirectory\fP: Put the temporary files in \fIdirectory\fP\&.
 .RE
 .SS Zoom levels and resolution
 .RS
@@ -72,7 +74,7 @@ it encounters.
 .IP \(bu 2
 \-Z \fIzoom\fP: Lowest (minzoom) zoom level (default 0)
 .IP \(bu 2
-\-d \fIdetail\fP: Detail at base zoom level (default 26\-basezoom, ~0.5m, for tile resolution of 4096 if \-z14)
+\-d \fIdetail\fP: Detail at base zoom level (default 12 at \-z14 or higher, or 13 at \-z13 or lower. Detail beyond 13 has rendering problems with Mapbox GL.)
 .IP \(bu 2
 \-D \fIdetail\fP: Detail at lower zoom levels (default 10, for tile resolution of 1024)
 .IP \(bu 2
@@ -96,22 +98,25 @@ it encounters.
 .IP \(bu 2
 \-g \fIgamma\fP: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 .RE
+.SS Doing more
+.RS
+.IP \(bu 2
+\-ac: Coalesce adjacent line and polygon features that have the same properties
+.IP \(bu 2
+\-ar: Try reversing the directions of lines to make them coalesce and compress better
+.IP \(bu 2
+\-ao: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
+.IP \(bu 2
+\-al: Let "dot" dropping at lower zooms apply to lines too
+.RE
 .SS Doing less
 .RS
 .IP \(bu 2
 \-ps: Don't simplify lines
 .IP \(bu 2
-\-pr: Don't reverse the direction of lines to make them coalesce better
-.IP \(bu 2
-\-pc: Don't coalesce features with the same properties
-.IP \(bu 2
 \-pf: Don't limit tiles to 200,000 features
 .IP \(bu 2
 \-pk: Don't limit tiles to 500K bytes
-.IP \(bu 2
-\-po: Don't reorder features to put the same properties in sequence
-.IP \(bu 2
-\-pl: Let "dot" simplification apply to lines too
 .IP \(bu 2
 \-pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
 .IP \(bu 2
@@ -167,7 +172,7 @@ I don't know why 2.5 is the appropriate number, but the densities of many differ
 data sets fall off at about this same rate. You can use \-r to specify a different rate.
 .PP
 You can use the gamma option to thin out especially dense clusters of points.
-For any area that where dots are closer than one pixel together (at whatever zoom level),
+For any area where dots are closer than one pixel together (at whatever zoom level),
 a gamma of 3, for example, will reduce these clusters to the cube root of their original density.
 .PP
 For line features, it drops any features that are too small to draw at all.
@@ -187,10 +192,28 @@ If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
 .SH Development
 .PP
-Requires protoc (\fB\fCbrew install protobuf\fR or
-\fB\fCapt\-get install libprotobuf\-dev\fR and \fB\fCprotobuf\-compiler\fR),
-\fB\fCmd2man\fR (\fB\fCgem install md2man\fR), and sqlite3 (\fB\fCapt\-get install libsqlite3\-dev\fR).
-To build:
+Requires protoc and sqlite3. Rebuilding the manpage
+uses md2man (\fB\fCgem install md2man\fR).
+.PP
+MacOS:
+.PP
+.RS
+.nf
+brew install protobuf
+.fi
+.RE
+.PP
+Linux:
+.PP
+.RS
+.nf
+sudo apt\-get install libprotobuf\-dev
+sudo apt\-get install protobuf\-compiler
+sudo apt\-get install libsqlite3\-dev
+.fi
+.RE
+.PP
+Then build:
 .PP
 .RS
 .nf
@@ -212,4 +235,4 @@ Check out some examples of maps made with tippecanoe
 .SH Name
 .PP
 The name is a joking reference
-\[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to making tiles.
+\[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.

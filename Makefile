@@ -1,7 +1,9 @@
 PREFIX ?= /usr/local
 MANDIR ?= /usr/share/man/man1/
 
-all: tippecanoe enumerate decode man/tippecanoe.1
+all: tippecanoe enumerate decode tile-join
+
+docs: man/tippecanoe.1
 
 install: tippecanoe
 	mkdir -p $(PREFIX)/bin
@@ -29,6 +31,9 @@ enumerate: enumerate.o
 	gcc $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lsqlite3
 
 decode: decode.o vector_tile.pb.o projection.o
+	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
+
+tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o

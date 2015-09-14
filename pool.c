@@ -1,10 +1,11 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "pool.h"
 
 #define POOL_WIDTH 256
 
-static int hash(char *s) {
+static int hash(const char *s) {
 	int h = 0;
 	for (; *s; s++) {
 		h = h * 37 + *s;
@@ -13,7 +14,7 @@ static int hash(char *s) {
 	return h;
 }
 
-struct pool_val *pool(struct pool *p, char *s, int type) {
+struct pool_val *pool(struct pool *p, const char *s, int type) {
 	int h = hash(s);
 	struct pool_val **v = &(p->vals[h]);
 
@@ -34,6 +35,10 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 	}
 
 	*v = malloc(sizeof(struct pool_val));
+	if (*v == NULL) {
+		fprintf(stderr, "out of memory making string pool\n");
+		exit(EXIT_FAILURE);
+	}
 	(*v)->left = NULL;
 	(*v)->right = NULL;
 	(*v)->next = NULL;
@@ -52,7 +57,7 @@ struct pool_val *pool(struct pool *p, char *s, int type) {
 	return *v;
 }
 
-int is_pooled(struct pool *p, char *s, int type) {
+int is_pooled(struct pool *p, const char *s, int type) {
 	int h = hash(s);
 	struct pool_val **v = &(p->vals[h]);
 
@@ -78,7 +83,7 @@ int is_pooled(struct pool *p, char *s, int type) {
 void pool_free1(struct pool *p, void (*func)(void *)) {
 	while (p->head != NULL) {
 		if (func != NULL) {
-			func(p->head->s);
+			func((void *) p->head->s);
 		}
 
 		struct pool_val *next = p->head->next;
@@ -104,6 +109,10 @@ void pool_free_strings(struct pool *p) {
 void pool_init(struct pool *p, int n) {
 	p->n = n;
 	p->vals = calloc(POOL_WIDTH, sizeof(struct pool_val *));
+	if (p->vals == NULL) {
+		fprintf(stderr, "out of memory creating string pool\n");
+		exit(EXIT_FAILURE);
+	}
 	p->head = NULL;
 	p->tail = NULL;
 }

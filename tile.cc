@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <unistd.h>
+#include <limits.h>
 #include <zlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -26,6 +27,9 @@ extern "C" {
 }
 
 #define CMD_BITS 3
+
+#define XSTRINGIFY(s) STRINGIFY(s)
+#define STRINGIFY(s) #s
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const &input, std::string &output) {
@@ -358,7 +362,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, signed char layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -429,7 +433,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 					// printf("type %d, meta %lld\n", t, metastart);
 					serialize_byte(geomfile[j], t, &geompos[j], fname);
-					serialize_byte(geomfile[j], layer, &geompos[j], fname);
+					serialize_long_long(geomfile[j], layer, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x, wy = initial_y;
 
@@ -452,7 +456,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
 	static bool evaluated = false;
 	double oprogress = 0;
@@ -532,8 +536,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				break;
 			}
 
-			signed char layer;
-			deserialize_byte(geoms, &layer);
+			long long layer;
+			deserialize_long_long(geoms, &layer);
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
@@ -594,7 +598,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				continue;
 			}
 
-			if (gamma >= 0 && (t == VT_POINT || (prevent['l' & 0xFF] && t == VT_LINE))) {
+			if (gamma >= 0 && (t == VT_POINT || (additional['l' & 0xFF] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -659,7 +663,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 #endif
 
-			if (t == VT_LINE && !prevent['r' & 0xFF]) {
+			if (t == VT_LINE && additional['r' & 0xFF]) {
 				geom = reorder_lines(geom);
 			}
 
@@ -701,7 +705,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			if (!prevent['o' & 0xFF]) {
+			if (additional['o' & 0xFF]) {
 				std::sort(features[j].begin(), features[j].end());
 			}
 
@@ -716,7 +720,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				}
 #endif
 
-				if (!prevent['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (additional['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -794,6 +798,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				return count;
 			}
 		} else {
+			int i;
+			for (i = 0; i < nlayers; i++) {
+				pool_free(&keys1[i]);
+				pool_free(&values1[i]);
+			}
+
 			return count;
 		}
 	}
@@ -828,6 +838,7 @@ struct write_tile_args {
 	double gamma;
 	int nlayers;
 	char *prevent;
+	char *additional;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -875,7 +886,7 @@ void run_thread(write_tile_args *arg) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, arg->file_bbox, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, *arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->child_shards);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, arg->file_bbox, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, *arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
 
 			if (len < 0) {
 				return; // XXX how to report errors from threads?
@@ -896,7 +907,7 @@ void run_thread(write_tile_args *arg) {
 	}
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -905,7 +916,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int subfd[TEMP_FILES];
 		int j;
 		for (j = 0; j < TEMP_FILES; j++) {
-			char geomname[strlen(tmpdir) + strlen("/geom2.XXXXXXXX") + 1];
+			char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX" XSTRINGIFY(INT_MAX)) + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
 			// printf("%s\n", geomname);
@@ -1013,6 +1024,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args.gamma = gamma;
 			args.nlayers = nlayers;
 			args.prevent = prevent;
+			args.additional = additional;
 			args.child_shards = TEMP_FILES / threads;
 
 			args.geomfd = geomfd;
