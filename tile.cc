@@ -133,6 +133,7 @@ struct coalesce {
 	unsigned long long index2;
 	char *metasrc;
 	bool coalesced;
+	long long original_seq;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -143,6 +144,12 @@ struct coalesce {
 		}
 	}
 };
+
+struct preservecmp {
+	bool operator()(struct coalesce &a, struct coalesce &b) {
+		return a.original_seq < b.original_seq;
+	}
+} preservecmp;
 
 int coalcmp(const void *v1, const void *v2) {
 	const struct coalesce *c1 = (const struct coalesce *) v1;
@@ -362,7 +369,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, long long seq) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -428,6 +435,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 					// printf("type %d, meta %lld\n", t, metastart);
 					serialize_byte(geomfile[j], t, &geompos[j], fname);
+					serialize_long_long(geomfile[j], seq, &geompos[j], fname);
 					serialize_long_long(geomfile[j], layer, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x, wy = initial_y;
@@ -518,6 +526,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				break;
 			}
 
+			long long original_seq;
+			deserialize_long_long(geoms, &original_seq);
+
 			long long layer;
 			deserialize_long_long(geoms, &layer);
 
@@ -565,7 +576,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom);
+				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, original_seq);
 			}
 
 			if (z < file_minzoom) {
@@ -672,6 +683,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				c.geom = geom;
 				c.metasrc = meta;
 				c.coalesced = false;
+				c.original_seq = original_seq;
 
 				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
 				features[layer].push_back(c);
@@ -719,6 +731,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
 				}
+			}
+
+			if (prevent['i' & 0xFF]) {
+				std::sort(features[j].begin(), features[j].end(), preservecmp);
 			}
 		}
 

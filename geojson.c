@@ -499,6 +499,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	long long geomstart = *geompos;
 
 	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
+	serialize_long_long(geomfile, *seq, geompos, fname);
 	serialize_long_long(geomfile, n, geompos, fname);
 	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = initial_x, wy = initial_y;
