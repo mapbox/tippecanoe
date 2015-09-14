@@ -96,7 +96,7 @@ Options
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
- * -pi: Preserve the original inport order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
+ * -pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
  * -q: Work quietly instead of reporting progress
 
 Example
