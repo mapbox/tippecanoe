@@ -146,7 +146,7 @@ struct coalesce {
 };
 
 struct preservecmp {
-	bool operator()(struct coalesce &a, struct coalesce &b) {
+	bool operator()(const struct coalesce &a, const struct coalesce &b) {
 		return a.original_seq < b.original_seq;
 	}
 } preservecmp;
