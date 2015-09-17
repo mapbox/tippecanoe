@@ -223,15 +223,13 @@ If a tile is too big, it is just left out of the new tileset.
 Example
 -------
 
-Imagine you have a tileset of census blocks, with some slightly ridiculous mangling to give each of them a single field to identify their state/county/tract/block combination:
+Imagine you have a tileset of census blocks:
 
 ```sh
 curl -O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
 unzip tl_2010_06001_tabblock10.zip
 ogr2ogr -f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
-cat tl_2010_06001_tabblock10.json |
-sed 's/"STATEFP10": "\([^"]*\)", "COUNTYFP10": "\([^"]*\)", "TRACTCE10": "\([^"]*\)", "BLOCKCE10": "\([^"]*\)"/"statecountytractblock": "\1\2\3\4", &/' |
-./tippecanoe -o tl_2010_06001_tabblock10.mbtiles
+./tippecanoe -o tl_2010_06001_tabblock10.mbtiles tl_2010_06001_tabblock10.json
 ```
 
 and a CSV of their populations:
@@ -240,7 +238,7 @@ and a CSV of their populations:
 curl -O http://www2.census.gov/census_2010/01-Redistricting_File--PL_94-171/California/ca2010.pl.zip
 unzip -p ca2010.pl.zip cageo2010.pl |
 awk 'BEGIN {
-    print "statecountytractblock,population"
+    print "GEOID10,population"
 }
 (substr($0, 9, 3) == "750") {
     print "\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\"," (0 + substr($0, 328, 9))
@@ -250,7 +248,7 @@ awk 'BEGIN {
 which looks like this:
 
 ```
-statecountytractblock,population
+GEOID10,population
 "060014277003018",0
 "060014283014046",0
 "060014284001020",0
@@ -265,5 +263,5 @@ statecountytractblock,population
 Then you can join those populations to the geometries and discard the no-longer-needed ID field:
 
 ```sh
-./tile-join -o population.mbtiles -x statecountytractblock -c population.csv tl_2010_06001_tabblock10.mbtiles
+./tile-join -o population.mbtiles -x GEOID10 -c population.csv tl_2010_06001_tabblock10.mbtiles
 ```
