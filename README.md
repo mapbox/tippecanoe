@@ -200,3 +200,70 @@ Name
 ----
 
 The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too) to a "tiler" for making map tiles.
+
+tile-join
+=========
+
+Tile-join is a tool for joining new attributes from a CSV file to features that
+have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
+file, matches them against the records of the CSV, and writes out a new tileset.
+
+The options are:
+
+ * -o *out.mbtiles*: Write the new tiles to the specified .mbtiles file
+ * -f: Remove *out.mbtiles* if it already exists
+ * -c *match.csv*: Use *match.csv* as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+ * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * -i: Only include features that matched the CSV.
+
+Because tile-join just copies the geometries to the new .mbtiles without processing them,
+it doesn't have any of tippecanoe's recourses if the new tiles are bigger than the 500K tile limit.
+If a tile is too big, it is just left out of the new tileset.
+
+Example
+-------
+
+Imagine you have a tileset of census blocks, with some slightly ridiculous mangling to give each of them a single field to identify their state/county/tract/block combination:
+
+```sh
+curl -O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
+unzip tl_2010_06001_tabblock10.zip
+ogr2ogr -f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
+cat tl_2010_06001_tabblock10.json |
+sed 's/"STATEFP10": "\([^"]*\)", "COUNTYFP10": "\([^"]*\)", "TRACTCE10": "\([^"]*\)", "BLOCKCE10": "\([^"]*\)"/"statecountytractblock": "\1\2\3\4", &/' |
+./tippecanoe -o tl_2010_06001_tabblock10.mbtiles
+```
+
+and a CSV of their populations:
+
+```sh
+curl -O http://www2.census.gov/census_2010/01-Redistricting_File--PL_94-171/California/ca2010.pl.zip
+unzip -p ca2010.pl.zip cageo2010.pl |
+awk 'BEGIN {
+    print "statecountytractblock,population"
+}
+(substr($0, 9, 3) == "750") {
+    print "\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\"," (0 + substr($0, 328, 9))
+}' > population.csv
+```
+
+which looks like this:
+
+```
+statecountytractblock,population
+"060014277003018",0
+"060014283014046",0
+"060014284001020",0
+...
+"060014507501001",202
+"060014507501002",119
+"060014507501003",193
+"060014507501004",85
+...
+```
+
+Then you can join those populations to the geometries and discard the no-longer-needed ID field:
+
+```sh
+./tile-join -o population.mbtiles -x statecountytractblock -c population.csv tl_2010_06001_tabblock10.mbtiles
+```
