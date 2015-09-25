@@ -201,7 +201,7 @@ struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
 	return ret;
 }
 
-void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
+void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only, int z, int x, int y) {
 	int m;
 	deserialize_int(meta, &m);
 
@@ -214,6 +214,8 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 			(void) retrieve_string(meta, values, stringpool);
 		} else {
 			struct pool_val *value = retrieve_string(meta, values, stringpool);
+
+			printf("%s=%s %d/%d/%d\n", key->s, value->s, z, x, y);
 
 			intmeta->push_back(key->n);
 			intmeta->push_back(value->n);
@@ -673,7 +675,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				c.metasrc = meta;
 				c.coalesced = false;
 
-				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
+				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL, z, tx, ty);
 				features[layer].push_back(c);
 			}
 		}
