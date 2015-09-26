@@ -446,7 +446,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	unsigned bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 
 	int nprop = 0;
-	if (properties->type == JSON_HASH) {
+	if (properties != NULL && properties->type == JSON_HASH) {
 		nprop = properties->length;
 	}
 
@@ -661,6 +661,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		FILE *fp;
 		long long found_hashes = 0;
 		long long found_features = 0;
+		long long found_geometries = 0;
 
 		if (n >= argc) {
 			reading = "standard input";
@@ -690,16 +691,65 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (j->type == JSON_HASH) {
 				found_hashes++;
 
-				if (found_hashes == 50 && found_features == 0) {
-					fprintf(stderr, "%s:%d: Not finding any GeoJSON features in input after 50 objects. Is your file just bare geometries?\n", reading, jp->line);
+				if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
+					fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", reading, jp->line);
 				}
 			}
 
 			json_object *type = json_hash_get(j, "type");
-			if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
+			if (type == NULL || type->type != JSON_STRING) {
 				continue;
 			}
 
+			if (found_features == 0) {
+				int i;
+				int is_geometry = 0;
+				for (i = 0; i < GEOM_TYPES; i++) {
+					if (strcmp(type->string, geometry_names[i]) == 0) {
+						is_geometry = 1;
+						break;
+					}
+				}
+
+				if (is_geometry) {
+					if (j->parent != NULL) {
+						if (j->parent->type == JSON_ARRAY) {
+							if (j->parent->parent->type == JSON_HASH) {
+								json_object *geometries = json_hash_get(j->parent->parent, "geometries");
+								if (geometries != NULL) {
+									// Parent of Parent must be a GeometryCollection
+									is_geometry = 0;
+								}
+							}
+						} else if (j->parent->type == JSON_HASH) {
+							json_object *geometry = json_hash_get(j->parent, "geometry");
+							if (geometry != NULL) {
+								// Parent must be a Feature
+								is_geometry = 0;
+							}
+						}
+					}
+				}
+
+				if (is_geometry) {
+					if (found_features != 0 && found_geometries == 0) {
+						fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+					}
+					found_geometries++;
+
+					serialize_geometry(j, NULL, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, n, droprate, file_bbox);
+					json_free(j);
+					continue;
+				}
+			}
+
+			if (strcmp(type->string, "Feature") != 0) {
+				continue;
+			}
+
+			if (found_features == 0 && found_geometries != 0) {
+				fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+			}
 			found_features++;
 
 			json_object *geometry = json_hash_get(j, "geometry");
