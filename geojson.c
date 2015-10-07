@@ -451,10 +451,16 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		if (min != NULL && min->type == JSON_NUMBER) {
 			tippecanoe_minzoom = min->number;
 		}
+		if (min != NULL && min->type == JSON_STRING) {
+			tippecanoe_minzoom = atoi(min->string);
+		}
 
 		json_object *max = json_hash_get(tippecanoe, "maxzoom");
 		if (max != NULL && max->type == JSON_NUMBER) {
 			tippecanoe_maxzoom = max->number;
+		}
+		if (max != NULL && max->type == JSON_STRING) {
+			tippecanoe_maxzoom = atoi(max->string);
 		}
 	}
 

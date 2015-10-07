@@ -110,6 +110,29 @@ $ tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 t
 $ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
 ```
 
+GeoJSON extension
+-----------------
+
+Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
+at which an individual feature will be included in the vector tile dataset being produced.
+If you have a feature like this:
+
+```
+{
+    "type" : "Feature",
+    "tippecanoe" : { "maxzoom" : 9, "minzoom" : 4 },
+    "properties" : { "FULLNAME" : "N Vasco Rd", },
+    "geometry" : {
+	"type" : "LineString",
+	"coordinates" : [ ...  ]
+    }
+}
+```
+
+with a `tippecanoe` object specifiying a `maxzoom` of 9 and a `minzoom` of 4, the feature
+will only appear in the vector tiles for zoom levels 4 through 9. Note that the `tippecanoe`
+object belongs to the Feature, not to its `properties`.
+
 Point styling
 -------------
 

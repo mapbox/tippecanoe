@@ -137,6 +137,29 @@ $ tippecanoe \-o alameda.mbtiles \-l alameda \-n "Alameda County from TIGER" \-z
 $ cat tiger/tl_2014_*_roads.json | tippecanoe \-o tiger.mbtiles \-l roads \-n "All TIGER roads, one zoom" \-z12 \-Z12 \-d14 \-x LINEARID \-x RTTYP
 .fi
 .RE
+.SH GeoJSON extension
+.PP
+Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
+at which an individual feature will be included in the vector tile dataset being produced.
+If you have a feature like this:
+.PP
+.RS
+.nf
+{
+    "type" : "Feature",
+    "tippecanoe" : { "maxzoom" : 9, "minzoom" : 4 },
+    "properties" : { "FULLNAME" : "N Vasco Rd", },
+    "geometry" : {
+    "type" : "LineString",
+    "coordinates" : [ ...  ]
+    }
+}
+.fi
+.RE
+.PP
+with a \fB\fCtippecanoe\fR object specifiying a \fB\fCmaxzoom\fR of 9 and a \fB\fCminzoom\fR of 4, the feature
+will only appear in the vector tiles for zoom levels 4 through 9. Note that the \fB\fCtippecanoe\fR
+object belongs to the Feature, not to its \fB\fCproperties\fR\&.
 .SH Point styling
 .PP
 To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
