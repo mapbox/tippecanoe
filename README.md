@@ -121,7 +121,7 @@ If you have a feature like this:
 {
     "type" : "Feature",
     "tippecanoe" : { "maxzoom" : 9, "minzoom" : 4 },
-    "properties" : { "FULLNAME" : "N Vasco Rd", },
+    "properties" : { "FULLNAME" : "N Vasco Rd" },
     "geometry" : {
         "type" : "LineString",
         "coordinates" : [ [ -121.733350, 37.767671 ], [ -121.733600, 37.767483 ], [ -121.733131, 37.766952 ] ]
