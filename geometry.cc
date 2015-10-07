@@ -298,6 +298,19 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 	}
 
 	if (out.size() > 0) {
+		// If the polygon begins and ends outside the edge,
+		// the starting and ending points will be left as the
+		// places where it intersects the edge. Need to add
+		// another point to close the loop.
+
+		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+			out.push_back(out[0]);
+		}
+
+		if (out.size() < 3) {
+			fprintf(stderr, "Polygon degenerated to a line segment\n");
+		}
+
 		out[0].op = VT_MOVETO;
 		for (unsigned i = 1; i < out.size(); i++) {
 			out[i].op = VT_LINETO;
@@ -318,7 +331,7 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
@@ -328,20 +341,20 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 				tmp.push_back(geom[k]);
 			}
 			tmp = clip_poly1(tmp, z, detail, buffer);
+			if (tmp.size() > 0) {
+				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
+					fprintf(stderr, "Internal error: Polygon ring not closed\n");
+					exit(EXIT_FAILURE);
+				}
+			}
 			for (unsigned k = 0; k < tmp.size(); k++) {
 				out.push_back(tmp[k]);
 			}
 
-			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
-				if (out.size() > 0 && out[out.size() - 1].op != VT_CLOSEPATH) {
-					out.push_back(draw(VT_CLOSEPATH, 0, 0));
-				}
-				i = j;
-			} else {
-				i = j - 1;
-			}
+			i = j - 1;
 		} else {
-			out.push_back(geom[i]);
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -664,4 +677,75 @@ drawvec reorder_lines(drawvec &geom) {
 	}
 
 	return geom;
+}
+
+drawvec fix_polygon(drawvec &geom) {
+	int outer = 1;
+	drawvec out;
+
+	unsigned i;
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_CLOSEPATH) {
+			outer = 1;
+		} else if (geom[i].op == VT_MOVETO) {
+			// Find the end of the ring
+
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			// Make a temporary copy of the ring.
+			// Close it if it isn't closed.
+
+			drawvec ring;
+			for (unsigned a = i; a < j; a++) {
+				ring.push_back(geom[a]);
+			}
+			if (j - i != 0 && (ring[0].x != ring[j - i - 1].x || ring[0].y != ring[j - i - 1].y)) {
+				ring.push_back(ring[0]);
+			}
+
+			// Reverse ring if winding order doesn't match
+			// inner/outer expectation
+
+			double area = 0;
+			for (unsigned k = 0; k < ring.size(); k++) {
+				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
+				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
+			}
+
+			if ((area > 0) != outer) {
+				drawvec tmp;
+				for (int a = ring.size() - 1; a >= 0; a--) {
+					tmp.push_back(ring[a]);
+				}
+				ring = tmp;
+			}
+
+			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
+			// reversal or closing
+
+			for (unsigned a = 0; a < ring.size(); a++) {
+				if (a == 0) {
+					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
+				} else {
+					out.push_back(draw(VT_LINETO, ring[a].x, ring[a].y));
+				}
+			}
+
+			// Next ring or polygon begins on the non-lineto that ended this one
+			// and is not an outer ring unless there is a terminator first
+
+			i = j - 1;
+			outer = 0;
+		} else {
+			fprintf(stderr, "Internal error: polygon ring begins with %d, not moveto\n", geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return out;
 }

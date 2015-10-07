@@ -123,7 +123,6 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 
 	int within = geometry_within[t];
-	long long began = *fpos;
 	if (within >= 0) {
 		int i;
 		for (i = 0; i < j->length; i++) {
@@ -187,9 +186,16 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 
 	if (t == GEOM_POLYGON) {
-		if (*fpos != began) {
-			serialize_byte(out, VT_CLOSEPATH, fpos, fname);
-		}
+		// Note that this is not using the correct meaning of closepath.
+		//
+		// We are using it here to close an entire Polygon, to distinguish
+		// the Polygons within a MultiPolygon from each other.
+		//
+		// This will be undone in fix_polygon(), which needs to know which
+		// rings come from which Polygons so that it can make the winding order
+		// of the outer ring be the opposite of the order of the inner rings.
+
+		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
 	}
 }
 
