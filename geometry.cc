@@ -97,6 +97,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		}
 
 		if (geom[i].op == VT_CLOSEPATH) {
+			fprintf(stderr, "Shouldn't happen\n");
 			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
 			out.push_back(geom[i]);
@@ -121,6 +122,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 			}
 
 			if (geom[i + 1].op == VT_CLOSEPATH) {
+				fprintf(stderr, "Shouldn't happen\n");
 				i++;  // also remove unused closepath
 				continue;
 			}
@@ -371,13 +373,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
-			}
-
-			if (j + 1 < geom.size() && geom[j + 1].op == VT_CLOSEPATH) {
-				fprintf(stderr, "double closepath\n");
 			}
 
 			double area = 0;
@@ -398,7 +396,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y));
 					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y + pixel));
 					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y + pixel));
-					out.push_back(draw(VT_CLOSEPATH, geom[i].x, geom[i].y));
+					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y));
 
 					*accum_area -= pixel * pixel;
 				}
@@ -412,7 +410,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				*reduced = false;
 			}
 
-			i = j;
+			i = j - 1;
 		} else {
 			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
 
@@ -614,7 +612,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
