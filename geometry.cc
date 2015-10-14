@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 #include <limits.h>
 #include "geometry.hh"
+#include "clipper/clipper.hpp"
 
 extern "C" {
 #include "tile.h"
@@ -97,6 +98,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		}
 
 		if (geom[i].op == VT_CLOSEPATH) {
+			fprintf(stderr, "Shouldn't happen\n");
 			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
 			out.push_back(geom[i]);
@@ -121,6 +123,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 			}
 
 			if (geom[i + 1].op == VT_CLOSEPATH) {
+				fprintf(stderr, "Shouldn't happen\n");
 				i++;  // also remove unused closepath
 				continue;
 			}
@@ -204,6 +207,7 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
+#if 0
 static bool inside(draw d, int edge, long long area, long long buffer) {
 	long long clip_buffer = buffer * area / 256;
 
@@ -298,6 +302,19 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 	}
 
 	if (out.size() > 0) {
+		// If the polygon begins and ends outside the edge,
+		// the starting and ending points will be left as the
+		// places where it intersects the edge. Need to add
+		// another point to close the loop.
+
+		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+			out.push_back(out[0]);
+		}
+
+		if (out.size() < 3) {
+			fprintf(stderr, "Polygon degenerated to a line segment\n");
+		}
+
 		out[0].op = VT_MOVETO;
 		for (unsigned i = 1; i < out.size(); i++) {
 			out[i].op = VT_LINETO;
@@ -306,43 +323,96 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 
 	return out;
 }
+#endif
 
-drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	if (z == 0) {
-		return geom;
+static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
+	// To make the GeoJSON come out right, we need to do each of the
+	// outer rings followed by its children if any, and then go back
+	// to do any outer-ring children of those children as a new top level.
+
+	ClipperLib::Path p = t->Contour;
+	for (unsigned i = 0; i < p.size(); i++) {
+		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+	}
+	if (p.size() > 0) {
+		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 	}
 
-	drawvec out;
+	for (int n = 0; n < t->ChildCount(); n++) {
+		ClipperLib::Path p = t->Childs[n]->Contour;
+		for (unsigned i = 0; i < p.size(); i++) {
+			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		}
+		if (p.size() > 0) {
+			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		}
+	}
+
+	for (int n = 0; n < t->ChildCount(); n++) {
+		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
+			decode_clipped(t->Childs[n]->Childs[m], out);
+		}
+	}
+}
+
+drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
+	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	for (unsigned i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
 
+			ClipperLib::Path path;
+
 			drawvec tmp;
 			for (unsigned k = i; k < j; k++) {
-				tmp.push_back(geom[k]);
-			}
-			tmp = clip_poly1(tmp, z, detail, buffer);
-			for (unsigned k = 0; k < tmp.size(); k++) {
-				out.push_back(tmp[k]);
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
 
-			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
-				if (out.size() > 0 && out[out.size() - 1].op != VT_CLOSEPATH) {
-					out.push_back(draw(VT_CLOSEPATH, 0, 0));
+			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+				fprintf(stderr, "Couldn't add polygon for clipping:");
+				for (unsigned k = i; k < j; k++) {
+					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
 				}
-				i = j;
-			} else {
-				i = j - 1;
+				fprintf(stderr, "\n");
 			}
+
+			i = j - 1;
 		} else {
-			out.push_back(geom[i]);
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
 		}
+	}
+
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+	long long clip_buffer = buffer * area / 256;
+
+	ClipperLib::Path edge;
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+
+	clipper.AddPath(edge, ClipperLib::ptClip, true);
+
+	ClipperLib::PolyTree clipped;
+	if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
+		fprintf(stderr, "Polygon clip failed\n");
+	}
+
+	drawvec out;
+
+	for (int i = 0; i < clipped.ChildCount(); i++) {
+		decode_clipped(clipped.Childs[i], out);
 	}
 
 	return out;
@@ -358,13 +428,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
-			}
-
-			if (j + 1 < geom.size() && geom[j + 1].op == VT_CLOSEPATH) {
-				fprintf(stderr, "double closepath\n");
 			}
 
 			double area = 0;
@@ -385,7 +451,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y));
 					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y + pixel));
 					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y + pixel));
-					out.push_back(draw(VT_CLOSEPATH, geom[i].x, geom[i].y));
+					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y));
 
 					*accum_area -= pixel * pixel;
 				}
@@ -399,7 +465,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				*reduced = false;
 			}
 
-			i = j;
+			i = j - 1;
 		} else {
 			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
 
@@ -601,7 +667,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
@@ -664,4 +730,75 @@ drawvec reorder_lines(drawvec &geom) {
 	}
 
 	return geom;
+}
+
+drawvec fix_polygon(drawvec &geom) {
+	int outer = 1;
+	drawvec out;
+
+	unsigned i;
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_CLOSEPATH) {
+			outer = 1;
+		} else if (geom[i].op == VT_MOVETO) {
+			// Find the end of the ring
+
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			// Make a temporary copy of the ring.
+			// Close it if it isn't closed.
+
+			drawvec ring;
+			for (unsigned a = i; a < j; a++) {
+				ring.push_back(geom[a]);
+			}
+			if (j - i != 0 && (ring[0].x != ring[j - i - 1].x || ring[0].y != ring[j - i - 1].y)) {
+				ring.push_back(ring[0]);
+			}
+
+			// Reverse ring if winding order doesn't match
+			// inner/outer expectation
+
+			double area = 0;
+			for (unsigned k = 0; k < ring.size(); k++) {
+				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
+				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
+			}
+
+			if ((area > 0) != outer) {
+				drawvec tmp;
+				for (int a = ring.size() - 1; a >= 0; a--) {
+					tmp.push_back(ring[a]);
+				}
+				ring = tmp;
+			}
+
+			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
+			// reversal or closing
+
+			for (unsigned a = 0; a < ring.size(); a++) {
+				if (a == 0) {
+					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
+				} else {
+					out.push_back(draw(VT_LINETO, ring[a].x, ring[a].y));
+				}
+			}
+
+			// Next ring or polygon begins on the non-lineto that ended this one
+			// and is not an outer ring unless there is a terminator first
+
+			i = j - 1;
+			outer = 0;
+		} else {
+			fprintf(stderr, "Internal error: polygon ring begins with %d, not moveto\n", geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return out;
 }
