@@ -115,7 +115,7 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 			printf("{ \"type\": \"Feature\"");
 			printf(", \"properties\": { ");
 
-			for (unsigned t = 0; t + 1 < feat.tags_size(); t += 2) {
+			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
 				if (t != 0) {
 					printf(", ");
 				}

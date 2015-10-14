@@ -331,7 +331,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// to do any outer-ring children of those children as a new top level.
 
 	ClipperLib::Path p = t->Contour;
-	for (int i = 0; i < p.size(); i++) {
+	for (unsigned i = 0; i < p.size(); i++) {
 		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 	}
 	if (p.size() > 0) {
@@ -340,7 +340,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 
 	for (int n = 0; n < t->ChildCount(); n++) {
 		ClipperLib::Path p = t->Childs[n]->Contour;
-		for (int i = 0; i < p.size(); i++) {
+		for (unsigned i = 0; i < p.size(); i++) {
 			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 		}
 		if (p.size() > 0) {
