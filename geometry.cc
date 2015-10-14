@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 #include <limits.h>
 #include "geometry.hh"
+#include "clipper/clipper.hpp"
 
 extern "C" {
 #include "tile.h"
@@ -206,6 +207,7 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
+#if 0
 static bool inside(draw d, int edge, long long area, long long buffer) {
 	long long clip_buffer = buffer * area / 256;
 
@@ -321,13 +323,40 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 
 	return out;
 }
+#endif
 
-drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	if (z == 0) {
-		return geom;
+static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
+	// To make the GeoJSON come out right, we need to do each of the
+	// outer rings followed by its children if any, and then go back
+	// to do any outer-ring children of those children as a new top level.
+
+	ClipperLib::Path p = t->Contour;
+	for (int i = 0; i < p.size(); i++) {
+		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+	}
+	if (p.size() > 0) {
+		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 	}
 
-	drawvec out;
+	for (int n = 0; n < t->ChildCount(); n++) {
+		ClipperLib::Path p = t->Childs[n]->Contour;
+		for (int i = 0; i < p.size(); i++) {
+			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		}
+		if (p.size() > 0) {
+			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		}
+	}
+
+	for (int n = 0; n < t->ChildCount(); n++) {
+		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
+			decode_clipped(t->Childs[n]->Childs[m], out);
+		}
+	}
+}
+
+drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
+	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	for (unsigned i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -338,19 +367,19 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 				}
 			}
 
+			ClipperLib::Path path;
+
 			drawvec tmp;
 			for (unsigned k = i; k < j; k++) {
-				tmp.push_back(geom[k]);
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
-			tmp = clip_poly1(tmp, z, detail, buffer);
-			if (tmp.size() > 0) {
-				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
-					fprintf(stderr, "Internal error: Polygon ring not closed\n");
-					exit(EXIT_FAILURE);
+
+			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+				fprintf(stderr, "Couldn't add polygon for clipping:");
+				for (unsigned k = i; k < j; k++) {
+					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
 				}
-			}
-			for (unsigned k = 0; k < tmp.size(); k++) {
-				out.push_back(tmp[k]);
+				fprintf(stderr, "\n");
 			}
 
 			i = j - 1;
@@ -358,6 +387,32 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+	long long clip_buffer = buffer * area / 256;
+
+	ClipperLib::Path edge;
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
+	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+
+	clipper.AddPath(edge, ClipperLib::ptClip, true);
+
+	ClipperLib::PolyTree clipped;
+	if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
+		fprintf(stderr, "Polygon clip failed\n");
+	}
+
+	drawvec out;
+
+	for (int i = 0; i < clipped.ChildCount(); i++) {
+		decode_clipped(clipped.Childs[i], out);
 	}
 
 	return out;
