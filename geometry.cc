@@ -420,7 +420,7 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
-	long long pixel = (1 << (32 - detail - z)) * 3;
+	long long pixel = (1 << (32 - detail - z)) * 2;
 
 	*reduced = true;
 

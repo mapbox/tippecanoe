@@ -204,7 +204,7 @@ For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark (and too dense for the 500K tile limit,
 in some places), so I need to figure out an equitable way to throw features away.
 .PP
-Any polygons that are smaller than a minimum area (currently 9 square subpixels) will
+Any polygons that are smaller than a minimum area (currently 4 square subpixels) will
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
