@@ -207,124 +207,6 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-#if 0
-static bool inside(draw d, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
-
-	switch (edge) {
-	case 0:  // top
-		return d.y > -clip_buffer;
-
-	case 1:  // right
-		return d.x < area + clip_buffer;
-
-	case 2:  // bottom
-		return d.y < area + clip_buffer;
-
-	case 3:  // left
-		return d.x > -clip_buffer;
-	}
-
-	fprintf(stderr, "internal error inside\n");
-	exit(EXIT_FAILURE);
-}
-
-// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
-	double s1_x = p1.x - p0.x;
-	double s1_y = p1.y - p0.y;
-	double s2_x = p3.x - p2.x;
-	double s2_y = p3.y - p2.y;
-
-	double t;
-	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
-}
-
-static draw intersect(draw a, draw b, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
-
-	switch (edge) {
-	case 0:  // top
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
-		break;
-
-	case 1:  // right
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
-		break;
-
-	case 2:  // bottom
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
-		break;
-
-	case 3:  // left
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
-		break;
-	}
-
-	fprintf(stderr, "internal error intersecting\n");
-	exit(EXIT_FAILURE);
-}
-
-// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
-static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
-	drawvec out = geom;
-
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-	}
-
-	for (int edge = 0; edge < 4; edge++) {
-		if (out.size() > 0) {
-			drawvec in = out;
-			out.resize(0);
-
-			draw S = in[in.size() - 1];
-
-			for (unsigned e = 0; e < in.size(); e++) {
-				draw E = in[e];
-
-				if (inside(E, edge, area, buffer)) {
-					if (!inside(S, edge, area, buffer)) {
-						out.push_back(intersect(S, E, edge, area, buffer));
-					}
-					out.push_back(E);
-				} else if (inside(S, edge, area, buffer)) {
-					out.push_back(intersect(S, E, edge, area, buffer));
-				}
-
-				S = E;
-			}
-		}
-	}
-
-	if (out.size() > 0) {
-		// If the polygon begins and ends outside the edge,
-		// the starting and ending points will be left as the
-		// places where it intersects the edge. Need to add
-		// another point to close the loop.
-
-		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
-			out.push_back(out[0]);
-		}
-
-		if (out.size() < 3) {
-			fprintf(stderr, "Polygon degenerated to a line segment\n");
-		}
-
-		out[0].op = VT_MOVETO;
-		for (unsigned i = 1; i < out.size(); i++) {
-			out[i].op = VT_LINETO;
-		}
-	}
-
-	return out;
-}
-#endif
-
 static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// To make the GeoJSON come out right, we need to do each of the
 	// outer rings followed by its children if any, and then go back
@@ -355,7 +237,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	}
 }
 
-drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
+drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	for (unsigned i = 0; i < geom.size(); i++) {
@@ -375,11 +257,13 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 			}
 
 			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+#if 0
 				fprintf(stderr, "Couldn't add polygon for clipping:");
 				for (unsigned k = i; k < j; k++) {
 					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
 				}
 				fprintf(stderr, "\n");
+#endif
 			}
 
 			i = j - 1;
@@ -389,24 +273,32 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 		}
 	}
 
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
+	if (clip) {
+		long long area = 0xFFFFFFFF;
+		if (z != 0) {
+			area = 1LL << (32 - z);
+		}
+		long long clip_buffer = buffer * area / 256;
+
+		ClipperLib::Path edge;
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+
+		clipper.AddPath(edge, ClipperLib::ptClip, true);
 	}
-	long long clip_buffer = buffer * area / 256;
-
-	ClipperLib::Path edge;
-	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
-	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
-	edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
-	edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
-	edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
-
-	clipper.AddPath(edge, ClipperLib::ptClip, true);
 
 	ClipperLib::PolyTree clipped;
-	if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
-		fprintf(stderr, "Polygon clip failed\n");
+	if (clip) {
+		if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
+			fprintf(stderr, "Polygon clip failed\n");
+		}
+	} else {
+		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
+			fprintf(stderr, "Polygon clean failed\n");
+		}
 	}
 
 	drawvec out;
@@ -438,20 +330,20 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				area += geom[k].x * geom[i + ((k - i + 1) % (j - i))].y;
 				area -= geom[k].y * geom[i + ((k - i + 1) % (j - i))].x;
 			}
-			area = fabs(area / 2);
+			area = area / 2;
 
-			if (area <= pixel * pixel) {
+			if (fabs(area) <= pixel * pixel) {
 				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
 				*accum_area += area;
 				if (*accum_area > pixel * pixel) {
 					// XXX use centroid;
 
-					out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y + pixel));
-					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y + pixel));
-					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y));
+					out.push_back(draw(VT_MOVETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y - pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y + pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y + pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
 
 					*accum_area -= pixel * pixel;
 				}

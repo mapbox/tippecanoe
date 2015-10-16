@@ -580,7 +580,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					geom = clip_lines(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POLYGON) {
-					geom = clip_poly(geom, z, line_detail, buffer);
+					geom = clean_or_clip_poly(geom, z, line_detail, buffer, true);
 				}
 				if (t == VT_POINT) {
 					geom = clip_point(geom, z, line_detail, buffer);
@@ -686,6 +686,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			to_tile_scale(geom, z, line_detail);
+
+			if (t == VT_POLYGON) {
+				// Scaling may have made the polygon degenerate.
+				// Give Clipper a chance to try to fix it.
+				geom = clean_or_clip_poly(geom, 0, 0, 0, false);
+			}
 
 			if (t == VT_POINT || to_feature(geom, NULL)) {
 				struct coalesce c;
