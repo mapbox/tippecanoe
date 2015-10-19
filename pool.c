@@ -34,26 +34,27 @@ struct pool_val *pool(struct pool *p, const char *s, int type) {
 		}
 	}
 
-	*v = malloc(sizeof(struct pool_val));
-	if (*v == NULL) {
+	struct pool_val *nv = malloc(sizeof(struct pool_val));
+	if (nv == NULL) {
 		fprintf(stderr, "out of memory making string pool\n");
 		exit(EXIT_FAILURE);
 	}
-	(*v)->left = NULL;
-	(*v)->right = NULL;
-	(*v)->next = NULL;
-	(*v)->s = s;
-	(*v)->type = type;
-	(*v)->n = p->n++;
+	nv->left = NULL;
+	nv->right = NULL;
+	nv->next = NULL;
+	nv->s = s;
+	nv->type = type;
+	nv->n = p->n++;
 
 	if (p->tail != NULL) {
-		p->tail->next = *v;
+		p->tail->next = nv;
 	}
-	p->tail = *v;
+	p->tail = nv;
 	if (p->head == NULL) {
-		p->head = *v;
+		p->head = nv;
 	}
 
+	*v = nv;
 	return *v;
 }
 

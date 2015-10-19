@@ -33,6 +33,7 @@ extern "C" {
 #define STRINGIFY(s) #s
 
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const &input, std::string &output) {
@@ -211,26 +212,30 @@ struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
 	return ret;
 }
 
-void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
+void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
 	int m;
 	deserialize_int(meta, &m);
 
 	int i;
 	for (i = 0; i < m; i++) {
 		struct pool_val *key = retrieve_string(meta, keys, stringpool);
+		struct pool_val *value = retrieve_string(meta, values, stringpool);
 
-		if (only != NULL && (strcmp(key->s, only) != 0)) {
-			// XXX if evaluate ever works again, check whether this is sufficient
-			(void) retrieve_string(meta, values, stringpool);
-		} else {
-			struct pool_val *value = retrieve_string(meta, values, stringpool);
+		intmeta->push_back(key->n);
+		intmeta->push_back(value->n);
 
-			intmeta->push_back(key->n);
-			intmeta->push_back(value->n);
+		if (!is_pooled(file_keys, key->s, value->type)) {
+			if (pthread_mutex_lock(&var_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
 
-			if (!is_pooled(file_keys, key->s, value->type)) {
-				// Dup to retain after munmap
-				pool(file_keys, strdup(key->s), value->type);
+			// Dup to retain after munmap
+			pool(file_keys, strdup(key->s), value->type);
+
+			if (pthread_mutex_unlock(&var_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -311,66 +316,6 @@ struct sll {
 		this->val = val;
 	}
 };
-
-#if 0
-void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, const char *layername, int line_detail, long long orig) {
-	std::vector<sll> options;
-
-	struct pool_val *pv;
-	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
-		struct pool keys, values;
-		pool_init(&keys, 0);
-		pool_init(&values, 0);
-		long long count = 0;
-
-		for (unsigned i = 0; i < features.size(); i++) {
-			char *meta = features[i].metasrc;
-
-			features[i].meta.resize(0);
-			decode_meta(&meta, &keys, &values, file_keys, &features[i].meta, pv->s);
-		}
-
-		std::vector<coalesce> empty;
-		mapnik::vector::tile tile = create_tile(layername, line_detail, empty, &count, &keys, &values, 1); // XXX layer
-
-		std::string s;
-		std::string compressed;
-
-		tile.SerializeToString(&s);
-		compress(s, compressed);
-
-		options.push_back(sll(pv->s, compressed.size()));
-
-		pool_free(&values);
-		pool_free(&keys);
-	}
-
-	std::sort(options.begin(), options.end());
-	for (unsigned i = 0; i < options.size(); i++) {
-		if (options[i].val > 1024) {
-			fprintf(stderr, "using -x %s would save about %lld, for a tile size of of %lld\n", options[i].name, options[i].val, orig - options[i].val);
-		}
-	}
-
-	struct pool keys, values;
-	pool_init(&keys, 0);
-	pool_init(&values, 0);
-	long long count = 0;
-
-	std::vector<coalesce> empty;
-	mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values, nlayers);
-
-	std::string s;
-	std::string compressed;
-
-	tile.SerializeToString(&s);
-	compress(s, compressed);
-	fprintf(stderr, "geometry alone (-X) would be %lld\n", (long long) compressed.size());
-
-	pool_free(&values);
-	pool_free(&keys);
-}
-#endif
 
 void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
@@ -475,7 +420,6 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
-	static bool evaluated = false;
 	double oprogress = 0;
 	double fraction = 1;
 
@@ -737,7 +681,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				c.coalesced = false;
 				c.original_seq = original_seq;
 
-				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
+				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta);
 				features[layer].push_back(c);
 			}
 		}
@@ -824,13 +768,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
 				if (!quiet) {
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
-				}
-
-				if (line_detail == min_detail || !evaluated) {
-					evaluated = true;
-#if 0
-					evaluate(features[0], metabase, file_keys[0], layername, line_detail, compressed.size()); // XXX layer
-#endif
 				}
 
 				if (prevent['d' & 0xFF]) {
