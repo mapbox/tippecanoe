@@ -78,7 +78,7 @@ struct draw {
 	}
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y) {
+void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	int within = 0;
 
@@ -97,7 +97,13 @@ void handle(std::string message, int z, unsigned x, unsigned y) {
 		exit(EXIT_FAILURE);
 	}
 
-	printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
+	printf("{ \"type\": \"FeatureCollection\"");
+
+	if (describe) {
+		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+	}
+
+	printf(", \"features\": [\n");
 
 	for (int l = 0; l < tile.layers_size(); l++) {
 		mapnik::vector::tile_layer layer = tile.layers(l);
@@ -319,36 +325,68 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 		exit(EXIT_FAILURE);
 	}
 
-	int handled = 0;
-	while (z >= 0 && !handled) {
-		const char *sql = "SELECT tile_data from tiles where zoom_level = ? and tile_column = ? and tile_row = ?;";
+	if (z < 0) {
+		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
 		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
 			exit(EXIT_FAILURE);
 		}
 
-		sqlite3_bind_int(stmt, 1, z);
-		sqlite3_bind_int(stmt, 2, x);
-		sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
+		printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
 
+		int within = 0;
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			if (within) {
+				printf(",\n");
+			}
+			within = 1;
+
 			int len = sqlite3_column_bytes(stmt, 0);
+			int z = sqlite3_column_int(stmt, 1);
+			int x = sqlite3_column_int(stmt, 2);
+			int y = sqlite3_column_int(stmt, 3);
+			y = (1LL << z) - 1 - y;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			if (z != oz) {
-				fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
-			}
-
-			handle(std::string(s, len), z, x, y);
-			handled = 1;
+			handle(std::string(s, len), z, x, y, 1);
 		}
 
-		sqlite3_finalize(stmt);
+		printf("] }\n");
 
-		z--;
-		x /= 2;
-		y /= 2;
+		sqlite3_finalize(stmt);
+	} else {
+		int handled = 0;
+		while (z >= 0 && !handled) {
+			const char *sql = "SELECT tile_data from tiles where zoom_level = ? and tile_column = ? and tile_row = ?;";
+			sqlite3_stmt *stmt;
+			if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+				fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
+				exit(EXIT_FAILURE);
+			}
+
+			sqlite3_bind_int(stmt, 1, z);
+			sqlite3_bind_int(stmt, 2, x);
+			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
+
+			while (sqlite3_step(stmt) == SQLITE_ROW) {
+				int len = sqlite3_column_bytes(stmt, 0);
+				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
+
+				if (z != oz) {
+					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
+				}
+
+				handle(std::string(s, len), z, x, y, 0);
+				handled = 1;
+			}
+
+			sqlite3_finalize(stmt);
+
+			z--;
+			x /= 2;
+			y /= 2;
+		}
 	}
 
 	if (sqlite3_close(db) != SQLITE_OK) {
@@ -371,11 +409,14 @@ int main(int argc, char **argv) {
 		usage(argv);
 	}
 
-	if (argc != optind + 4) {
+	if (argc == optind + 4) {
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
+	} else if (argc == optind + 1) {
+		decode(argv[optind], -1, -1, -1);
+	} else {
 		usage(argv);
 	}
 
-	decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
 
 	return 0;
 }
