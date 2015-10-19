@@ -96,6 +96,7 @@ Options
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+ * -pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
  * -q: Work quietly instead of reporting progress
 
 Example
@@ -108,6 +109,29 @@ $ tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 t
 ```
 $ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
 ```
+
+GeoJSON extension
+-----------------
+
+Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
+at which an individual feature will be included in the vector tile dataset being produced.
+If you have a feature like this:
+
+```
+{
+    "type" : "Feature",
+    "tippecanoe" : { "maxzoom" : 9, "minzoom" : 4 },
+    "properties" : { "FULLNAME" : "N Vasco Rd" },
+    "geometry" : {
+        "type" : "LineString",
+        "coordinates" : [ [ -121.733350, 37.767671 ], [ -121.733600, 37.767483 ], [ -121.733131, 37.766952 ] ]
+    }
+}
+```
+
+with a `tippecanoe` object specifiying a `maxzoom` of 9 and a `minzoom` of 4, the feature
+will only appear in the vector tiles for zoom levels 4 through 9. Note that the `tippecanoe`
+object belongs to the Feature, not to its `properties`.
 
 Point styling
 -------------
@@ -154,7 +178,7 @@ For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark (and too dense for the 500K tile limit,
 in some places), so I need to figure out an equitable way to throw features away.
 
-Any polygons that are smaller than a minimum area (currently 9 square subpixels) will
+Any polygons that are smaller than a minimum area (currently 4 square subpixels) will
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
@@ -199,3 +223,68 @@ Name
 ----
 
 The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too) to a "tiler" for making map tiles.
+
+tile-join
+=========
+
+Tile-join is a tool for joining new attributes from a CSV file to features that
+have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
+file, matches them against the records of the CSV, and writes out a new tileset.
+
+The options are:
+
+ * -o *out.mbtiles*: Write the new tiles to the specified .mbtiles file
+ * -f: Remove *out.mbtiles* if it already exists
+ * -c *match.csv*: Use *match.csv* as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+ * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * -i: Only include features that matched the CSV.
+
+Because tile-join just copies the geometries to the new .mbtiles without processing them,
+it doesn't have any of tippecanoe's recourses if the new tiles are bigger than the 500K tile limit.
+If a tile is too big, it is just left out of the new tileset.
+
+Example
+-------
+
+Imagine you have a tileset of census blocks:
+
+```sh
+curl -O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
+unzip tl_2010_06001_tabblock10.zip
+ogr2ogr -f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
+./tippecanoe -o tl_2010_06001_tabblock10.mbtiles tl_2010_06001_tabblock10.json
+```
+
+and a CSV of their populations:
+
+```sh
+curl -O http://www2.census.gov/census_2010/01-Redistricting_File--PL_94-171/California/ca2010.pl.zip
+unzip -p ca2010.pl.zip cageo2010.pl |
+awk 'BEGIN {
+    print "GEOID10,population"
+}
+(substr($0, 9, 3) == "750") {
+    print "\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\"," (0 + substr($0, 328, 9))
+}' > population.csv
+```
+
+which looks like this:
+
+```
+GEOID10,population
+"060014277003018",0
+"060014283014046",0
+"060014284001020",0
+...
+"060014507501001",202
+"060014507501002",119
+"060014507501003",193
+"060014507501004",85
+...
+```
+
+Then you can join those populations to the geometries and discard the no-longer-needed ID field:
+
+```sh
+./tile-join -o population.mbtiles -x GEOID10 -c population.csv tl_2010_06001_tabblock10.mbtiles
+```

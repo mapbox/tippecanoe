@@ -133,6 +133,7 @@ struct coalesce {
 	unsigned long long index2;
 	char *metasrc;
 	bool coalesced;
+	long long original_seq;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -143,6 +144,12 @@ struct coalesce {
 		}
 	}
 };
+
+struct preservecmp {
+	bool operator()(const struct coalesce &a, const struct coalesce &b) {
+		return a.original_seq < b.original_seq;
+	}
+} preservecmp;
 
 int coalcmp(const void *v1, const void *v2) {
 	const struct coalesce *c1 = (const struct coalesce *) v1;
@@ -362,7 +369,7 @@ void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file
 }
 #endif
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -433,7 +440,14 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 					// printf("type %d, meta %lld\n", t, metastart);
 					serialize_byte(geomfile[j], t, &geompos[j], fname);
-					serialize_long_long(geomfile[j], layer, &geompos[j], fname);
+					serialize_long_long(geomfile[j], seq, &geompos[j], fname);
+					serialize_long_long(geomfile[j], (layer << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), &geompos[j], fname);
+					if (tippecanoe_minzoom != -1) {
+						serialize_int(geomfile[j], tippecanoe_minzoom, geompos, fname);
+					}
+					if (tippecanoe_maxzoom != -1) {
+						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
+					}
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x, wy = initial_y;
 
@@ -536,8 +550,19 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				break;
 			}
 
+			long long original_seq;
+			deserialize_long_long(geoms, &original_seq);
+
 			long long layer;
 			deserialize_long_long(geoms, &layer);
+			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
+			if (layer & 2) {
+				deserialize_int(geoms, &tippecanoe_minzoom);
+			}
+			if (layer & 1) {
+				deserialize_int(geoms, &tippecanoe_maxzoom);
+			}
+			layer >>= 2;
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
@@ -559,6 +584,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 			original_features++;
 
+			if (z == 0 && t == VT_POLYGON) {
+				geom = fix_polygon(geom);
+			}
+
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {
 				continue;
@@ -569,7 +598,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					geom = clip_lines(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POLYGON) {
-					geom = clip_poly(geom, z, line_detail, buffer);
+					geom = clean_or_clip_poly(geom, z, line_detail, buffer, true);
 				}
 				if (t == VT_POINT) {
 					geom = clip_point(geom, z, line_detail, buffer);
@@ -583,10 +612,17 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment);
+				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
 			}
 
 			if (z < file_minzoom) {
+				continue;
+			}
+
+			if (tippecanoe_minzoom != -1 && z < tippecanoe_minzoom) {
+				continue;
+			}
+			if (tippecanoe_maxzoom != -1 && z > tippecanoe_maxzoom) {
 				continue;
 			}
 
@@ -669,6 +705,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 
 			to_tile_scale(geom, z, line_detail);
 
+			if (t == VT_POLYGON) {
+				// Scaling may have made the polygon degenerate.
+				// Give Clipper a chance to try to fix it.
+				geom = clean_or_clip_poly(geom, 0, 0, 0, false);
+			}
+
 			if (t == VT_POINT || to_feature(geom, NULL)) {
 				struct coalesce c;
 
@@ -690,6 +732,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				c.geom = geom;
 				c.metasrc = meta;
 				c.coalesced = false;
+				c.original_seq = original_seq;
 
 				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
 				features[layer].push_back(c);
@@ -737,6 +780,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
 				}
+			}
+
+			if (prevent['i' & 0xFF]) {
+				std::sort(features[j].begin(), features[j].end(), preservecmp);
 			}
 		}
 

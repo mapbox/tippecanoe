@@ -10,6 +10,7 @@
 #include <sqlite3.h>
 #include <limits.h>
 #include "geometry.hh"
+#include "clipper/clipper.hpp"
 
 extern "C" {
 #include "tile.h"
@@ -97,6 +98,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		}
 
 		if (geom[i].op == VT_CLOSEPATH) {
+			fprintf(stderr, "Shouldn't happen\n");
 			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
 			out.push_back(geom[i]);
@@ -121,6 +123,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 			}
 
 			if (geom[i + 1].op == VT_CLOSEPATH) {
+				fprintf(stderr, "Shouldn't happen\n");
 				i++;  // also remove unused closepath
 				continue;
 			}
@@ -204,145 +207,104 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-static bool inside(draw d, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
+static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
+	// To make the GeoJSON come out right, we need to do each of the
+	// outer rings followed by its children if any, and then go back
+	// to do any outer-ring children of those children as a new top level.
 
-	switch (edge) {
-	case 0:  // top
-		return d.y > -clip_buffer;
-
-	case 1:  // right
-		return d.x < area + clip_buffer;
-
-	case 2:  // bottom
-		return d.y < area + clip_buffer;
-
-	case 3:  // left
-		return d.x > -clip_buffer;
+	ClipperLib::Path p = t->Contour;
+	for (unsigned i = 0; i < p.size(); i++) {
+		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+	}
+	if (p.size() > 0) {
+		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 	}
 
-	fprintf(stderr, "internal error inside\n");
-	exit(EXIT_FAILURE);
-}
-
-// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
-	double s1_x = p1.x - p0.x;
-	double s1_y = p1.y - p0.y;
-	double s2_x = p3.x - p2.x;
-	double s2_y = p3.y - p2.y;
-
-	double t;
-	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
-}
-
-static draw intersect(draw a, draw b, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
-
-	switch (edge) {
-	case 0:  // top
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
-		break;
-
-	case 1:  // right
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
-		break;
-
-	case 2:  // bottom
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
-		break;
-
-	case 3:  // left
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
-		break;
-	}
-
-	fprintf(stderr, "internal error intersecting\n");
-	exit(EXIT_FAILURE);
-}
-
-// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
-static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
-	drawvec out = geom;
-
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-	}
-
-	for (int edge = 0; edge < 4; edge++) {
-		if (out.size() > 0) {
-			drawvec in = out;
-			out.resize(0);
-
-			draw S = in[in.size() - 1];
-
-			for (unsigned e = 0; e < in.size(); e++) {
-				draw E = in[e];
-
-				if (inside(E, edge, area, buffer)) {
-					if (!inside(S, edge, area, buffer)) {
-						out.push_back(intersect(S, E, edge, area, buffer));
-					}
-					out.push_back(E);
-				} else if (inside(S, edge, area, buffer)) {
-					out.push_back(intersect(S, E, edge, area, buffer));
-				}
-
-				S = E;
-			}
+	for (int n = 0; n < t->ChildCount(); n++) {
+		ClipperLib::Path p = t->Childs[n]->Contour;
+		for (unsigned i = 0; i < p.size(); i++) {
+			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		}
+		if (p.size() > 0) {
+			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 		}
 	}
 
-	if (out.size() > 0) {
-		out[0].op = VT_MOVETO;
-		for (unsigned i = 1; i < out.size(); i++) {
-			out[i].op = VT_LINETO;
+	for (int n = 0; n < t->ChildCount(); n++) {
+		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
+			decode_clipped(t->Childs[n]->Childs[m], out);
 		}
 	}
-
-	return out;
 }
 
-drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	if (z == 0) {
-		return geom;
-	}
-
-	drawvec out;
+drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	for (unsigned i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
 
+			ClipperLib::Path path;
+
 			drawvec tmp;
 			for (unsigned k = i; k < j; k++) {
-				tmp.push_back(geom[k]);
-			}
-			tmp = clip_poly1(tmp, z, detail, buffer);
-			for (unsigned k = 0; k < tmp.size(); k++) {
-				out.push_back(tmp[k]);
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
 
-			if (j >= geom.size() || geom[j].op == VT_CLOSEPATH) {
-				if (out.size() > 0 && out[out.size() - 1].op != VT_CLOSEPATH) {
-					out.push_back(draw(VT_CLOSEPATH, 0, 0));
+			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+#if 0
+				fprintf(stderr, "Couldn't add polygon for clipping:");
+				for (unsigned k = i; k < j; k++) {
+					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
 				}
-				i = j;
-			} else {
-				i = j - 1;
+				fprintf(stderr, "\n");
+#endif
 			}
+
+			i = j - 1;
 		} else {
-			out.push_back(geom[i]);
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
 		}
+	}
+
+	if (clip) {
+		long long area = 0xFFFFFFFF;
+		if (z != 0) {
+			area = 1LL << (32 - z);
+		}
+		long long clip_buffer = buffer * area / 256;
+
+		ClipperLib::Path edge;
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+
+		clipper.AddPath(edge, ClipperLib::ptClip, true);
+	}
+
+	ClipperLib::PolyTree clipped;
+	if (clip) {
+		if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
+			fprintf(stderr, "Polygon clip failed\n");
+		}
+	} else {
+		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
+			fprintf(stderr, "Polygon clean failed\n");
+		}
+	}
+
+	drawvec out;
+
+	for (int i = 0; i < clipped.ChildCount(); i++) {
+		decode_clipped(clipped.Childs[i], out);
 	}
 
 	return out;
@@ -350,7 +312,7 @@ drawvec clip_poly(drawvec &geom, int z, int detail, int buffer) {
 
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
-	long long pixel = (1 << (32 - detail - z)) * 3;
+	long long pixel = (1 << (32 - detail - z)) * 2;
 
 	*reduced = true;
 
@@ -358,13 +320,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
-			}
-
-			if (j + 1 < geom.size() && geom[j + 1].op == VT_CLOSEPATH) {
-				fprintf(stderr, "double closepath\n");
 			}
 
 			double area = 0;
@@ -372,20 +330,20 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				area += geom[k].x * geom[i + ((k - i + 1) % (j - i))].y;
 				area -= geom[k].y * geom[i + ((k - i + 1) % (j - i))].x;
 			}
-			area = fabs(area / 2);
+			area = area / 2;
 
-			if (area <= pixel * pixel) {
+			if (fabs(area) <= pixel * pixel) {
 				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
 				*accum_area += area;
 				if (*accum_area > pixel * pixel) {
 					// XXX use centroid;
 
-					out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel, geom[i].y + pixel));
-					out.push_back(draw(VT_LINETO, geom[i].x, geom[i].y + pixel));
-					out.push_back(draw(VT_CLOSEPATH, geom[i].x, geom[i].y));
+					out.push_back(draw(VT_MOVETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y - pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y + pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y + pixel/2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
 
 					*accum_area -= pixel * pixel;
 				}
@@ -399,7 +357,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				*reduced = false;
 			}
 
-			i = j;
+			i = j - 1;
 		} else {
 			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
 
@@ -601,7 +559,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
 			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op == VT_CLOSEPATH || geom[j].op == VT_MOVETO) {
+				if (geom[j].op != VT_LINETO) {
 					break;
 				}
 			}
@@ -664,4 +622,75 @@ drawvec reorder_lines(drawvec &geom) {
 	}
 
 	return geom;
+}
+
+drawvec fix_polygon(drawvec &geom) {
+	int outer = 1;
+	drawvec out;
+
+	unsigned i;
+	for (i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_CLOSEPATH) {
+			outer = 1;
+		} else if (geom[i].op == VT_MOVETO) {
+			// Find the end of the ring
+
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			// Make a temporary copy of the ring.
+			// Close it if it isn't closed.
+
+			drawvec ring;
+			for (unsigned a = i; a < j; a++) {
+				ring.push_back(geom[a]);
+			}
+			if (j - i != 0 && (ring[0].x != ring[j - i - 1].x || ring[0].y != ring[j - i - 1].y)) {
+				ring.push_back(ring[0]);
+			}
+
+			// Reverse ring if winding order doesn't match
+			// inner/outer expectation
+
+			double area = 0;
+			for (unsigned k = 0; k < ring.size(); k++) {
+				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
+				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
+			}
+
+			if ((area > 0) != outer) {
+				drawvec tmp;
+				for (int a = ring.size() - 1; a >= 0; a--) {
+					tmp.push_back(ring[a]);
+				}
+				ring = tmp;
+			}
+
+			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
+			// reversal or closing
+
+			for (unsigned a = 0; a < ring.size(); a++) {
+				if (a == 0) {
+					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
+				} else {
+					out.push_back(draw(VT_LINETO, ring[a].x, ring[a].y));
+				}
+			}
+
+			// Next ring or polygon begins on the non-lineto that ended this one
+			// and is not an outer ring unless there is a terminator first
+
+			i = j - 1;
+			outer = 0;
+		} else {
+			fprintf(stderr, "Internal error: polygon ring begins with %d, not moveto\n", geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return out;
 }

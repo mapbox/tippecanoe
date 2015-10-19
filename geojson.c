@@ -123,7 +123,6 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 
 	int within = geometry_within[t];
-	long long began = *fpos;
 	if (within >= 0) {
 		int i;
 		for (i = 0; i < j->length; i++) {
@@ -187,9 +186,16 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 	}
 
 	if (t == GEOM_POLYGON) {
-		if (*fpos != began) {
-			serialize_byte(out, VT_CLOSEPATH, fpos, fname);
-		}
+		// Note that this is not using the correct meaning of closepath.
+		//
+		// We are using it here to close an entire Polygon, to distinguish
+		// the Polygons within a MultiPolygon from each other.
+		//
+		// This will be undone in fix_polygon(), which needs to know which
+		// rings come from which Polygons so that it can make the winding order
+		// of the outer ring be the opposite of the order of the inner rings.
+
+		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
 	}
 }
 
@@ -409,7 +415,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int n, double droprate, unsigned *file_bbox) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -443,10 +449,31 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		return 0;
 	}
 
+	int tippecanoe_minzoom = -1;
+	int tippecanoe_maxzoom = -1;
+
+	if (tippecanoe != NULL) {
+		json_object *min = json_hash_get(tippecanoe, "minzoom");
+		if (min != NULL && min->type == JSON_NUMBER) {
+			tippecanoe_minzoom = min->number;
+		}
+		if (min != NULL && min->type == JSON_STRING) {
+			tippecanoe_minzoom = atoi(min->string);
+		}
+
+		json_object *max = json_hash_get(tippecanoe, "maxzoom");
+		if (max != NULL && max->type == JSON_NUMBER) {
+			tippecanoe_maxzoom = max->number;
+		}
+		if (max != NULL && max->type == JSON_STRING) {
+			tippecanoe_maxzoom = atoi(max->string);
+		}
+	}
+
 	unsigned bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 
 	int nprop = 0;
-	if (properties->type == JSON_HASH) {
+	if (properties != NULL && properties->type == JSON_HASH) {
 		nprop = properties->length;
 	}
 
@@ -499,7 +526,16 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	long long geomstart = *geompos;
 
 	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
-	serialize_long_long(geomfile, n, geompos, fname);
+	serialize_long_long(geomfile, *seq, geompos, fname);
+
+	serialize_long_long(geomfile, (layer << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
+	if (tippecanoe_minzoom != -1) {
+		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
+	}
+	if (tippecanoe_maxzoom != -1) {
+		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
+	}
+
 	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = initial_x, wy = initial_y;
 	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy, &initialized);
@@ -653,22 +689,23 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		nlayers = 1;
 	}
 
-	int n;
-	for (n = 0; n < nlayers; n++) {
+	int layer;
+	for (layer = 0; layer < nlayers; layer++) {
 		json_pull *jp;
 		const char *reading;
 		FILE *fp;
 		long long found_hashes = 0;
 		long long found_features = 0;
+		long long found_geometries = 0;
 
-		if (n >= argc) {
+		if (layer >= argc) {
 			reading = "standard input";
 			fp = stdin;
 		} else {
-			reading = argv[n];
-			fp = fopen(argv[n], "r");
+			reading = argv[layer];
+			fp = fopen(argv[layer], "r");
 			if (fp == NULL) {
-				perror(argv[n]);
+				perror(argv[layer]);
 				continue;
 			}
 		}
@@ -689,16 +726,65 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (j->type == JSON_HASH) {
 				found_hashes++;
 
-				if (found_hashes == 50 && found_features == 0) {
-					fprintf(stderr, "%s:%d: Not finding any GeoJSON features in input after 50 objects. Is your file just bare geometries?\n", reading, jp->line);
+				if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
+					fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", reading, jp->line);
 				}
 			}
 
 			json_object *type = json_hash_get(j, "type");
-			if (type == NULL || type->type != JSON_STRING || strcmp(type->string, "Feature") != 0) {
+			if (type == NULL || type->type != JSON_STRING) {
 				continue;
 			}
 
+			if (found_features == 0) {
+				int i;
+				int is_geometry = 0;
+				for (i = 0; i < GEOM_TYPES; i++) {
+					if (strcmp(type->string, geometry_names[i]) == 0) {
+						is_geometry = 1;
+						break;
+					}
+				}
+
+				if (is_geometry) {
+					if (j->parent != NULL) {
+						if (j->parent->type == JSON_ARRAY) {
+							if (j->parent->parent->type == JSON_HASH) {
+								json_object *geometries = json_hash_get(j->parent->parent, "geometries");
+								if (geometries != NULL) {
+									// Parent of Parent must be a GeometryCollection
+									is_geometry = 0;
+								}
+							}
+						} else if (j->parent->type == JSON_HASH) {
+							json_object *geometry = json_hash_get(j->parent, "geometry");
+							if (geometry != NULL) {
+								// Parent must be a Feature
+								is_geometry = 0;
+							}
+						}
+					}
+				}
+
+				if (is_geometry) {
+					if (found_features != 0 && found_geometries == 0) {
+						fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+					}
+					found_geometries++;
+
+					serialize_geometry(j, NULL, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, NULL);
+					json_free(j);
+					continue;
+				}
+			}
+
+			if (strcmp(type->string, "Feature") != 0) {
+				continue;
+			}
+
+			if (found_features == 0 && found_geometries != 0) {
+				fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+			}
 			found_features++;
 
 			json_object *geometry = json_hash_get(j, "geometry");
@@ -715,14 +801,16 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				continue;
 			}
 
+			json_object *tippecanoe = json_hash_get(j, "tippecanoe");
+
 			json_object *geometries = json_hash_get(geometry, "geometries");
 			if (geometries != NULL) {
 				int g;
 				for (g = 0; g < geometries->length; g++) {
-					serialize_geometry(geometries->array[g], properties, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, n, droprate, file_bbox);
+					serialize_geometry(geometries->array[g], properties, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
 				}
 			} else {
-				serialize_geometry(geometry, properties, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, n, droprate, file_bbox);
+				serialize_geometry(geometry, properties, reading, jp, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
 			}
 
 			json_free(j);

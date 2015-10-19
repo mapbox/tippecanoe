@@ -37,8 +37,7 @@ void latlon2tile(double lat, double lon, int zoom, unsigned int *x, unsigned int
 void tile2latlon(unsigned int x, unsigned int y, int zoom, double *lat, double *lon) {
 	unsigned long long n = 1LL << zoom;
 	*lon = 360.0 * x / n - 180.0;
-	float lat_rad = atan(sinh(M_PI * (1 - 2.0 * y / n)));
-	*lat = lat_rad * 180 / M_PI;
+	*lat = atan(sinh(M_PI * (1 - 2.0 * y / n))) * 180.0 / M_PI;
 }
 
 unsigned long long encode(unsigned int wx, unsigned int wy) {

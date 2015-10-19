@@ -95,6 +95,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
 	mapnik::vector::tile tile;
 	mapnik::vector::tile outtile;
+	int features_added = 0;
 
 	if (is_compressed(message)) {
 		std::string uncompressed;
@@ -278,6 +279,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 				for (unsigned i = 0; i < feature_tags.size(); i++) {
 					outfeature->add_tags(feature_tags[i]);
 				}
+
+				features_added++;
 			}
 		}
 
@@ -299,6 +302,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 		pool_free_strings(&keys);
 		pool_free_strings(&values);
+	}
+
+	if (features_added == 0) {
+		return;
 	}
 
 	std::string s;
