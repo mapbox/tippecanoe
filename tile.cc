@@ -522,7 +522,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			deserialize_byte(geoms, &feature_minzoom);
 
 			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
-			if (progress != oprogress) {
+			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
 				}
@@ -887,8 +887,9 @@ void *run_thread(void *vargs) {
 			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, *arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
 
 			if (len < 0) {
-				return NULL; // XXX how to report errors from threads?
-				// return z - 1;
+				int *err = (int *) malloc(sizeof(int));
+				*err = z - 1;
+				return err;
 			}
 
 			if (pthread_mutex_lock(&db_lock) != 0) {
@@ -1055,11 +1056,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 		}
 
+		int err = INT_MAX;
+
 		for (thread = 0; thread < threads; thread++) {
 			void *retval;
 
 			if (pthread_join(pthreads[thread], &retval) != 0) {
 				perror("pthread_join");
+			}
+
+			if (retval != NULL) {
+				err = *((int *) retval);
 			}
 		}
 
@@ -1075,6 +1082,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 			geomfd[j] = subfd[j];
 			geom_size[j] = geomst.st_size;
+		}
+
+		if (err != INT_MAX) {
+			return err;
 		}
 	}
 
