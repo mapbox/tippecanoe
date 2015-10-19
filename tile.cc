@@ -418,9 +418,8 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
-	double oprogress = 0;
 	double fraction = 1;
 
 	char *og = *geoms;
@@ -460,7 +459,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		long long count = 0;
-		// long long along = 0;
 		double accum_area = 0;
 
 		double interval = 0;
@@ -487,6 +485,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		long long geompos[child_shards];
 		memset(within, '\0', sizeof(within));
 		memset(geompos, '\0', sizeof(geompos));
+
+		double oprogress = 0;
 
 		*geoms = og;
 
@@ -521,7 +521,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
 
-			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
@@ -873,6 +873,7 @@ void *run_thread(void *vargs) {
 
 		char *geomstart = geom;
 		char *end = geom + arg->geom_size[j];
+		char *prevgeom = geom;
 
 		while (geom < end) {
 			int z;
@@ -884,7 +885,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, *arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -892,7 +893,7 @@ void *run_thread(void *vargs) {
 				return err;
 			}
 
-			if (pthread_mutex_lock(&db_lock) != 0) {
+			if (pthread_mutex_lock(&var_lock) != 0) {
 				perror("pthread_mutex_lock");
 				exit(EXIT_FAILURE);
 			}
@@ -903,7 +904,10 @@ void *run_thread(void *vargs) {
 				*arg->most = len;
 			}
 
-			if (pthread_mutex_unlock(&db_lock) != 0) {
+			*arg->along += geom - prevgeom;
+			prevgeom = geom;
+
+			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
 				exit(EXIT_FAILURE);
 			}
@@ -912,7 +916,6 @@ void *run_thread(void *vargs) {
 		if (munmap(geomstart, arg->geom_size[j]) != 0) {
 			perror("munmap geom");
 		}
-		*arg->along += arg->geom_size[j];
 	}
 
 	return NULL;
