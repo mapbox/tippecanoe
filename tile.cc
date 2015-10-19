@@ -1034,7 +1034,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].file_minzoom = minzoom;
 			args[thread].file_maxzoom = maxzoom;
 			args[thread].todo = todo;
-			args[thread].along = &along; // XXX locking
+			args[thread].along = &along; // locked with var_lock
 			args[thread].gamma = gamma;
 			args[thread].nlayers = nlayers;
 			args[thread].prevent = prevent;
