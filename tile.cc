@@ -891,10 +891,20 @@ void *run_thread(void *vargs) {
 				// return z - 1;
 			}
 
+			if (pthread_mutex_lock(&db_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
+
 			if (z == arg->maxzoom && len > *arg->most) {
 				*arg->midx = x;
 				*arg->midy = y;
 				*arg->most = len;
+			}
+
+			if (pthread_mutex_unlock(&db_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -1010,9 +1020,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
 			args[thread].basezoom = maxzoom; // XXX rename?
-			args[thread].file_keys = file_keys; // XXX locking
+			args[thread].file_keys = file_keys; // locked with var_lock
 			args[thread].layernames = layernames;
-			args[thread].outdb = outdb; // XXX locking
+			args[thread].outdb = outdb; // locked with db_lock
 			args[thread].droprate = droprate;
 			args[thread].buffer = buffer;
 			args[thread].fname = fname;
@@ -1029,13 +1039,13 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 			args[thread].geomfd = geomfd;
 			args[thread].geom_size = geom_size;
-			args[thread].midx = midx; // XXX locking
-			args[thread].midy = midy; // XXX locking
+			args[thread].midx = midx; // locked with var_lock
+			args[thread].midy = midy; // locked with var_lock
 			args[thread].maxzoom = maxzoom;
 			args[thread].minzoom = minzoom;
 			args[thread].full_detail = full_detail;
 			args[thread].low_detail = low_detail;
-			args[thread].most = &most; // XXX locking
+			args[thread].most = &most; // locked with var_lock
 
 			args[thread].tasks = dispatches[thread].tasks;
 
