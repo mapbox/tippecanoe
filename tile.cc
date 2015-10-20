@@ -956,7 +956,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 		}
 
-#define MAX_THREADS 20 // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
+#define MAX_THREADS 20  // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
 
 		int threads = MAX_THREADS;
 		if (threads > TEMP_FILES / 4) {
@@ -969,7 +969,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			threads = useful_threads;
 		}
 		// Round down to a power of 2
-		threads = 1 << (int)(log(threads) / log(2));
+		threads = 1 << (int) (log(threads) / log(2));
 
 		// Assign temporary files to threads
 
@@ -1021,10 +1021,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].metabase = metabase;
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
-			args[thread].basezoom = maxzoom; // XXX rename?
-			args[thread].file_keys = file_keys; // locked with var_lock
+			args[thread].basezoom = maxzoom;     // XXX rename?
+			args[thread].file_keys = file_keys;  // locked with var_lock
 			args[thread].layernames = layernames;
-			args[thread].outdb = outdb; // locked with db_lock
+			args[thread].outdb = outdb;  // locked with db_lock
 			args[thread].droprate = droprate;
 			args[thread].buffer = buffer;
 			args[thread].fname = fname;
@@ -1032,7 +1032,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].file_minzoom = minzoom;
 			args[thread].file_maxzoom = maxzoom;
 			args[thread].todo = todo;
-			args[thread].along = &along; // locked with var_lock
+			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
 			args[thread].nlayers = nlayers;
 			args[thread].prevent = prevent;
@@ -1041,13 +1041,13 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 			args[thread].geomfd = geomfd;
 			args[thread].geom_size = geom_size;
-			args[thread].midx = midx; // locked with var_lock
-			args[thread].midy = midy; // locked with var_lock
+			args[thread].midx = midx;  // locked with var_lock
+			args[thread].midy = midy;  // locked with var_lock
 			args[thread].maxzoom = maxzoom;
 			args[thread].minzoom = minzoom;
 			args[thread].full_detail = full_detail;
 			args[thread].low_detail = low_detail;
-			args[thread].most = &most; // locked with var_lock
+			args[thread].most = &most;  // locked with var_lock
 
 			args[thread].tasks = dispatches[thread].tasks;
 
