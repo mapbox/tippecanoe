@@ -418,7 +418,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
 	double fraction = 1;
 
@@ -831,7 +831,7 @@ struct write_tile_args {
 	int file_minzoom;
 	int file_maxzoom;
 	double todo;
-	long long *along;
+	volatile long long *along;
 	double gamma;
 	int nlayers;
 	char *prevent;
@@ -839,13 +839,13 @@ struct write_tile_args {
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
-	unsigned *midx;
-	unsigned *midy;
+	volatile unsigned *midx;
+	volatile unsigned *midy;
 	int maxzoom;
 	int minzoom;
 	int full_detail;
 	int low_detail;
-	long long *most;
+	volatile long long *most;
 };
 
 void *run_thread(void *vargs) {
@@ -956,7 +956,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				useful_threads++;
 			}
 		}
-		printf("\n");
 
 #define MAX_THREADS 20 // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
 
@@ -972,6 +971,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 		// Round down to a power of 2
 		threads = 1 << (int)(log(threads) / log(2));
+
+		printf(" %d threads\n", threads);
 
 		// Assign temporary files to threads
 
