@@ -339,11 +339,11 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				if (*accum_area > pixel * pixel) {
 					// XXX use centroid;
 
-					out.push_back(draw(VT_MOVETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y - pixel/2));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel/2, geom[i].y + pixel/2));
-					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y + pixel/2));
-					out.push_back(draw(VT_LINETO, geom[i].x - pixel/2, geom[i].y - pixel/2));
+					out.push_back(draw(VT_MOVETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y - pixel / 2));
+					out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y + pixel / 2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y + pixel / 2));
+					out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
 
 					*accum_area -= pixel * pixel;
 				}

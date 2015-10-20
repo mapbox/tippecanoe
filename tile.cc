@@ -15,6 +15,7 @@
 #include <sys/mman.h>
 #include <math.h>
 #include <sqlite3.h>
+#include <pthread.h>
 #include "vector_tile.pb.h"
 #include "geometry.hh"
 
@@ -30,6 +31,9 @@ extern "C" {
 
 #define XSTRINGIFY(s) STRINGIFY(s)
 #define STRINGIFY(s) #s
+
+pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 static inline int compress(std::string const &input, std::string &output) {
@@ -208,26 +212,30 @@ struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
 	return ret;
 }
 
-void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, char *only) {
+void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
 	int m;
 	deserialize_int(meta, &m);
 
 	int i;
 	for (i = 0; i < m; i++) {
 		struct pool_val *key = retrieve_string(meta, keys, stringpool);
+		struct pool_val *value = retrieve_string(meta, values, stringpool);
 
-		if (only != NULL && (strcmp(key->s, only) != 0)) {
-			// XXX if evaluate ever works again, check whether this is sufficient
-			(void) retrieve_string(meta, values, stringpool);
-		} else {
-			struct pool_val *value = retrieve_string(meta, values, stringpool);
+		intmeta->push_back(key->n);
+		intmeta->push_back(value->n);
 
-			intmeta->push_back(key->n);
-			intmeta->push_back(value->n);
+		if (!is_pooled(file_keys, key->s, value->type)) {
+			if (pthread_mutex_lock(&var_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
 
-			if (!is_pooled(file_keys, key->s, value->type)) {
-				// Dup to retain after munmap
-				pool(file_keys, strdup(key->s), value->type);
+			// Dup to retain after munmap
+			pool(file_keys, strdup(key->s), value->type);
+
+			if (pthread_mutex_unlock(&var_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
@@ -309,67 +317,7 @@ struct sll {
 	}
 };
 
-#if 0
-void evaluate(std::vector<coalesce> &features, char *metabase, struct pool *file_keys, const char *layername, int line_detail, long long orig) {
-	std::vector<sll> options;
-
-	struct pool_val *pv;
-	for (pv = file_keys->head; pv != NULL; pv = pv->next) {
-		struct pool keys, values;
-		pool_init(&keys, 0);
-		pool_init(&values, 0);
-		long long count = 0;
-
-		for (unsigned i = 0; i < features.size(); i++) {
-			char *meta = features[i].metasrc;
-
-			features[i].meta.resize(0);
-			decode_meta(&meta, &keys, &values, file_keys, &features[i].meta, pv->s);
-		}
-
-		std::vector<coalesce> empty;
-		mapnik::vector::tile tile = create_tile(layername, line_detail, empty, &count, &keys, &values, 1); // XXX layer
-
-		std::string s;
-		std::string compressed;
-
-		tile.SerializeToString(&s);
-		compress(s, compressed);
-
-		options.push_back(sll(pv->s, compressed.size()));
-
-		pool_free(&values);
-		pool_free(&keys);
-	}
-
-	std::sort(options.begin(), options.end());
-	for (unsigned i = 0; i < options.size(); i++) {
-		if (options[i].val > 1024) {
-			fprintf(stderr, "using -x %s would save about %lld, for a tile size of of %lld\n", options[i].name, options[i].val, orig - options[i].val);
-		}
-	}
-
-	struct pool keys, values;
-	pool_init(&keys, 0);
-	pool_init(&values, 0);
-	long long count = 0;
-
-	std::vector<coalesce> empty;
-	mapnik::vector::tile tile = create_tile(layername, line_detail, features, &count, &keys, &values, nlayers);
-
-	std::string s;
-	std::string compressed;
-
-	tile.SerializeToString(&s);
-	compress(s, compressed);
-	fprintf(stderr, "geometry alone (-X) would be %lld\n", (long long) compressed.size());
-
-	pool_free(&values);
-	pool_free(&keys);
-}
-#endif
-
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
 	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -405,7 +353,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 
 				// j is the shard that the child tile's data is being written to.
 				//
-				// Be careful: We can't jump more zoom levels than MAX_ZOOM_INCREMENT
+				// Be careful: We can't jump more zoom levels than max_zoom_increment
 				// because that could break the constraint that each of the children
 				// of the current tile must have its own shard, because the data for
 				// the child tile must be contiguous within the shard.
@@ -414,9 +362,14 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 				// the four that would normally result from splitting one tile,
 				// because it will go through all the shards when it does the
 				// next zoom.
+				//
+				// If child_shards is a power of 2 but not a power of 4, this will
+				// shard X more widely than Y. XXX Is there a better way to do this
+				// without causing collisions?
 
-				int j = ((jx & ((1 << MAX_ZOOM_INCREMENT) - 1)) << MAX_ZOOM_INCREMENT) |
-					((jy & ((1 << MAX_ZOOM_INCREMENT) - 1)));
+				int j = ((jx << max_zoom_increment) |
+					 ((jy & ((1 << max_zoom_increment) - 1)))) &
+					(child_shards - 1);
 
 				{
 					if (!within[j]) {
@@ -465,20 +418,29 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers, char *prevent, char *additional) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
-	static bool evaluated = false;
-	double oprogress = 0;
 	double fraction = 1;
 
 	char *og = *geoms;
 
+	// XXX is there a way to do this without floating point?
+	int max_zoom_increment = log(child_shards) / log(4);
+	if (child_shards < 4 || max_zoom_increment < 1) {
+		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
+		exit(EXIT_FAILURE);
+	}
+	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
+		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
+		exit(EXIT_FAILURE);
+	}
+
 	int nextzoom = z + 1;
 	if (nextzoom < file_minzoom) {
-		if (z + MAX_ZOOM_INCREMENT > file_minzoom) {
+		if (z + max_zoom_increment > file_minzoom) {
 			nextzoom = file_minzoom;
 		} else {
-			nextzoom = z + MAX_ZOOM_INCREMENT;
+			nextzoom = z + max_zoom_increment;
 		}
 	}
 
@@ -497,7 +459,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 		}
 
 		long long count = 0;
-		// long long along = 0;
 		double accum_area = 0;
 
 		double interval = 0;
@@ -520,8 +481,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			features.push_back(std::vector<coalesce>());
 		}
 
-		int within[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
-		long long geompos[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)] = {0};
+		int within[child_shards];
+		long long geompos[child_shards];
+		memset(within, '\0', sizeof(within));
+		memset(geompos, '\0', sizeof(geompos));
+
+		double oprogress = 0;
 
 		*geoms = og;
 
@@ -556,8 +521,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
 
-			double progress = floor((((*geoms - geomstart + along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
-			if (progress != oprogress) {
+			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
 				}
@@ -594,7 +559,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
+				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
 			}
 
 			if (z < file_minzoom) {
@@ -716,13 +681,13 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 				c.coalesced = false;
 				c.original_seq = original_seq;
 
-				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta, NULL);
+				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta);
 				features[layer].push_back(c);
 			}
 		}
 
 		int j;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < child_shards; j++) {
 			if (within[j]) {
 				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
@@ -805,13 +770,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 				}
 
-				if (line_detail == min_detail || !evaluated) {
-					evaluated = true;
-#if 0
-					evaluate(features[0], metabase, file_keys[0], layername, line_detail, compressed.size()); // XXX layer
-#endif
-				}
-
 				if (prevent['d' & 0xFF]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
@@ -823,7 +781,18 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
+				if (pthread_mutex_lock(&db_lock) != 0) {
+					perror("pthread_mutex_lock");
+					exit(EXIT_FAILURE);
+				}
+
 				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+
+				if (pthread_mutex_unlock(&db_lock) != 0) {
+					perror("pthread_mutex_unlock");
+					exit(EXIT_FAILURE);
+				}
+
 				return count;
 			}
 		} else {
@@ -841,15 +810,126 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, unsigned *f
 	return -1;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *file_bbox, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
+struct task {
+	int fileno;
+	struct task *next;
+} tasks[TEMP_FILES];
+
+struct write_tile_args {
+	struct task *tasks;
+	char *metabase;
+	char *stringpool;
+	int min_detail;
+	int basezoom;
+	struct pool **file_keys;
+	char **layernames;
+	sqlite3 *outdb;
+	double droprate;
+	int buffer;
+	const char *fname;
+	FILE **geomfile;
+	int file_minzoom;
+	int file_maxzoom;
+	double todo;
+	volatile long long *along;
+	double gamma;
+	int nlayers;
+	char *prevent;
+	char *additional;
+	int child_shards;
+	int *geomfd;
+	off_t *geom_size;
+	volatile unsigned *midx;
+	volatile unsigned *midy;
+	int maxzoom;
+	int minzoom;
+	int full_detail;
+	int low_detail;
+	volatile long long *most;
+};
+
+void *run_thread(void *vargs) {
+	write_tile_args *arg = (write_tile_args *) vargs;
+	struct task *task;
+
+	for (task = arg->tasks; task != NULL; task = task->next) {
+		int j = task->fileno;
+
+		if (arg->geomfd[j] < 0) {
+			// only one source file for zoom level 0
+			continue;
+		}
+		if (arg->geom_size[j] == 0) {
+			continue;
+		}
+
+		// printf("%lld of geom_size\n", (long long) geom_size[j]);
+
+		char *geom = (char *) mmap(NULL, arg->geom_size[j], PROT_READ, MAP_PRIVATE, arg->geomfd[j], 0);
+		if (geom == MAP_FAILED) {
+			perror("mmap geom");
+			exit(EXIT_FAILURE);
+		}
+
+		char *geomstart = geom;
+		char *end = geom + arg->geom_size[j];
+		char *prevgeom = geom;
+
+		while (geom < end) {
+			int z;
+			unsigned x, y;
+
+			deserialize_int(&geom, &z);
+			deserialize_uint(&geom, &x);
+			deserialize_uint(&geom, &y);
+
+			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
+
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
+
+			if (len < 0) {
+				int *err = (int *) malloc(sizeof(int));
+				*err = z - 1;
+				return err;
+			}
+
+			if (pthread_mutex_lock(&var_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
+
+			if (z == arg->maxzoom && len > *arg->most) {
+				*arg->midx = x;
+				*arg->midy = y;
+				*arg->most = len;
+			}
+
+			*arg->along += geom - prevgeom;
+			prevgeom = geom;
+
+			if (pthread_mutex_unlock(&var_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (munmap(geomstart, arg->geom_size[j]) != 0) {
+			perror("munmap geom");
+		}
+	}
+
+	return NULL;
+}
+
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
 
-		FILE *sub[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
-		int subfd[(1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT)];
+		FILE *sub[TEMP_FILES];
+		int subfd[TEMP_FILES];
 		int j;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < TEMP_FILES; j++) {
 			char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX" XSTRINGIFY(INT_MAX)) + 1];
 			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
@@ -866,62 +946,132 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			unlink(geomname);
 		}
 
+		int useful_threads = 0;
 		long long todo = 0;
 		long long along = 0;
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		for (j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
+			if (geom_size[j] > 0) {
+				useful_threads++;
+			}
 		}
 
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
-			if (geomfd[j] < 0) {
-				// only one source file for zoom level 0
-				continue;
+#define MAX_THREADS 20  // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
+
+		int threads = MAX_THREADS;
+		if (threads > TEMP_FILES / 4) {
+			threads = TEMP_FILES / 4;
+		}
+		// XXX is it useful to divide further if we know we are skipping
+		// some zoom levels? Is it faster to have fewer CPUs working on
+		// sharding, but more deeply, or fewer CPUs, less deeply?
+		if (threads > useful_threads) {
+			threads = useful_threads;
+		}
+		// Round down to a power of 2
+		threads = 1 << (int) (log(threads) / log(2));
+
+		// Assign temporary files to threads
+
+		struct dispatch {
+			struct task *tasks;
+			long long todo;
+			struct dispatch *next;
+		} dispatches[threads];
+		struct dispatch *dispatch_head = &dispatches[0];
+		for (j = 0; j < threads; j++) {
+			dispatches[j].tasks = NULL;
+			dispatches[j].todo = 0;
+			if (j + 1 < threads) {
+				dispatches[j].next = &dispatches[j + 1];
+			} else {
+				dispatches[j].next = NULL;
 			}
+		}
+
+		for (j = 0; j < TEMP_FILES; j++) {
 			if (geom_size[j] == 0) {
 				continue;
 			}
 
-			// printf("%lld of geom_size\n", (long long) geom_size[j]);
+			tasks[j].fileno = j;
+			tasks[j].next = dispatch_head->tasks;
+			dispatch_head->tasks = &tasks[j];
+			dispatch_head->todo += geom_size[j];
 
-			char *geom = (char *) mmap(NULL, geom_size[j], PROT_READ, MAP_PRIVATE, geomfd[j], 0);
-			if (geom == MAP_FAILED) {
-				perror("mmap geom");
-				exit(EXIT_FAILURE);
-			}
+			struct dispatch *here = dispatch_head;
+			dispatch_head = dispatch_head->next;
 
-			char *geomstart = geom;
-			char *end = geom + geom_size[j];
-
-			while (geom < end) {
-				int z;
-				unsigned x, y;
-
-				deserialize_int(&geom, &z);
-				deserialize_uint(&geom, &x);
-				deserialize_uint(&geom, &y);
-
-				// fprintf(stderr, "%d/%u/%u\n", z, x, y);
-
-				long long len = write_tile(&geom, metabase, stringpool, file_bbox, z, x, y, z == maxzoom ? full_detail : low_detail, min_detail, maxzoom, file_keys, layernames, outdb, droprate, buffer, fname, sub, minzoom, maxzoom, todo, geomstart, along, gamma, nlayers, prevent, additional);
-
-				if (len < 0) {
-					return i - 1;
-				}
-
-				if (z == maxzoom && len > most) {
-					*midx = x;
-					*midy = y;
-					most = len;
+			dispatch **d;
+			for (d = &dispatch_head; *d != NULL; d = &((*d)->next)) {
+				if (here->todo < (*d)->todo) {
+					break;
 				}
 			}
 
-			if (munmap(geomstart, geom_size[j]) != 0) {
-				perror("munmap geom");
-			}
-			along += geom_size[j];
+			here->next = *d;
+			*d = here;
 		}
 
-		for (j = 0; j < (1 << MAX_ZOOM_INCREMENT) * (1 << MAX_ZOOM_INCREMENT); j++) {
+		pthread_t pthreads[threads];
+		write_tile_args args[threads];
+
+		int thread;
+		for (thread = 0; thread < threads; thread++) {
+			args[thread].metabase = metabase;
+			args[thread].stringpool = stringpool;
+			args[thread].min_detail = min_detail;
+			args[thread].basezoom = maxzoom;     // XXX rename?
+			args[thread].file_keys = file_keys;  // locked with var_lock
+			args[thread].layernames = layernames;
+			args[thread].outdb = outdb;  // locked with db_lock
+			args[thread].droprate = droprate;
+			args[thread].buffer = buffer;
+			args[thread].fname = fname;
+			args[thread].geomfile = sub + thread * (TEMP_FILES / threads);
+			args[thread].file_minzoom = minzoom;
+			args[thread].file_maxzoom = maxzoom;
+			args[thread].todo = todo;
+			args[thread].along = &along;  // locked with var_lock
+			args[thread].gamma = gamma;
+			args[thread].nlayers = nlayers;
+			args[thread].prevent = prevent;
+			args[thread].additional = additional;
+			args[thread].child_shards = TEMP_FILES / threads;
+
+			args[thread].geomfd = geomfd;
+			args[thread].geom_size = geom_size;
+			args[thread].midx = midx;  // locked with var_lock
+			args[thread].midy = midy;  // locked with var_lock
+			args[thread].maxzoom = maxzoom;
+			args[thread].minzoom = minzoom;
+			args[thread].full_detail = full_detail;
+			args[thread].low_detail = low_detail;
+			args[thread].most = &most;  // locked with var_lock
+
+			args[thread].tasks = dispatches[thread].tasks;
+
+			if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
+				perror("pthread_create");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		int err = INT_MAX;
+
+		for (thread = 0; thread < threads; thread++) {
+			void *retval;
+
+			if (pthread_join(pthreads[thread], &retval) != 0) {
+				perror("pthread_join");
+			}
+
+			if (retval != NULL) {
+				err = *((int *) retval);
+			}
+		}
+
+		for (j = 0; j < TEMP_FILES; j++) {
 			close(geomfd[j]);
 			fclose(sub[j]);
 
@@ -933,6 +1083,10 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 			geomfd[j] = subfd[j];
 			geom_size[j] = geomst.st_size;
+		}
+
+		if (err != INT_MAX) {
+			return err;
 		}
 	}
 
