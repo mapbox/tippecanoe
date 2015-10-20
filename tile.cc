@@ -951,7 +951,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		long long along = 0;
 		for (j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
-			printf("%d", geom_size[j] != 0);
 			if (geom_size[j] > 0) {
 				useful_threads++;
 			}
@@ -971,8 +970,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 		// Round down to a power of 2
 		threads = 1 << (int)(log(threads) / log(2));
-
-		printf(" %d threads\n", threads);
 
 		// Assign temporary files to threads
 

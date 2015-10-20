@@ -1,3 +1,16 @@
+## 1.3.0
+
+* Tile generation is multithreaded to take advantage of multiple CPUs
+* More compact data representation reduces memory usage and improves speed
+* Polygon clipping uses [Clipper](http://www.angusj.com/delphi/clipper/documentation/Docs/_Body.htm)
+  and makes sure interior and exterior rings are distinguished by winding order
+* Individual GeoJSON features can specify their own minzoom and maxzoom
+* New `tile-join` utility can add new properties from a CSV file to an existing tileset
+* Feature coalescing, line-reversing, and reordering by attribute are now options, not defaults
+* Output of `decode` utility is now in GeoJSON format
+* Tile generation with a minzoom spends less time on unused lower zoom levels
+* Bare geometries without a Feature wrapper are accepted
+
 ## 1.2.0
 
 * Switched to top-down rendering, yielding performance improvements
