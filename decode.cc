@@ -259,8 +259,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 						}
 					}
 
+					// These are lat/lon coordinates where the Y axis points upward,
+					// not tile coordinates, so the outer ring of the polygon has a positive area.
+
 					areas[i] = area;
-					if (areas[i] <= 0) {
+					if (areas[i] >= 0) {
 						outer++;
 					}
 
@@ -275,7 +278,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				int state = 0;
 				for (unsigned i = 0; i < rings.size(); i++) {
-					if (areas[i] <= 0) {
+					if (areas[i] >= 0) {
 						if (state != 0) {
 							// new multipolygon
 							printf(" ] ], [ [ ");

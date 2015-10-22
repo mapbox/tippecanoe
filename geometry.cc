@@ -335,7 +335,12 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 			if (fabs(area) <= pixel * pixel) {
 				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
-				*accum_area += area;
+				// These are screen coordinates where the Y axis points downward,
+				// so the area of the outer ring is negative. So we subtract from
+				// the accumulated area that hasn't been accounted for rather than
+				// adding to it.
+
+				*accum_area -= area;
 				if (*accum_area > pixel * pixel) {
 					// XXX use centroid;
 
@@ -662,7 +667,7 @@ drawvec fix_polygon(drawvec &geom) {
 				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
 			}
 
-			if ((area > 0) != outer) {
+			if ((area < 0) != outer) {
 				drawvec tmp;
 				for (int a = ring.size() - 1; a >= 0; a--) {
 					tmp.push_back(ring[a]);
