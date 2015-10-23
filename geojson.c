@@ -616,6 +616,10 @@ struct geometry_queue {
 
 void enqueue_geometry(json_object *geometry, json_object *properties, json_object *tippecanoe, json_object *to_free, int line) {
 	struct geometry_queue *gq = malloc(sizeof(struct geometry_queue));
+	if (gq == NULL) {
+		perror("malloc");
+		exit(EXIT_FAILURE);
+	}
 
 	gq->geometry = geometry;
 	gq->properties = properties;
@@ -718,6 +722,8 @@ void *run_queue(void *v) {
 					exit(EXIT_FAILURE);
 				}
 			}
+
+			free(gq);
 
 			if (pthread_mutex_lock(&gq_lock) != 0) {
 				perror("pthread_mutex_lock");
