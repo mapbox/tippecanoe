@@ -117,9 +117,9 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
+void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized) {
 	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
+		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
 		return;
 	}
 
@@ -135,7 +135,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source, wx, wy, initialized);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -148,7 +148,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 				static int warned = 0;
 
 				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, source->line);
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
 					warned = 1;
 				}
 			}
@@ -182,7 +182,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 			*wx = x;
 			*wy = y;
 		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
+			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 		}
 	}
 
@@ -416,12 +416,12 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
 		if (!warned) {
-			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, jp->line);
+			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, line);
 			warned = 1;
 		}
 
@@ -429,13 +429,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	}
 
 	if (geometry_type->type != JSON_STRING) {
-		fprintf(stderr, "%s:%d: geometry without type\n", reading, jp->line);
+		fprintf(stderr, "%s:%d: geometry without type\n", reading, line);
 		return 0;
 	}
 
 	json_object *coordinates = json_hash_get(geometry, "coordinates");
 	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, jp->line);
+		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, line);
 		return 0;
 	}
 
@@ -446,7 +446,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, jp->line, geometry_type->string);
+		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, line, geometry_type->string);
 		return 0;
 	}
 
@@ -512,7 +512,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
-				fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, jp->line, properties->keys[i]->string);
+				fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, line, properties->keys[i]->string);
 				continue;
 			}
 		}
@@ -539,7 +539,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = initial_x, wy = initial_y;
-	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy, &initialized);
+	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, &initialized);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	/*
@@ -608,12 +608,13 @@ struct geometry_queue {
 	json_object *properties;
 	json_object *tippecanoe;
 	json_object *to_free;
+	int line;
 
 	struct geometry_queue *next;
 	struct geometry_queue *prev;
 } *gq_head = NULL, *gq_tail = NULL;
 
-void enqueue_geometry(json_object *geometry, json_object *properties, json_object *tippecanoe, json_object *to_free) {
+void enqueue_geometry(json_object *geometry, json_object *properties, json_object *tippecanoe, json_object *to_free, int line) {
 	struct geometry_queue *gq = malloc(sizeof(struct geometry_queue));
 
 	gq->geometry = geometry;
@@ -622,6 +623,7 @@ void enqueue_geometry(json_object *geometry, json_object *properties, json_objec
 	gq->to_free = to_free;
 	gq->next = NULL;
 	gq->prev = NULL;
+	gq->line = line;
 
 	if (pthread_mutex_lock(&gq_lock) != 0) {
 		perror("pthread_mutex_lock");
@@ -649,7 +651,6 @@ void enqueue_geometry(json_object *geometry, json_object *properties, json_objec
 
 struct run_queue_args {
 	const char *reading;
-	json_pull *jp;
 	long long *seq;
 	long long *metapos;
 	long long *geompos;
@@ -701,7 +702,7 @@ void *run_queue(void *v) {
 			}
 
 			if (gq->geometry != NULL) {
-				serialize_geometry(gq->geometry, gq->properties, a->reading, a->jp, a->seq, a->metapos, a->geompos, a->indexpos, a->exclude, a->include, a->exclude_all, a->metafile, a->geomfile, a->indexfile, a->poolfile, a->treefile, a->fname, a->maxzoom, a->layer, a->droprate, a->file_bbox, gq->tippecanoe);
+				serialize_geometry(gq->geometry, gq->properties, a->reading, gq->line, a->seq, a->metapos, a->geompos, a->indexpos, a->exclude, a->include, a->exclude_all, a->metafile, a->geomfile, a->indexfile, a->poolfile, a->treefile, a->fname, a->maxzoom, a->layer, a->droprate, a->file_bbox, gq->tippecanoe);
 			}
 
 			if (gq->to_free != NULL) {
@@ -741,7 +742,6 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 
 	struct run_queue_args a;
 	a.reading = reading;
-	a.jp = jp;
 	a.seq = seq;
 	a.metapos = metapos;
 	a.geompos = geompos;
@@ -864,7 +864,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 					exit(EXIT_FAILURE);
 				}
 
-				enqueue_geometry(j, NULL, NULL, j);
+				enqueue_geometry(j, NULL, NULL, j, jp->line);
 				continue;
 			}
 		}
@@ -910,18 +910,18 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				enqueue_geometry(geometries->array[g], properties, tippecanoe, NULL);
+				enqueue_geometry(geometries->array[g], properties, tippecanoe, NULL, jp->line);
 			}
 
-			enqueue_geometry(NULL, NULL, NULL, j);
+			enqueue_geometry(NULL, NULL, NULL, j, jp->line);
 		} else {
-			enqueue_geometry(geometry, properties, tippecanoe, j);
+			enqueue_geometry(geometry, properties, tippecanoe, j, jp->line);
 		}
 
 		/* XXX check for any non-features in the outer object */
 	}
 
-	enqueue_geometry(NULL, NULL, NULL, NULL); // Shutdown message for the reader
+	enqueue_geometry(NULL, NULL, NULL, NULL, 0); // Shutdown message for the reader
 
 	void *retval;
 	if (pthread_join(reader, &retval) != 0) {
