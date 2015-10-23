@@ -598,6 +598,55 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
+struct geometry_queue {
+	json_object *geometry;
+	json_object *properties;
+	json_object *tippecanoe;
+	json_object *to_free;
+
+	struct geometry_queue *next;
+	struct geometry_queue *prev;
+} *gq_head = NULL, *gq_tail = NULL;
+
+void enqueue_geometry(json_object *geometry, json_object *properties, json_object *tippecanoe, json_object *to_free) {
+	struct geometry_queue *gq = malloc(sizeof(struct geometry_queue));
+
+	gq->geometry = geometry;
+	gq->properties = properties;
+	gq->tippecanoe = tippecanoe;
+	gq->to_free = to_free;
+	gq->next = NULL;
+	gq->prev = NULL;
+
+	if (gq_head == NULL) {
+		gq_head = gq_tail = gq;
+	} else {
+		gq->prev = gq_tail;
+		gq_tail->next = gq;
+		gq_tail = gq;
+	}
+
+	// XXX wake reader
+}
+
+void run_queue(const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
+	while (gq_head != NULL) {
+		struct geometry_queue *gq = gq_head;
+		gq_head = gq_head->next;
+		if (gq_head != NULL) {
+			gq_head->prev = NULL;
+		}
+
+		if (gq->geometry != NULL) {
+			serialize_geometry(gq->geometry, gq->properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, gq->tippecanoe);
+		}
+
+		if (gq->to_free != NULL) {
+			json_free(gq->to_free);
+		}
+	}
+}
+
 void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
 	long long found_hashes = 0;
 	long long found_features = 0;
@@ -663,8 +712,8 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, NULL);
-				json_free(j);
+				json_disconnect(j);
+				enqueue_geometry(j, NULL, NULL, j);
 				continue;
 			}
 		}
@@ -672,6 +721,8 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (strcmp(type->string, "Feature") != 0) {
 			continue;
 		}
+
+		json_disconnect(j);
 
 		if (found_features == 0 && found_geometries != 0) {
 			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
@@ -698,16 +749,18 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
+				enqueue_geometry(geometries->array[g], properties, tippecanoe, NULL);
 			}
-		} else {
-			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
-		}
 
-		json_free(j);
+			enqueue_geometry(NULL, NULL, NULL, j);
+		} else {
+			enqueue_geometry(geometry, properties, tippecanoe, j);
+		}
 
 		/* XXX check for any non-features in the outer object */
 	}
+
+	run_queue(reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
 }
 
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
