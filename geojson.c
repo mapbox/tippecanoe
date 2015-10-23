@@ -600,6 +600,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 }
 
 pthread_mutex_t json_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gq_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t gq_notify;
 
 struct geometry_queue {
 	json_object *geometry;
@@ -621,6 +623,11 @@ void enqueue_geometry(json_object *geometry, json_object *properties, json_objec
 	gq->next = NULL;
 	gq->prev = NULL;
 
+	if (pthread_mutex_lock(&gq_lock) != 0) {
+		perror("pthread_mutex_lock");
+		exit(EXIT_FAILURE);
+	}
+
 	if (gq_head == NULL) {
 		gq_head = gq_tail = gq;
 	} else {
@@ -629,38 +636,136 @@ void enqueue_geometry(json_object *geometry, json_object *properties, json_objec
 		gq_tail = gq;
 	}
 
-	// XXX wake reader
-}
+	if (pthread_cond_signal(&gq_notify) != 0) {
+		perror("pthread_cond_signal");
+		exit(EXIT_FAILURE);
+	}
 
-void run_queue(const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
-	while (gq_head != NULL) {
-		struct geometry_queue *gq = gq_head;
-		gq_head = gq_head->next;
-		if (gq_head != NULL) {
-			gq_head->prev = NULL;
-		}
-
-		if (gq->geometry != NULL) {
-			serialize_geometry(gq->geometry, gq->properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, gq->tippecanoe);
-		}
-
-		if (gq->to_free != NULL) {
-			if (pthread_mutex_lock(&json_lock) != 0) {
-				perror("pthread_mutex_lock");
-				exit(EXIT_FAILURE);
-			}
-
-			json_free(gq->to_free);
-
-			if (pthread_mutex_unlock(&json_lock) != 0) {
-				perror("pthread_mutex_unlock");
-				exit(EXIT_FAILURE);
-			}
-		}
+	if (pthread_mutex_unlock(&gq_lock) != 0) {
+		perror("pthread_mutex_unlock");
+		exit(EXIT_FAILURE);
 	}
 }
 
+struct run_queue_args {
+	const char *reading;
+	json_pull *jp;
+	long long *seq;
+	long long *metapos;
+	long long *geompos;
+	long long *indexpos;
+	struct pool *exclude;
+	struct pool *include;
+	int exclude_all;
+	FILE *metafile;
+	FILE *geomfile;
+	FILE *indexfile;
+	struct memfile *poolfile;
+	struct memfile *treefile;
+	const char *fname;
+	int maxzoom;
+	int layer;
+	double droprate;
+	unsigned *file_bbox;
+};
+
+void *run_queue(void *v) {
+	struct run_queue_args *a = v;
+
+	while (1) {
+		if (pthread_mutex_lock(&gq_lock) != 0) {
+			perror("pthread_mutex_lock");
+			exit(EXIT_FAILURE);
+		}
+
+		if (pthread_cond_wait(&gq_notify, &gq_lock) != 0) {
+			perror("pthread_cond_wait");
+			exit(EXIT_FAILURE);
+		}
+
+		while (gq_head != NULL) {
+			struct geometry_queue *gq = gq_head;
+			gq_head = gq_head->next;
+			if (gq_head != NULL) {
+				gq_head->prev = NULL;
+			}
+
+			if (pthread_mutex_unlock(&gq_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
+			}
+
+			// Magic value to signal end of queue
+			if (gq->geometry == NULL && gq->to_free == NULL) {
+				return NULL;
+			}
+
+			if (gq->geometry != NULL) {
+				serialize_geometry(gq->geometry, gq->properties, a->reading, a->jp, a->seq, a->metapos, a->geompos, a->indexpos, a->exclude, a->include, a->exclude_all, a->metafile, a->geomfile, a->indexfile, a->poolfile, a->treefile, a->fname, a->maxzoom, a->layer, a->droprate, a->file_bbox, gq->tippecanoe);
+			}
+
+			if (gq->to_free != NULL) {
+				if (pthread_mutex_lock(&json_lock) != 0) {
+					perror("pthread_mutex_lock");
+					exit(EXIT_FAILURE);
+				}
+
+				json_free(gq->to_free);
+
+				if (pthread_mutex_unlock(&json_lock) != 0) {
+					perror("pthread_mutex_unlock");
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			if (pthread_mutex_lock(&gq_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (pthread_mutex_unlock(&gq_lock) != 0) {
+			perror("pthread_mutex_unlock");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return NULL;
+}
+
 void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
+	if (pthread_cond_init(&gq_notify, NULL) != 0) {
+		perror("pthread_cond_init");
+		exit(EXIT_FAILURE);
+	}
+
+	struct run_queue_args a;
+	a.reading = reading;
+	a.jp = jp;
+	a.seq = seq;
+	a.metapos = metapos;
+	a.geompos = geompos;
+	a.indexpos = indexpos;
+	a.exclude = exclude;
+	a.include = include;
+	a.exclude_all = exclude_all;
+	a.metafile = metafile;
+	a.geomfile = geomfile;
+	a.indexfile = indexfile;
+	a.poolfile = poolfile;
+	a.treefile = treefile;
+	a.fname = fname;
+	a.maxzoom = maxzoom;
+	a.layer = layer;
+	a.droprate = droprate;
+	a.file_bbox = file_bbox;
+
+	pthread_t reader;
+	if (pthread_create(&reader, NULL, run_queue, &a) != 0) {
+		perror("pthread_create");
+		exit(EXIT_FAILURE);
+	}
+
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -816,7 +921,13 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		/* XXX check for any non-features in the outer object */
 	}
 
-	run_queue(reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+	enqueue_geometry(NULL, NULL, NULL, NULL); // Shutdown message for the reader
+
+	void *retval;
+	if (pthread_join(reader, &retval) != 0) {
+		perror("pthread_join");
+		exit(EXIT_FAILURE);
+	}
 }
 
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
