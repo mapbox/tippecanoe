@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <sqlite3.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 #include "jsonpull.h"
 #include "tile.h"
@@ -598,6 +599,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
+pthread_mutex_t json_lock = PTHREAD_MUTEX_INITIALIZER;
+
 struct geometry_queue {
 	json_object *geometry;
 	json_object *properties;
@@ -642,7 +645,17 @@ void run_queue(const char *reading, json_pull *jp, long long *seq, long long *me
 		}
 
 		if (gq->to_free != NULL) {
+			if (pthread_mutex_lock(&json_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
+
 			json_free(gq->to_free);
+
+			if (pthread_mutex_unlock(&json_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 }
@@ -653,13 +666,35 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 	long long found_geometries = 0;
 
 	while (1) {
+		if (pthread_mutex_lock(&json_lock) != 0) {
+			perror("pthread_mutex_lock");
+			exit(EXIT_FAILURE);
+		}
+
 		json_object *j = json_read(jp);
+
+		if (pthread_mutex_unlock(&json_lock) != 0) {
+			perror("pthread_mutex_unlock");
+			exit(EXIT_FAILURE);
+		}
+
 		if (j == NULL) {
 			if (jp->error != NULL) {
 				fprintf(stderr, "%s:%d: %s\n", reading, jp->line, jp->error);
 			}
 
+			if (pthread_mutex_lock(&json_lock) != 0) {
+				perror("pthread_mutex_lock");
+				exit(EXIT_FAILURE);
+			}
+
 			json_free(jp->root);
+
+			if (pthread_mutex_unlock(&json_lock) != 0) {
+				perror("pthread_mutex_unlock");
+				exit(EXIT_FAILURE);
+			}
+
 			break;
 		}
 
@@ -712,7 +747,18 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
+				if (pthread_mutex_lock(&json_lock) != 0) {
+					perror("pthread_mutex_lock");
+					exit(EXIT_FAILURE);
+				}
+
 				json_disconnect(j);
+
+				if (pthread_mutex_unlock(&json_lock) != 0) {
+					perror("pthread_mutex_unlock");
+					exit(EXIT_FAILURE);
+				}
+
 				enqueue_geometry(j, NULL, NULL, j);
 				continue;
 			}
@@ -722,7 +768,17 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 			continue;
 		}
 
+		if (pthread_mutex_lock(&json_lock) != 0) {
+			perror("pthread_mutex_lock");
+			exit(EXIT_FAILURE);
+		}
+
 		json_disconnect(j);
+
+		if (pthread_mutex_unlock(&json_lock) != 0) {
+			perror("pthread_mutex_unlock");
+			exit(EXIT_FAILURE);
+		}
 
 		if (found_features == 0 && found_geometries != 0) {
 			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
@@ -732,14 +788,14 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
 			fprintf(stderr, "%s:%d: feature with no geometry\n", reading, jp->line);
-			json_free(j);
+			json_free(j); // Already disconnected, so don't need lock
 			continue;
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
 			fprintf(stderr, "%s:%d: feature without properties hash\n", reading, jp->line);
-			json_free(j);
+			json_free(j); // Already disconnected, so don't need lock
 			continue;
 		}
 
