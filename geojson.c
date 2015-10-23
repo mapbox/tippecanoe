@@ -864,14 +864,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		jp = json_begin_file(fp);
 
-		int layer;
-		if (nlayers == 1) {
-			layer = 0;
-		} else {
-			layer = source;
-		}
-
-		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox);
+		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, source, droprate, file_bbox);
 
 		json_end(jp);
 		fclose(fp);
