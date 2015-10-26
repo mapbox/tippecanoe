@@ -936,6 +936,35 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 	}
 }
 
+struct jsonmap {
+	char *map;
+	long long off;
+	long long end;
+};
+
+int json_map_read(struct json_pull *jp, char *buffer, int n) {
+	struct jsonmap *jm = jp->source;
+
+	if (jm->off + n >= jm->end) {
+		n = jm->end - jm->off;
+	}
+
+	memcpy(buffer, jm->map + jm->off, n);
+	jm->off += n;
+
+	return n;
+}
+
+struct json_pull *json_begin_map(char *map, long long len) {
+	struct jsonmap *jm = malloc(sizeof(struct jsonmap));
+
+	jm->map = map;
+	jm->off = 0;
+	jm->end = len;
+
+	return json_begin(json_map_read, jm);
+}
+
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
@@ -1031,26 +1060,52 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	for (layer = 0; layer < nlayers; layer++) {
 		json_pull *jp;
 		const char *reading;
-		FILE *fp;
+		int fd;
 
 		if (layer >= argc) {
 			reading = "standard input";
-			fp = stdin;
+			fd = 0;
 		} else {
 			reading = argv[layer];
-			fp = fopen(argv[layer], "r");
-			if (fp == NULL) {
+			fd = open(argv[layer], O_RDONLY);
+			if (fd < 0) {
 				perror(argv[layer]);
 				continue;
 			}
 		}
 
-		jp = json_begin_file(fp);
+		struct stat st;
+		char *map = NULL;
+		off_t off;
 
-		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+		if (fstat(fd, &st) == 0) {
+			off = lseek(fd, 0, SEEK_CUR);
+			if (off >= 0) {
+				map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+			}
+		}
 
-		json_end(jp);
-		fclose(fp);
+		if (map != NULL && map != MAP_FAILED) {
+			jp = json_begin_map(map, st.st_size - off);
+			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+			free(jp->source);
+			json_end(jp);
+
+			munmap(map, st.st_size - off);
+			close(fd);
+		} else {
+			FILE *fp = fdopen(fd, "r");
+			if (fp == NULL) {
+				perror(argv[layer]);
+				close(fd);
+				continue;
+			}
+
+			jp = json_begin_file(fp);
+			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+			json_end(jp);
+			fclose(fp);
+		}
 	}
 
 	fclose(metafile);
