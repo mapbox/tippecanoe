@@ -1078,10 +1078,36 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			jp = json_begin_map(map, st.st_size - off);
-			parse_json(jp, reading);
-			free(jp->source);
-			json_end(jp);
+			int split = 1;
+			if (split) {
+#define THREADS 10
+				long long segs[THREADS + 1];
+				segs[0] = 0;
+				segs[THREADS] = st.st_size - off;
+
+				int i;
+				for (i = 1; i < THREADS; i++) {
+					segs[i] = off + (st.st_size - off) * i / THREADS;
+
+					while (segs[i] < st.st_size && map[segs[i]] != '\n') {
+						segs[i]++;
+					}
+
+					printf("%d %lld\n", i, segs[i]);
+				}
+
+				for (i = 0; i < THREADS; i++) {
+					jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
+					parse_json(jp, reading);
+					free(jp->source);
+					json_end(jp);
+				}
+			} else {
+				jp = json_begin_map(map, st.st_size - off);
+				parse_json(jp, reading);
+				free(jp->source);
+				json_end(jp);
+			}
 
 			munmap(map, st.st_size - off);
 			close(fd);
