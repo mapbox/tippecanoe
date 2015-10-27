@@ -740,38 +740,7 @@ void *run_queue(void *v) {
 	return NULL;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
-	if (pthread_cond_init(&gq_notify, NULL) != 0) {
-		perror("pthread_cond_init");
-		exit(EXIT_FAILURE);
-	}
-
-	struct run_queue_args a;
-	a.reading = reading;
-	a.seq = seq;
-	a.metapos = metapos;
-	a.geompos = geompos;
-	a.indexpos = indexpos;
-	a.exclude = exclude;
-	a.include = include;
-	a.exclude_all = exclude_all;
-	a.metafile = metafile;
-	a.geomfile = geomfile;
-	a.indexfile = indexfile;
-	a.poolfile = poolfile;
-	a.treefile = treefile;
-	a.fname = fname;
-	a.maxzoom = maxzoom;
-	a.layer = layer;
-	a.droprate = droprate;
-	a.file_bbox = file_bbox;
-
-	pthread_t reader;
-	if (pthread_create(&reader, NULL, run_queue, &a) != 0) {
-		perror("pthread_create");
-		exit(EXIT_FAILURE);
-	}
-
+void parse_json(json_pull *jp, const char *reading) { // , long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -926,14 +895,6 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 
 		/* XXX check for any non-features in the outer object */
 	}
-
-	enqueue_geometry(NULL, NULL, NULL, NULL, 0); // Shutdown message for the reader
-
-	void *retval;
-	if (pthread_join(reader, &retval) != 0) {
-		perror("pthread_join");
-		exit(EXIT_FAILURE);
-	}
 }
 
 struct jsonmap {
@@ -1074,6 +1035,37 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 		}
 
+		if (pthread_cond_init(&gq_notify, NULL) != 0) {
+			perror("pthread_cond_init");
+			exit(EXIT_FAILURE);
+		}
+
+		struct run_queue_args a;
+		a.reading = reading;
+		a.seq = &seq;
+		a.metapos = &metapos;
+		a.geompos = &geompos;
+		a.indexpos = &indexpos;
+		a.exclude = exclude;
+		a.include = include;
+		a.exclude_all = exclude_all;
+		a.metafile = metafile;
+		a.geomfile = geomfile;
+		a.indexfile = indexfile;
+		a.poolfile = poolfile;
+		a.treefile = treefile;
+		a.fname = fname;
+		a.maxzoom = maxzoom;
+		a.layer = layer;
+		a.droprate = droprate;
+		a.file_bbox = file_bbox;
+
+		pthread_t reader;
+		if (pthread_create(&reader, NULL, run_queue, &a) != 0) {
+			perror("pthread_create");
+			exit(EXIT_FAILURE);
+		}
+
 		struct stat st;
 		char *map = NULL;
 		off_t off;
@@ -1087,7 +1079,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		if (map != NULL && map != MAP_FAILED) {
 			jp = json_begin_map(map, st.st_size - off);
-			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+			parse_json(jp, reading);
 			free(jp->source);
 			json_end(jp);
 
@@ -1102,9 +1094,17 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			jp = json_begin_file(fp);
-			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+			parse_json(jp, reading);
 			json_end(jp);
 			fclose(fp);
+		}
+
+		enqueue_geometry(NULL, NULL, NULL, NULL, 0); // Shutdown message for the reader
+
+		void *retval;
+		if (pthread_join(reader, &retval) != 0) {
+			perror("pthread_join");
+			exit(EXIT_FAILURE);
 		}
 	}
 
