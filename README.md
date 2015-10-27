@@ -67,8 +67,8 @@ Options
 
  * -z _zoom_: Base (maxzoom) zoom level (default 14)
  * -Z _zoom_: Lowest (minzoom) zoom level (default 0)
- * -d _detail_: Detail at base zoom level (default 12 at -z14 or higher, or 13 at -z13 or lower. Detail beyond 13 has rendering problems with Mapbox GL.)
- * -D _detail_: Detail at lower zoom levels (default 10, for tile resolution of 1024)
+ * -d _detail_: Detail at base zoom level (default 12, for tile resolution of 4096)
+ * -D _detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
 
