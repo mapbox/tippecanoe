@@ -10,6 +10,7 @@
 * Output of `decode` utility is now in GeoJSON format
 * Tile generation with a minzoom spends less time on unused lower zoom levels
 * Bare geometries without a Feature wrapper are accepted
+* Default tile resolution is 4096 units at all zooms since renderers assume it
 
 ## 1.2.0
 
