@@ -897,6 +897,18 @@ void parse_json(json_pull *jp, const char *reading) { // , long long *seq, long 
 	}
 }
 
+struct parser_args {
+	json_pull *jp;
+	const char *reading;
+};
+
+void *run_parser(void *vargs) {
+	struct parser_args *a = vargs;
+
+	parse_json(a->jp, a->reading);
+	return NULL;
+}
+
 struct jsonmap {
 	char *map;
 	long long off;
@@ -1042,7 +1054,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		struct run_queue_args a;
 		a.reading = reading;
-		a.seq = &seq;
+		a.seq = &seq; // XXX sequence for sortings vs sequence for progress
 		a.metapos = &metapos;
 		a.geompos = &geompos;
 		a.indexpos = &indexpos;
@@ -1082,6 +1094,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (split) {
 #define THREADS 10
 				long long segs[THREADS + 1];
+				pthread_t pthreads[THREADS];
+				struct parser_args parser_args[THREADS];
+
 				segs[0] = 0;
 				segs[THREADS] = st.st_size - off;
 
@@ -1097,10 +1112,24 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				}
 
 				for (i = 0; i < THREADS; i++) {
-					jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
-					parse_json(jp, reading);
-					free(jp->source);
-					json_end(jp);
+					parser_args[i].jp = jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
+					parser_args[i].reading = reading;
+
+					if (pthread_create(&pthreads[i], NULL, run_parser, &parser_args[i]) != 0) {
+						perror("pthread_create");
+						exit(EXIT_FAILURE);
+					}
+				}
+
+				for (i = 0; i < THREADS; i++) {
+					void *retval;
+
+					if (pthread_join(pthreads[i], &retval) != 0) {
+						perror("pthread_join");
+					}
+
+					free(parser_args[i].jp->source);
+					json_end(parser_args[i].jp);
 				}
 			} else {
 				jp = json_begin_map(map, st.st_size - off);
