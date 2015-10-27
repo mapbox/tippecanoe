@@ -26,7 +26,7 @@
 #include "version.h"
 #include "memfile.h"
 
-int low_detail = 10;
+int low_detail = 12;
 int full_detail = -1;
 int min_detail = 7;
 int quiet = 0;
@@ -1274,15 +1274,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (full_detail <= 0) {
-		if (maxzoom >= 14) {
-			// ~0.5m accuracy at z14
-			full_detail = 12;
-		} else {
-			// as good as we can get without breaking GL
-			full_detail = 13;
-		}
-
-		full_detail = 26 - maxzoom;
+		full_detail = 12;
 	}
 
 	if (full_detail < min_detail || low_detail < min_detail) {
