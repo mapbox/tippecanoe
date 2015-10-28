@@ -98,7 +98,6 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		}
 
 		if (geom[i].op == VT_CLOSEPATH) {
-			fprintf(stderr, "Shouldn't happen\n");
 			out.push_back(geom[i]);
 		} else { /* moveto or lineto */
 			out.push_back(geom[i]);
@@ -305,6 +304,36 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 	for (int i = 0; i < clipped.ChildCount(); i++) {
 		decode_clipped(clipped.Childs[i], out);
+	}
+
+	return out;
+}
+
+drawvec close_poly(drawvec &geom) {
+	drawvec out;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			if (j - 1 > i) {
+				if (geom[j - 1].x != geom[i].x || geom[j - 1].y != geom[i].y) {
+					fprintf(stderr, "Internal error: polygon not closed\n");
+				}
+			}
+
+			for (unsigned n = i; n < j - 1; n++) {
+				out.push_back(geom[n]);
+			}
+			out.push_back(draw(VT_CLOSEPATH, 0, 0));
+
+			i = j - 1;
+		}
 	}
 
 	return out;
