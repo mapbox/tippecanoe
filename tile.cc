@@ -656,6 +656,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				// Scaling may have made the polygon degenerate.
 				// Give Clipper a chance to try to fix it.
 				geom = clean_or_clip_poly(geom, 0, 0, 0, false);
+				geom = close_poly(geom);
 			}
 
 			if (t == VT_POINT || to_feature(geom, NULL)) {

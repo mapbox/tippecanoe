@@ -295,6 +295,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 							}
 
 							printf("[ %f, %f ]", rings[i][j].lon, rings[i][j].lat);
+						} else {
+							if (j != 0) {
+								printf(", ");
+							}
+
+							printf("[ %f, %f ]", rings[i][0].lon, rings[i][0].lat);
 						}
 					}
 
