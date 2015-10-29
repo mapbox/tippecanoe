@@ -1,5 +1,5 @@
 PREFIX ?= /usr/local
-MANDIR ?= /usr/share/man/man1/
+MANDIR ?= /usr/local/share/man/man1/
 
 all: tippecanoe enumerate decode tile-join
 
