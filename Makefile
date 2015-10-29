@@ -1,5 +1,5 @@
 PREFIX ?= /usr/local
-MANDIR ?= /usr/local/share/man/man1/
+MANDIR ?= $(PREFIX)/share/man/man1/
 
 all: tippecanoe enumerate decode tile-join
 
@@ -7,8 +7,9 @@ docs: man/tippecanoe.1
 
 install: tippecanoe
 	mkdir -p $(PREFIX)/bin
+	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
-	cp man/tippecanoe.1 $(MANDIR)
+	cp man/tippecanoe.1 $(MANDIR)/tippecanoe.1
 
 man/tippecanoe.1: README.md
 	md2man-roff README.md > man/tippecanoe.1
