@@ -796,30 +796,47 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	unsigned midx = 0, midy = 0;
 	long long seq = 0;
 
-	int nlayers = argc;
-	if (nlayers == 0) {
+	int nlayers;
+	if (layername != NULL) {
 		nlayers = 1;
+	} else {
+		nlayers = argc;
+		if (nlayers == 0) {
+			nlayers = 1;
+		}
 	}
 
-	int layer;
-	for (layer = 0; layer < nlayers; layer++) {
+	int nsources = argc;
+	if (nsources == 0) {
+		nsources = 1;
+	}
+
+	int source;
+	for (source = 0; source < nsources; source++) {
 		json_pull *jp;
 		const char *reading;
 		FILE *fp;
 
-		if (layer >= argc) {
+		if (source >= argc) {
 			reading = "standard input";
 			fp = stdin;
 		} else {
-			reading = argv[layer];
-			fp = fopen(argv[layer], "r");
+			reading = argv[source];
+			fp = fopen(argv[source], "r");
 			if (fp == NULL) {
-				perror(argv[layer]);
+				perror(argv[source]);
 				continue;
 			}
 		}
 
 		jp = json_begin_file(fp);
+
+		int layer;
+		if (nlayers == 1) {
+			layer = 0;
+		} else {
+			layer = source;
+		}
 
 		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
 
@@ -867,7 +884,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	char *layernames[nlayers];
 	for (i = 0; i < nlayers; i++) {
-		if (argc <= 1 && layername != NULL) {
+		if (layername != NULL) {
 			layernames[i] = strdup(layername);
 		} else {
 			char *src = argv[i];
@@ -892,7 +909,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (cp != NULL) {
 				*cp = '\0';
 			}
-			layername = trunc;
 
 			char *out = trunc;
 			for (cp = trunc; *cp; cp++) {
@@ -1137,7 +1153,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers);  // XXX layers
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
