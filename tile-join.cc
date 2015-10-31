@@ -216,7 +216,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					feature_tags.push_back(v->n);
 				}
 
-				if (strcmp(key, header[0].c_str()) == 0) {
+				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
 					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(std::string(value));
 
 					if (ii != mapping.end()) {
@@ -387,7 +387,7 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -515,7 +515,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (argc - optind != 1 || outfile == NULL) {
+	if (argc - optind < 1 || outfile == NULL) {
 		usage(argv);
 	}
 
