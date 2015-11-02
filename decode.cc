@@ -289,7 +289,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				int state = 0;
 				for (unsigned i = 0; i < rings.size(); i++) {
-					printf("AREA %f   ", areas[i]);
 					if (areas[i] <= 0) {
 						if (state != 0) {
 							// new multipolygon
