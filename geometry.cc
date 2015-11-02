@@ -344,6 +344,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	long long pixel = (1 << (32 - detail - z)) * 2;
 
 	*reduced = true;
+	bool included_last_outer = false;
 
 	for (unsigned i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -361,7 +362,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 			}
 			area = area / 2;
 
-			if (fabs(area) <= pixel * pixel) {
+			if (fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
 				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
 				*accum_area += area;
@@ -376,6 +377,10 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 					*accum_area -= pixel * pixel;
 				}
+
+				if (area >= 0) {
+					included_last_outer = false;
+				}
 			} else {
 				// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
 
@@ -384,6 +389,10 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				}
 
 				*reduced = false;
+
+				if (area >= 0) {
+					included_last_outer = true;
+				}
 			}
 
 			i = j - 1;

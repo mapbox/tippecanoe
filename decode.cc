@@ -109,6 +109,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 		mapnik::vector::tile_layer layer = tile.layers(l);
 		int extent = layer.extent();
 
+		if (describe) {
+			if (l != 0) {
+				printf(",\n");
+			}
+
+			printf("{ \"type\": \"FeatureCollection\"");
+			printf(", \"properties\": { \"layer\": ");
+			printq(layer.name().c_str());
+			printf(" }");
+			printf(", \"features\": [\n");
+
+			within = 0;
+		}
+
 		for (int f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
 			int px = 0, py = 0;
@@ -260,7 +274,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 
 					areas[i] = area;
-					if (areas[i] <= 0) {
+					if (areas[i] <= 0 || i == 0) {
 						outer++;
 					}
 
@@ -315,6 +329,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			}
 
 			printf(" } }\n");
+		}
+
+		if (describe) {
+			printf("] }\n");
 		}
 	}
 

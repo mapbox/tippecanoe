@@ -54,7 +54,8 @@ Options
 
 ### Naming
 
- * -l _name_: Layer name (default "file" if source is file.json or output is file.mbtiles). Only works if there is only one layer.
+ * -l _name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
+   specified, the files are all merged into the single named layer.
  * -n _name_: Human-readable name (default file.json)
 
 ### File control

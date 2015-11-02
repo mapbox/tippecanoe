@@ -246,6 +246,10 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 
 	int i;
 	for (i = 0; i < nlayers; i++) {
+		if (features[i].size() == 0) {
+			continue;
+		}
+
 		mapnik::vector::tile_layer *layer = tile.add_layers();
 
 		layer->set_name(layernames[i]);

@@ -54,7 +54,8 @@ it encounters.
 .SS Naming
 .RS
 .IP \(bu 2
-\-l \fIname\fP: Layer name (default "file" if source is file.json or output is file.mbtiles). Only works if there is only one layer.
+\-l \fIname\fP: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
+specified, the files are all merged into the single named layer.
 .IP \(bu 2
 \-n \fIname\fP: Human\-readable name (default file.json)
 .RE
