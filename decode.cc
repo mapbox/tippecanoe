@@ -274,7 +274,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 
 					areas[i] = area;
-					if (areas[i] <= 0) {
+					if (areas[i] <= 0 || i == 0) {
 						outer++;
 					}
 
