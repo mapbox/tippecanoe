@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include <limits.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -322,6 +323,22 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
+double min(double a, double b) {
+	if (a < b) {
+		return a;
+	} else {
+		return b;
+	}
+}
+
+double max(double a, double b) {
+	if (a > b) {
+		return a;
+	} else {
+		return b;
+	}
+}
+
 void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
 	sqlite3 *db;
 
@@ -355,13 +372,15 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 
 	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &stmt, NULL) == SQLITE_OK) {
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			st->minzoom = sqlite3_column_int(stmt, 0);
+			int minzoom = sqlite3_column_int(stmt, 0);
+			st->minzoom = min(st->minzoom, minzoom);
 		}
 		sqlite3_finalize(stmt);
 	}
 	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &stmt, NULL) == SQLITE_OK) {
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			st->maxzoom = sqlite3_column_int(stmt, 0);
+			int maxzoom = sqlite3_column_int(stmt, 0);
+			st->maxzoom = max(st->maxzoom, maxzoom);
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -375,7 +394,12 @@ void decode(char *fname, char *map, struct pool **file_keys, char ***layernames,
 	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'bounds'", -1, &stmt, NULL) == SQLITE_OK) {
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
 			const unsigned char *s = sqlite3_column_text(stmt, 0);
-			sscanf((char *) s, "%lf,%lf,%lf,%lf", &st->minlon, &st->minlat, &st->maxlon, &st->maxlat);
+			double minlon, minlat, maxlon, maxlat;
+			sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
+			st->minlon = min(minlon, st->minlon);
+			st->maxlon = max(maxlon, st->maxlon);
+			st->minlat = min(minlat, st->minlat);
+			st->maxlat = max(maxlat, st->maxlat);
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -526,6 +550,8 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outfile, argv);
 	struct stats st;
 	memset(&st, 0, sizeof(st));
+	st.minzoom = st.minlat = st.minlon = INT_MAX;
+	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
 	struct pool *file_keys = NULL;
 	char **layernames = NULL;
