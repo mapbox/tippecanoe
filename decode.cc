@@ -115,7 +115,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			}
 
 			printf("{ \"type\": \"FeatureCollection\"");
-			printf(", \"properties\": { \"name\": ");
+			printf(", \"properties\": { \"layer\": ");
 			printq(layer.name().c_str());
 			printf(" }");
 			printf(", \"features\": [\n");
