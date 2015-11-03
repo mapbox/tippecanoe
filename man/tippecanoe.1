@@ -337,3 +337,31 @@ Then you can join those populations to the geometries and discard the no\-longer
 \&./tile\-join \-o population.mbtiles \-x GEOID10 \-c population.csv tl_2010_06001_tabblock10.mbtiles
 .fi
 .RE
+.SH tippecanoe\-enumerate
+.PP
+The \fB\fCtippecanoe\-enumerate\fR utility lists the tiles that an \fB\fCmbtiles\fR file defines.
+Each line of the output lists the name of the \fB\fCmbtiles\fR file and the zoom, x, and y
+coordinates of one of the tiles.
+.SH tippecanoe\-decode
+.PP
+The \fB\fCtippecanoe\-decode\fR utility turns vector mbtiles back to GeoJSON. You can use it either
+on an entire file:
+.PP
+.RS
+.nf
+tippecanoe\-decode file.mbtiles
+.fi
+.RE
+.PP
+or on an individual tile:
+.PP
+.RS
+.nf
+tippecanoe\-decode file.mbtiles zoom x y
+.fi
+.RE
+.PP
+If you decode an entire file, you get a nested \fB\fCFeatureCollection\fR identifying each
+tile and layer separately. Note that the same features generally appear at all zooms,
+so the output for the file will have many copies of the same features at different
+resolutions.

@@ -1,7 +1,7 @@
 PREFIX ?= /usr/local
 MANDIR ?= $(PREFIX)/share/man/man1/
 
-all: tippecanoe enumerate decode tile-join
+all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 
 docs: man/tippecanoe.1
 
@@ -9,6 +9,9 @@ install: tippecanoe
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
+	cp tippecanoe-enumerate $(PREFIX)/bin/tippecanoe-enumerate
+	cp tippecanoe-decode $(PREFIX)/bin/tippecanoe-decode
+	cp tile-join $(PREFIX)/bin/tile-join
 	cp man/tippecanoe.1 $(MANDIR)/tippecanoe.1
 
 man/tippecanoe.1: README.md
@@ -28,10 +31,10 @@ LIBS = -L/usr/local/lib
 tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
 
-enumerate: enumerate.o
+tippecanoe-enumerate: enumerate.o
 	gcc $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lsqlite3
 
-decode: decode.o vector_tile.pb.o projection.o
+tippecanoe-decode: decode.o vector_tile.pb.o projection.o
 	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
 
 tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
