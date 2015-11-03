@@ -295,7 +295,11 @@ tippecanoe-enumerate
 
 The `tippecanoe-enumerate` utility lists the tiles that an `mbtiles` file defines.
 Each line of the output lists the name of the `mbtiles` file and the zoom, x, and y
-coordinates of one of the tiles.
+coordinates of one of the tiles. It does basically the same thing as
+
+    select zoom_level, tile_column, (1 << zoom_level) - 1 - tile_row from tiles;
+
+on the file in sqlite3.
 
 tippecanoe-decode
 =================

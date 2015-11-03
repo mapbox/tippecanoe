@@ -341,7 +341,15 @@ Then you can join those populations to the geometries and discard the no\-longer
 .PP
 The \fB\fCtippecanoe\-enumerate\fR utility lists the tiles that an \fB\fCmbtiles\fR file defines.
 Each line of the output lists the name of the \fB\fCmbtiles\fR file and the zoom, x, and y
-coordinates of one of the tiles.
+coordinates of one of the tiles. It does basically the same thing as
+.PP
+.RS
+.nf
+select zoom_level, tile_column, (1 << zoom_level) \- 1 \- tile_row from tiles;
+.fi
+.RE
+.PP
+on the file in sqlite3.
 .SH tippecanoe\-decode
 .PP
 The \fB\fCtippecanoe\-decode\fR utility turns vector mbtiles back to GeoJSON. You can use it either
