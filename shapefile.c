@@ -65,11 +65,13 @@ void parse_shapefile(FILE *fp, const char *reading, long long *seq, long long *m
 		return;
 	}
 
+	cols /= 32;
+
 	int dbflen[cols];
 	int dbftype[cols];
 	char keys[cols][33];
 	int i;
-	for (i = 0; i < cols / 32; i++) {
+	for (i = 0; i < cols; i++) {
 		int start = i * 32;
 		int end;
 		for (end = start; end < start + 10 && dbcolumns[end] != '\0'; end++) {
@@ -110,6 +112,39 @@ void parse_shapefile(FILE *fp, const char *reading, long long *seq, long long *m
 			fprintf(stderr, "%s: metadata ended early\n", dbfname);
 			exit(EXIT_FAILURE);
 		}
+
+		if (db[0] != ' ') {
+			continue;
+		}
+
+		char *vals[cols];
+
+		int here = 1;
+		for (i = 0; i < cols; i++) {
+			if (here + dbflen[i] > dbreclen) {
+				fprintf(stderr, "Corrupt db: %d vs %d\n", here + dbflen[i], dbreclen);
+				exit(EXIT_FAILURE);
+			}
+
+			vals[i] = malloc(dbflen[i] + 1);
+			memcpy(vals[i], db + here, dbflen[i]);
+			vals[i][dbflen[i]] = '\0';
+
+			here += dbflen[i];
+		}
+
+		int type = read32le(content);
+
+		if (type == 1) {
+			// point
+		}
+
+		for (i = 0; i < cols; i++) {
+			free(vals[i]);
+		}
+
+		json_free(geometry);
+		json_free(properties);
 	}
 
 	fclose(dbf);
