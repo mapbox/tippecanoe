@@ -17,6 +17,7 @@
 #include <limits.h>
 #include <sqlite3.h>
 #include <stdarg.h>
+#include <sys/resource.h>
 
 #include "jsonpull.h"
 #include "tile.h"
@@ -59,6 +60,27 @@ int geometry_within[GEOM_TYPES] = {
 int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
+
+int CPUS;
+int TEMP_FILES;
+
+void init_cpus() {
+        CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+        if (CPUS < 1) {
+                CPUS = 1;
+        }
+
+        TEMP_FILES = 64;
+        struct rlimit rl;
+        if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+                perror("getrlimit");
+        } else {
+                TEMP_FILES = rl.rlim_cur / 3;
+                if (TEMP_FILES > CPUS * 4) {
+                        TEMP_FILES = CPUS * 4;
+                }
+        }
+}
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
 	size_t w = fwrite(ptr, size, nitems, stream);
@@ -1166,6 +1188,8 @@ int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
 #endif
+
+	init_cpus();
 
 	extern int optind;
 	extern char *optarg;

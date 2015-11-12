@@ -818,7 +818,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 struct task {
 	int fileno;
 	struct task *next;
-} tasks[TEMP_FILES];
+};
 
 struct write_tile_args {
 	struct task *tasks;
@@ -961,9 +961,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 		}
 
-#define MAX_THREADS 20  // XXX Obtain from sysctl(hw.ncpu), /proc/cpuinfo, etc.
-
-		int threads = MAX_THREADS;
+		int threads = CPUS;
 		if (threads > TEMP_FILES / 4) {
 			threads = TEMP_FILES / 4;
 		}
@@ -978,6 +976,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		// Assign temporary files to threads
 
+		struct task tasks[TEMP_FILES];
 		struct dispatch {
 			struct task *tasks;
 			long long todo;

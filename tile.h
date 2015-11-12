@@ -33,4 +33,5 @@ extern unsigned initial_x, initial_y;
 extern int geometry_scale;
 extern int quiet;
 
-#define TEMP_FILES 64
+extern int CPUS;
+extern int TEMP_FILES;
