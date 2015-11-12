@@ -1,3 +1,10 @@
+## 1.4.0
+
+* More polygon correctness
+* Query the system for the number of available CPUs instead of guessing
+* Merge input files into one layer if a layer name is specified
+* Document and install tippecanoe-enumerate and tippecanoe-decode
+
 ## 1.3.0
 
 * Tile generation is multithreaded to take advantage of multiple CPUs
