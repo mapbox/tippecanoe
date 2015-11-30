@@ -5,7 +5,7 @@ all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 
 docs: man/tippecanoe.1
 
-install: tippecanoe
+install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
