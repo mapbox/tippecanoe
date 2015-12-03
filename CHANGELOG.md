@@ -1,3 +1,8 @@
+## 1.4.1
+
+* Features that cross the antimeridian are split into two parts instead
+  of being partially lost off the edge
+
 ## 1.4.0
 
 * More polygon correctness
