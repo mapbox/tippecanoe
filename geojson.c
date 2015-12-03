@@ -138,7 +138,7 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
+void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
 		return;
@@ -160,7 +160,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			unsigned x, y;
+			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			latlon2tile(lat, lon, 32, &x, &y);
@@ -437,7 +437,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -492,7 +492,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 
-	unsigned bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
+	long long bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 
 	int nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
@@ -595,7 +595,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	struct index index;
 	index.start = geomstart;
 	index.end = *geompos;
-	index.index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+
+	// Calculate the center even if off the edge of the plane,
+	// and then mask to bring it back into the addressable area
+	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
+	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
+	index.index = encode(midx, midy);
+
 	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 	*indexpos += sizeof(struct index);
 
@@ -620,7 +626,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, unsigned *file_bbox) {
+void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, long long *file_bbox) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -814,7 +820,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		memfile_write(treefile, &p, sizeof(struct stringpool));
 	}
 
-	unsigned file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
+	long long file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
 	unsigned midx = 0, midy = 0;
 	long long seq = 0;
 
@@ -1158,6 +1164,24 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
+
+	// If the bounding box extends off the plane on either side,
+	// a feature wrapped across the date line, so the width of the
+	// bounding box is the whole world.
+	if (file_bbox[0] < 0) {
+		file_bbox[0] = 0;
+		file_bbox[2] = (1LL << 32) - 1;
+	}
+	if (file_bbox[2] > (1LL << 32) - 1) {
+		file_bbox[0] = 0;
+		file_bbox[2] = (1LL << 32) - 1;
+	}
+	if (file_bbox[1] < 0) {
+		file_bbox[1] = 0;
+	}
+	if (file_bbox[3] < (1LL << 32) - 1) {
+		file_bbox[3] = (1LL << 32) - 1;
+	}
 
 	tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
 	tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
