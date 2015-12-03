@@ -544,6 +544,26 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 
+			if (z == 0) {
+				if (bbox[0] < 0 || bbox[2] > 1LL << 32) {
+					// If the geometry extends off the edge of the world, concatenate on another copy
+					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
+
+					unsigned n = geom.size();
+					for (unsigned i = 0; i < n; i++) {
+						geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
+					}
+					for (unsigned i = 0; i < n; i++) {
+						geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
+					}
+
+					bbox[0] = 0;
+					bbox[2] = 1LL << 32;
+
+					quick = -1;
+				}
+			}
+
 			if (quick != 1) {
 				if (t == VT_LINE) {
 					geom = clip_lines(geom, z, line_detail, buffer);

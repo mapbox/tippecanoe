@@ -160,7 +160,7 @@ void parse_geometry(int t, json_object *j, unsigned *bbox, long long *fpos, FILE
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			unsigned x, y;
+			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			latlon2tile(lat, lon, 32, &x, &y);
