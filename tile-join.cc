@@ -566,7 +566,7 @@ int main(int argc, char **argv) {
 		fk[i] = &(file_keys[i]);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers, outfile);
 	mbtiles_close(outdb, argv);
 
 	return 0;

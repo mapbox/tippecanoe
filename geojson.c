@@ -738,7 +738,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional, char *command) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -1199,7 +1199,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers);
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, command);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -1236,6 +1236,19 @@ int main(int argc, char **argv) {
 	pool_init(&exclude, 0);
 	pool_init(&include, 0);
 	int exclude_all = 0;
+
+	char *command;
+	{
+		int commandlen = 0;
+		for (i = 0; i < argc; i++) {
+			commandlen += strlen(argv[i]) + 1;
+		}
+		command = malloc(commandlen + 1);
+		*command = '\0';
+		for (i = 0; i < argc; i++) {
+			sprintf(command + strlen(command), "%s ", argv[i]);
+		}
+	}
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
@@ -1365,7 +1378,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, command);
 
 	mbtiles_close(outdb, argv);
 

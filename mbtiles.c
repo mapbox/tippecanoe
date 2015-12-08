@@ -113,7 +113,7 @@ static void aprintf(char **buf, const char *format, ...) {
 	free(tmp);
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers, char *command) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -123,14 +123,14 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", fname);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", command);
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set description in metadata: %s\n", err);
 		exit(EXIT_FAILURE);
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %d);", 1);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %f);", 1.2);
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set metadata: %s\n", err);
 		exit(EXIT_FAILURE);
