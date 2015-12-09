@@ -357,41 +357,53 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			double area = 0;
 			for (unsigned k = i; k < j; k++) {
-				area += geom[k].x * geom[i + ((k - i + 1) % (j - i))].y;
-				area -= geom[k].y * geom[i + ((k - i + 1) % (j - i))].x;
+				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
 			}
 			area = area / 2;
 
-			if (fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
-				// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
+			// XXX There is an ambiguity here: If the area of a ring is 0 and it is followed by holes,
+			// we don't know whether the area-0 ring was a hole too or whether it was the outer ring
+			// that these subsequent holes are somehow being subtracted from. I hope that if a polygon
+			// was simplified down to nothing, its holes also became nothing.
 
-				*accum_area += area;
-				if (*accum_area > pixel * pixel) {
-					// XXX use centroid;
+			if (area != 0) {
+				// These are pixel coordinates, so area > 0 for the outer ring.
+				// If the outer ring of a polygon was reduced to a pixel, its
+				// inner rings must just have their area de-accumulated rather
+				// than being drawn since we don't really know where they are.
 
-					out.push_back(draw(VT_MOVETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y - pixel / 2));
-					out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y + pixel / 2));
-					out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y + pixel / 2));
-					out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
+				if (fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
+					// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
-					*accum_area -= pixel * pixel;
-				}
+					*accum_area += area;
+					if (area > 0 && *accum_area > pixel * pixel) {
+						// XXX use centroid;
 
-				if (area >= 0) {
-					included_last_outer = false;
-				}
-			} else {
-				// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
+						out.push_back(draw(VT_MOVETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y - pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y + pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y + pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
 
-				for (unsigned k = i; k <= j && k < geom.size(); k++) {
-					out.push_back(geom[k]);
-				}
+						*accum_area -= pixel * pixel;
+					}
 
-				*reduced = false;
+					if (area > 0) {
+						included_last_outer = false;
+					}
+				} else {
+					// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
 
-				if (area >= 0) {
-					included_last_outer = true;
+					for (unsigned k = i; k <= j && k < geom.size(); k++) {
+						out.push_back(geom[k]);
+					}
+
+					*reduced = false;
+
+					if (area > 0) {
+						included_last_outer = true;
+					}
 				}
 			}
 
