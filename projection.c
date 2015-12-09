@@ -3,6 +3,23 @@
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void latlon2tile(double lat, double lon, int zoom, long long *x, long long *y) {
+	// Must limit latitude somewhere to prevent overflow.
+	// 89.9 degrees latitude is 0.621 worlds beyond the edge of the flat earth,
+	// hopefully far enough out that there are few expectations about the shape.
+	if (lat < -89.9) {
+		lat = -89.9;
+	}
+	if (lat > 89.9) {
+		lat = 89.9;
+	}
+
+	if (lon < -360) {
+		lon = -360;
+	}
+	if (lon > 360) {
+		lon = 360;
+	}
+
 	double lat_rad = lat * M_PI / 180;
 	unsigned long long n = 1LL << zoom;
 
