@@ -206,8 +206,6 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-#define CLIPPER_OFFSET 0x400000000LL
-
 static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// To make the GeoJSON come out right, we need to do each of the
 	// outer rings followed by its children if any, and then go back
@@ -215,19 +213,19 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 
 	ClipperLib::Path p = t->Contour;
 	for (unsigned i = 0; i < p.size(); i++) {
-		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X - CLIPPER_OFFSET, p[i].Y - CLIPPER_OFFSET));
+		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 	}
 	if (p.size() > 0) {
-		out.push_back(draw(VT_LINETO, p[0].X - CLIPPER_OFFSET, p[0].Y - CLIPPER_OFFSET));
+		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 	}
 
 	for (int n = 0; n < t->ChildCount(); n++) {
 		ClipperLib::Path p = t->Childs[n]->Contour;
 		for (unsigned i = 0; i < p.size(); i++) {
-			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X - CLIPPER_OFFSET, p[i].Y - CLIPPER_OFFSET));
+			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 		}
 		if (p.size() > 0) {
-			out.push_back(draw(VT_LINETO, p[0].X - CLIPPER_OFFSET, p[0].Y - CLIPPER_OFFSET));
+			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 		}
 	}
 
@@ -254,7 +252,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 			drawvec tmp;
 			for (unsigned k = i; k < j; k++) {
-				path.push_back(ClipperLib::IntPoint(geom[k].x + CLIPPER_OFFSET, geom[k].y + CLIPPER_OFFSET));
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
 
 			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
@@ -282,11 +280,11 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		long long clip_buffer = buffer * area / 256;
 
 		ClipperLib::Path edge;
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer + CLIPPER_OFFSET, -clip_buffer + CLIPPER_OFFSET));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer + CLIPPER_OFFSET, -clip_buffer + CLIPPER_OFFSET));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer + CLIPPER_OFFSET, area + clip_buffer + CLIPPER_OFFSET));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer + CLIPPER_OFFSET, area + clip_buffer + CLIPPER_OFFSET));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer + CLIPPER_OFFSET, -clip_buffer + CLIPPER_OFFSET));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
+		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
 
 		clipper.AddPath(edge, ClipperLib::ptClip, true);
 	}
