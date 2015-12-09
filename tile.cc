@@ -550,11 +550,17 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
 					unsigned n = geom.size();
-					for (unsigned i = 0; i < n; i++) {
-						geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
+
+					if (bbox[0] < 0) {
+						for (unsigned i = 0; i < n; i++) {
+							geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
+						}
 					}
-					for (unsigned i = 0; i < n; i++) {
-						geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
+
+					if (bbox[2] > 1LL << 32) {
+						for (unsigned i = 0; i < n; i++) {
+							geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
+						}
 					}
 
 					bbox[0] = 0;
