@@ -108,27 +108,29 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 
 	// second pass: remove unused movetos
 
-	geom = out;
-	out.resize(0);
+	if (type != VT_POINT) {
+		geom = out;
+		out.resize(0);
 
-	for (i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_MOVETO) {
-			if (i + 1 >= geom.size()) {
-				continue;
+		for (i = 0; i < geom.size(); i++) {
+			if (geom[i].op == VT_MOVETO) {
+				if (i + 1 >= geom.size()) {
+					continue;
+				}
+
+				if (geom[i + 1].op == VT_MOVETO) {
+					continue;
+				}
+
+				if (geom[i + 1].op == VT_CLOSEPATH) {
+					fprintf(stderr, "Shouldn't happen\n");
+					i++;  // also remove unused closepath
+					continue;
+				}
 			}
 
-			if (geom[i + 1].op == VT_MOVETO) {
-				continue;
-			}
-
-			if (geom[i + 1].op == VT_CLOSEPATH) {
-				fprintf(stderr, "Shouldn't happen\n");
-				i++;  // also remove unused closepath
-				continue;
-			}
+			out.push_back(geom[i]);
 		}
-
-		out.push_back(geom[i]);
 	}
 
 	// second pass: remove empty movetos

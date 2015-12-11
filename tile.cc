@@ -753,12 +753,18 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			features[j] = out;
 
+			out.clear();
 			for (x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
 				}
+
+				if (features[j][x].geom.size() > 0) {
+					out.push_back(features[j][x]);
+				}
 			}
+			features[j] = out;
 
 			if (prevent['i' & 0xFF]) {
 				std::sort(features[j].begin(), features[j].end(), preservecmp);

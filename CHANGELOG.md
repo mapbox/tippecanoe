@@ -1,3 +1,8 @@
+## 1.4.2
+
+* Bug fix for problem that would occasionally produce empty point geometries
+* More bug fixes for polygon generation
+
 ## 1.4.1
 
 * Features that cross the antimeridian are split into two parts instead
