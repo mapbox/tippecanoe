@@ -1,3 +1,7 @@
+## 1.4.3
+
+* Encode numeric attributes as integers instead of floating point if possible
+
 ## 1.4.2
 
 * Bug fix for problem that would occasionally produce empty point geometries

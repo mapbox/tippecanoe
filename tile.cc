@@ -7,6 +7,7 @@
 #include <set>
 #include <algorithm>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
 #include <zlib.h>
@@ -241,6 +242,37 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 	}
 }
 
+static int is_integer(const char *s, long long *v) {
+	errno = 0;
+	char *endptr;
+
+	*v = strtoll(s, &endptr, 0);
+	if (*v == 0 && errno != 0) {
+		return 0;
+	}
+	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE)) {
+		return 0;
+	}
+	if (*endptr != '\0') {
+		// Special case: If it is an integer followed by .0000 or similar,
+		// it is still an integer
+
+		if (*endptr != '.') {
+			return 0;
+		}
+		endptr++;
+		for (; *endptr != '\0'; endptr++) {
+			if (*endptr != '0') {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	return 1;
+}
+
 mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
 	mapnik::vector::tile tile;
 
@@ -291,7 +323,16 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 			mapnik::vector::tile_value *tv = layer->add_values();
 
 			if (pv->type == VT_NUMBER) {
-				tv->set_double_value(atof(pv->s));
+				long long v;
+				if (is_integer(pv->s, &v)) {
+					if (v >= 0) {
+						tv->set_int_value(v);
+					} else {
+						tv->set_sint_value(v);
+					}
+				} else {
+					tv->set_double_value(atof(pv->s));
+				}
 			} else if (pv->type == VT_BOOLEAN) {
 				tv->set_bool_value(pv->s[0] == 't');
 			} else {
