@@ -1250,7 +1250,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (file_bbox[1] < 0) {
 		file_bbox[1] = 0;
 	}
-	if (file_bbox[3] < (1LL << 32) - 1) {
+	if (file_bbox[3] > (1LL << 32) - 1) {
 		file_bbox[3] = (1LL << 32) - 1;
 	}
 
