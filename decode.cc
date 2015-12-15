@@ -152,10 +152,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					printf(": %lld", (long long) val.int_value());
 				} else if (val.has_double_value()) {
 					printq(key);
-					printf(": %g", val.double_value());
+					double v = val.double_value();
+					if (v == (long long) v) {
+						printf(": %lld", (long long) v);
+					} else {
+						printf(": %g", v);
+					}
 				} else if (val.has_float_value()) {
 					printq(key);
-					printf(": %g", val.float_value());
+					double v = val.float_value();
+					if (v == (long long) v) {
+						printf(": %lld", (long long) v);
+					} else {
+						printf(": %g", v);
+					}
 				} else if (val.has_sint_value()) {
 					printq(key);
 					printf(": %lld", (long long) val.sint_value());
