@@ -362,8 +362,8 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
-	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
+	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
 
@@ -463,7 +463,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
 	double fraction = 1;
 
@@ -481,9 +481,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 	}
 
 	int nextzoom = z + 1;
-	if (nextzoom < file_minzoom) {
-		if (z + max_zoom_increment > file_minzoom) {
-			nextzoom = file_minzoom;
+	if (nextzoom < minzoom) {
+		if (z + max_zoom_increment > minzoom) {
+			nextzoom = minzoom;
 		} else {
 			nextzoom = z + max_zoom_increment;
 		}
@@ -566,7 +566,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
 
-			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
@@ -630,10 +630,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
 			}
 
-			if (z < file_minzoom) {
+			if (z < minzoom) {
 				continue;
 			}
 

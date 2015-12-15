@@ -564,19 +564,19 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	/*
-	 * Note that minzoom for lines is the dimension
+	 * Note that feature_minzoom for lines is the dimension
 	 * of the geometry in world coordinates, but
 	 * for points is the lowest zoom level (in tiles,
 	 * not in pixels) at which it should be drawn.
 	 *
 	 * So a line that is too small for, say, z8
-	 * will have minzoom of 18 (if tile detail is 10),
+	 * will have feature_minzoom of 18 (if tile detail is 10),
 	 * not 8.
 	 */
-	int minzoom = 0;
+	int feature_minzoom = 0;
 	if (mb_geometry[t] == VT_LINE) {
-		for (minzoom = 0; minzoom < 31; minzoom++) {
-			unsigned mask = 1 << (32 - (minzoom + 1));
+		for (feature_minzoom = 0; feature_minzoom < 31; feature_minzoom++) {
+			unsigned mask = 1 << (32 - (feature_minzoom + 1));
 
 			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
 				break;
@@ -587,10 +587,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		if (r == 0) {
 			r = .00000001;
 		}
-		minzoom = basezoom - floor(log(r) / -log(droprate));
+		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
 	}
 
-	serialize_byte(geomfile, minzoom, geompos, fname);
+	serialize_byte(geomfile, feature_minzoom, geompos, fname);
 
 	struct index index;
 	index.start = geomstart;
