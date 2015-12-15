@@ -1035,13 +1035,84 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		close(indexfd);
 	}
 
-	/* Copy geometries to a new file in index order */
-
 	indexfd = open(indexname, O_RDONLY);
 	if (indexfd < 0) {
 		perror("reopen sorted index");
 		exit(EXIT_FAILURE);
 	}
+
+	if (basezoom < 0) {
+		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+
+#define MAX_ZOOM 30
+		struct tile {
+			unsigned x;
+			unsigned y;
+			long long count;
+		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
+
+		{
+			int i;
+			for (i = 0; i <= MAX_ZOOM; i++) {
+				tile[i].x = tile[i].y = tile[i].count = 0;
+				max[i].x = max[i].y = max[i].count = 0;
+			}
+		}
+
+		long long indices = indexpos / sizeof(struct index);
+		long long i;
+		for (i = 0; i < indices; i++) {
+			unsigned xx, yy;
+			decode(map[i].index, &xx, &yy);
+
+			int z;
+			for (z = 0; z <= MAX_ZOOM; z++) {
+				unsigned xxx = 0, yyy = 0;
+				if (z != 0) {
+					xxx = xx >> (32 - z);
+					yyy = yy >> (32 - z);
+				}
+
+				if (tile[z].x != xxx || tile[z].y != yyy) {
+					if (tile[z].count > max[z].count) {
+						max[z] = tile[z];
+					}
+
+					tile[z].x = xxx;
+					tile[z].y = yyy;
+					tile[z].count = 0;
+				}
+
+				tile[z].count++;
+			}
+		}
+
+		basezoom = MAX_ZOOM;
+
+		int z;
+		for (z = MAX_ZOOM; z >= 0; z--) {
+			if (tile[z].count > max[z].count) {
+				max[z] = tile[z];
+			}
+
+			if (max[z].count < 50000) {
+				basezoom = z;
+			}
+
+			// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
+		}
+
+		fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+
+		munmap(map, indexpos);
+	}
+
+	/* Copy geometries to a new file in index order */
+
 	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 	if (index_map == MAP_FAILED) {
 		perror("mmap index");
@@ -1262,7 +1333,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'B':
-			basezoom = atoi(optarg);
+			if (strcmp(optarg, "g") == 0) {
+				basezoom = -2;
+			} else {
+				basezoom = atoi(optarg);
+			}
 			break;
 
 		case 'd':
@@ -1347,7 +1422,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	if (basezoom < 0) {
+	if (basezoom == -1) {
 		basezoom = maxzoom;
 	}
 

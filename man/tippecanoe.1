@@ -75,7 +75,8 @@ specified, the files are all merged into the single named layer.
 .IP \(bu 2
 \-Z \fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 .IP \(bu 2
-\-B \fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom)
+\-B \fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+If you use \-Bg, it will guess a zoom level that will keep less than 50,000 features in the densest tile.
 .IP \(bu 2
 \-d \fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 4096)
 .IP \(bu 2
