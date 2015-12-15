@@ -71,11 +71,13 @@ specified, the files are all merged into the single named layer.
 .SS Zoom levels and resolution
 .RS
 .IP \(bu 2
-\-z \fIzoom\fP: Base (maxzoom) zoom level (default 14)
+\-z \fIzoom\fP: Maxzoom: the highest zoom level for which tiles are generated (default 14)
 .IP \(bu 2
-\-Z \fIzoom\fP: Lowest (minzoom) zoom level (default 0)
+\-Z \fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 .IP \(bu 2
-\-d \fIdetail\fP: Detail at base zoom level (default 12, for tile resolution of 4096)
+\-B \fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom)
+.IP \(bu 2
+\-d \fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 4096)
 .IP \(bu 2
 \-D \fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 4096)
 .IP \(bu 2
@@ -95,7 +97,7 @@ specified, the files are all merged into the single named layer.
 .SS Point simplification
 .RS
 .IP \(bu 2
-\-r \fIrate\fP: Rate at which dots are dropped at lower zoom levels (default 2.5)
+\-r \fIrate\fP: Rate at which dots are dropped at zoom levels below basezoom (default 2.5)
 .IP \(bu 2
 \-g \fIgamma\fP: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 .RE
@@ -168,7 +170,7 @@ coordinated with the base zoom level and dot\-dropping rate. You can use this sh
 calculate the appropriate marker\-width at high zoom levels to match the fraction of dots
 that were dropped at low zoom levels.
 .PP
-If you used \fB\fC\-z\fR to change the base zoom level or \fB\fC\-r\fR to change the
+If you used \fB\fC\-B\fR or \fB\fC\-z\fR to change the base zoom level or \fB\fC\-r\fR to change the
 dot\-dropping rate, replace them in the \fB\fCbasezoom\fR and \fB\fCrate\fR below.
 .PP
 .RS
@@ -193,7 +195,9 @@ awk 'BEGIN {
 At every zoom level, line and polygon features are subjected to Douglas\-Peucker
 simplification to the resolution of the tile.
 .PP
-For point features, it drops 1/2.5 of the dots for each zoom level above the base.
+For point features, it drops 1/2.5 of the dots for each zoom level above the
+point base zoom (which is normally the same as the \fB\fC\-z\fR max zoom, but can be
+a different zoom specified with \fB\fC\-B\fR if you have precise but sparse data).
 I don't know why 2.5 is the appropriate number, but the densities of many different
 data sets fall off at about this same rate. You can use \-r to specify a different rate.
 .PP
