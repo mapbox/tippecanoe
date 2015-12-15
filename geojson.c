@@ -437,7 +437,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -587,7 +587,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		if (r == 0) {
 			r = .00000001;
 		}
-		minzoom = maxzoom - floor(log(r) / -log(droprate));
+		minzoom = basezoom - floor(log(r) / -log(droprate));
 	}
 
 	serialize_byte(geomfile, minzoom, geompos, fname);
@@ -626,7 +626,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, long long *file_bbox) {
+void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -691,7 +691,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, NULL);
+				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL);
 				json_free(j);
 				continue;
 			}
@@ -726,10 +726,10 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
+				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
+			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 		}
 
 		json_free(j);
@@ -738,7 +738,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -866,7 +866,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			layer = source;
 		}
 
-		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox);
 
 		json_end(jp);
 		fclose(fp);
@@ -1138,7 +1138,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
 	}
 
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1224,6 +1224,7 @@ int main(int argc, char **argv) {
 	char *outdir = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
+	int basezoom = -1;
 	int force = 0;
 	double droprate = 2.5;
 	double gamma = 0;
@@ -1242,7 +1243,7 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:B:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1258,6 +1259,10 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'B':
+			basezoom = atoi(optarg);
 			break;
 
 		case 'd':
@@ -1332,7 +1337,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1340,6 +1345,10 @@ int main(int argc, char **argv) {
 	if (minzoom > maxzoom) {
 		fprintf(stderr, "minimum zoom -Z cannot be greater than maxzoom -z\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (basezoom < 0) {
+		basezoom = maxzoom;
 	}
 
 	if (full_detail <= 0) {
@@ -1365,7 +1374,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
 
 	mbtiles_close(outdb, argv);
 

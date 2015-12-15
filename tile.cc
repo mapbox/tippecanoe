@@ -906,8 +906,6 @@ struct write_tile_args {
 	int buffer;
 	const char *fname;
 	FILE **geomfile;
-	int file_minzoom;
-	int file_maxzoom;
 	double todo;
 	volatile long long *along;
 	double gamma;
@@ -999,7 +997,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1098,7 +1096,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].metabase = metabase;
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
-			args[thread].basezoom = maxzoom;     // XXX rename?
+			args[thread].basezoom = basezoom;
 			args[thread].file_keys = file_keys;  // locked with var_lock
 			args[thread].layernames = layernames;
 			args[thread].outdb = outdb;  // locked with db_lock
@@ -1106,8 +1104,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].buffer = buffer;
 			args[thread].fname = fname;
 			args[thread].geomfile = sub + thread * (TEMP_FILES / threads);
-			args[thread].file_minzoom = minzoom;
-			args[thread].file_maxzoom = maxzoom;
 			args[thread].todo = todo;
 			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
