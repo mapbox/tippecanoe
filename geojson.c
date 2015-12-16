@@ -1122,7 +1122,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (droprate < 0) {
 			droprate = 1;
 
-			for (z = 0; z <= basezoom; z++) {
+			for (z = basezoom; z >= 0; z--) {
 				double interval = exp(log(droprate) * (basezoom - z));
 
 				if (max[z].count / interval >= MAX_FEATURES) {
@@ -1467,6 +1467,13 @@ int main(int argc, char **argv) {
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
+
+	if ((basezoom < 0 || droprate < 0) && (gamma < 0)) {
+		// Can't use randomized (as opposed to evenly distributed) dot dropping
+		// if rate and base aren't known during feature reading.
+		gamma = 0;
+		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
+	}
 
 	if (outdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);
