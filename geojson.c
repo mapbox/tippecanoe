@@ -1046,7 +1046,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-	if (basezoom < 0) {
+	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
 			perror("mmap");
@@ -1096,22 +1096,44 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 		}
 
-		basezoom = MAX_ZOOM;
-
 		int z;
 		for (z = MAX_ZOOM; z >= 0; z--) {
 			if (tile[z].count > max[z].count) {
 				max[z] = tile[z];
 			}
-
-			if (max[z].count < 50000) {
-				basezoom = z;
-			}
-
-			// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
 		}
 
-		fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+#define MAX_FEATURES 50000
+
+		if (basezoom < 0) {
+			basezoom = MAX_ZOOM;
+
+			for (z = MAX_ZOOM; z >= 0; z--) {
+				if (max[z].count < MAX_FEATURES) {
+					basezoom = z;
+				}
+
+				// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
+			}
+
+			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+		}
+
+		if (droprate < 0) {
+			droprate = 1;
+
+			for (z = 0; z <= basezoom; z++) {
+				double interval = exp(log(droprate) * (basezoom - z));
+
+				if (max[z].count / interval >= MAX_FEATURES) {
+					interval = (long double) max[z].count / MAX_FEATURES;
+					droprate = exp(log(interval) / (basezoom - z));
+					interval = exp(log(droprate) * (basezoom - z));
+
+					fprintf(stderr, "Choosing a drop rate of -r%f to keep %f features in tile %d/%u/%u.\n", droprate, max[z].count / interval, z, max[z].x, max[z].y);
+				}
+			}
+		}
 
 		munmap(map, indexpos);
 	}
@@ -1375,7 +1397,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'r':
-			droprate = atof(optarg);
+			if (strcmp(optarg, "g") == 0) {
+				droprate = -2;
+			} else {
+				droprate = atof(optarg);
+			}
 			break;
 
 		case 'b':
