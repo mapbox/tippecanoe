@@ -736,6 +736,11 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 
 		/* XXX check for any non-features in the outer object */
 	}
+
+	if (!quiet) {
+		fprintf(stderr, "                              \r");
+		//     (stderr, "Read 10000.00 million features\r", *seq / 1000000.0);
+	}
 }
 
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
