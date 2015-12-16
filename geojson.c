@@ -1058,12 +1058,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			unsigned x;
 			unsigned y;
 			long long count;
+			double gap;
+			unsigned long long previndex;
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
 			int i;
 			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = 0;
+				tile[i].x = tile[i].y = tile[i].count = tile[i].gap = tile[i].previndex = 0;
 				max[i].x = max[i].y = max[i].count = 0;
 			}
 		}
@@ -1082,6 +1084,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					yyy = yy >> (32 - z);
 				}
 
+				double scale = (double) (1LL << (64 - 2 * (z + 8)));
+
 				if (tile[z].x != xxx || tile[z].y != yyy) {
 					if (tile[z].count > max[z].count) {
 						max[z] = tile[z];
@@ -1090,6 +1094,37 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					tile[z].x = xxx;
 					tile[z].y = yyy;
 					tile[z].count = 0;
+					tile[z].gap = 0;
+					tile[z].previndex = 0;
+				}
+
+				// Keep in sync with write_tile()
+				if (gamma > 0) {
+					if (tile[z].gap > 0) {
+						if (map[i].index == tile[z].previndex) {
+							continue;  // Exact duplicate: can't fulfil the gap requirement
+						}
+
+						if (exp(log((map[i].index - tile[z].previndex) / scale) * gamma) >= tile[z].gap) {
+							// Dot is further from the previous than the nth root of the gap,
+							// so produce it, and choose a new gap at the next point.
+							tile[z].gap = 0;
+						} else {
+							continue;
+						}
+					} else {
+						tile[z].gap = (map[i].index - tile[z].previndex) / scale;
+
+						if (tile[z].gap == 0) {
+							continue;  // Exact duplicate: skip
+						} else if (tile[z].gap < 1) {
+							continue;  // Narrow dot spacing: need to stretch out
+						} else {
+							tile[z].gap = 0;  // Wider spacing than minimum: so pass through unchanged
+						}
+					}
+
+					tile[z].previndex = map[i].index;
 				}
 
 				tile[z].count++;
