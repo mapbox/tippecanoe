@@ -1140,6 +1140,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 #define MAX_FEATURES 50000
 
+		int obasezoom = basezoom;
 		if (basezoom < 0) {
 			basezoom = MAX_ZOOM;
 
@@ -1154,10 +1155,36 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
 		}
 
-		if (droprate < 0) {
+		if (obasezoom < 0 && basezoom > maxzoom) {
+			fprintf(stderr, "Couldn't find a suitable base zoom. Working from the other direction.\n");
+			if (gamma == 0) {
+				fprintf(stderr, "You might want to try -g1 to limit near-duplicates.\n");
+			}
+
+			if (droprate < 0) {
+				if (maxzoom == 0) {
+					droprate = 2.5;
+				} else {
+					droprate = exp(log((long double) max[0].count / max[maxzoom].count) / (maxzoom));
+					fprintf(stderr, "Choosing a drop rate of -r%f to get from %lld to %lld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
+				}
+			}
+
+			basezoom = 0;
+			for (z = 0; z <= maxzoom; z++) {
+				// printf("%d/%u/%u has %lld ", z, max[z].x, max[z].y, max[z].count);
+				double zoomdiff = log((long double) max[z].count / MAX_FEATURES) / log(droprate);
+				// printf("which implies that base zoom should be %f\n", zoomdiff + z);
+				if (zoomdiff + z > basezoom) {
+					basezoom = ceil(zoomdiff + z);
+				}
+			}
+
+			fprintf(stderr, "Choosing a base zoom of -B%d to keep %f features in tile %d/%u/%u.\n", basezoom, max[maxzoom].count * exp(log(droprate) * (maxzoom - basezoom)), maxzoom, max[maxzoom].x, max[maxzoom].y);
+		} else if (droprate < 0) {
 			droprate = 1;
 
-			for (z = basezoom; z >= 0; z--) {
+			for (z = basezoom - 1; z >= 0; z--) {
 				double interval = exp(log(droprate) * (basezoom - z));
 
 				if (max[z].count / interval >= MAX_FEATURES) {
