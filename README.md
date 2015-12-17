@@ -70,6 +70,8 @@ Options
  * -Z _zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
  * -B _zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
    If you use -Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
+   You can also specify a marker-width with -Bg*width* to allow fewer features in the densest tile to
+   compensate for the larger marker.
  * -d _detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
  * -D _detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)

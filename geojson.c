@@ -743,7 +743,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -1058,6 +1058,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			unsigned x;
 			unsigned y;
 			long long count;
+			long long fullcount;
 			double gap;
 			unsigned long long previndex;
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
@@ -1065,8 +1066,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		{
 			int i;
 			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = tile[i].gap = tile[i].previndex = 0;
-				max[i].x = max[i].y = max[i].count = 0;
+				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
+				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
 			}
 		}
 
@@ -1094,9 +1095,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					tile[z].x = xxx;
 					tile[z].y = yyy;
 					tile[z].count = 0;
+					tile[z].fullcount = 0;
 					tile[z].gap = 0;
 					tile[z].previndex = 0;
 				}
+
+				tile[z].fullcount++;
 
 				// Keep in sync with write_tile()
 				if (gamma > 0) {
@@ -1138,14 +1142,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 		}
 
-#define MAX_FEATURES 50000
+		int max_features = 50000 / (basezoom_marker_width * basezoom_marker_width);
 
 		int obasezoom = basezoom;
 		if (basezoom < 0) {
 			basezoom = MAX_ZOOM;
 
 			for (z = MAX_ZOOM; z >= 0; z--) {
-				if (max[z].count < MAX_FEATURES) {
+				if (max[z].count < max_features) {
 					basezoom = z;
 				}
 
@@ -1173,7 +1177,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			basezoom = 0;
 			for (z = 0; z <= maxzoom; z++) {
 				// printf("%d/%u/%u has %lld ", z, max[z].x, max[z].y, max[z].count);
-				double zoomdiff = log((long double) max[z].count / MAX_FEATURES) / log(droprate);
+				double zoomdiff = log((long double) max[z].count / max_features) / log(droprate);
 				// printf("which implies that base zoom should be %f\n", zoomdiff + z);
 				if (zoomdiff + z > basezoom) {
 					basezoom = ceil(zoomdiff + z);
@@ -1187,8 +1191,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			for (z = basezoom - 1; z >= 0; z--) {
 				double interval = exp(log(droprate) * (basezoom - z));
 
-				if (max[z].count / interval >= MAX_FEATURES) {
-					interval = (long double) max[z].count / MAX_FEATURES;
+				if (max[z].count / interval >= max_features) {
+					interval = (long double) max[z].count / max_features;
 					droprate = exp(log(interval) / (basezoom - z));
 					interval = exp(log(droprate) * (basezoom - z));
 
@@ -1385,6 +1389,7 @@ int main(int argc, char **argv) {
 	int maxzoom = 14;
 	int minzoom = 0;
 	int basezoom = -1;
+	double basezoom_marker_width = 1;
 	int force = 0;
 	double droprate = 2.5;
 	double gamma = 0;
@@ -1424,8 +1429,20 @@ int main(int argc, char **argv) {
 		case 'B':
 			if (strcmp(optarg, "g") == 0) {
 				basezoom = -2;
+				basezoom_marker_width = 1;
+			} else if (optarg[0] == 'g') {
+				basezoom = -2;
+				basezoom_marker_width = atof(optarg + 1);
+				if (basezoom_marker_width == 0) {
+					fprintf(stderr, "%s: Must specify marker width >0 with -Bg\n", argv[0]);
+					exit(EXIT_FAILURE);
+				}
 			} else {
 				basezoom = atoi(optarg);
+				if (basezoom == 0 && strcmp(optarg, "0") != 0) {
+					fprintf(stderr, "%s: Couldn't understand -B%s\n", argv[0], optarg);
+					exit(EXIT_FAILURE);
+				}
 			}
 			break;
 
@@ -1549,7 +1566,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
 
 	mbtiles_close(outdb, argv);
 
