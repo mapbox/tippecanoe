@@ -1176,9 +1176,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			basezoom = 0;
 			for (z = 0; z <= maxzoom; z++) {
-				// printf("%d/%u/%u has %lld ", z, max[z].x, max[z].y, max[z].count);
 				double zoomdiff = log((long double) max[z].count / max_features) / log(droprate);
-				// printf("which implies that base zoom should be %f\n", zoomdiff + z);
 				if (zoomdiff + z > basezoom) {
 					basezoom = ceil(zoomdiff + z);
 				}
@@ -1198,6 +1196,36 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 					fprintf(stderr, "Choosing a drop rate of -r%f to keep %f features in tile %d/%u/%u.\n", droprate, max[z].count / interval, z, max[z].x, max[z].y);
 				}
+			}
+		}
+
+		if (gamma > 0) {
+			int effective = 0;
+
+			for (z = 0; z < maxzoom; z++) {
+				if (max[z].count < max[z].fullcount) {
+					effective = z + 1;
+				}
+			}
+
+			if (effective == 0) {
+				fprintf(stderr, "With gamma, effective base zoom is 0, so no effective drop rate\n");
+			} else {
+				double interval_0 = exp(log(droprate) * (basezoom - 0));
+				double interval_eff = exp(log(droprate) * (basezoom - effective));
+				if (effective > basezoom) {
+					interval_eff = 1;
+				}
+
+				double scaled_0 = max[0].count / interval_0;
+				double scaled_eff = max[effective].count / interval_eff;
+
+				double rate_at_0 = scaled_0 / max[0].fullcount;
+				double rate_at_eff = scaled_eff / max[effective].fullcount;
+
+				double eff_drop = exp(log(rate_at_eff / rate_at_0) / (effective - 0));
+
+				fprintf(stderr, "With gamma, effective base zoom of %d, effective drop rate of %f\n", effective, eff_drop);
 			}
 		}
 
