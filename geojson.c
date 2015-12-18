@@ -437,7 +437,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -564,19 +564,19 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	/*
-	 * Note that minzoom for lines is the dimension
+	 * Note that feature_minzoom for lines is the dimension
 	 * of the geometry in world coordinates, but
 	 * for points is the lowest zoom level (in tiles,
 	 * not in pixels) at which it should be drawn.
 	 *
 	 * So a line that is too small for, say, z8
-	 * will have minzoom of 18 (if tile detail is 10),
+	 * will have feature_minzoom of 18 (if tile detail is 10),
 	 * not 8.
 	 */
-	int minzoom = 0;
+	int feature_minzoom = 0;
 	if (mb_geometry[t] == VT_LINE) {
-		for (minzoom = 0; minzoom < 31; minzoom++) {
-			unsigned mask = 1 << (32 - (minzoom + 1));
+		for (feature_minzoom = 0; feature_minzoom < 31; feature_minzoom++) {
+			unsigned mask = 1 << (32 - (feature_minzoom + 1));
 
 			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
 				break;
@@ -587,10 +587,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		if (r == 0) {
 			r = .00000001;
 		}
-		minzoom = maxzoom - floor(log(r) / -log(droprate));
+		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
 	}
 
-	serialize_byte(geomfile, minzoom, geompos, fname);
+	serialize_byte(geomfile, feature_minzoom, geompos, fname);
 
 	struct index index;
 	index.start = geomstart;
@@ -626,7 +626,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int layer, double droprate, long long *file_bbox) {
+void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -691,7 +691,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, NULL);
+				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL);
 				json_free(j);
 				continue;
 			}
@@ -726,19 +726,24 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
+				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox, tippecanoe);
+			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 		}
 
 		json_free(j);
 
 		/* XXX check for any non-features in the outer object */
 	}
+
+	if (!quiet) {
+		fprintf(stderr, "                              \r");
+		//     (stderr, "Read 10000.00 million features\r", *seq / 1000000.0);
+	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -866,7 +871,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			layer = source;
 		}
 
-		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, layer, droprate, file_bbox);
+		parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox);
 
 		json_end(jp);
 		fclose(fp);
@@ -1035,13 +1040,200 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		close(indexfd);
 	}
 
-	/* Copy geometries to a new file in index order */
-
 	indexfd = open(indexname, O_RDONLY);
 	if (indexfd < 0) {
 		perror("reopen sorted index");
 		exit(EXIT_FAILURE);
 	}
+
+	if (basezoom < 0 || droprate < 0) {
+		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+		if (map == MAP_FAILED) {
+			perror("mmap");
+			exit(EXIT_FAILURE);
+		}
+
+#define MAX_ZOOM 30
+		struct tile {
+			unsigned x;
+			unsigned y;
+			long long count;
+			long long fullcount;
+			double gap;
+			unsigned long long previndex;
+		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
+
+		{
+			int i;
+			for (i = 0; i <= MAX_ZOOM; i++) {
+				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
+				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
+			}
+		}
+
+		long long indices = indexpos / sizeof(struct index);
+		long long i;
+		for (i = 0; i < indices; i++) {
+			unsigned xx, yy;
+			decode(map[i].index, &xx, &yy);
+
+			int z;
+			for (z = 0; z <= MAX_ZOOM; z++) {
+				unsigned xxx = 0, yyy = 0;
+				if (z != 0) {
+					xxx = xx >> (32 - z);
+					yyy = yy >> (32 - z);
+				}
+
+				double scale = (double) (1LL << (64 - 2 * (z + 8)));
+
+				if (tile[z].x != xxx || tile[z].y != yyy) {
+					if (tile[z].count > max[z].count) {
+						max[z] = tile[z];
+					}
+
+					tile[z].x = xxx;
+					tile[z].y = yyy;
+					tile[z].count = 0;
+					tile[z].fullcount = 0;
+					tile[z].gap = 0;
+					tile[z].previndex = 0;
+				}
+
+				tile[z].fullcount++;
+
+				// Keep in sync with write_tile()
+				if (gamma > 0) {
+					if (tile[z].gap > 0) {
+						if (map[i].index == tile[z].previndex) {
+							continue;  // Exact duplicate: can't fulfil the gap requirement
+						}
+
+						if (exp(log((map[i].index - tile[z].previndex) / scale) * gamma) >= tile[z].gap) {
+							// Dot is further from the previous than the nth root of the gap,
+							// so produce it, and choose a new gap at the next point.
+							tile[z].gap = 0;
+						} else {
+							continue;
+						}
+					} else {
+						tile[z].gap = (map[i].index - tile[z].previndex) / scale;
+
+						if (tile[z].gap == 0) {
+							continue;  // Exact duplicate: skip
+						} else if (tile[z].gap < 1) {
+							continue;  // Narrow dot spacing: need to stretch out
+						} else {
+							tile[z].gap = 0;  // Wider spacing than minimum: so pass through unchanged
+						}
+					}
+
+					tile[z].previndex = map[i].index;
+				}
+
+				tile[z].count++;
+			}
+		}
+
+		int z;
+		for (z = MAX_ZOOM; z >= 0; z--) {
+			if (tile[z].count > max[z].count) {
+				max[z] = tile[z];
+			}
+		}
+
+		int max_features = 50000 / (basezoom_marker_width * basezoom_marker_width);
+
+		int obasezoom = basezoom;
+		if (basezoom < 0) {
+			basezoom = MAX_ZOOM;
+
+			for (z = MAX_ZOOM; z >= 0; z--) {
+				if (max[z].count < max_features) {
+					basezoom = z;
+				}
+
+				// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
+			}
+
+			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+		}
+
+		if (obasezoom < 0 && basezoom > maxzoom) {
+			fprintf(stderr, "Couldn't find a suitable base zoom. Working from the other direction.\n");
+			if (gamma == 0) {
+				fprintf(stderr, "You might want to try -g1 to limit near-duplicates.\n");
+			}
+
+			if (droprate < 0) {
+				if (maxzoom == 0) {
+					droprate = 2.5;
+				} else {
+					droprate = exp(log((long double) max[0].count / max[maxzoom].count) / (maxzoom));
+					fprintf(stderr, "Choosing a drop rate of -r%f to get from %lld to %lld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
+				}
+			}
+
+			basezoom = 0;
+			for (z = 0; z <= maxzoom; z++) {
+				double zoomdiff = log((long double) max[z].count / max_features) / log(droprate);
+				if (zoomdiff + z > basezoom) {
+					basezoom = ceil(zoomdiff + z);
+				}
+			}
+
+			fprintf(stderr, "Choosing a base zoom of -B%d to keep %f features in tile %d/%u/%u.\n", basezoom, max[maxzoom].count * exp(log(droprate) * (maxzoom - basezoom)), maxzoom, max[maxzoom].x, max[maxzoom].y);
+		} else if (droprate < 0) {
+			droprate = 1;
+
+			for (z = basezoom - 1; z >= 0; z--) {
+				double interval = exp(log(droprate) * (basezoom - z));
+
+				if (max[z].count / interval >= max_features) {
+					interval = (long double) max[z].count / max_features;
+					droprate = exp(log(interval) / (basezoom - z));
+					interval = exp(log(droprate) * (basezoom - z));
+
+					fprintf(stderr, "Choosing a drop rate of -r%f to keep %f features in tile %d/%u/%u.\n", droprate, max[z].count / interval, z, max[z].x, max[z].y);
+				}
+			}
+		}
+
+		if (gamma > 0) {
+			int effective = 0;
+
+			for (z = 0; z < maxzoom; z++) {
+				if (max[z].count < max[z].fullcount) {
+					effective = z + 1;
+				}
+			}
+
+			if (effective == 0) {
+				fprintf(stderr, "With gamma, effective base zoom is 0, so no effective drop rate\n");
+			} else {
+				double interval_0 = exp(log(droprate) * (basezoom - 0));
+				double interval_eff = exp(log(droprate) * (basezoom - effective));
+				if (effective > basezoom) {
+					interval_eff = 1;
+				}
+
+				double scaled_0 = max[0].count / interval_0;
+				double scaled_eff = max[effective].count / interval_eff;
+
+				double rate_at_0 = scaled_0 / max[0].fullcount;
+				double rate_at_eff = scaled_eff / max[effective].fullcount;
+
+				double eff_drop = exp(log(rate_at_eff / rate_at_0) / (effective - 0));
+
+				fprintf(stderr, "With gamma, effective base zoom of %d, effective drop rate of %f\n", effective, eff_drop);
+			}
+		}
+
+		munmap(map, indexpos);
+	}
+
+	/* Copy geometries to a new file in index order */
+
 	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 	if (index_map == MAP_FAILED) {
 		perror("mmap index");
@@ -1138,7 +1330,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
 	}
 
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1179,7 +1371,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (file_bbox[1] < 0) {
 		file_bbox[1] = 0;
 	}
-	if (file_bbox[3] < (1LL << 32) - 1) {
+	if (file_bbox[3] > (1LL << 32) - 1) {
 		file_bbox[3] = (1LL << 32) - 1;
 	}
 
@@ -1224,6 +1416,8 @@ int main(int argc, char **argv) {
 	char *outdir = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
+	int basezoom = -1;
+	double basezoom_marker_width = 1;
 	int force = 0;
 	double droprate = 2.5;
 	double gamma = 0;
@@ -1242,7 +1436,7 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:B:")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1258,6 +1452,26 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'B':
+			if (strcmp(optarg, "g") == 0) {
+				basezoom = -2;
+				basezoom_marker_width = 1;
+			} else if (optarg[0] == 'g') {
+				basezoom = -2;
+				basezoom_marker_width = atof(optarg + 1);
+				if (basezoom_marker_width == 0) {
+					fprintf(stderr, "%s: Must specify marker width >0 with -Bg\n", argv[0]);
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				basezoom = atoi(optarg);
+				if (basezoom == 0 && strcmp(optarg, "0") != 0) {
+					fprintf(stderr, "%s: Couldn't understand -B%s\n", argv[0], optarg);
+					exit(EXIT_FAILURE);
+				}
+			}
 			break;
 
 		case 'd':
@@ -1290,7 +1504,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'r':
-			droprate = atof(optarg);
+			if (strcmp(optarg, "g") == 0) {
+				droprate = -2;
+			} else {
+				droprate = atof(optarg);
+			}
 			break;
 
 		case 'b':
@@ -1332,7 +1550,7 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1340,6 +1558,10 @@ int main(int argc, char **argv) {
 	if (minzoom > maxzoom) {
 		fprintf(stderr, "minimum zoom -Z cannot be greater than maxzoom -z\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (basezoom == -1) {
+		basezoom = maxzoom;
 	}
 
 	if (full_detail <= 0) {
@@ -1353,6 +1575,13 @@ int main(int argc, char **argv) {
 
 	geometry_scale = 32 - (full_detail + maxzoom);
 
+	if ((basezoom < 0 || droprate < 0) && (gamma < 0)) {
+		// Can't use randomized (as opposed to evenly distributed) dot dropping
+		// if rate and base aren't known during feature reading.
+		gamma = 0;
+		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
+	}
+
 	if (outdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);
 		exit(EXIT_FAILURE);
@@ -1365,7 +1594,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
 
 	mbtiles_close(outdb, argv);
 

@@ -1,3 +1,9 @@
+## 1.5.0
+
+* Base zoom for dot-dropping can be specified independently of
+  maxzoom for tiling.
+* Tippecanoe can calculate a base zoom and drop rate for you.
+
 ## 1.4.3
 
 * Encode numeric attributes as integers instead of floating point if possible

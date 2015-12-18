@@ -66,9 +66,13 @@ Options
 
 ### Zoom levels and resolution
 
- * -z _zoom_: Base (maxzoom) zoom level (default 14)
- * -Z _zoom_: Lowest (minzoom) zoom level (default 0)
- * -d _detail_: Detail at base zoom level (default 12, for tile resolution of 4096)
+ * -z _zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+ * -Z _zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+ * -B _zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+   If you use -Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
+   You can also specify a marker-width with -Bg*width* to allow fewer features in the densest tile to
+   compensate for the larger marker.
+ * -d _detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
  * -D _detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
@@ -81,7 +85,8 @@ Options
 
 ### Point simplification
 
- * -r _rate_: Rate at which dots are dropped at lower zoom levels (default 2.5)
+ * -r _rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+   If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
  * -g _gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 ### Doing more
@@ -142,7 +147,7 @@ coordinated with the base zoom level and dot-dropping rate. You can use this she
 calculate the appropriate marker-width at high zoom levels to match the fraction of dots
 that were dropped at low zoom levels.
 
-If you used `-z` to change the base zoom level or `-r` to change the
+If you used `-B` or `-z` to change the base zoom level or `-r` to change the
 dot-dropping rate, replace them in the `basezoom` and `rate` below.
 
     awk 'BEGIN {
@@ -167,7 +172,9 @@ Geometric simplifications
 At every zoom level, line and polygon features are subjected to Douglas-Peucker
 simplification to the resolution of the tile.
 
-For point features, it drops 1/2.5 of the dots for each zoom level above the base.
+For point features, it drops 1/2.5 of the dots for each zoom level above the
+point base zoom (which is normally the same as the `-z` max zoom, but can be
+a different zoom specified with `-B` if you have precise but sparse data).
 I don't know why 2.5 is the appropriate number, but the densities of many different
 data sets fall off at about this same rate. You can use -r to specify a different rate.
 

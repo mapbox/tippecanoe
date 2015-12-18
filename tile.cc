@@ -362,8 +362,8 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
-	if (geom.size() > 0 && nextzoom <= file_maxzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
+	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
 
@@ -463,7 +463,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int file_maxzoom, long long *bb
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
 	int line_detail;
 	double fraction = 1;
 
@@ -481,9 +481,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 	}
 
 	int nextzoom = z + 1;
-	if (nextzoom < file_minzoom) {
-		if (z + max_zoom_increment > file_minzoom) {
-			nextzoom = file_minzoom;
+	if (nextzoom < minzoom) {
+		if (z + max_zoom_increment > minzoom) {
+			nextzoom = minzoom;
 		} else {
 			nextzoom = z + max_zoom_increment;
 		}
@@ -566,7 +566,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
 
-			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (file_maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
@@ -630,10 +630,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, file_maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
 			}
 
-			if (z < file_minzoom) {
+			if (z < minzoom) {
 				continue;
 			}
 
@@ -906,8 +906,6 @@ struct write_tile_args {
 	int buffer;
 	const char *fname;
 	FILE **geomfile;
-	int file_minzoom;
-	int file_maxzoom;
 	double todo;
 	volatile long long *along;
 	double gamma;
@@ -963,7 +961,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->maxzoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -999,7 +997,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1098,7 +1096,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].metabase = metabase;
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
-			args[thread].basezoom = maxzoom;     // XXX rename?
+			args[thread].basezoom = basezoom;
 			args[thread].file_keys = file_keys;  // locked with var_lock
 			args[thread].layernames = layernames;
 			args[thread].outdb = outdb;  // locked with db_lock
@@ -1106,8 +1104,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].buffer = buffer;
 			args[thread].fname = fname;
 			args[thread].geomfile = sub + thread * (TEMP_FILES / threads);
-			args[thread].file_minzoom = minzoom;
-			args[thread].file_maxzoom = maxzoom;
 			args[thread].todo = todo;
 			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
