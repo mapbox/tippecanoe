@@ -332,20 +332,17 @@ again:
 	/////////////////////////// Comma
 
 	if (c == ',') {
-		if (j->container == NULL) {
-			j->error = "Found comma at top level";
-			return NULL;
-		}
+		if (j->container != NULL) {
+			if (j->container->expect != JSON_COMMA) {
+				j->error = "Found unexpected comma";
+				return NULL;
+			}
 
-		if (j->container->expect != JSON_COMMA) {
-			j->error = "Found unexpected comma";
-			return NULL;
-		}
-
-		if (j->container->type == JSON_HASH) {
-			j->container->expect = JSON_KEY;
-		} else {
-			j->container->expect = JSON_ITEM;
+			if (j->container->type == JSON_HASH) {
+				j->container->expect = JSON_KEY;
+			} else {
+				j->container->expect = JSON_ITEM;
+			}
 		}
 
 		if (cb != NULL) {

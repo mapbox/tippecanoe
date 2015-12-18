@@ -903,10 +903,28 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			jp = json_begin_map(map, st.st_size - off);
-			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, source, droprate, file_bbox);
-			free(jp->source);
-			json_end(jp);
+#define THREADS 10
+			long long segs[THREADS + 1];
+			segs[0] = 0;
+			segs[THREADS] = st.st_size - off;
+
+			int i;
+			for (i = 1; i < THREADS; i++) {
+				segs[i] = off + (st.st_size - off) * i / THREADS;
+
+				while (segs[i] < st.st_size && map[segs[i]] != '\n') {
+					segs[i]++;
+				}
+
+				printf("%d %lld\n", i, segs[i]);
+			}
+
+			for (i = 0; i < THREADS; i++) {
+				jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
+				parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, source, droprate, file_bbox);
+				free(jp->source);
+				json_end(jp);
+			}
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
