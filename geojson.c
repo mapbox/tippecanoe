@@ -138,9 +138,9 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, json_pull *source, long long *wx, long long *wy, int *initialized) {
+void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized) {
 	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, source->line, t);
+		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
 		return;
 	}
 
@@ -156,7 +156,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, source, wx, wy, initialized);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -169,7 +169,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 				static int warned = 0;
 
 				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, source->line);
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
 					warned = 1;
 				}
 			}
@@ -203,7 +203,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 			*wx = x;
 			*wy = y;
 		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, source->line);
+			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 		}
 	}
 
@@ -437,12 +437,12 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, json_pull *jp, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
 		if (!warned) {
-			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, jp->line);
+			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, line);
 			warned = 1;
 		}
 
@@ -450,13 +450,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	}
 
 	if (geometry_type->type != JSON_STRING) {
-		fprintf(stderr, "%s:%d: geometry without type\n", reading, jp->line);
+		fprintf(stderr, "%s:%d: geometry without type\n", reading, line);
 		return 0;
 	}
 
 	json_object *coordinates = json_hash_get(geometry, "coordinates");
 	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, jp->line);
+		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, line);
 		return 0;
 	}
 
@@ -467,7 +467,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, jp->line, geometry_type->string);
+		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, line, geometry_type->string);
 		return 0;
 	}
 
@@ -533,7 +533,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
-				fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, jp->line, properties->keys[i]->string);
+				fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, line, properties->keys[i]->string);
 				continue;
 			}
 		}
@@ -560,7 +560,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = initial_x, wy = initial_y;
-	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, jp, &wx, &wy, &initialized);
+	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, &initialized);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	/*
@@ -691,7 +691,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL);
+				serialize_geometry(j, NULL, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL);
 				json_free(j);
 				continue;
 			}
@@ -726,10 +726,10 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
+				serialize_geometry(geometries->array[g], properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
+			serialize_geometry(geometry, properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
 		}
 
 		json_free(j);
