@@ -272,6 +272,7 @@ struct index {
 	long long start;
 	long long end;
 	unsigned long long index;
+	int segment;
 };
 
 int indexcmp(const void *v1, const void *v2) {
@@ -437,7 +438,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -595,6 +596,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	struct index index;
 	index.start = geomstart;
 	index.end = *geompos;
+	index.segment = segment;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
@@ -626,7 +628,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox) {
+void parse_json(json_pull *jp, const char *reading, long long *seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, int segment) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -691,7 +693,7 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL);
+				serialize_geometry(j, NULL, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL, segment);
 				json_free(j);
 				continue;
 			}
@@ -726,10 +728,10 @@ void parse_json(json_pull *jp, const char *reading, long long *seq, long long *m
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
+				serialize_geometry(geometries->array[g], properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe);
+			serialize_geometry(geometry, properties, reading, jp->line, seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment);
 		}
 
 		json_free(j);
@@ -772,90 +774,130 @@ struct json_pull *json_begin_map(char *map, long long len) {
 	return json_begin(json_map_read, jm);
 }
 
+struct reader {
+	char *metaname;
+	char *poolname;
+	char *treename;
+	char *geomname;
+	char *indexname;
+
+	int metafd;
+	int poolfd;
+	int treefd;
+	int geomfd;
+	int indexfd;
+
+        FILE *metafile;
+        struct memfile *poolfile;
+        struct memfile *treefile;
+        FILE *geomfile;
+        FILE *indexfile;
+
+        long long metapos;
+        long long geompos;
+        long long indexpos;
+
+	long long *file_bbox;
+
+	struct stat geomst;
+	struct stat metast;
+
+	char *geom_map;
+};
+
 int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
 	int ret = EXIT_SUCCESS;
 
-	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
-	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
-	char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
-	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
-	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
+#define THREADS 10
+	struct reader reader[THREADS];
+	int i;
+	for (i = 0; i < THREADS; i++) {
+		struct reader *r = reader + i;
 
-	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-	sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
-	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
+		r->metaname = malloc(strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1);
+		r->poolname = malloc(strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1);
+		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
+		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
+		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
 
-	int metafd = mkstemp(metaname);
-	if (metafd < 0) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-	int poolfd = mkstemp(poolname);
-	if (poolfd < 0) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-	int treefd = mkstemp(treename);
-	if (treefd < 0) {
-		perror(treename);
-		exit(EXIT_FAILURE);
-	}
-	int geomfd = mkstemp(geomname);
-	if (geomfd < 0) {
-		perror(geomname);
-		exit(EXIT_FAILURE);
-	}
-	int indexfd = mkstemp(indexname);
-	if (indexfd < 0) {
-		perror(indexname);
-		exit(EXIT_FAILURE);
+		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+		sprintf(r->treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
+		sprintf(r->geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		sprintf(r->indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
+
+		r->metafd = mkstemp(r->metaname);
+		if (r->metafd < 0) {
+			perror(r->metaname);
+			exit(EXIT_FAILURE);
+		}
+		r->poolfd = mkstemp(r->poolname);
+		if (r->poolfd < 0) {
+			perror(r->poolname);
+			exit(EXIT_FAILURE);
+		}
+		r->treefd = mkstemp(r->treename);
+		if (r->treefd < 0) {
+			perror(r->treename);
+			exit(EXIT_FAILURE);
+		}
+		r->geomfd = mkstemp(r->geomname);
+		if (r->geomfd < 0) {
+			perror(r->geomname);
+			exit(EXIT_FAILURE);
+		}
+		r->indexfd = mkstemp(r->indexname);
+		if (r->indexfd < 0) {
+			perror(r->indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		r->metafile = fopen(r->metaname, "wb");
+		if (r->metafile == NULL) {
+			perror(r->metaname);
+			exit(EXIT_FAILURE);
+		}
+		r->poolfile = memfile_open(r->poolfd);
+		if (r->poolfile == NULL) {
+			perror(r->poolname);
+			exit(EXIT_FAILURE);
+		}
+		r->treefile = memfile_open(r->treefd);
+		if (r->treefile == NULL) {
+			perror(r->treename);
+			exit(EXIT_FAILURE);
+		}
+		r->geomfile = fopen(r->geomname, "wb");
+		if (r->geomfile == NULL) {
+			perror(r->geomname);
+			exit(EXIT_FAILURE);
+		}
+		r->indexfile = fopen(r->indexname, "wb");
+		if (r->indexfile == NULL) {
+			perror(r->indexname);
+			exit(EXIT_FAILURE);
+		}
+		r->metapos = 0;
+		r->geompos = 0;
+		r->indexpos = 0;
+
+		unlink(r->metaname);
+		unlink(r->poolname);
+		unlink(r->treename);
+		unlink(r->geomname);
+		unlink(r->indexname);
+
+		// To distinguish a null value
+		{
+			struct stringpool p;
+			memfile_write(r->treefile, &p, sizeof(struct stringpool));
+		}
+
+		r->file_bbox = malloc(4 * sizeof(long long));
+		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
+		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
 
-	FILE *metafile = fopen(metaname, "wb");
-	if (metafile == NULL) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-	struct memfile *poolfile = memfile_open(poolfd);
-	if (poolfile == NULL) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-	struct memfile *treefile = memfile_open(treefd);
-	if (treefile == NULL) {
-		perror(treename);
-		exit(EXIT_FAILURE);
-	}
-	FILE *geomfile = fopen(geomname, "wb");
-	if (geomfile == NULL) {
-		perror(geomname);
-		exit(EXIT_FAILURE);
-	}
-	FILE *indexfile = fopen(indexname, "wb");
-	if (indexfile == NULL) {
-		perror(indexname);
-		exit(EXIT_FAILURE);
-	}
-	long long metapos = 0;
-	long long geompos = 0;
-	long long indexpos = 0;
-
-	unlink(metaname);
-	unlink(poolname);
-	unlink(treename);
-	unlink(geomname);
-	unlink(indexname);
-
-	// To distinguish a null value
-	{
-		struct stringpool p;
-		memfile_write(treefile, &p, sizeof(struct stringpool));
-	}
-
-	long long file_bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
-	unsigned midx = 0, midy = 0;
 	long long seq = 0;
 
 	int nlayers;
@@ -903,7 +945,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-#define THREADS 10
 			long long segs[THREADS + 1];
 			segs[0] = 0;
 			segs[THREADS] = st.st_size - off;
@@ -921,7 +962,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			for (i = 0; i < THREADS; i++) {
 				jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
-				parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, source, droprate, file_bbox);
+				parse_json(jp, reading, &seq, &reader[i].metapos, &reader[i].geompos, &reader[i].indexpos, exclude, include, exclude_all, reader[i].metafile, reader[i].geomfile, reader[i].indexfile, reader[i].poolfile, reader[i].treefile, fname, maxzoom, basezoom, source, droprate, reader[i].file_bbox, i);
 				free(jp->source);
 				json_end(jp);
 			}
@@ -934,45 +975,35 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			jp = json_begin_file(fp);
-			parse_json(jp, reading, &seq, &metapos, &geompos, &indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, source, droprate, file_bbox);
+			parse_json(jp, reading, &seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source, droprate, reader[0].file_bbox, 0);
 			json_end(jp);
 			fclose(fp);
 		}
 	}
 
-	fclose(metafile);
-	fclose(geomfile);
-	fclose(indexfile);
-	memfile_close(treefile);
+	for (i = 0; i < THREADS; i++) {
+		fclose(reader[i].metafile);
+		fclose(reader[i].geomfile);
+		fclose(reader[i].indexfile);
+		memfile_close(reader[i].treefile);
 
-	struct stat geomst;
-	struct stat metast;
+		if (fstat(reader[i].geomfd, &reader[i].geomst) != 0) {
+			perror("stat geom\n");
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(reader[i].metafd, &reader[i].metast) != 0) {
+			perror("stat meta\n");
+			exit(EXIT_FAILURE);
+		}
 
-	if (fstat(geomfd, &geomst) != 0) {
-		perror("stat geom\n");
-		exit(EXIT_FAILURE);
+		if (reader[i].geomst.st_size == 0 || reader[i].metast.st_size == 0) {
+			fprintf(stderr, "did not read any valid geometries\n"); // XXX
+			// exit(EXIT_FAILURE);
+		}
 	}
-	if (fstat(metafd, &metast) != 0) {
-		perror("stat meta\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (geomst.st_size == 0 || metast.st_size == 0) {
-		fprintf(stderr, "did not read any valid geometries\n");
-		exit(EXIT_FAILURE);
-	}
-
-	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
-	if (meta == MAP_FAILED) {
-		perror("mmap meta");
-		exit(EXIT_FAILURE);
-	}
-
-	char *stringpool = poolfile->map;
 
 	struct pool file_keys1[nlayers];
 	struct pool *file_keys[nlayers];
-	int i;
 	for (i = 0; i < nlayers; i++) {
 		pool_init(&file_keys1[i], 0);
 		file_keys[i] = &file_keys1[i];
@@ -1019,6 +1050,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 		}
 	}
+
+	// XXX Join the sub-indices together, and then
+
+	long long indexpos = 0; // XXX
+	int indexfd = 0; // XXX
+	char *indexname = "XXX"; // XXX
 
 	/* Sort the index by geometry */
 
@@ -1304,14 +1341,22 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 	unlink(indexname);
 
-	char *geom_map = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfd, 0);
-	if (geom_map == MAP_FAILED) {
-		perror("mmap unsorted geometry");
-		exit(EXIT_FAILURE);
+	for (i = 0; i < THREADS; i++) {
+		reader[i].geom_map = mmap(NULL, reader[i].geomst.st_size, PROT_READ, MAP_PRIVATE, reader[i].geomfd, 0);
+		if (reader[i].geom_map == MAP_FAILED) {
+			perror("mmap unsorted geometry");
+			exit(EXIT_FAILURE);
+		}
+		if (close(reader[i].geomfd) != 0) {
+			perror("close unsorted geometry");
+		}
 	}
-	if (close(geomfd) != 0) {
-		perror("close unsorted geometry");
-	}
+
+	char *geomname = "XXX"; // XXX
+	FILE *geomfile = NULL; // XXX
+	int geomfd = 0; // XXX
+	long long geompos = 0; // XXX
+	struct stat geomst; // XXX
 
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 	geomfd = mkstemp(geomname);
@@ -1337,7 +1382,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		long long sum = 0;
 		long long progress = 0;
 		for (i = 0; i < indexpos / sizeof(struct index); i++) {
-			fwrite_check(geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname);
+			fwrite_check(reader[index_map[i].segment].geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname);
 			sum += index_map[i].end - index_map[i].start;
 
 			long long p = 1000 * i / (indexpos / sizeof(struct index));
@@ -1357,8 +1402,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (munmap(index_map, indexpos) != 0) {
 		perror("unmap sorted index");
 	}
-	if (munmap(geom_map, geomst.st_size) != 0) {
-		perror("unmap unsorted geometry");
+
+	for (i = 0; i < THREADS; i++) {
+		if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
+			perror("unmap unsorted geometry");
+		}
 	}
 	if (close(indexfd) != 0) {
 		perror("close sorted index");
@@ -1390,9 +1438,19 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 
 	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) geomst.st_size, (long long) metast.st_size, poolfile->off);
+		for (i = 0; i < THREADS; i++) {
+			fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", seq, (long long) reader[i].geomst.st_size, (long long) reader[i].metast.st_size, reader[i].poolfile->off);
+		}
 	}
 
+	char *stringpool = poolfile->map;
+	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
+	if (meta == MAP_FAILED) {
+		perror("mmap meta");
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned midx = 0, midy = 0;
 	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
 
 	if (maxzoom != written) {
@@ -1419,6 +1477,22 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
+
+	long long file_bbox[4] = { UINT_MAX, UINT_MAX, 0, 0 };
+	for (i = 0; i < THREADS; i++) {
+		if (reader[i].file_bbox[0] < file_bbox[0]) {
+			file_bbox[0] = reader[i].file_bbox[0];
+		}
+		if (reader[i].file_bbox[1] < file_bbox[1]) {
+			file_bbox[1] = reader[i].file_bbox[1];
+		}
+		if (reader[i].file_bbox[2] > file_bbox[2]) {
+			file_bbox[2] = reader[i].file_bbox[2];
+		}
+		if (reader[i].file_bbox[3] > file_bbox[3]) {
+			file_bbox[3] = reader[i].file_bbox[3];
+		}
+	}
 
 	// If the bounding box extends off the plane on either side,
 	// a feature wrapped across the date line, so the width of the
