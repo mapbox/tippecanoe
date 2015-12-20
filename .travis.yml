@@ -1,0 +1,17 @@
+language: c
+
+sudo: false
+
+matrix:
+    - os: linux
+      addons:
+        apt:
+          packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+
+
+install:
+ - make
+
+script:
+ - echo '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[0,0]}}' > test.json
+ - ./tippecanoe -o test.mbtiles test.json

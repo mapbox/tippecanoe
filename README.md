@@ -4,6 +4,8 @@ tippecanoe
 Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large collections of [GeoJSON](http://geojson.org/)
 features. This is a tool for [making maps from huge datasets](MADE_WITH.md).
 
+[![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
+
 Intent
 ------
 
