@@ -17,6 +17,7 @@
 #include <math.h>
 #include <sqlite3.h>
 #include <pthread.h>
+#include <errno.h>
 #include "vector_tile.pb.h"
 #include "geometry.hh"
 
