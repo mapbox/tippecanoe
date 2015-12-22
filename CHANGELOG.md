@@ -1,3 +1,8 @@
+## 1.5.1
+
+* Fix internal error when number of CPUs is not a power of 2
+* Add missing #include
+
 ## 1.5.0
 
 * Base zoom for dot-dropping can be specified independently of
