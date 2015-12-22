@@ -1479,7 +1479,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	// segment+offset to find the data.
 
 	long long pool_off[THREADS];
-	long long metafile_off[THREADS];
+	long long meta_off[THREADS];
 
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
@@ -1532,7 +1532,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			munmap(map, reader[i].metapos);
 		}
 
-		metafile_off[i] = metapos;
+		meta_off[i] = metapos;
 		metapos += reader[i].metapos;
 		close(reader[i].metafd);
 
@@ -1563,10 +1563,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-#if 0 /* XXX */
-
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1574,14 +1572,17 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		ret = EXIT_FAILURE;
 	}
 
-	if (munmap(meta, metast.st_size) != 0) {
+	if (munmap(meta, metapos) != 0) {
 		perror("munmap meta");
 	}
 	if (close(metafd) < 0) {
 		perror("close meta");
 	}
 
-	if (memfile_close(poolfile) != 0) {
+	if (munmap(stringpool, poolpos) != 0) {
+		perror("munmap stringpool");
+	}
+	if (close(poolfd) < 0) {
 		perror("close pool");
 	}
 
@@ -1650,7 +1651,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		free(layernames[i]);
 	}
 
-#endif
 	return ret;
 }
 

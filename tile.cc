@@ -464,7 +464,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off) {
 	int line_detail;
 	double fraction = 1;
 
@@ -562,7 +562,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
-			char *meta = metabase + metastart;
+			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
@@ -757,7 +757,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				c.coalesced = false;
 				c.original_seq = original_seq;
 
-				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta);
+				decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 				features[layer].push_back(c);
 			}
 		}
@@ -926,6 +926,8 @@ struct write_tile_args {
 	int full_detail;
 	int low_detail;
 	volatile long long *most;
+	long long *meta_off;
+	long long *pool_off;
 };
 
 void *run_thread(void *vargs) {
@@ -965,7 +967,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -1001,7 +1003,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1125,6 +1127,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].full_detail = full_detail;
 			args[thread].low_detail = low_detail;
 			args[thread].most = &most;  // locked with var_lock
+			args[thread].meta_off = meta_off;
+			args[thread].pool_off = pool_off;
 
 			args[thread].tasks = dispatches[thread].tasks;
 
