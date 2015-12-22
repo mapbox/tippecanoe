@@ -344,7 +344,6 @@ struct stringpool {
 	long long right;
 	long long off;
 };
-long long pooltree = 0;
 
 static unsigned char swizzle[256] = {
 	0x00, 0xBF, 0x18, 0xDE, 0x93, 0xC9, 0xB1, 0x5E, 0xDF, 0xBE, 0x72, 0x5A, 0xBB, 0x42, 0x64, 0xC6,
@@ -383,7 +382,7 @@ int swizzlecmp(char *a, char *b) {
 }
 
 long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, char type) {
-	long long *sp = &pooltree;
+	long long *sp = &treefile->tree;
 
 	while (*sp != 0) {
 		int cmp = swizzlecmp(s, poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off + 1);
@@ -403,7 +402,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 
 	// *sp is probably in the memory-mapped file, and will move if the file grows.
 	long long ssp;
-	if (sp == &pooltree) {
+	if (sp == &treefile->tree) {
 		ssp = -1;
 	} else {
 		ssp = ((char *) sp) - treefile->map;
@@ -431,7 +430,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	}
 
 	if (ssp == -1) {
-		pooltree = p;
+		treefile->tree = p;
 	} else {
 		*((long long *) (treefile->map + ssp)) = p;
 	}
@@ -934,7 +933,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		struct stat st;
 		char *map = NULL;
-		off_t off;
+		off_t off = 0;
 
 		if (fstat(fd, &st) == 0) {
 			off = lseek(fd, 0, SEEK_CUR);
@@ -1085,6 +1084,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			indexpos += reader[i].indexpos;
 		}
 	}
+	fclose(indexfile);
 
 	/* Sort the index by geometry */
 
@@ -1381,11 +1381,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 
-	char *geomname = "XXX"; // XXX
-	FILE *geomfile = NULL; // XXX
-	int geomfd = 0; // XXX
-	long long geompos = 0; // XXX
-	struct stat geomst; // XXX
+	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+
+	FILE *geomfile;
+	int geomfd;
+	long long geompos = 0;
+	struct stat geomst;
 
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 	geomfd = mkstemp(geomname);
