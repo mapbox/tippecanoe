@@ -1154,7 +1154,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				perror("Reunify index");
 				exit(EXIT_FAILURE);
 			}
-			munmap(map, reader[i].indexpos);
+			if (munmap(map, reader[i].indexpos) != 0) {
+				perror("unmap unmerged index");
+			}
+			if (close(reader[i].indexfd) != 0) {
+				perror("close unmerged index");
+			}
 			indexpos += reader[i].indexpos;
 		}
 	}
@@ -1454,10 +1459,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				exit(EXIT_FAILURE);
 			}
 		}
-
-		if (close(reader[i].geomfd) != 0) {
-			perror("close unsorted geometry");
-		}
 	}
 
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
@@ -1515,6 +1516,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	for (i = 0; i < CPUS; i++) {
 		if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
 			perror("unmap unsorted geometry");
+		}
+		if (close(reader[i].geomfd) != 0) {
+			perror("close unsorted geometry");
 		}
 	}
 	if (close(indexfd) != 0) {
@@ -1607,12 +1611,16 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				perror("Reunify meta");
 				exit(EXIT_FAILURE);
 			}
-			munmap(map, reader[i].metapos);
+			if (munmap(map, reader[i].metapos) != 0) {
+				perror("unmap unmerged meta");
+			}
 		}
 
 		meta_off[i] = metapos;
 		metapos += reader[i].metapos;
-		close(reader[i].metafd);
+		if (close(reader[i].metafd) != 0) {
+			perror("close unmerged meta");
+		}
 
 		if (reader[i].poolfile->off > 0) {
 			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
@@ -1660,8 +1668,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror("close meta");
 	}
 
-	if (munmap(stringpool, poolpos) != 0) {
-		perror("munmap stringpool");
+	if (poolpos > 0) {
+		if (munmap(stringpool, poolpos) != 0) {
+			perror("munmap stringpool");
+		}
 	}
 	if (close(poolfd) < 0) {
 		perror("close pool");
