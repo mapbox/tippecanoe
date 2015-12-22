@@ -917,7 +917,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	int source;
 	for (source = 0; source < nsources; source++) {
-		json_pull *jp;
 		const char *reading;
 		int fd;
 
@@ -961,7 +960,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			for (i = 0; i < THREADS; i++) {
-				jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
+				json_pull *jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 				parse_json(jp, reading, &seq, &reader[i].metapos, &reader[i].geompos, &reader[i].indexpos, exclude, include, exclude_all, reader[i].metafile, reader[i].geomfile, reader[i].indexfile, reader[i].poolfile, reader[i].treefile, fname, maxzoom, basezoom, source, droprate, reader[i].file_bbox, i);
 				free(jp->source);
 				json_end(jp);
@@ -974,7 +973,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				continue;
 			}
 
-			jp = json_begin_file(fp);
+			json_pull *jp = json_begin_file(fp);
 			parse_json(jp, reading, &seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source, droprate, reader[0].file_bbox, 0);
 			json_end(jp);
 			fclose(fp);
@@ -1051,11 +1050,41 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 
-	// XXX Join the sub-indices together, and then
+	/* Join the sub-indices together */
 
-	long long indexpos = 0; // XXX
-	int indexfd = 0; // XXX
-	char *indexname = "XXX"; // XXX
+	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
+	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
+
+	int indexfd = mkstemp(indexname);
+	if (indexfd < 0) {
+		perror(indexname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *indexfile = fopen(indexname, "wb");
+	if (indexfile == NULL) {
+		perror(indexname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(indexname);
+
+	long long indexpos = 0;
+	for (i = 0; i < THREADS; i++) {
+		if (reader[i].indexpos > 0) {
+			void *map = mmap(NULL, reader[i].indexpos, PROT_READ, MAP_PRIVATE, reader[i].indexfd, 0);
+			if (map == MAP_FAILED) {
+				perror("mmap");
+				exit(EXIT_FAILURE);
+			}
+			if (fwrite(map, reader[i].indexpos, 1, indexfile) != 1) {
+				perror("Reunify index");
+				exit(EXIT_FAILURE);
+			}
+			munmap(map, reader[i].indexpos);
+			indexpos += reader[i].indexpos;
+		}
+	}
 
 	/* Sort the index by geometry */
 
@@ -1443,6 +1472,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 
+#if 0 /* XXX */
+
 	char *stringpool = poolfile->map;
 	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
@@ -1534,6 +1565,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		pool_free_strings(&file_keys1[i]);
 		free(layernames[i]);
 	}
+
+#endif
 	return ret;
 }
 
