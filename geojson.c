@@ -823,15 +823,15 @@ struct reader {
 	int geomfd;
 	int indexfd;
 
-        FILE *metafile;
-        struct memfile *poolfile;
-        struct memfile *treefile;
-        FILE *geomfile;
-        FILE *indexfile;
+	FILE *metafile;
+	struct memfile *poolfile;
+	struct memfile *treefile;
+	FILE *geomfile;
+	FILE *indexfile;
 
-        long long metapos;
-        long long geompos;
-        long long indexpos;
+	long long metapos;
+	long long geompos;
+	long long indexpos;
 
 	long long *file_bbox;
 
@@ -841,7 +841,7 @@ struct reader {
 	char *geom_map;
 };
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional, int read_parallel) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -971,10 +971,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		char *map = NULL;
 		off_t off = 0;
 
-		if (fstat(fd, &st) == 0) {
-			off = lseek(fd, 0, SEEK_CUR);
-			if (off >= 0) {
-				map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+		if (read_parallel) {
+			if (fstat(fd, &st) == 0) {
+				off = lseek(fd, 0, SEEK_CUR);
+				if (off >= 0) {
+					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+				}
 			}
 		}
 
@@ -1067,8 +1069,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (reader[i].geomst.st_size == 0 || reader[i].metast.st_size == 0) {
-			fprintf(stderr, "did not read any valid geometries\n"); // XXX
-			// exit(EXIT_FAILURE);
+			fprintf(stderr, "did not read any valid geometries\n");  // XXX
+										 // exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1634,7 +1636,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 
 	char *stringpool = NULL;
-	if (poolpos > 0) { // Will be 0 if -X was specified
+	if (poolpos > 0) {  // Will be 0 if -X was specified
 		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
 		if (stringpool == MAP_FAILED) {
 			perror("mmap string pool");
@@ -1673,7 +1675,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
 
-	long long file_bbox[4] = { UINT_MAX, UINT_MAX, 0, 0 };
+	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 	for (i = 0; i < CPUS; i++) {
 		if (reader[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = reader[i].file_bbox[0];
@@ -1763,13 +1765,14 @@ int main(int argc, char **argv) {
 	pool_init(&exclude, 0);
 	pool_init(&include, 0);
 	int exclude_all = 0;
+	int read_parallel = 0;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:B:")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:B:P")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -1882,8 +1885,12 @@ int main(int argc, char **argv) {
 			fprintf(stderr, VERSION);
 			exit(EXIT_FAILURE);
 
+		case 'P':
+			read_parallel = 1;
+			break;
+
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [-P] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -1927,7 +1934,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel);
 
 	mbtiles_close(outdb, argv);
 
