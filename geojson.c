@@ -558,6 +558,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
 	}
 
+	serialize_int(geomfile, segment, geompos, fname);
 	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = initial_x, wy = initial_y;
 	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, &initialized);

@@ -362,7 +362,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -441,6 +441,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					if (tippecanoe_maxzoom != -1) {
 						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
 					}
+					serialize_int(geomfile[j], segment, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x, wy = initial_y;
 
@@ -556,6 +557,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			layer >>= 2;
 
+			int segment;
+			deserialize_int(geoms, &segment);
+
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
 			char *meta = metabase + metastart;
@@ -630,7 +634,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment);
 			}
 
 			if (z < minzoom) {
