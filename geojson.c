@@ -1474,14 +1474,96 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 
-#if 0 /* XXX */
+	// Create a combined string pool and a combined metadata file
+	// but keep track of the offsets into it since we still need
+	// segment+offset to find the data.
 
-	char *stringpool = poolfile->map;
-	char *meta = (char *) mmap(NULL, metast.st_size, PROT_READ, MAP_PRIVATE, metafd, 0);
+	long long pool_off[THREADS];
+	long long metafile_off[THREADS];
+
+	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+
+	int poolfd = mkstemp(poolname);
+	if (poolfd < 0) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *poolfile = fopen(poolname, "wb");
+	if (poolfile == NULL) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(poolname);
+
+	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+
+	int metafd = mkstemp(metaname);
+	if (metafd < 0) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *metafile = fopen(metaname, "wb");
+	if (metafile == NULL) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(metaname);
+
+	long long metapos = 0;
+	long long poolpos = 0;
+
+	for (i = 0; i < THREADS; i++) {
+		if (reader[i].metapos > 0) {
+			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
+			if (map == MAP_FAILED) {
+				perror("mmap");
+				exit(EXIT_FAILURE);
+			}
+			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
+				perror("Reunify meta");
+				exit(EXIT_FAILURE);
+			}
+			munmap(map, reader[i].metapos);
+		}
+
+		metafile_off[i] = metapos;
+		metapos += reader[i].metapos;
+		close(reader[i].metafd);
+
+		if (reader[i].poolfile->off > 0) {
+			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
+				perror("Reunify string pool");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		pool_off[i] = poolpos;
+		poolpos += reader[i].poolfile->off;
+		memfile_close(reader[i].poolfile);
+	}
+
+	fclose(poolfile);
+	fclose(metafile);
+
+	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
+
+	char *stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
+	if (stringpool == MAP_FAILED) {
+		perror("mmap string pool");
+		exit(EXIT_FAILURE);
+	}
+
+#if 0 /* XXX */
 
 	unsigned midx = 0, midy = 0;
 	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail);
