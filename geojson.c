@@ -1633,10 +1633,13 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-	char *stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
-	if (stringpool == MAP_FAILED) {
-		perror("mmap string pool");
-		exit(EXIT_FAILURE);
+	char *stringpool = NULL;
+	if (poolpos > 0) { // Will be 0 if -X was specified
+		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
+		if (stringpool == MAP_FAILED) {
+			perror("mmap string pool");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	unsigned midx = 0, midy = 0;
