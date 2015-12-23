@@ -6,7 +6,7 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-      env: COVERAGE=gcov-4.9 CXX=g++-4.9 CC=gcc-4.9
+      env: COVERAGE=gcov-4.9
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
@@ -23,6 +23,8 @@ matrix:
 install:
  - if [[ $(uname -s) == 'Darwin' ]]; then brew install protobuf; fi;
  - if [ -n "${COVERAGE}" ]; then
+       export CXX=g++-4.9;
+       export CC=gcc-4.9;
        export CXXFLAGS="--coverage -g";
        export CFLAGS="--coverage -g";
        export LDFLAGS="--coverage";
