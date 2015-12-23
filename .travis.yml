@@ -38,5 +38,5 @@ script:
        ls;
        ${COVERAGE} -lp *.o;
        pip install --user cpp-coveralls;
-       ~/.local/bin/coveralls --no-gcov -i ./;
+       ~/.local/bin/coveralls --no-gcov -i ./ --exclude clipper --exclude vector_tile.pb.cc --exclude vector_tile.pb.h;
    fi
