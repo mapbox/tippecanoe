@@ -8,13 +8,30 @@ matrix:
       addons:
         apt:
           packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+    - os: linux
+      env: COVERAGE=gcov-4.9 CXX=g++-4.9
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: [ 'g++-4.9', 'protobuf-compiler', 'libprotobuf-dev' ]
     - os: osx
 
 
 install:
  - if [[ $(uname -s) == 'Darwin' ]]; then brew install protobuf; fi;
+ - if [ -n "${COVERAGE}" ]; then
+       export CXXFLAGS="--coverage";
+       export CFLAGS="--coverage";
+       export LDFLAGS="--coverage";
+   fi;
  - make
 
 script:
  - echo '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[0,0]}}' > test.json
  - ./tippecanoe -o test.mbtiles test.json
+ - if [ -n "${COVERAGE}" ]; then
+       rm vector_tile.pb.o;
+       ${COVERAGE} -lp *.o;
+       pip install --user cpp-coveralls;
+       ~/.local/bin/coveralls --no-gcov -i ./;
+   fi
