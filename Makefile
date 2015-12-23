@@ -1,6 +1,13 @@
 PREFIX ?= /usr/local
 MANDIR ?= $(PREFIX)/share/man/man1/
 
+# inherit from env if set
+CC := $(CC)
+CXX := $(CXX)
+CFLAGS := $(CFLAGS)
+CXXFLAGS := $(CXXFLAGS)
+LDFLAGS := $(LDFLAGS)
+
 all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 
 docs: man/tippecanoe.1
@@ -29,29 +36,29 @@ INCLUDES = -I/usr/local/include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o
-	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
-	gcc $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lsqlite3
+	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o vector_tile.pb.o projection.o
-	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
 
 tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
-	g++ $(PG) $(LIBS) -O3 -g -Wall -o $@ $^ -lm -lz -lprotobuf-lite -lsqlite3
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
 	ranlib $@
 
 %.o: %.c $(H)
-	cc $(PG) $(INCLUDES) -O3 -g -Wall -c $<
+	cc $(PG) $(INCLUDES) -O3 -g -Wall $(CFLAGS) -c $<
 
 %.o: %.cc $(H)
-	g++ $(PG) $(INCLUDES) -O3 -g -Wall -c $<
+	$(CXX) $(PG) $(INCLUDES) -O3 -g -Wall $(CXXFLAGS) -c $<
 
 clean:
-	rm tippecanoe *.o
+	rm -f tippecanoe *.o
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $(C) $(H)
