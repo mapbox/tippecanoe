@@ -33,9 +33,7 @@ int full_detail = -1;
 int min_detail = 7;
 int quiet = 0;
 
-unsigned initial_x = 0, initial_y = 0;
 int geometry_scale = 0;
-int initialized = 0;
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -142,7 +140,7 @@ void serialize_string(FILE *out, const char *s, long long *fpos, const char *fna
 	*fpos += len + 1;
 }
 
-void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized) {
+void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
 		return;
@@ -160,7 +158,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized);
+			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -194,8 +192,8 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 			}
 
 			if (!*initialized) {
-				initial_x = x;
-				initial_y = y;
+				*initial_x = (x >> geometry_scale) << geometry_scale;
+				*initial_y = (y >> geometry_scale) << geometry_scale;
 				*wx = x;
 				*wy = y;
 				*initialized = 1;
@@ -441,7 +439,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -564,8 +562,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_int(geomfile, segment, geompos, fname);
 	serialize_long_long(geomfile, metastart, geompos, fname);
-	long long wx = initial_x, wy = initial_y;
-	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, &initialized);
+	long long wx = *initial_x, wy = *initial_y;
+	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	/*
@@ -633,7 +631,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, int segment) {
+void parse_json(json_pull *jp, const char *reading, long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -698,7 +696,7 @@ void parse_json(json_pull *jp, const char *reading, long long *layer_seq, volati
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL, segment);
+				serialize_geometry(j, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y);
 				json_free(j);
 				continue;
 			}
@@ -733,10 +731,10 @@ void parse_json(json_pull *jp, const char *reading, long long *layer_seq, volati
 		if (geometries != NULL) {
 			int g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment);
+				serialize_geometry(geometries->array[g], properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment);
+			serialize_geometry(geometry, properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
 		}
 
 		json_free(j);
@@ -773,12 +771,15 @@ struct parse_json_args {
 	double droprate;
 	long long *file_bbox;
 	int segment;
+	int *initialized;
+	unsigned *initial_x;
+	unsigned *initial_y;
 };
 
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = v;
 
-	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->maxzoom, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment);
+	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->maxzoom, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y);
 
 	return NULL;
 }
@@ -937,6 +938,12 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 	volatile long long progress_seq = 0;
 
+	int initialized[CPUS];
+	unsigned initial_x[CPUS], initial_y[CPUS];
+	for (i = 0; i < CPUS; i++) {
+		initialized[i] = initial_x[i] = initial_y[i] = 0;
+	}
+
 	int nlayers;
 	if (layername != NULL) {
 		nlayers = 1;
@@ -1029,6 +1036,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				pja[i].droprate = droprate;
 				pja[i].file_bbox = reader[i].file_bbox;
 				pja[i].segment = i;
+				pja[i].initialized = &initialized[i];
+				pja[i].initial_x = &initial_x[i];
+				pja[i].initial_y = &initial_y[i];
 
 				if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 					perror("pthread_create");
@@ -1056,7 +1066,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			long long layer_seq = 0;
 			json_pull *jp = json_begin_file(fp);
-			parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source, droprate, reader[0].file_bbox, 0);
+			parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
 			json_end(jp);
 			fclose(fp);
 		}
@@ -1498,6 +1508,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		for (i = 0; i < indexpos / sizeof(struct index); i++) {
 			fwrite_check(reader[index_map[i].segment].geom_map + index_map[i].start, sizeof(char), index_map[i].end - index_map[i].start, geomfile, fname);
 			sum += index_map[i].end - index_map[i].start;
+			geompos += index_map[i].end - index_map[i].start;
 
 			long long p = 1000 * i / (indexpos / sizeof(struct index));
 			if (p != progress) {
@@ -1662,7 +1673,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off);
+	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);

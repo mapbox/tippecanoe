@@ -18,7 +18,7 @@ extern "C" {
 #include "projection.h"
 }
 
-drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox) {
+drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
 	bbox[0] = LONG_LONG_MAX;
