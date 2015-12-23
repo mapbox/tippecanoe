@@ -52,7 +52,7 @@ libjsonpull.a: jsonpull.o
 	ranlib $@
 
 %.o: %.c $(H)
-	cc $(PG) $(INCLUDES) -O3 -g -Wall $(CFLAGS) -c $<
+	$(CC) $(PG) $(INCLUDES) -O3 -g -Wall $(CFLAGS) -c $<
 
 %.o: %.cc $(H)
 	$(CXX) $(PG) $(INCLUDES) -O3 -g -Wall $(CXXFLAGS) -c $<
