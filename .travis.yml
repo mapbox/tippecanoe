@@ -35,7 +35,7 @@ script:
  - echo '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[0,0]}}' > test.json
  - ./tippecanoe -o test.mbtiles test.json
  - if [ -n "${COVERAGE}" ]; then
-       ls;
+       rm vector_tile.pb.o;
        ${COVERAGE} -lp *.o;
        pip install --user cpp-coveralls;
        ~/.local/bin/coveralls --no-gcov -i ./ --exclude clipper --exclude vector_tile.pb.cc --exclude vector_tile.pb.h;
