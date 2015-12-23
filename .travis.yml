@@ -8,9 +8,11 @@ matrix:
       addons:
         apt:
           packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+    - os: osx
 
 
 install:
+ - if [[ $(uname -s) == 'Darwin' ]]; then brew install protobuf; fi;
  - make
 
 script:
