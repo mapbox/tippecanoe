@@ -551,7 +551,7 @@ void *partial_feature_worker(void *v) {
 	return NULL;
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -810,7 +810,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 		}
 
-		int tasks = CPUS / (1 << z);
+		int tasks = ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
 		}
@@ -1036,6 +1036,7 @@ struct write_tile_args {
 	long long *pool_off;
 	unsigned *initial_x;
 	unsigned *initial_y;
+	volatile int *running;
 };
 
 void *run_thread(void *vargs) {
@@ -1075,7 +1076,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -1108,6 +1109,7 @@ void *run_thread(void *vargs) {
 		}
 	}
 
+	arg->running--;
 	return NULL;
 }
 
@@ -1204,6 +1206,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		pthread_t pthreads[threads];
 		write_tile_args args[threads];
+		int running = threads;
 
 		int thread;
 		for (thread = 0; thread < threads; thread++) {
@@ -1241,6 +1244,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].initial_y = initial_y;
 
 			args[thread].tasks = dispatches[thread].tasks;
+			args[thread].running = &running;
 
 			if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 				perror("pthread_create");
