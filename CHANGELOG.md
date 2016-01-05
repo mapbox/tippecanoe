@@ -1,3 +1,7 @@
+## 1.6.0
+
+* Add option of parallelized input when reading from a line-delimited file
+
 ## 1.5.1
 
 * Fix internal error when number of CPUs is not a power of 2
