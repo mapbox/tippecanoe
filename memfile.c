@@ -26,6 +26,7 @@ struct memfile *memfile_open(int fd) {
 	mf->map = map;
 	mf->len = INCREMENT;
 	mf->off = 0;
+	mf->tree = 0;
 
 	return mf;
 }

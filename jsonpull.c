@@ -332,20 +332,17 @@ again:
 	/////////////////////////// Comma
 
 	if (c == ',') {
-		if (j->container == NULL) {
-			j->error = "Found comma at top level";
-			return NULL;
-		}
+		if (j->container != NULL) {
+			if (j->container->expect != JSON_COMMA) {
+				j->error = "Found unexpected comma";
+				return NULL;
+			}
 
-		if (j->container->expect != JSON_COMMA) {
-			j->error = "Found unexpected comma";
-			return NULL;
-		}
-
-		if (j->container->type == JSON_HASH) {
-			j->container->expect = JSON_KEY;
-		} else {
-			j->container->expect = JSON_ITEM;
+			if (j->container->type == JSON_HASH) {
+				j->container->expect = JSON_KEY;
+			} else {
+				j->container->expect = JSON_ITEM;
+			}
 		}
 
 		if (cb != NULL) {
@@ -568,11 +565,19 @@ void json_free(json_object *o) {
 		free(o->string);
 	}
 
+	json_disconnect(o);
+
+	free(o);
+}
+
+void json_disconnect(json_object *o) {
 	// Expunge references to this as an array element
 	// or a hash key or value.
 
 	if (o->parent != NULL) {
 		if (o->parent->type == JSON_ARRAY) {
+			int i;
+
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->array[i] == o) {
 					break;
@@ -586,6 +591,8 @@ void json_free(json_object *o) {
 		}
 
 		if (o->parent->type == JSON_HASH) {
+			int i;
+
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->keys[i] == o) {
 					o->parent->keys[i] = fabricate_object(o->parent, JSON_NULL);
@@ -612,5 +619,5 @@ void json_free(json_object *o) {
 		}
 	}
 
-	free(o);
+	o->parent = NULL;
 }
