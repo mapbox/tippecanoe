@@ -1,3 +1,7 @@
+## 1.6.1
+
+* Use multiple threads for line simplification and polygon cleaning
+
 ## 1.6.0
 
 * Add option of parallelized input when reading from a line-delimited file
