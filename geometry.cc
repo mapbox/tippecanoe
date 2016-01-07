@@ -750,8 +750,46 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	}
 }
 
+// If any line segment crosses a tile boundary, add a node there
+// that cannot be simplified away, to prevent the edge of any
+// feature from jumping abruptly at the tile boundary.
+drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
+	drawvec out;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (i > 0 && geom[i].op == VT_LINETO && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO)) {
+			double x1 = geom[i - 1].x;
+			double y1 = geom[i - 1].y;
+
+			double x2 = geom[i - 0].x;
+			double y2 = geom[i - 0].y;
+
+			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
+
+			if (c > 1) {  // clipped
+				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
+					out.push_back(draw(VT_LINETO, x1, y1));
+					out[out.size() - 1].necessary = 1;
+				}
+				if (x2 != geom[i - 0].x || y2 != geom[i - 0].y) {
+					out.push_back(draw(VT_LINETO, x2, y2));
+					out[out.size() - 1].necessary = 1;
+				}
+			}
+		}
+
+		out.push_back(geom[i]);
+	}
+
+	return out;
+}
+
 drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	int res = 1 << (32 - detail - z);
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
 
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
@@ -763,6 +801,8 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 			geom[i].necessary = 1;
 		}
 	}
+
+	geom = impose_tile_boundaries(geom, area);
 
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {

@@ -493,7 +493,7 @@ void *partial_feature_worker(void *v) {
 
 	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
 		drawvec geom = (*partials)[i].geom;
-		(*partials)[i].geom.clear(); // avoid keeping two copies in memory
+		(*partials)[i].geom.clear();  // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
@@ -501,7 +501,7 @@ void *partial_feature_worker(void *v) {
 		char *additional = (*partials)[i].additional;
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !prevent['s' & 0xFF]) {
-			if (1 /* !reduced */) { // XXX why did this not simplify if reduced?
+			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
@@ -845,7 +845,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		// This is serial because decode_meta() unifies duplicates
 		for (unsigned i = 0; i < partials.size(); i++) {
 			drawvec geom = partials[i].geom;
-			partials[i].geom.clear(); // avoid keeping two copies in memory
+			partials[i].geom.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
 			char *meta = partials[i].meta;
 			signed char t = partials[i].t;

@@ -1,3 +1,7 @@
+## 1.6.2
+
+* Make sure line simplification matches on opposite sides of a tile boundary
+
 ## 1.6.1
 
 * Use multiple threads for line simplification and polygon cleaning
