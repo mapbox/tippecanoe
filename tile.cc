@@ -479,6 +479,7 @@ struct partial {
 	int line_detail;
 	char *prevent;
 	char *additional;
+	int maxzoom;
 };
 
 struct partial_arg {
@@ -499,8 +500,9 @@ void *partial_feature_worker(void *v) {
 		int line_detail = (*partials)[i].line_detail;
 		char *prevent = (*partials)[i].prevent;
 		char *additional = (*partials)[i].additional;
+		int maxzoom = (*partials)[i].maxzoom;
 
-		if ((t == VT_LINE || t == VT_POLYGON) && !prevent['s' & 0xFF]) {
+		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent['s' & 0xFF] || (z == maxzoom && prevent['S' & 0xFF]))) {
 			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
@@ -806,6 +808,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				p.line_detail = line_detail;
 				p.prevent = prevent;
 				p.additional = additional;
+				p.maxzoom = maxzoom;
 				partials.push_back(p);
 			}
 		}
