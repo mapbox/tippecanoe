@@ -106,6 +106,7 @@ Options
 ### Doing less
 
  * -ps: Don't simplify lines
+ * -pS: Don't simplify lines at maxzoom (but do simplify at lower zooms)
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
