@@ -1,3 +1,7 @@
+## 1.6.4
+
+* Fix crashing bug when layers are being merged with -l
+
 ## 1.6.3
 
 * Add an option to do line simplification only at zooms below maxzoom
