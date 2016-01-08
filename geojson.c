@@ -1090,7 +1090,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				pja[i].fname = fname;
 				pja[i].maxzoom = maxzoom;
 				pja[i].basezoom = basezoom;
-				pja[i].layer = source;
+				pja[i].layer = source < nlayers ? source : 0;
 				pja[i].droprate = droprate;
 				pja[i].file_bbox = reader[i].file_bbox;
 				pja[i].segment = i;
@@ -1124,7 +1124,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			long long layer_seq = 0;
 			json_pull *jp = json_begin_file(fp);
-			parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
+			parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
 			json_end(jp);
 			fclose(fp);
 		}
