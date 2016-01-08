@@ -1,3 +1,7 @@
+## 1.6.3
+
+* Add an option to do line simplification only at zooms below maxzoom
+
 ## 1.6.2
 
 * Make sure line simplification matches on opposite sides of a tile boundary
