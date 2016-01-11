@@ -1319,6 +1319,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
+	progress_seq = indexpos / sizeof(struct index);
+
 	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
@@ -1344,11 +1346,21 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 		}
 
+		long long progress = -1;
+
 		long long indices = indexpos / sizeof(struct index);
 		long long i;
 		for (i = 0; i < indices; i++) {
 			unsigned xx, yy;
 			decode(map[i].index, &xx, &yy);
+
+			long long nprogress = 100 * i / indices;
+			if (nprogress != progress) {
+				progress = nprogress;
+				if (!quiet) {
+					fprintf(stderr, "Base zoom/drop rate: %lld%% \r", progress);
+				}
+			}
 
 			int z;
 			for (z = 0; z <= MAX_ZOOM; z++) {
