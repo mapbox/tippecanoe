@@ -1826,6 +1826,18 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	return ret;
 }
 
+int int_in(int v, int *a, int len) {
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (a[i] == v) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -1961,14 +1973,24 @@ int main(int argc, char **argv) {
 		case 'p': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				prevent[*cp & 0xFF] = 1;
+				if (int_in(*cp, prevent_options, sizeof(prevent_options) / sizeof(prevent_options[0]))) {
+					prevent[*cp & 0xFF] = 1;
+				} else {
+					fprintf(stderr, "%s: Unknown option -p%c\n", argv[0], *cp);
+					exit(EXIT_FAILURE);
+				}
 			}
 		} break;
 
 		case 'a': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				additional[*cp & 0xFF] = 1;
+				if (int_in(*cp, additional_options, sizeof(additional_options) / sizeof(additional_options[0]))) {
+					additional[*cp & 0xFF] = 1;
+				} else {
+					fprintf(stderr, "%s: Unknown option -a%c\n", argv[0], *cp);
+					exit(EXIT_FAILURE);
+				}
 			}
 		} break;
 

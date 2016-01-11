@@ -35,3 +35,29 @@ extern int quiet;
 
 extern int CPUS;
 extern int TEMP_FILES;
+
+static int additional_options[] = {
+#define A_COALESCE ((int) 'c')
+	A_COALESCE,
+#define A_REVERSE ((int) 'r')
+	A_REVERSE,
+#define A_REORDER ((int) 'o')
+	A_REORDER,
+#define A_LINE_DROP ((int) 'l')
+	A_LINE_DROP,
+};
+
+static int prevent_options[] = {
+#define P_SIMPLIFY ((int) 's')
+	P_SIMPLIFY,
+#define P_SIMPLIFY_LOW ((int) 'S')
+	P_SIMPLIFY_LOW,
+#define P_FEATURE_LIMIT ((int) 'f')
+	P_FEATURE_LIMIT,
+#define P_KILOBYTE_LIMIT ((int) 'k')
+	P_KILOBYTE_LIMIT,
+#define P_DYNAMIC_DROP ((int) 'd')
+	P_DYNAMIC_DROP,
+#define P_INPUT_ORDER ((int) 'i')
+	P_INPUT_ORDER,
+};

@@ -502,7 +502,7 @@ void *partial_feature_worker(void *v) {
 		char *additional = (*partials)[i].additional;
 		int maxzoom = (*partials)[i].maxzoom;
 
-		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent['s' & 0xFF] || (z == maxzoom && prevent['S' & 0xFF]))) {
+		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
 			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
@@ -518,7 +518,7 @@ void *partial_feature_worker(void *v) {
 		}
 #endif
 
-		if (t == VT_LINE && additional['r' & 0xFF]) {
+		if (t == VT_LINE && additional[A_REVERSE]) {
 			geom = reorder_lines(geom);
 		}
 
@@ -746,7 +746,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 
-			if (gamma >= 0 && (t == VT_POINT || (additional['l' & 0xFF] && t == VT_LINE))) {
+			if (gamma >= 0 && (t == VT_POINT || (additional[A_LINE_DROP] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -880,7 +880,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			if (additional['o' & 0xFF]) {
+			if (additional[A_REORDER]) {
 				std::sort(features[j].begin(), features[j].end());
 			}
 
@@ -895,7 +895,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 #endif
 
-				if (additional['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -920,7 +920,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			features[j] = out;
 
-			if (prevent['i' & 0xFF]) {
+			if (prevent[P_INPUT_ORDER]) {
 				std::sort(features[j].begin(), features[j].end(), preservecmp);
 			}
 		}
@@ -936,7 +936,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		if (totalsize > 0) {
-			if (totalsize > 200000 && !prevent['f' & 0xFF]) {
+			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
 				return -1;
@@ -956,12 +956,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			tile.SerializeToString(&s);
 			compress(s, compressed);
 
-			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
+			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 				}
 
-				if (prevent['d' & 0xFF]) {
+				if (prevent[P_DYNAMIC_DROP]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
