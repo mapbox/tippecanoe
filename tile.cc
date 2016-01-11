@@ -579,7 +579,11 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 	}
 
-	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
+	static volatile double oprogress = 0;
+
+	// This only loops if the tile data didn't fit, in which case the detail
+	// goes down and the progress indicator goes backward for the next try.
+	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 		struct pool keys1[nlayers], values1[nlayers];
@@ -621,8 +625,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		long long geompos[child_shards];
 		memset(within, '\0', sizeof(within));
 		memset(geompos, '\0', sizeof(geompos));
-
-		double oprogress = 0;
 
 		*geoms = og;
 
