@@ -1827,7 +1827,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 }
 
 int int_in(int v, int *a, int len) {
-	for (int i = 0; i < len; i++) {
+	int i;
+
+	for (i = 0; i < len; i++) {
 		if (a[i] == v) {
 			return 1;
 		}
