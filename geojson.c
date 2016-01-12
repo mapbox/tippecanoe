@@ -998,7 +998,7 @@ void *run_start_parsing(void *v) {
 		perror("stat read temp");
 	}
 	if (a->len != st.st_size) {
-		fprintf(stderr, "wrong number of bytes in teomporary: %lld vs %lld\n", a->len, st.st_size);
+		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", a->len, (long long) st.st_size);
 	}
 	a->len = st.st_size;
 
@@ -1246,7 +1246,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				int n;
 
 				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
-					fwrite(buf, sizeof(char), n, readfp);
+					fwrite_check(buf, sizeof(char), n, readfp, reading);
 					ahead += n;
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
