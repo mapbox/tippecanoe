@@ -741,11 +741,6 @@ void parse_json(json_pull *jp, const char *reading, long long *layer_seq, volati
 
 		/* XXX check for any non-features in the outer object */
 	}
-
-	if (!quiet) {
-		fprintf(stderr, "                              \r");
-		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
-	}
 }
 
 struct parse_json_args {
@@ -1003,7 +998,7 @@ void *run_start_parsing(void *v) {
 		perror("stat read temp");
 	}
 	if (a->len != st.st_size) {
-		printf("%lld vs %lld\n", a->len, st.st_size);
+		fprintf(stderr, "wrong number of bytes in teomporary: %lld vs %lld\n", a->len, st.st_size);
 	}
 	a->len = st.st_size;
 
@@ -1204,7 +1199,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
-					// map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
 				}
 			}
 		}
@@ -1240,17 +1235,21 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				}
 				unlink(readname);
 
-				int c;
 				volatile int is_parsing = 0;
 				long long ahead = 0;
 				long long initial_offset = 0;
 				pthread_t previous_reader;
 
-				while ((c = getc(fp)) != EOF) {
-					putc(c, readfp);
-					ahead++;
+#define READ_BUF 2000
+#define PARSE_MIN 10000000
+				char buf[READ_BUF];
+				int n;
 
-					if (c == '\n' && ahead > 1000000 && is_parsing == 0) {
+				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
+					fwrite(buf, sizeof(char), n, readfp);
+					ahead += n;
+
+					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
 						if (initial_offset != 0) {
 							if (pthread_join(previous_reader, NULL) != 0) {
 								perror("pthread_join");
@@ -1277,6 +1276,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 						}
 						unlink(readname);
 					}
+				}
+				if (n < 0) {
+					perror(reading);
 				}
 
 				if (initial_offset != 0) {
@@ -1306,6 +1308,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 			fclose(fp);
 		}
+	}
+
+	if (!quiet) {
+		fprintf(stderr, "                              \r");
+		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
 	}
 
 	for (i = 0; i < CPUS; i++) {
