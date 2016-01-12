@@ -69,6 +69,11 @@ void init_cpus() {
 		CPUS = 1;
 	}
 
+	// Guard against short struct index.segment
+	if (CPUS > 32767) {
+		CPUS = 32767;
+	}
+
 	// Round down to a power of 2
 	CPUS = 1 << (int) (log(CPUS) / log(2));
 
