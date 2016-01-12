@@ -274,7 +274,8 @@ struct index {
 	long long start;
 	long long end;
 	unsigned long long index;
-	int segment;
+	short segment;
+	unsigned long long seq : (64 - 16); // pack with segment to stay in 32 bytes
 };
 
 int indexcmp(const void *v1, const void *v2) {
@@ -284,6 +285,12 @@ int indexcmp(const void *v1, const void *v2) {
 	if (i1->index < i2->index) {
 		return -1;
 	} else if (i1->index > i2->index) {
+		return 1;
+	}
+
+	if (i1->seq < i2->seq) {
+		return -1;
+	} else if (i1->seq > i2->seq) {
 		return 1;
 	}
 
@@ -599,6 +606,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	index.start = geomstart;
 	index.end = *geompos;
 	index.segment = segment;
+	index.seq = *layer_seq;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
@@ -1429,12 +1437,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (!quiet) {
 			fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
 		}
-
-		// XXX On machines with different page sizes, doing the sorting
-		// in different-sized chunks can cause features with the same
-		// index (i.e., the same bbox) to appear in different orders
-		// because the sort is unstable. This doesn't seem worth spending
-		// more memory to fix, but could make tests unstable.
 
 		int page = sysconf(_SC_PAGESIZE);
 		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
