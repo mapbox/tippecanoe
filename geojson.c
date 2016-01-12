@@ -966,7 +966,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 }
 
-struct start_parsing_arg {
+struct read_parallel_arg {
 	int fd;
 	FILE *fp;
 	long long offset;
@@ -990,8 +990,8 @@ struct start_parsing_arg {
 	unsigned *initial_y;
 };
 
-void *run_start_parsing(void *v) {
-	struct start_parsing_arg *a = v;
+void *run_read_parallel(void *v) {
+	struct read_parallel_arg *a = v;
 
 	struct stat st;
 	if (fstat(a->fd, &st) != 0) {
@@ -1023,37 +1023,37 @@ void *run_start_parsing(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *previous_reader, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
 
 	*is_parsing = 1;
 
-	struct start_parsing_arg *spa = malloc(sizeof(struct start_parsing_arg));
-	spa->fd = fd;
-	spa->fp = fp;
-	spa->offset = offset;
-	spa->len = len;
-	spa->is_parsing = is_parsing;
+	struct read_parallel_arg *rpa = malloc(sizeof(struct read_parallel_arg));
+	rpa->fd = fd;
+	rpa->fp = fp;
+	rpa->offset = offset;
+	rpa->len = len;
+	rpa->is_parsing = is_parsing;
 
-	spa->reading = reading;
-	spa->reader = reader;
-	spa->progress_seq = progress_seq;
-	spa->exclude = exclude;
-	spa->include = include;
-	spa->exclude_all = exclude_all;
-	spa->fname = fname;
-	spa->maxzoom = maxzoom;
-	spa->basezoom = basezoom;
-	spa->source = source;
-	spa->nlayers = nlayers;
-	spa->droprate = droprate;
-	spa->initialized = initialized;
-	spa->initial_x = initial_x;
-	spa->initial_y = initial_y;
+	rpa->reading = reading;
+	rpa->reader = reader;
+	rpa->progress_seq = progress_seq;
+	rpa->exclude = exclude;
+	rpa->include = include;
+	rpa->exclude_all = exclude_all;
+	rpa->fname = fname;
+	rpa->maxzoom = maxzoom;
+	rpa->basezoom = basezoom;
+	rpa->source = source;
+	rpa->nlayers = nlayers;
+	rpa->droprate = droprate;
+	rpa->initialized = initialized;
+	rpa->initial_x = initial_x;
+	rpa->initial_y = initial_y;
 
-	if (pthread_create(previous_reader, NULL, run_start_parsing, spa) != 0) {
+	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
 		exit(EXIT_FAILURE);
 	}
@@ -1238,7 +1238,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				volatile int is_parsing = 0;
 				long long ahead = 0;
 				long long initial_offset = 0;
-				pthread_t previous_reader;
+				pthread_t parallel_parser;
 
 #define READ_BUF 2000
 #define PARSE_MIN 10000000
@@ -1251,14 +1251,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
 						if (initial_offset != 0) {
-							if (pthread_join(previous_reader, NULL) != 0) {
+							if (pthread_join(parallel_parser, NULL) != 0) {
 								perror("pthread_join");
 								exit(EXIT_FAILURE);
 							}
 						}
 
 						fflush(readfp);
-						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 						initial_offset += ahead;
 						ahead = 0;
@@ -1282,7 +1282,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				}
 
 				if (initial_offset != 0) {
-					if (pthread_join(previous_reader, NULL) != 0) {
+					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
 						exit(EXIT_FAILURE);
 					}
@@ -1291,9 +1291,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
-					if (pthread_join(previous_reader, NULL) != 0) {
+					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
 					}
 				}
