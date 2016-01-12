@@ -1,3 +1,8 @@
+## 1.7.0
+
+* Parallel processing of input with -P works with streamed input too
+* Error handling if unsupported options given to -p or -a
+
 ## 1.6.4
 
 * Fix crashing bug when layers are being merged with -l
