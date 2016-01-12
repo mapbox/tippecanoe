@@ -280,7 +280,7 @@ struct index {
 	long long end;
 	unsigned long long index;
 	short segment;
-	unsigned long long seq : (64 - 16); // pack with segment to stay in 32 bytes
+	unsigned long long seq : (64 - 16);  // pack with segment to stay in 32 bytes
 };
 
 int indexcmp(const void *v1, const void *v2) {
