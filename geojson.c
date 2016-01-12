@@ -973,6 +973,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 
 struct start_parsing_arg {
 	int fd;
+	FILE *fp;
 	long long offset;
 	long long len;
 	volatile int *is_parsing;
@@ -997,6 +998,15 @@ struct start_parsing_arg {
 void *run_start_parsing(void *v) {
 	struct start_parsing_arg *a = v;
 
+	struct stat st;
+	if (fstat(a->fd, &st) != 0) {
+		perror("stat read temp");
+	}
+	if (a->len != st.st_size) {
+		printf("%lld vs %lld\n", a->len, st.st_size);
+	}
+	a->len = st.st_size;
+
 	char *map = mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
 	if (map == NULL || map == MAP_FAILED) {
 		perror("map intermediate input");
@@ -1008,14 +1018,17 @@ void *run_start_parsing(void *v) {
 	if (munmap(map, a->len) != 0) {
 		perror("munmap source file");
 	}
+	if (fclose(a->fp) != 0) {
+		perror("close source file");
+	}
 
-	a->is_parsing = 0;
+	*(a->is_parsing) = 0;
 	free(a);
 
 	return NULL;
 }
 
-void start_parsing(int fd, long long offset, long long len, volatile int *is_parsing, pthread_t *previous_reader, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *previous_reader, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -1024,6 +1037,7 @@ void start_parsing(int fd, long long offset, long long len, volatile int *is_par
 
 	struct start_parsing_arg *spa = malloc(sizeof(struct start_parsing_arg));
 	spa->fd = fd;
+	spa->fp = fp;
 	spa->offset = offset;
 	spa->len = len;
 	spa->is_parsing = is_parsing;
@@ -1190,7 +1204,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
-					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					// map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
 				}
 			}
 		}
@@ -1219,7 +1233,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					perror(readname);
 					exit(EXIT_FAILURE);
 				}
-				FILE *readfp = fopen(readname, "w");
+				FILE *readfp = fdopen(readfd, "w");
 				if (readfp == NULL) {
 					perror(readname);
 					exit(EXIT_FAILURE);
@@ -1236,7 +1250,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					putc(c, readfp);
 					ahead++;
 
-					if (c == '\n' && ahead > 100000 && is_parsing == 0) {
+					if (c == '\n' && ahead > 1000000 && is_parsing == 0) {
 						if (initial_offset != 0) {
 							if (pthread_join(previous_reader, NULL) != 0) {
 								perror("pthread_join");
@@ -1244,19 +1258,19 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 							}
 						}
 
-						fclose(readfp);
-						start_parsing(readfd, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+						fflush(readfp);
+						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 						initial_offset += ahead;
 						ahead = 0;
 
 						sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-						int readfd = mkstemp(readname);
+						readfd = mkstemp(readname);
 						if (readfd < 0) {
 							perror(readname);
 							exit(EXIT_FAILURE);
 						}
-						FILE *readfp = fdopen(readfd, "w");
+						readfp = fdopen(readfd, "w");
 						if (readfp == NULL) {
 							perror(readname);
 							exit(EXIT_FAILURE);
@@ -1272,10 +1286,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					}
 				}
 
-				fclose(readfp);
+				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &previous_reader, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 					if (pthread_join(previous_reader, NULL) != 0) {
 						perror("pthread_join");
