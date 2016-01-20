@@ -1,3 +1,8 @@
+## 1.7.1
+
+* Make clipping behavior with no buffer consistent with Mapnik.
+  Features that are exactly on a tile boundary appear in both tiles.
+
 ## 1.7.0
 
 * Parallel processing of input with -P works with streamed input too
