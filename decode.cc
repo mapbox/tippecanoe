@@ -194,8 +194,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 						g += 2;
 
 						long long scale = 1LL << (32 - z);
-						long long wx = scale * x + (scale / extent) * (px + .5);
-						long long wy = scale * y + (scale / extent) * (py + .5);
+						long long wx = scale * x + (scale / extent) * px;
+						long long wy = scale * y + (scale / extent) * py;
 
 						double lat, lon;
 						tile2latlon(wx, wy, 32, &lat, &lon);

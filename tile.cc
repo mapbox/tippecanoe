@@ -376,8 +376,10 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			// Division instead of right-shift because coordinates can be negative
 			bbox2[k] = bbox[k] / (1 << (32 - nextzoom - 8));
 		}
-		bbox2[0] -= buffer;
-		bbox2[1] -= buffer;
+		// Decrement the top and left edges so that any features that are
+		// touching the edge can potentially be included in the adjacent tiles too.
+		bbox2[0] -= buffer + 1;
+		bbox2[1] -= buffer + 1;
 		bbox2[2] += buffer;
 		bbox2[3] += buffer;
 
