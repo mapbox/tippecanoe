@@ -363,7 +363,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -460,7 +460,6 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					}
 
 					serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
-					serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
 				}
 			}
 		}
@@ -661,9 +660,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
 
-			signed char feature_minzoom;
-			deserialize_byte(geoms, &feature_minzoom);
-
 			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
@@ -728,7 +724,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
 			}
 
 			if (z < minzoom) {
@@ -739,14 +735,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 			if (tippecanoe_maxzoom != -1 && z > tippecanoe_maxzoom) {
-				continue;
-			}
-
-			if (t == VT_LINE && z + line_detail <= feature_minzoom) {
-				continue;
-			}
-
-			if (t == VT_POINT && z < feature_minzoom && gamma < 0) {
 				continue;
 			}
 
