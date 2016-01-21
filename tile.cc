@@ -571,6 +571,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		exit(EXIT_FAILURE);
 	}
 
+	bool already_rewrote = false;
 	int nextzoom = z + 1;
 	if (nextzoom < minzoom) {
 		if (z + max_zoom_increment > minzoom) {
@@ -723,7 +724,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				unclipped_features++;
 			}
 
-			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
+			if (!already_rewrote) { /* only write out the next zoom once, even if we retry */
 				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
 			}
 
@@ -804,6 +805,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				partials.push_back(p);
 			}
 		}
+
+		already_rewrote = true;
+
+		// Now that we have read all the features and prepared for the next zoom level,
+		// simplification of individual features can happen in parallel if there are
+		// extra processors to do it on.
 
 		int tasks = ceil((double) CPUS / *running);
 		if (tasks < 1) {
