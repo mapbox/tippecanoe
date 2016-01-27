@@ -517,6 +517,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	char *metakey[nprop];
 	char *metaval[nprop];
 	int metatype[nprop];
+	int mustfree[nprop];
 	int m = 0;
 
 	int i;
@@ -531,6 +532,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 			}
 
 			metakey[m] = properties->keys[i]->string;
+			mustfree[m] = 0;
 
 			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 				metatype[m] = VT_STRING;
@@ -547,8 +549,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
-				fprintf(stderr, "%s:%d: Unsupported property type for %s\n", reading, line, properties->keys[i]->string);
-				continue;
+				metatype[m] = VT_STRING;
+				metaval[m] = json_stringify(properties->values[i]);
+				mustfree[m] = 1;
+				m++;
 			}
 		}
 	}
@@ -557,6 +561,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	for (i = 0; i < m; i++) {
 		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
 		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
+
+		if (mustfree[i]) {
+			free(metaval[i]);
+		}
 	}
 
 	long long geomstart = *geompos;
