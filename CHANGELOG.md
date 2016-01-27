@@ -1,3 +1,8 @@
+## 1.7.2
+
+* Feature properties that are arrays or hashes get stringified
+  rather than being left out with a warning.
+
 ## 1.7.1
 
 * Make clipping behavior with no buffer consistent with Mapnik.
