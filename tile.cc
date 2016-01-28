@@ -1102,7 +1102,7 @@ void *run_thread(void *vargs) {
 					*arg->midy = y;
 					*arg->most = len;
 				} else if (len == *arg->most) {
-					unsigned long long a = (((unsigned long long) x         ) << 32) | y;
+					unsigned long long a = (((unsigned long long) x) << 32) | y;
 					unsigned long long b = (((unsigned long long) *arg->midx) << 32) | *arg->midy;
 
 					if (a < b) {
