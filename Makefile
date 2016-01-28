@@ -80,7 +80,7 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
 prep-test: $(TESTS)
 
 tests/%.json: Makefile tippecanoe tippecanoe-decode
-	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
-	./tippecanoe-decode $@.mbtiles > $@
+	./tippecanoe -f -o $@.check.mbtiles $(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe-decode $@.check.mbtiles > $@
 	cmp $(patsubst %.check,%,$@) $@
-	rm $@.mbtiles
+	rm $@.check.mbtiles

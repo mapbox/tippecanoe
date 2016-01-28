@@ -1,12 +1,12 @@
 { "type": "FeatureCollection", "properties": {
 "bounds": "-1.000000,-1.000000,1.000000,1.000000",
-"center": "1.000000,-1.000000,4",
-"description": "tests/nullisland/out/-b0_-z4.json.mbtiles",
+"center": "-1.000000,1.000000,4",
+"description": "tests/nullisland/out/-b0_-z4.json.check.mbtiles",
 "format": "pbf",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ] }",
 "maxzoom": "4",
 "minzoom": "0",
-"name": "tests/nullisland/out/-b0_-z4.json.mbtiles",
+"name": "tests/nullisland/out/-b0_-z4.json.check.mbtiles",
 "type": "overlay",
 "version": "1"
 }, "features": [
