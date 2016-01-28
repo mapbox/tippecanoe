@@ -72,7 +72,7 @@ prep-test:
 test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
 
 %.json.check:
-	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/in.json && \
-	./tippecanoe-decode $@.mbtiles > $@.out && \
-	cmp $(patsubst %.check,%,$@) $@.out && \
+	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/in.json
+	./tippecanoe-decode $@.mbtiles > $@.out
+	cmp $(patsubst %.check,%,$@) $@.out
 	rm $@.out $@.mbtiles
