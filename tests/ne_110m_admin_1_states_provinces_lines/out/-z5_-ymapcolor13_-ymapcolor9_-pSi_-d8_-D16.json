@@ -1,4 +1,15 @@
-{ "type": "FeatureCollection", "features": [
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"center": "-84.375000,36.466030,5",
+"description": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-ymapcolor13_-ymapcolor9_-pSi_-d8_-D16.json.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 5, \"fields\": {\"mapcolor9\": \"Number\", \"mapcolor13\": \"Number\"} } ] }",
+"maxzoom": "5",
+"minzoom": "0",
+"name": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-ymapcolor13_-ymapcolor9_-pSi_-d8_-D16.json.mbtiles",
+"type": "overlay",
+"version": "1"
+}, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in" }, "features": [
 { "type": "Feature", "properties": { "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.707031, 41.376809 ], [ -74.882812, 41.442726 ], [ -75.014648, 41.508577 ], [ -75.102539, 41.672912 ], [ -75.058594, 41.771312 ], [ -75.190430, 41.869561 ], [ -75.410156, 42.000325 ], [ -76.772461, 42.032974 ], [ -78.222656, 42.000325 ], [ -79.760742, 42.000325 ], [ -79.760742, 42.261049 ] ] } }

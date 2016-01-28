@@ -1,4 +1,15 @@
-{ "type": "FeatureCollection", "features": [
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"center": "-82.968750,37.710240,7",
+"description": "tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"countries\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 7, \"fields\": {\"adm0_a3\": \"String\", \"adm0_name\": \"String\", \"mapcolor9\": \"Number\", \"mapcolor13\": \"Number\"} } ] }",
+"maxzoom": "7",
+"minzoom": "1",
+"name": "tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.mbtiles",
+"type": "overlay",
+"version": "1"
+}, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "countries" }, "features": [
 { "type": "Feature", "properties": { "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -124.013672, 46.286224 ], [ -123.793945, 46.286224 ], [ -123.486328, 46.286224 ], [ -123.266602, 46.195042 ], [ -122.958984, 46.134170 ], [ -122.783203, 45.951150 ], [ -122.739258, 45.798170 ], [ -122.695312, 45.644768 ], [ -122.431641, 45.614037 ], [ -122.211914, 45.614037 ], [ -121.816406, 45.706179 ], [ -121.596680, 45.736860 ], [ -121.245117, 45.706179 ], [ -121.069336, 45.644768 ], [ -120.849609, 45.675482 ], [ -120.629883, 45.767523 ], [ -120.190430, 45.767523 ], [ -119.794922, 45.859412 ], [ -119.619141, 45.951150 ], [ -119.355469, 45.890008 ], [ -119.003906, 46.012224 ], [ -116.938477, 46.012224 ] ] } }

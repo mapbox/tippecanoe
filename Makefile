@@ -66,13 +66,21 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-prep-test:
-	set -x; for i in $(TESTS); do ./tippecanoe -o /tmp/$$$$.mbtiles $$(echo $$i | awk -F/ '{ print $$4 }' | sed 's/\.json$$//' | tr '_' ' ') $$(echo $$i | awk -F/ '{ print $$1 "/" $$2 "/in.json" }'); ./tippecanoe-decode /tmp/$$$$.mbtiles > $$i; rm -f /tmp/$$$$.mbtiles; done
-
 test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
 
 %.json.check:
-	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/in.json
+	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $(patsubst %.check,%,$@) $@.out
 	rm $@.out $@.mbtiles
+
+# Use this target to regenerate the standards that the tests are compared against
+# after making a change that legitimately changes their output
+
+prep-test: $(TESTS)
+
+tests/%.json: Makefile tippecanoe tippecanoe-decode
+	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe-decode $@.mbtiles > $@
+	cmp $(patsubst %.check,%,$@) $@
+	rm $@.mbtiles

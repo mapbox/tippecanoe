@@ -1,4 +1,15 @@
-{ "type": "FeatureCollection", "features": [
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-1.000000,-1.000000,1.000000,1.000000",
+"center": "1.000000,-1.000000,4",
+"description": "tests/nullisland/out/-b0_-z4.json.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ] }",
+"maxzoom": "4",
+"minzoom": "0",
+"name": "tests/nullisland/out/-b0_-z4.json.mbtiles",
+"type": "overlay",
+"version": "1"
+}, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in" }, "features": [
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.000000, 0.000000 ], [ -1.054688, 0.000000 ], [ -1.054688, 1.054628 ], [ 0.000000, 1.054628 ], [ 0.000000, 0.000000 ] ] ] } }

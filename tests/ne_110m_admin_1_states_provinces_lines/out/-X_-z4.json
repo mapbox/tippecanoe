@@ -1,4 +1,15 @@
-{ "type": "FeatureCollection", "features": [
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"center": "-78.750000,31.461472,4",
+"description": "tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ] }",
+"maxzoom": "4",
+"minzoom": "0",
+"name": "tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.mbtiles",
+"type": "overlay",
+"version": "1"
+}, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in" }, "features": [
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -124.013672, 46.316584 ], [ -123.486328, 46.316584 ], [ -122.958984, 46.134170 ], [ -122.695312, 45.644768 ], [ -122.431641, 45.644768 ], [ -121.640625, 45.767523 ], [ -121.113281, 45.644768 ], [ -120.673828, 45.767523 ], [ -120.234375, 45.767523 ], [ -119.619141, 45.951150 ], [ -119.355469, 45.890008 ], [ -119.003906, 46.012224 ], [ -116.982422, 46.012224 ] ] } }
