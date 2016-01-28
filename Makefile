@@ -62,3 +62,17 @@ clean:
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $(C) $(H)
+
+TESTS = $(wildcard tests/*/out/*.json)
+SPACE = $(NULL) $(NULL)
+
+prep-test:
+	set -x; for i in $(TESTS); do ./tippecanoe -o /tmp/$$$$.mbtiles $$(echo $$i | awk -F/ '{ print $$4 }' | sed 's/\.json$$//' | tr '_' ' ') $$(echo $$i | awk -F/ '{ print $$1 "/" $$2 "/in.json" }'); ./tippecanoe-decode /tmp/$$$$.mbtiles > $$i; rm -f /tmp/$$$$.mbtiles; done
+
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
+
+%.json.check:
+	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/in.json && \
+	./tippecanoe-decode $@.mbtiles > $@.out && \
+	cmp $(patsubst %.check,%,$@) $@.out && \
+	rm $@.out $@.mbtiles
