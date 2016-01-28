@@ -547,7 +547,7 @@ int main(int argc, char **argv) {
 		unlink(outfile);
 	}
 
-	sqlite3 *outdb = mbtiles_open(outfile, argv);
+	sqlite3 *outdb = mbtiles_open(outfile, argv, 0);
 	struct stats st;
 	memset(&st, 0, sizeof(st));
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
@@ -566,7 +566,7 @@ int main(int argc, char **argv) {
 		fk[i] = &(file_keys[i]);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers, 0);
 	mbtiles_close(outdb, argv);
 
 	return 0;

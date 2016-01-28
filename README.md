@@ -64,6 +64,8 @@ Options
 
  * -o _file_.mbtiles: Name the output file.
  * -f: Delete the mbtiles file if it already exists instead of giving an error
+ * -F: Proceed (without deleting existing data) if the metadata or tiles table already exists
+   or if metadata fields can't be set
  * -t _directory_: Put the temporary files in _directory_.
  * -P: Use multiple threads to read different parts of each input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
