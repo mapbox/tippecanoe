@@ -18,7 +18,7 @@ extern "C" {
 #include "projection.h"
 }
 
-drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox) {
+drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
 	bbox[0] = LONG_LONG_MAX;
@@ -341,6 +341,163 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
+static bool inside(draw d, int edge, long long area, long long buffer) {
+	long long clip_buffer = buffer * area / 256;
+
+	switch (edge) {
+	case 0:  // top
+		return d.y > -clip_buffer;
+
+	case 1:  // right
+		return d.x < area + clip_buffer;
+
+	case 2:  // bottom
+		return d.y < area + clip_buffer;
+
+	case 3:  // left
+		return d.x > -clip_buffer;
+	}
+
+	fprintf(stderr, "internal error inside\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
+	double s1_x = p1.x - p0.x;
+	double s1_y = p1.y - p0.y;
+	double s2_x = p3.x - p2.x;
+	double s2_y = p3.y - p2.y;
+
+	double t;
+	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+}
+
+static draw intersect(draw a, draw b, int edge, long long area, long long buffer) {
+	long long clip_buffer = buffer * area / 256;
+
+	switch (edge) {
+	case 0:  // top
+		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
+		break;
+
+	case 1:  // right
+		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
+		break;
+
+	case 2:  // bottom
+		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
+		break;
+
+	case 3:  // left
+		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
+		break;
+	}
+
+	fprintf(stderr, "internal error intersecting\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
+static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
+	drawvec out = geom;
+
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+
+	for (int edge = 0; edge < 4; edge++) {
+		if (out.size() > 0) {
+			drawvec in = out;
+			out.resize(0);
+
+			draw S = in[in.size() - 1];
+
+			for (unsigned e = 0; e < in.size(); e++) {
+				draw E = in[e];
+
+				if (inside(E, edge, area, buffer)) {
+					if (!inside(S, edge, area, buffer)) {
+						out.push_back(intersect(S, E, edge, area, buffer));
+					}
+					out.push_back(E);
+				} else if (inside(S, edge, area, buffer)) {
+					out.push_back(intersect(S, E, edge, area, buffer));
+				}
+
+				S = E;
+			}
+		}
+	}
+
+	if (out.size() > 0) {
+		// If the polygon begins and ends outside the edge,
+		// the starting and ending points will be left as the
+		// places where it intersects the edge. Need to add
+		// another point to close the loop.
+
+		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+			out.push_back(out[0]);
+		}
+
+		if (out.size() < 3) {
+			fprintf(stderr, "Polygon degenerated to a line segment\n");
+		}
+
+		out[0].op = VT_MOVETO;
+		for (unsigned i = 1; i < out.size(); i++) {
+			out[i].op = VT_LINETO;
+		}
+	}
+
+	return out;
+}
+
+drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
+	if (z == 0) {
+		return geom;
+	}
+
+	drawvec out;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			unsigned j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			drawvec tmp;
+			for (unsigned k = i; k < j; k++) {
+				tmp.push_back(geom[k]);
+			}
+			tmp = clip_poly1(tmp, z, detail, buffer);
+			if (tmp.size() > 0) {
+				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
+					fprintf(stderr, "Internal error: Polygon ring not closed\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+			for (unsigned k = 0; k < tmp.size(); k++) {
+				out.push_back(tmp[k]);
+			}
+
+			i = j - 1;
+		} else {
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return out;
+}
+
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
 	long long pixel = (1 << (32 - detail - z)) * 2;
@@ -593,8 +750,46 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 	}
 }
 
+// If any line segment crosses a tile boundary, add a node there
+// that cannot be simplified away, to prevent the edge of any
+// feature from jumping abruptly at the tile boundary.
+drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
+	drawvec out;
+
+	for (unsigned i = 0; i < geom.size(); i++) {
+		if (i > 0 && geom[i].op == VT_LINETO && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO)) {
+			double x1 = geom[i - 1].x;
+			double y1 = geom[i - 1].y;
+
+			double x2 = geom[i - 0].x;
+			double y2 = geom[i - 0].y;
+
+			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
+
+			if (c > 1) {  // clipped
+				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
+					out.push_back(draw(VT_LINETO, x1, y1));
+					out[out.size() - 1].necessary = 1;
+				}
+				if (x2 != geom[i - 0].x || y2 != geom[i - 0].y) {
+					out.push_back(draw(VT_LINETO, x2, y2));
+					out[out.size() - 1].necessary = 1;
+				}
+			}
+		}
+
+		out.push_back(geom[i]);
+	}
+
+	return out;
+}
+
 drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	int res = 1 << (32 - detail - z);
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
 
 	unsigned i;
 	for (i = 0; i < geom.size(); i++) {
@@ -606,6 +801,8 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 			geom[i].necessary = 1;
 		}
 	}
+
+	geom = impose_tile_boundaries(geom, area);
 
 	for (i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {

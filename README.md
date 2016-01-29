@@ -66,6 +66,11 @@ Options
  * -o _file_.mbtiles: Name the output file.
  * -f: Delete the mbtiles file if it already exists instead of giving an error
  * -t _directory_: Put the temporary files in _directory_.
+ * -P: Use multiple threads to read different parts of each input file at once.
+   This will only work if the input is line-delimited JSON with each Feature on its
+   own line, because it knows nothing of the top-level structure around the Features.
+   Performance will be better if the input is a named file that can be mapped into memory
+   rather than a stream that can only be read sequentially.
 
 ### Zoom levels and resolution
 
@@ -102,6 +107,7 @@ Options
 ### Doing less
 
  * -ps: Don't simplify lines
+ * -pS: Don't simplify lines at maxzoom (but do simplify at lower zooms)
  * -pf: Don't limit tiles to 200,000 features
  * -pk: Don't limit tiles to 500K bytes
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.

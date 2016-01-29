@@ -62,3 +62,25 @@ clean:
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $(C) $(H)
+
+TESTS = $(wildcard tests/*/out/*.json)
+SPACE = $(NULL) $(NULL)
+
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
+
+%.json.check:
+	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe-decode $@.mbtiles > $@.out
+	cmp $(patsubst %.check,%,$@) $@.out
+	rm $@.out $@.mbtiles
+
+# Use this target to regenerate the standards that the tests are compared against
+# after making a change that legitimately changes their output
+
+prep-test: $(TESTS)
+
+tests/%.json: Makefile tippecanoe tippecanoe-decode
+	./tippecanoe -f -o $@.check.mbtiles $(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe-decode $@.check.mbtiles > $@
+	cmp $(patsubst %.check,%,$@) $@
+	rm $@.check.mbtiles

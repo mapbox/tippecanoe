@@ -59,5 +59,8 @@ json_object *json_read_tree(json_pull *j);
 json_object *json_read(json_pull *j);
 json_object *json_read_separators(json_pull *j, json_separator_callback cb, void *state);
 void json_free(json_object *j);
+void json_disconnect(json_object *j);
 
 json_object *json_hash_get(json_object *o, const char *s);
+
+char *json_stringify(json_object *o);

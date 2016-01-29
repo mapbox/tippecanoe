@@ -1,3 +1,4 @@
+#define _GNU_SOURCE  // for asprintf()
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -194,6 +195,21 @@ static void string_append(struct string *s, char c) {
 	s->buf[s->n] = '\0';
 }
 
+static void string_append_string(struct string *s, char *add) {
+	int len = strlen(add);
+
+	if (s->n + len + 1 >= s->nalloc) {
+		s->nalloc += 500 + len;
+		s->buf = realloc(s->buf, s->nalloc);
+	}
+
+	for (; *add != '\0'; add++) {
+		s->buf[s->n++] = *add;
+	}
+
+	s->buf[s->n] = '\0';
+}
+
 static void string_free(struct string *s) {
 	free(s->buf);
 }
@@ -332,20 +348,17 @@ again:
 	/////////////////////////// Comma
 
 	if (c == ',') {
-		if (j->container == NULL) {
-			j->error = "Found comma at top level";
-			return NULL;
-		}
+		if (j->container != NULL) {
+			if (j->container->expect != JSON_COMMA) {
+				j->error = "Found unexpected comma";
+				return NULL;
+			}
 
-		if (j->container->expect != JSON_COMMA) {
-			j->error = "Found unexpected comma";
-			return NULL;
-		}
-
-		if (j->container->type == JSON_HASH) {
-			j->container->expect = JSON_KEY;
-		} else {
-			j->container->expect = JSON_ITEM;
+			if (j->container->type == JSON_HASH) {
+				j->container->expect = JSON_KEY;
+			} else {
+				j->container->expect = JSON_ITEM;
+			}
 		}
 
 		if (cb != NULL) {
@@ -568,11 +581,19 @@ void json_free(json_object *o) {
 		free(o->string);
 	}
 
+	json_disconnect(o);
+
+	free(o);
+}
+
+void json_disconnect(json_object *o) {
 	// Expunge references to this as an array element
 	// or a hash key or value.
 
 	if (o->parent != NULL) {
 		if (o->parent->type == JSON_ARRAY) {
+			int i;
+
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->array[i] == o) {
 					break;
@@ -586,6 +607,8 @@ void json_free(json_object *o) {
 		}
 
 		if (o->parent->type == JSON_HASH) {
+			int i;
+
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->keys[i] == o) {
 					o->parent->keys[i] = fabricate_object(o->parent, JSON_NULL);
@@ -612,5 +635,83 @@ void json_free(json_object *o) {
 		}
 	}
 
-	free(o);
+	o->parent = NULL;
+}
+
+static void json_print_one(struct string *val, json_object *o) {
+	if (o == NULL) {
+		string_append_string(val, "NULL");
+	} else if (o->type == JSON_STRING) {
+		string_append(val, '\"');
+
+		char *cp;
+		for (cp = o->string; *cp != '\0'; cp++) {
+			if (*cp == '\\' || *cp == '"') {
+				string_append(val, '\\');
+				string_append(val, *cp);
+			} else if (*cp >= 0 && *cp < ' ') {
+				char *s;
+				if (asprintf(&s, "\\u%04x", *cp) >= 0) {
+					string_append_string(val, s);
+					free(s);
+				}
+			} else {
+				string_append(val, *cp);
+			}
+		}
+
+		string_append(val, '\"');
+	} else if (o->type == JSON_NUMBER) {
+		string_append_string(val, o->string);
+	} else if (o->type == JSON_NULL) {
+		string_append_string(val, "null");
+	} else if (o->type == JSON_TRUE) {
+		string_append_string(val, "true");
+	} else if (o->type == JSON_FALSE) {
+		string_append_string(val, "false");
+	} else if (o->type == JSON_HASH) {
+		string_append(val, '}');
+	} else if (o->type == JSON_ARRAY) {
+		string_append(val, ']');
+	}
+}
+
+static void json_print(struct string *val, json_object *o) {
+	if (o == NULL) {
+		// Hash value in incompletely read hash
+		string_append_string(val, "NULL");
+	} else if (o->type == JSON_HASH) {
+		string_append(val, '{');
+
+		int i;
+		for (i = 0; i < o->length; i++) {
+			json_print(val, o->keys[i]);
+			string_append(val, ':');
+			json_print(val, o->values[i]);
+			if (i + 1 < o->length) {
+				string_append(val, ',');
+			}
+		}
+		string_append(val, '}');
+	} else if (o->type == JSON_ARRAY) {
+		string_append(val, '[');
+		int i;
+		for (i = 0; i < o->length; i++) {
+			json_print(val, o->array[i]);
+			if (i + 1 < o->length) {
+				string_append(val, ',');
+			}
+		}
+		string_append(val, ']');
+	} else {
+		json_print_one(val, o);
+	}
+}
+
+char *json_stringify(json_object *o) {
+	struct string val;
+	string_init(&val);
+	json_print(&val, o);
+
+	return val.buf;
 }

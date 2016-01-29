@@ -32,8 +32,7 @@ install:
  - make
 
 script:
- - echo '{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[0,0]}}' > test.json
- - ./tippecanoe -o test.mbtiles test.json
+ - make test
  - if [ -n "${COVERAGE}" ]; then
        rm vector_tile.pb.o;
        ${COVERAGE} -lp *.o;

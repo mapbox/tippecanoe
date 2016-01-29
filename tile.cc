@@ -363,7 +363,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -376,8 +376,10 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			// Division instead of right-shift because coordinates can be negative
 			bbox2[k] = bbox[k] / (1 << (32 - nextzoom - 8));
 		}
-		bbox2[0] -= buffer;
-		bbox2[1] -= buffer;
+		// Decrement the top and left edges so that any features that are
+		// touching the edge can potentially be included in the adjacent tiles too.
+		bbox2[0] -= buffer + 1;
+		bbox2[1] -= buffer + 1;
 		bbox2[2] += buffer;
 		bbox2[3] += buffer;
 
@@ -442,8 +444,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					if (tippecanoe_maxzoom != -1) {
 						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
 					}
+					serialize_int(geomfile[j], segment, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
-					long long wx = initial_x, wy = initial_y;
+					long long wx = initial_x[segment], wy = initial_y[segment];
 
 					for (unsigned u = 0; u < geom.size(); u++) {
 						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
@@ -464,7 +467,95 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 	}
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards) {
+struct partial {
+	drawvec geom;
+	long long layer;
+	char *meta;
+	signed char t;
+	int segment;
+	long long original_seq;
+	bool reduced;
+	unsigned long long index;
+	unsigned long long index2;
+	int z;
+	int line_detail;
+	char *prevent;
+	char *additional;
+	int maxzoom;
+};
+
+struct partial_arg {
+	std::vector<struct partial> *partials;
+	int task;
+	int tasks;
+};
+
+void *partial_feature_worker(void *v) {
+	struct partial_arg *a = (struct partial_arg *) v;
+	std::vector<struct partial> *partials = a->partials;
+
+	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
+		drawvec geom = (*partials)[i].geom;
+		(*partials)[i].geom.clear();  // avoid keeping two copies in memory
+		signed char t = (*partials)[i].t;
+		int z = (*partials)[i].z;
+		int line_detail = (*partials)[i].line_detail;
+		char *prevent = (*partials)[i].prevent;
+		char *additional = (*partials)[i].additional;
+		int maxzoom = (*partials)[i].maxzoom;
+
+		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
+			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
+				if (t == VT_LINE) {
+					geom = remove_noop(geom, t, 32 - z - line_detail);
+				}
+
+				geom = simplify_lines(geom, z, line_detail);
+			}
+		}
+
+#if 0
+		if (t == VT_LINE && z != basezoom) {
+			geom = shrink_lines(geom, z, line_detail, basezoom, &along);
+		}
+#endif
+
+		if (t == VT_LINE && additional[A_REVERSE]) {
+			geom = reorder_lines(geom);
+		}
+
+		to_tile_scale(geom, z, line_detail);
+
+		if (t == VT_POLYGON) {
+			// Scaling may have made the polygon degenerate.
+			// Give Clipper a chance to try to fix it.
+			geom = clean_or_clip_poly(geom, 0, 0, 0, false);
+			geom = close_poly(geom);
+		}
+
+		// Worth skipping this if not coalescing anyway?
+		if (geom.size() > 0) {
+			(*partials)[i].index = encode(geom[0].x, geom[0].y);
+			(*partials)[i].index2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+
+			// Anything numbered below the start of the line
+			// can't possibly be the next feature.
+			// We want lowest-but-not-under.
+			if ((*partials)[i].index2 < (*partials)[i].index) {
+				(*partials)[i].index2 = ~0LL;
+			}
+		} else {
+			(*partials)[i].index = 0;
+			(*partials)[i].index2 = 0;
+		}
+
+		(*partials)[i].geom = geom;
+	}
+
+	return NULL;
+}
+
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -490,7 +581,11 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 	}
 
-	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--) {
+	static volatile double oprogress = 0;
+
+	// This only loops if the tile data didn't fit, in which case the detail
+	// goes down and the progress indicator goes backward for the next try.
+	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 		struct pool keys1[nlayers], values1[nlayers];
@@ -522,6 +617,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		long long original_features = 0;
 		long long unclipped_features = 0;
 
+		std::vector<struct partial> partials;
 		std::vector<std::vector<coalesce> > features;
 		for (i = 0; i < nlayers; i++) {
 			features.push_back(std::vector<coalesce>());
@@ -531,8 +627,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		long long geompos[child_shards];
 		memset(within, '\0', sizeof(within));
 		memset(geompos, '\0', sizeof(geompos));
-
-		double oprogress = 0;
 
 		*geoms = og;
 
@@ -557,12 +651,15 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			layer >>= 2;
 
+			int segment;
+			deserialize_int(geoms, &segment);
+
 			long long metastart;
 			deserialize_long_long(geoms, &metastart);
-			char *meta = metabase + metastart;
+			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
-			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox);
+			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
 
 			signed char feature_minzoom;
 			deserialize_byte(geoms, &feature_minzoom);
@@ -617,7 +714,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					geom = clip_lines(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POLYGON) {
-					geom = clean_or_clip_poly(geom, z, line_detail, buffer, true);
+					geom = simple_clip_poly(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POINT) {
 					geom = clip_point(geom, z, line_detail, buffer);
@@ -631,7 +728,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
 			}
 
 			if (z < minzoom) {
@@ -653,7 +750,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 
-			if (gamma >= 0 && (t == VT_POINT || (additional['l' & 0xFF] && t == VT_LINE))) {
+			if (gamma >= 0 && (t == VT_POINT || (additional[A_LINE_DROP] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;
@@ -702,59 +799,78 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
 			}
 
-			if ((t == VT_LINE || t == VT_POLYGON) && !prevent['s' & 0xFF]) {
-				if (!reduced) {
-					if (t == VT_LINE) {
-						geom = remove_noop(geom, t, 32 - z - line_detail);
-					}
+			if (geom.size() > 0) {
+				partial p;
+				p.geom = geom;
+				p.layer = layer;
+				p.meta = meta;
+				p.t = t;
+				p.segment = segment;
+				p.original_seq = original_seq;
+				p.reduced = reduced;
+				p.z = z;
+				p.line_detail = line_detail;
+				p.prevent = prevent;
+				p.additional = additional;
+				p.maxzoom = maxzoom;
+				partials.push_back(p);
+			}
+		}
 
-					geom = simplify_lines(geom, z, line_detail);
+		int tasks = ceil((double) CPUS / *running);
+		if (tasks < 1) {
+			tasks = 1;
+		}
+
+		pthread_t pthreads[tasks];
+		partial_arg args[tasks];
+		for (int i = 0; i < tasks; i++) {
+			args[i].task = i;
+			args[i].tasks = tasks;
+			args[i].partials = &partials;
+
+			if (tasks > 1) {
+				if (pthread_create(&pthreads[i], NULL, partial_feature_worker, &args[i]) != 0) {
+					perror("pthread_create");
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				partial_feature_worker(&args[i]);
+			}
+		}
+
+		if (tasks > 1) {
+			for (int i = 0; i < tasks; i++) {
+				void *retval;
+
+				if (pthread_join(pthreads[i], &retval) != 0) {
+					perror("pthread_join");
 				}
 			}
+		}
 
-#if 0
-			if (t == VT_LINE && z != basezoom) {
-				geom = shrink_lines(geom, z, line_detail, basezoom, &along);
-			}
-#endif
-
-			if (t == VT_LINE && additional['r' & 0xFF]) {
-				geom = reorder_lines(geom);
-			}
-
-			to_tile_scale(geom, z, line_detail);
-
-			if (t == VT_POLYGON) {
-				// Scaling may have made the polygon degenerate.
-				// Give Clipper a chance to try to fix it.
-				geom = clean_or_clip_poly(geom, 0, 0, 0, false);
-				geom = close_poly(geom);
-			}
+		// This is serial because decode_meta() unifies duplicates
+		for (unsigned i = 0; i < partials.size(); i++) {
+			drawvec geom = partials[i].geom;
+			partials[i].geom.clear();  // avoid keeping two copies in memory
+			long long layer = partials[i].layer;
+			char *meta = partials[i].meta;
+			signed char t = partials[i].t;
+			int segment = partials[i].segment;
+			long long original_seq = partials[i].original_seq;
 
 			if (t == VT_POINT || to_feature(geom, NULL)) {
 				struct coalesce c;
 
 				c.type = t;
-				if (geom.size() > 0) {
-					c.index = encode(geom[0].x, geom[0].y);
-					c.index2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
-
-					// Anything numbered below the start of the line
-					// can't possibly be the next feature.
-					// We want lowest-but-not-under.
-					if (c.index2 < c.index) {
-						c.index2 = ~0LL;
-					}
-				} else {
-					c.index = 0;
-					c.index2 = 0;
-				}
+				c.index = partials[i].index;
+				c.index2 = partials[i].index2;
 				c.geom = geom;
 				c.metasrc = meta;
 				c.coalesced = false;
 				c.original_seq = original_seq;
 
-				decode_meta(&meta, stringpool, keys[layer], values[layer], file_keys[layer], &c.meta);
+				decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 				features[layer].push_back(c);
 			}
 		}
@@ -768,7 +884,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		for (j = 0; j < nlayers; j++) {
-			if (additional['o' & 0xFF]) {
+			if (additional[A_REORDER]) {
 				std::sort(features[j].begin(), features[j].end());
 			}
 
@@ -783,7 +899,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 #endif
 
-				if (additional['c' & 0xFF] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -808,7 +924,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			features[j] = out;
 
-			if (prevent['i' & 0xFF]) {
+			if (prevent[P_INPUT_ORDER]) {
 				std::sort(features[j].begin(), features[j].end(), preservecmp);
 			}
 		}
@@ -824,7 +940,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		if (totalsize > 0) {
-			if (totalsize > 200000 && !prevent['f' & 0xFF]) {
+			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
 				return -1;
@@ -844,12 +960,12 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			tile.SerializeToString(&s);
 			compress(s, compressed);
 
-			if (compressed.size() > 500000 && !prevent['k' & 0xFF]) {
+			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
 				}
 
-				if (prevent['d' & 0xFF]) {
+				if (prevent[P_DYNAMIC_DROP]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
@@ -923,6 +1039,11 @@ struct write_tile_args {
 	int full_detail;
 	int low_detail;
 	volatile long long *most;
+	long long *meta_off;
+	long long *pool_off;
+	unsigned *initial_x;
+	unsigned *initial_y;
+	volatile int *running;
 };
 
 void *run_thread(void *vargs) {
@@ -962,7 +1083,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards);
+			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -975,10 +1096,21 @@ void *run_thread(void *vargs) {
 				exit(EXIT_FAILURE);
 			}
 
-			if (z == arg->maxzoom && len > *arg->most) {
-				*arg->midx = x;
-				*arg->midy = y;
-				*arg->most = len;
+			if (z == arg->maxzoom) {
+				if (len > *arg->most) {
+					*arg->midx = x;
+					*arg->midy = y;
+					*arg->most = len;
+				} else if (len == *arg->most) {
+					unsigned long long a = (((unsigned long long) x) << 32) | y;
+					unsigned long long b = (((unsigned long long) *arg->midx) << 32) | *arg->midy;
+
+					if (a < b) {
+						*arg->midx = x;
+						*arg->midy = y;
+						*arg->most = len;
+					}
+				}
 			}
 
 			*arg->along += geom - prevgeom;
@@ -995,10 +1127,11 @@ void *run_thread(void *vargs) {
 		}
 	}
 
+	arg->running--;
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1091,6 +1224,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		pthread_t pthreads[threads];
 		write_tile_args args[threads];
+		int running = threads;
 
 		int thread;
 		for (thread = 0; thread < threads; thread++) {
@@ -1122,8 +1256,13 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].full_detail = full_detail;
 			args[thread].low_detail = low_detail;
 			args[thread].most = &most;  // locked with var_lock
+			args[thread].meta_off = meta_off;
+			args[thread].pool_off = pool_off;
+			args[thread].initial_x = initial_x;
+			args[thread].initial_y = initial_y;
 
 			args[thread].tasks = dispatches[thread].tasks;
+			args[thread].running = &running;
 
 			if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 				perror("pthread_create");
