@@ -360,6 +360,32 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	}
 
 	if (z < 0) {
+		printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
+
+		const char *sql2 = "SELECT name, value from metadata order by name;";
+		sqlite3_stmt *stmt2;
+		if (sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL) != SQLITE_OK) {
+			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
+			exit(EXIT_FAILURE);
+		}
+
+		int within = 0;
+		while (sqlite3_step(stmt2) == SQLITE_ROW) {
+			if (within) {
+				printf(",\n");
+			}
+			within = 1;
+
+			const unsigned char *name = sqlite3_column_text(stmt2, 0);
+			const unsigned char *value = sqlite3_column_text(stmt2, 1);
+
+			printq((char *) name);
+			printf(": ");
+			printq((char *) value);
+		}
+
+		sqlite3_finalize(stmt2);
+
 		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
 		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -367,9 +393,9 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			exit(EXIT_FAILURE);
 		}
 
-		printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
+		printf("\n}, \"features\": [\n");
 
-		int within = 0;
+		within = 0;
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 			if (within) {
 				printf(",\n");

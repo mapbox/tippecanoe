@@ -1,3 +1,7 @@
+## 1.8.0
+
+* There are tests that can be run with "make test".
+
 ## 1.7.2
 
 * Feature properties that are arrays or hashes get stringified
