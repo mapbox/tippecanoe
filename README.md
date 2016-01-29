@@ -5,6 +5,7 @@ Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from l
 features. This is a tool for [making maps from huge datasets](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
+[![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
 
 Intent
 ------
