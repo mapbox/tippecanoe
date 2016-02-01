@@ -243,6 +243,42 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 	}
 }
 
+void add_meta(const char *key, char *value, int type, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+	struct pool_val *k, *v;
+
+	// XXX MEMORY LEAK
+
+	if (is_pooled(keys, key, VT_STRING)) {
+		k = pool(keys, key, VT_STRING);
+	} else {
+		k = pool(keys, strdup(key), VT_STRING);
+	}
+
+	if (is_pooled(values, value, type)) {
+		v = pool(values, value, type);
+	} else {
+		v = pool(values, strdup(value), type);
+	}
+
+	intmeta->push_back(k->n);
+	intmeta->push_back(v->n);
+
+	if (!is_pooled(file_keys, key, type)) {
+		if (pthread_mutex_lock(&var_lock) != 0) {
+			perror("pthread_mutex_lock");
+			exit(EXIT_FAILURE);
+		}
+
+		// Dup to retain after munmap
+		pool(file_keys, strdup(key), type);
+
+		if (pthread_mutex_unlock(&var_lock) != 0) {
+			perror("pthread_mutex_unlock");
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 static int is_integer(const char *s, long long *v) {
 	errno = 0;
 	char *endptr;
@@ -482,6 +518,7 @@ struct partial {
 	char *prevent;
 	char *additional;
 	int maxzoom;
+	double gap;
 };
 
 struct partial_arg {
@@ -658,6 +695,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			deserialize_long_long(geoms, &metastart);
 			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
+			double spacing = 0;
 
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
 
@@ -760,6 +798,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 				if (gamma > 0) {
 					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+					spacing = (index - previndex) / scale;
 					if (gap > 0) {
 						if (index == previndex) {
 							continue;  // Exact duplicate: can't fulfil the gap requirement
@@ -813,6 +852,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				p.prevent = prevent;
 				p.additional = additional;
 				p.maxzoom = maxzoom;
+				p.gap = spacing;
 				partials.push_back(p);
 			}
 		}
@@ -871,6 +911,11 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				c.original_seq = original_seq;
 
 				decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
+
+				char s[50];
+				sprintf(s, "%f", partials[i].gap);
+				add_meta("gap", s, VT_NUMBER, keys[layer], values[layer], file_keys[layer], &c.meta);
+
 				features[layer].push_back(c);
 			}
 		}
