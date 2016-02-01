@@ -1080,7 +1080,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional, int read_parallel) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional, int read_parallel, int forcetable) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -2028,7 +2028,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers);
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -2069,6 +2069,7 @@ int main(int argc, char **argv) {
 	int basezoom = -1;
 	double basezoom_marker_width = 1;
 	int force = 0;
+	int forcetable = 0;
 	double droprate = 2.5;
 	double gamma = 0;
 	int buffer = 5;
@@ -2087,7 +2088,7 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fXt:g:p:vqa:B:P")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fFXt:g:p:vqa:B:P")) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;
@@ -2168,6 +2169,10 @@ int main(int argc, char **argv) {
 
 		case 'f':
 			force = 1;
+			break;
+
+		case 'F':
+			forcetable = 1;
 			break;
 
 		case 't':
@@ -2256,10 +2261,10 @@ int main(int argc, char **argv) {
 		unlink(outdir);
 	}
 
-	sqlite3 *outdb = mbtiles_open(outdir, argv);
+	sqlite3 *outdb = mbtiles_open(outdir, argv, forcetable);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel);
+	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
 
 	mbtiles_close(outdb, argv);
 
