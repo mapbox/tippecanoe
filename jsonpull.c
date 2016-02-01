@@ -1,3 +1,4 @@
+#define _GNU_SOURCE  // for asprintf()
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>

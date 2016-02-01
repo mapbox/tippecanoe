@@ -1396,7 +1396,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			*out = '\0';
 
 			if (!quiet) {
-				printf("using layer %d name %s\n", i, trunc);
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, trunc);
 			}
 		}
 	}
