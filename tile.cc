@@ -1096,10 +1096,21 @@ void *run_thread(void *vargs) {
 				exit(EXIT_FAILURE);
 			}
 
-			if (z == arg->maxzoom && len > *arg->most) {
-				*arg->midx = x;
-				*arg->midy = y;
-				*arg->most = len;
+			if (z == arg->maxzoom) {
+				if (len > *arg->most) {
+					*arg->midx = x;
+					*arg->midy = y;
+					*arg->most = len;
+				} else if (len == *arg->most) {
+					unsigned long long a = (((unsigned long long) x) << 32) | y;
+					unsigned long long b = (((unsigned long long) *arg->midx) << 32) | *arg->midy;
+
+					if (a < b) {
+						*arg->midx = x;
+						*arg->midy = y;
+						*arg->most = len;
+					}
+				}
 			}
 
 			*arg->along += geom - prevgeom;
