@@ -661,7 +661,10 @@ static void json_print_one(struct string *val, json_object *o) {
 
 		string_append(val, '\"');
 	} else if (o->type == JSON_NUMBER) {
-		string_append_string(val, o->string);
+		char *cp;
+        for (cp = o->string; *cp != '\0'; cp++) {
+            string_append(val, *cp);
+		}
 	} else if (o->type == JSON_NULL) {
 		string_append_string(val, "null");
 	} else if (o->type == JSON_TRUE) {
