@@ -66,7 +66,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test
 
 %.json.check:
 	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
