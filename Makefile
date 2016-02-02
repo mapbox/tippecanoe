@@ -66,13 +66,29 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS))
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test
 
 %.json.check:
 	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $(patsubst %.check,%,$@) $@.out
 	rm $@.out $@.mbtiles
+
+parallel-test:
+	mkdir -p tests/parallel
+	perl -e 'for ($$i = 0; $$i < 300000; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in.json
+	./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-file.mbtiles tests/parallel/in.json
+	./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-file.mbtiles tests/parallel/in.json
+	cat tests/parallel/in.json | ./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-pipe.mbtiles
+	cat tests/parallel/in.json | ./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-pipe.mbtiles
+	./tippecanoe-decode tests/parallel/linear-file.mbtiles > tests/parallel/linear-file.json
+	./tippecanoe-decode tests/parallel/parallel-file.mbtiles > tests/parallel/parallel-file.json
+	./tippecanoe-decode tests/parallel/linear-pipe.mbtiles > tests/parallel/linear-pipe.json
+	./tippecanoe-decode tests/parallel/parallel-pipe.mbtiles > tests/parallel/parallel-pipe.json
+	cmp tests/parallel/linear-file.json tests/parallel/parallel-file.json
+	cmp tests/parallel/linear-file.json tests/parallel/linear-pipe.json
+	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipe.json
+	rm tests/parallel/*.mbtiles tests/parallel/*.json
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
