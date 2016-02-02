@@ -243,21 +243,23 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 	}
 }
 
-void add_meta(const char *key, char *value, int type, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+void add_meta(const char *key, char *value, int type, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta, std::vector<char *> &to_free) {
 	struct pool_val *k, *v;
-
-	// XXX MEMORY LEAK
 
 	if (is_pooled(keys, key, VT_STRING)) {
 		k = pool(keys, key, VT_STRING);
 	} else {
-		k = pool(keys, strdup(key), VT_STRING);
+		char *dup = strdup(key);
+		to_free.push_back(dup);
+		k = pool(keys, dup, VT_STRING);
 	}
 
 	if (is_pooled(values, value, type)) {
 		v = pool(values, value, type);
 	} else {
-		v = pool(values, strdup(value), type);
+		char *dup = strdup(value);
+		to_free.push_back(dup);
+		v = pool(values, dup, type);
 	}
 
 	intmeta->push_back(k->n);
@@ -660,6 +662,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			features.push_back(std::vector<coalesce>());
 		}
 
+		std::vector<char *> to_free;
+
 		int within[child_shards];
 		long long geompos[child_shards];
 		memset(within, '\0', sizeof(within));
@@ -788,6 +792,13 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 
+			// Avoid recalculating of index unless needed for gamma or glow
+			unsigned long long index = 0;
+			if (additional[A_GLOW] || gamma > 0) {
+				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+				spacing = (index - previndex) / scale;
+			}
+
 			if (gamma >= 0 && (t == VT_POINT || (additional[A_LINE_DROP] && t == VT_LINE))) {
 				seq++;
 				if (seq >= 0) {
@@ -797,8 +808,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 
 				if (gamma > 0) {
-					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
-					spacing = (index - previndex) / scale;
 					if (gap > 0) {
 						if (index == previndex) {
 							continue;  // Exact duplicate: can't fulfil the gap requirement
@@ -822,10 +831,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 							gap = 0;  // Wider spacing than minimum: so pass through unchanged
 						}
 					}
-
-					previndex = index;
 				}
 			}
+
+			previndex = index;
 
 			fraction_accum += fraction;
 			if (fraction_accum < 1) {
@@ -912,9 +921,18 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 				decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 
-				char s[50];
-				sprintf(s, "%f", partials[i].gap);
-				add_meta("gap", s, VT_NUMBER, keys[layer], values[layer], file_keys[layer], &c.meta);
+				if (additional[A_GLOW]) {
+					char s[50];
+					int glow = 255;
+					if (partials[i].gap > 0) {
+						glow = (1 / partials[i].gap);
+						if (glow > 255) {
+							glow = 255;
+						}
+					}
+					sprintf(s, "%d", glow);
+					add_meta("glow", s, VT_NUMBER, keys[layer], values[layer], file_keys[layer], &c.meta, to_free);
+				}
 
 				features[layer].push_back(c);
 			}
@@ -998,6 +1016,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				pool_free(&keys1[i]);
 				pool_free(&values1[i]);
 			}
+			for (unsigned i = 0; i < to_free.size(); i++) {
+				free(to_free[i]);
+				to_free[i] = NULL;
+			}
 
 			std::string s;
 			std::string compressed;
@@ -1040,6 +1062,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			for (i = 0; i < nlayers; i++) {
 				pool_free(&keys1[i]);
 				pool_free(&values1[i]);
+			}
+			for (unsigned i = 0; i < to_free.size(); i++) {
+				free(to_free[i]);
+				to_free[i] = NULL;
 			}
 
 			return count;

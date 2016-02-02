@@ -45,6 +45,8 @@ static int additional_options[] = {
 	A_REORDER,
 #define A_LINE_DROP ((int) 'l')
 	A_LINE_DROP,
+#define A_GLOW ((int) 'g')
+	A_GLOW,
 };
 
 static int prevent_options[] = {
