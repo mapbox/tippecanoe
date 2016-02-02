@@ -1203,6 +1203,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		nsources = 1;
 	}
 
+	long overall_offset = 0;
+
 	int source;
 	for (source = 0; source < nsources; source++) {
 		const char *reading;
@@ -1234,7 +1236,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, 0, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+			overall_offset += st.st_size - off;
 
 			if (munmap(map, st.st_size - off) != 0) {
 				perror("munmap source file");
@@ -1266,7 +1269,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				volatile int is_parsing = 0;
 				long long ahead = 0;
-				long long initial_offset = 0;
+				long long initial_offset = overall_offset;
 				pthread_t parallel_parser;
 
 #define READ_BUF 2000
@@ -1290,6 +1293,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 						initial_offset += ahead;
+						overall_offset += ahead;
 						ahead = 0;
 
 						sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
@@ -1325,14 +1329,17 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
 					}
+
+					overall_offset += ahead;
 				}
 			} else {
 				// Plain serial reading
 
-				long long layer_seq = 0;
+				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
 				parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
 				json_end(jp);
+				overall_offset = layer_seq;
 			}
 
 			fclose(fp);
