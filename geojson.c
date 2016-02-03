@@ -1602,33 +1602,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				tile[z].fullcount++;
 
-				// Keep in sync with write_tile()
-				if (gamma > 0) {
-					if (tile[z].gap > 0) {
-						if (map[i].index == tile[z].previndex) {
-							continue;  // Exact duplicate: can't fulfil the gap requirement
-						}
-
-						if (exp(log((map[i].index - tile[z].previndex) / scale) * gamma) >= tile[z].gap) {
-							// Dot is further from the previous than the nth root of the gap,
-							// so produce it, and choose a new gap at the next point.
-							tile[z].gap = 0;
-						} else {
-							continue;
-						}
-					} else {
-						tile[z].gap = (map[i].index - tile[z].previndex) / scale;
-
-						if (tile[z].gap == 0) {
-							continue;  // Exact duplicate: skip
-						} else if (tile[z].gap < 1) {
-							continue;  // Narrow dot spacing: need to stretch out
-						} else {
-							tile[z].gap = 0;  // Wider spacing than minimum: so pass through unchanged
-						}
-					}
-
-					tile[z].previndex = map[i].index;
+				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
+					continue;
 				}
 
 				tile[z].count++;

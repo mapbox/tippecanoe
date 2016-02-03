@@ -555,6 +555,38 @@ void *partial_feature_worker(void *v) {
 	return NULL;
 }
 
+int manage_gap(unsigned long long index, unsigned long long *previndex, double scale, double gamma, double *gap) {
+	if (gamma > 0) {
+		if (*gap > 0) {
+			if (index == *previndex) {
+				return 1;  // Exact duplicate: can't fulfil the gap requirement
+			}
+
+			if (exp(log((index - *previndex) / scale) * gamma) >= *gap) {
+				// Dot is further from the previous than the nth root of the gap,
+				// so produce it, and choose a new gap at the next point.
+				*gap = 0;
+			} else {
+				return 1;
+			}
+		} else {
+			*gap = (index - *previndex) / scale;
+
+			if (*gap == 0) {
+				return 1;  // Exact duplicate: skip
+			} else if (*gap < 1) {
+				return 1;  // Narrow dot spacing: need to stretch out
+			} else {
+				*gap = 0;  // Wider spacing than minimum: so pass through unchanged
+			}
+		}
+
+		*previndex = index;
+	}
+
+	return 0;
+}
+
 long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
@@ -759,32 +791,10 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 
 				if (gamma > 0) {
-					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
-					if (gap > 0) {
-						if (index == previndex) {
-							continue;  // Exact duplicate: can't fulfil the gap requirement
-						}
-
-						if (exp(log((index - previndex) / scale) * gamma) >= gap) {
-							// Dot is further from the previous than the nth root of the gap,
-							// so produce it, and choose a new gap at the next point.
-							gap = 0;
-						} else {
-							continue;
-						}
-					} else {
-						gap = (index - previndex) / scale;
-
-						if (gap == 0) {
-							continue;  // Exact duplicate: skip
-						} else if (gap < 1) {
-							continue;  // Narrow dot spacing: need to stretch out
-						} else {
-							gap = 0;  // Wider spacing than minimum: so pass through unchanged
-						}
+					unsigned long long index = index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+					if (manage_gap(index, &previndex, scale, gamma, &gap)) {
+						continue;
 					}
-
-					previndex = index;
 				}
 			}
 
