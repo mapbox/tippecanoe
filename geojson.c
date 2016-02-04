@@ -2259,6 +2259,9 @@ int main(int argc, char **argv) {
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
+	if (geometry_scale < 0) {
+		geometry_scale = 0;
+	}
 
 	if ((basezoom < 0 || droprate < 0) && (gamma < 0)) {
 		// Can't use randomized (as opposed to evenly distributed) dot dropping
