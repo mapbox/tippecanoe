@@ -1551,12 +1551,13 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			long long fullcount;
 			double gap;
 			unsigned long long previndex;
+			double spacing;
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
 			int i;
 			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
+				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = tile[i].spacing = 0;
 				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
 			}
 		}
@@ -1590,6 +1591,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				if (tile[z].x != xxx || tile[z].y != yyy) {
 					if (tile[z].count > max[z].count) {
 						max[z] = tile[z];
+						printf("%d/%d/%d %f %lld\n", z, xxx, yyy, tile[z].spacing, tile[z].count);
+						max[z].spacing = tile[z].spacing / (tile[z].count - 1);
 					}
 
 					tile[z].x = xxx;
@@ -1598,9 +1601,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					tile[z].fullcount = 0;
 					tile[z].gap = 0;
 					tile[z].previndex = 0;
+					tile[z].spacing = 0;
 				}
 
 				tile[z].fullcount++;
+
+				if (tile[z].count > 0) {
+					tile[z].spacing += (map[i].index - tile[z].previndex) / scale;
+				}
 
 				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
 					continue;
@@ -1614,6 +1622,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		for (z = MAX_ZOOM; z >= 0; z--) {
 			if (tile[z].count > max[z].count) {
 				max[z] = tile[z];
+				max[z].spacing = tile[z].spacing / (tile[z].count - 1);
 			}
 		}
 
@@ -1628,7 +1637,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 					basezoom = z;
 				}
 
-				// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
+				printf("%d/%u/%u %lld  %f\n", z, max[z].x, max[z].y, max[z].count, max[z].spacing);
 			}
 
 			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);

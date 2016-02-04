@@ -556,33 +556,31 @@ void *partial_feature_worker(void *v) {
 }
 
 int manage_gap(unsigned long long index, unsigned long long *previndex, double scale, double gamma, double *gap) {
-	if (gamma > 0) {
-		if (*gap > 0) {
-			if (index == *previndex) {
-				return 1;  // Exact duplicate: can't fulfil the gap requirement
-			}
-
-			if (exp(log((index - *previndex) / scale) * gamma) >= *gap) {
-				// Dot is further from the previous than the nth root of the gap,
-				// so produce it, and choose a new gap at the next point.
-				*gap = 0;
-			} else {
-				return 1;
-			}
-		} else {
-			*gap = (index - *previndex) / scale;
-
-			if (*gap == 0) {
-				return 1;  // Exact duplicate: skip
-			} else if (*gap < 1) {
-				return 1;  // Narrow dot spacing: need to stretch out
-			} else {
-				*gap = 0;  // Wider spacing than minimum: so pass through unchanged
-			}
+	if (*gap > 0) {
+		if (index == *previndex) {
+			return 1;  // Exact duplicate: can't fulfil the gap requirement
 		}
 
-		*previndex = index;
+		if (exp(log((index - *previndex) / scale) * gamma) >= *gap) {
+			// Dot is further from the previous than the nth root of the gap,
+			// so produce it, and choose a new gap at the next point.
+			*gap = 0;
+		} else {
+			return 1;
+		}
+	} else {
+		*gap = (index - *previndex) / scale;
+
+		if (*gap == 0) {
+			return 1;  // Exact duplicate: skip
+		} else if (*gap < 1) {
+			return 1;  // Narrow dot spacing: need to stretch out
+		} else {
+			*gap = 0;  // Wider spacing than minimum: so pass through unchanged
+		}
 	}
+
+	*previndex = index;
 
 	return 0;
 }
