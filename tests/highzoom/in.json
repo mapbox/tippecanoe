@@ -1,0 +1,2 @@
+{ "type": "Feature", "properties": { "name": "Santa Cruz" }, "geometry": { "type": "Point", "coordinates": [ -122,37 ] } }
+{ "type": "Feature", "properties": { "name": "London" }, "geometry": { "type": "Point", "coordinates": [ 0,51.5 ] } }
