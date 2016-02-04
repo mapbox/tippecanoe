@@ -63,6 +63,8 @@ int mb_geometry[GEOM_TYPES] = {
 int CPUS;
 int TEMP_FILES;
 
+#define MAX_ZOOM 24
+
 void init_cpus() {
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 	if (CPUS < 1) {
@@ -1543,7 +1545,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			exit(EXIT_FAILURE);
 		}
 
-#define MAX_ZOOM 30
 		struct tile {
 			unsigned x;
 			unsigned y;
@@ -2238,6 +2239,11 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [-P] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	if (maxzoom > MAX_ZOOM) {
+		maxzoom = MAX_ZOOM;
+		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
 	}
 
 	if (minzoom > maxzoom) {
