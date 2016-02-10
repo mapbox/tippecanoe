@@ -1,3 +1,7 @@
+## 1.8.1
+
+* Bug fixes to maxzoom, and more tests
+
 ## 1.8.0
 
 * There are tests that can be run with "make test".
