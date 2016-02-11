@@ -155,7 +155,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %d);", 1);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %d);", 2);
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set version : %s\n", err);
 		if (!forcetable) {

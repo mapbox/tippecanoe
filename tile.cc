@@ -468,7 +468,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 }
 
 struct partial {
-	drawvec geom;
+	std::vector<drawvec> geoms;
 	long long layer;
 	char *meta;
 	signed char t;
@@ -495,8 +495,8 @@ void *partial_feature_worker(void *v) {
 	std::vector<struct partial> *partials = a->partials;
 
 	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
-		drawvec geom = (*partials)[i].geom;
-		(*partials)[i].geom.clear();  // avoid keeping two copies in memory
+		drawvec geom = (*partials)[i].geoms[0];  // XXX assumption of a single geometry at the beginning
+		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
@@ -526,17 +526,26 @@ void *partial_feature_worker(void *v) {
 
 		to_tile_scale(geom, z, line_detail);
 
+		std::vector<drawvec> geoms;
+		geoms.push_back(geom);
+
+		if (t == VT_POLYGON && !prevent[P_POLYGON_SPLIT]) {
+			geoms = chop_polygon(geoms);
+		}
+
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
-			geom = clean_or_clip_poly(geom, 0, 0, 0, false);
-			geom = close_poly(geom);
+			for (unsigned i = 0; i < geoms.size(); i++) {
+				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
+				geoms[i] = close_poly(geoms[i]);
+			}
 		}
 
 		// Worth skipping this if not coalescing anyway?
-		if (geom.size() > 0) {
-			(*partials)[i].index = encode(geom[0].x, geom[0].y);
-			(*partials)[i].index2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+		if (geoms.size() > 0 && geoms[0].size() > 0) {
+			(*partials)[i].index = encode(geoms[0][0].x, geoms[0][0].y);
+			(*partials)[i].index2 = encode(geoms[0][geoms[0].size() - 1].x, geoms[0][geoms[0].size() - 1].y);
 
 			// Anything numbered below the start of the line
 			// can't possibly be the next feature.
@@ -549,7 +558,7 @@ void *partial_feature_worker(void *v) {
 			(*partials)[i].index2 = 0;
 		}
 
-		(*partials)[i].geom = geom;
+		(*partials)[i].geoms = geoms;
 	}
 
 	return NULL;
@@ -801,7 +810,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 			if (geom.size() > 0) {
 				partial p;
-				p.geom = geom;
+				p.geoms.push_back(geom);
 				p.layer = layer;
 				p.meta = meta;
 				p.t = t;
@@ -851,27 +860,31 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 		// This is serial because decode_meta() unifies duplicates
 		for (unsigned i = 0; i < partials.size(); i++) {
-			drawvec geom = partials[i].geom;
-			partials[i].geom.clear();  // avoid keeping two copies in memory
+			std::vector<drawvec> geoms = partials[i].geoms;
+			partials[i].geoms.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
-			char *meta = partials[i].meta;
 			signed char t = partials[i].t;
 			int segment = partials[i].segment;
 			long long original_seq = partials[i].original_seq;
 
-			if (t == VT_POINT || to_feature(geom, NULL)) {
-				struct coalesce c;
+			// A complex polygon may have been split up into multiple geometries.
+			// Break them out into multiple features if necessary.
+			for (unsigned j = 0; j < geoms.size(); j++) {
+				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
+					struct coalesce c;
+					char *meta = partials[i].meta;
 
-				c.type = t;
-				c.index = partials[i].index;
-				c.index2 = partials[i].index2;
-				c.geom = geom;
-				c.metasrc = meta;
-				c.coalesced = false;
-				c.original_seq = original_seq;
+					c.type = t;
+					c.index = partials[i].index;
+					c.index2 = partials[i].index2;
+					c.geom = geoms[j];
+					c.metasrc = meta;
+					c.coalesced = false;
+					c.original_seq = original_seq;
 
-				decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
-				features[layer].push_back(c);
+					decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
+					features[layer].push_back(c);
+				}
 			}
 		}
 
@@ -899,7 +912,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 20000 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
 					unsigned z;
 					for (z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
@@ -909,6 +922,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					out.push_back(features[j][x]);
 				}
 			}
+
 			features[j] = out;
 
 			out.clear();

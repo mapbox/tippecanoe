@@ -114,6 +114,7 @@ Options
  * -pk: Don't limit tiles to 500K bytes
  * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
  * -pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
+ * -pp: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
  * -q: Work quietly instead of reporting progress
 
 Example
@@ -201,6 +202,9 @@ Any polygons that are smaller than a minimum area (currently 4 square subpixels)
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
+
+Any polygons that have over 700 vertices after line simplification will be split into
+multiple features so they can be rendered efficiently, unless you use -pp to prevent this.
 
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry. You are strongly encouraged to use -x to exclude

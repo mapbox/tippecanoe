@@ -1,3 +1,8 @@
+## 1.9.0
+
+* Claim vector tile version 2 in mbtiles
+* Split too-complex polygons into multiple features
+
 ## 1.8.1
 
 * Bug fixes to maxzoom, and more tests

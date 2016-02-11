@@ -29,3 +29,4 @@ int quick_check(long long *bbox, int z, int detail, long long buffer);
 drawvec simplify_lines(drawvec &geom, int z, int detail);
 drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
+std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
