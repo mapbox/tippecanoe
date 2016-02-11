@@ -529,11 +529,9 @@ void *partial_feature_worker(void *v) {
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
 
-#if 0
-		if (t == VT_POLYGON) {
-			geoms = chop_geometry(geoms); // XXX
+		if (t == VT_POLYGON && !prevent[P_POLYGON_SPLIT]) {
+			geoms = chop_polygon(geoms);
 		}
-#endif
 
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.

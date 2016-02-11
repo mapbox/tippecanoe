@@ -436,7 +436,9 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 		}
 
 		if (out.size() < 3) {
-			fprintf(stderr, "Polygon degenerated to a line segment\n");
+			// fprintf(stderr, "Polygon degenerated to a line segment\n");
+			out.clear();
+			return out;
 		}
 
 		out[0].op = VT_MOVETO;
@@ -943,16 +945,12 @@ drawvec fix_polygon(drawvec &geom) {
 }
 
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
-	return geoms;
-
 	while (1) {
 		bool again = false;
 		std::vector<drawvec> out;
 
 		for (unsigned i = 0; i < geoms.size(); i++) {
 			if (geoms[i].size() > 700) {
-				again = true;
-
 				long long midx = 0, midy = 0, count = 0;
 				long long maxx = LONG_LONG_MIN, maxy = LONG_LONG_MIN, minx = LONG_LONG_MAX, miny = LONG_LONG_MAX;
 
@@ -976,6 +974,23 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 						}
 					}
 				}
+
+				midx /= count;
+				midy /= count;
+
+				if (maxy - miny > maxx - minx) {
+					// printf("clipping y to %lld %lld %lld %lld\n", minx, miny, maxx, midy);
+					out.push_back(simple_clip_poly(geoms[i], minx, miny, maxx, midy));
+					// printf("          and %lld %lld %lld %lld\n", minx, midy, maxx, maxy);
+					out.push_back(simple_clip_poly(geoms[i], minx, midy, maxx, maxy));
+				} else {
+					// printf("clipping x to %lld %lld %lld %lld\n", minx, miny, midx, maxy);
+					out.push_back(simple_clip_poly(geoms[i], minx, miny, midx, maxy));
+					// printf("          and %lld %lld %lld %lld\n", midx, midy, maxx, maxy);
+					out.push_back(simple_clip_poly(geoms[i], midx, miny, maxx, maxy));
+				}
+
+				again = true;
 			} else {
 				out.push_back(geoms[i]);
 			}

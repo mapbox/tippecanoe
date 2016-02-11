@@ -8,6 +8,8 @@ features. This is a tool for making maps from huge datasets
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg)
 \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
+[Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)
+\[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
 .SH Intent
 .PP
 The goal of Tippecanoe is to enable making a scale\-independent view of your data,
@@ -143,6 +145,8 @@ If you use \-rg, it will guess a drop rate that will keep at most 50,000 feature
 .IP \(bu 2
 \-pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
+\-pp: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+.IP \(bu 2
 \-q: Work quietly instead of reporting progress
 .RE
 .SH Example
@@ -231,6 +235,9 @@ Any polygons that are smaller than a minimum area (currently 4 square subpixels)
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
+.PP
+Any polygons that have over 700 vertices after line simplification will be split into
+multiple features so they can be rendered efficiently, unless you use \-pp to prevent this.
 .PP
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry. You are strongly encouraged to use \-x to exclude
