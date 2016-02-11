@@ -60,4 +60,6 @@ static int prevent_options[] = {
 	P_DYNAMIC_DROP,
 #define P_INPUT_ORDER ((int) 'i')
 	P_INPUT_ORDER,
+#define P_POLYGON_SPLIT ((int) 'p')
+	P_POLYGON_SPLIT,
 };
