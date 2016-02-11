@@ -8,7 +8,7 @@
 "minzoom": "0",
 "name": "tests/nullisland/out/-b0_-z4.json.check.mbtiles",
 "type": "overlay",
-"version": "1"
+"version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in" }, "features": [
