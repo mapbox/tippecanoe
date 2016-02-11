@@ -495,8 +495,8 @@ void *partial_feature_worker(void *v) {
 	std::vector<struct partial> *partials = a->partials;
 
 	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
-		drawvec geom = (*partials)[i].geoms[0]; // XXX assumption of a single geometry at the beginning
-		(*partials)[i].geoms.clear();  // avoid keeping two copies in memory
+		drawvec geom = (*partials)[i].geoms[0];  // XXX assumption of a single geometry at the beginning
+		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
