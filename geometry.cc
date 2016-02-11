@@ -341,21 +341,19 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
-static bool inside(draw d, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
-
+static bool inside(draw d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
 	switch (edge) {
 	case 0:  // top
-		return d.y > -clip_buffer;
+		return d.y > miny;
 
 	case 1:  // right
-		return d.x < area + clip_buffer;
+		return d.x < maxx;
 
 	case 2:  // bottom
-		return d.y < area + clip_buffer;
+		return d.y < maxy;
 
 	case 3:  // left
-		return d.x > -clip_buffer;
+		return d.x > minx;
 	}
 
 	fprintf(stderr, "internal error inside\n");
@@ -376,24 +374,22 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
 }
 
-static draw intersect(draw a, draw b, int edge, long long area, long long buffer) {
-	long long clip_buffer = buffer * area / 256;
-
+static draw intersect(draw a, draw b, int edge, long long minx, long long miny, long long maxx, long long maxy) {
 	switch (edge) {
 	case 0:  // top
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, -clip_buffer));
+		return get_line_intersection(a, b, draw(VT_MOVETO, minx, miny), draw(VT_MOVETO, maxx, miny));
 		break;
 
 	case 1:  // right
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, -clip_buffer), draw(VT_MOVETO, area + clip_buffer, area + clip_buffer));
+		return get_line_intersection(a, b, draw(VT_MOVETO, maxx, miny), draw(VT_MOVETO, maxx, maxy));
 		break;
 
 	case 2:  // bottom
-		return get_line_intersection(a, b, draw(VT_MOVETO, area + clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, area + clip_buffer));
+		return get_line_intersection(a, b, draw(VT_MOVETO, maxx, maxy), draw(VT_MOVETO, minx, maxy));
 		break;
 
 	case 3:  // left
-		return get_line_intersection(a, b, draw(VT_MOVETO, -clip_buffer, area + clip_buffer), draw(VT_MOVETO, -clip_buffer, -clip_buffer));
+		return get_line_intersection(a, b, draw(VT_MOVETO, minx, maxy), draw(VT_MOVETO, minx, miny));
 		break;
 	}
 
@@ -402,13 +398,8 @@ static draw intersect(draw a, draw b, int edge, long long area, long long buffer
 }
 
 // http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
-static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
+static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out = geom;
-
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-	}
 
 	for (int edge = 0; edge < 4; edge++) {
 		if (out.size() > 0) {
@@ -420,13 +411,13 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 			for (unsigned e = 0; e < in.size(); e++) {
 				draw E = in[e];
 
-				if (inside(E, edge, area, buffer)) {
-					if (!inside(S, edge, area, buffer)) {
-						out.push_back(intersect(S, E, edge, area, buffer));
+				if (inside(E, edge, minx, miny, maxx, maxy)) {
+					if (!inside(S, edge, minx, miny, maxx, maxy)) {
+						out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
 					}
 					out.push_back(E);
-				} else if (inside(S, edge, area, buffer)) {
-					out.push_back(intersect(S, E, edge, area, buffer));
+				} else if (inside(S, edge, minx, miny, maxx, maxy)) {
+					out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
 				}
 
 				S = E;
@@ -457,11 +448,7 @@ static drawvec clip_poly1(drawvec &geom, int z, int detail, int buffer) {
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	if (z == 0) {
-		return geom;
-	}
-
+drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out;
 
 	for (unsigned i = 0; i < geom.size(); i++) {
@@ -477,7 +464,7 @@ drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
 			for (unsigned k = i; k < j; k++) {
 				tmp.push_back(geom[k]);
 			}
-			tmp = clip_poly1(tmp, z, detail, buffer);
+			tmp = clip_poly1(tmp, minx, miny, maxx, maxy);
 			if (tmp.size() > 0) {
 				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
 					fprintf(stderr, "Internal error: Polygon ring not closed\n");
@@ -496,6 +483,17 @@ drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
 	}
 
 	return out;
+}
+
+drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+
+	long long clip_buffer = buffer * area / 256;
+
+	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
 }
 
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
@@ -942,4 +940,51 @@ drawvec fix_polygon(drawvec &geom) {
 	}
 
 	return out;
+}
+
+std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
+	return geoms;
+
+	while (1) {
+		bool again = false;
+		std::vector<drawvec> out;
+
+		for (unsigned i = 0; i < geoms.size(); i++) {
+			if (geoms[i].size() > 700) {
+				again = true;
+
+				long long midx = 0, midy = 0, count = 0;
+				long long maxx = LONG_LONG_MIN, maxy = LONG_LONG_MIN, minx = LONG_LONG_MAX, miny = LONG_LONG_MAX;
+
+				for (unsigned j = 0; j < geoms[i].size(); j++) {
+					if (geoms[i][j].op == VT_MOVETO || geoms[i][j].op == VT_LINETO) {
+						midx += geoms[i][j].x;
+						midy += geoms[i][j].y;
+						count++;
+
+						if (geoms[i][j].x > maxx) {
+							maxx = geoms[i][j].x;
+						}
+						if (geoms[i][j].y > maxy) {
+							maxy = geoms[i][j].y;
+						}
+						if (geoms[i][j].x < minx) {
+							minx = geoms[i][j].x;
+						}
+						if (geoms[i][j].y < miny) {
+							miny = geoms[i][j].y;
+						}
+					}
+				}
+			} else {
+				out.push_back(geoms[i]);
+			}
+		}
+
+		if (!again) {
+			return out;
+		}
+
+		geoms = out;
+	}
 }
