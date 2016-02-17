@@ -1,3 +1,7 @@
+## 1.9.1
+
+* Incorporate Mapnik's Clipper upgrades for consistent results between Mac and Linux
+
 ## 1.9.0
 
 * Claim vector tile version 2 in mbtiles
