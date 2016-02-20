@@ -1,3 +1,7 @@
+## 1.9.2
+
+* Increase maximum tile size for tippecanoe-decode
+
 ## 1.9.1
 
 * Incorporate Mapnik's Clipper upgrades for consistent results between Mac and Linux
