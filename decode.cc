@@ -5,6 +5,8 @@
 #include <string>
 #include <zlib.h>
 #include <math.h>
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <google/protobuf/io/coded_stream.h>
 #include "vector_tile.pb.h"
 #include "tile.h"
 
@@ -88,7 +90,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	if (is_compressed(message)) {
 		std::string uncompressed;
 		decompress(message, uncompressed);
-		if (!tile.ParseFromString(uncompressed)) {
+		google::protobuf::io::ArrayInputStream stream(uncompressed.c_str(), uncompressed.length());
+		google::protobuf::io::CodedInputStream codedstream(&stream);
+		codedstream.SetTotalBytesLimit(10 * 67108864, 5 * 67108864);
+		if (!tile.ParseFromCodedStream(&codedstream)) {
 			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
