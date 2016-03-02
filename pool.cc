@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 extern "C" {
-	#include "pool.h"
+#include "pool.h"
 };
 
 static unsigned char swizzle[256] = {
@@ -57,12 +57,12 @@ struct key {
 };
 
 struct Hash {
-	size_t operator() (const struct key &key) const {
+	size_t operator()(const struct key &key) const {
 		return hash(key.s) ^ key.type;
 	}
 };
 struct Equal {
-	bool operator() (const struct key &t1, const struct key &t2) const {
+	bool operator()(const struct key &t1, const struct key &t2) const {
 		return t1.type == t2.type && strcmp(t1.s, t2.s) == 0;
 	}
 };
@@ -104,7 +104,6 @@ struct pool_val *pool(struct pool *p, const char *s, int type) {
 	return nv;
 }
 
-
 int is_pooled(struct pool *p, const char *s, int type) {
 	struct key k;
 	k.s = s;
@@ -131,7 +130,7 @@ void pool_free1(struct pool *p, void (*func)(void *)) {
 	p->tail = NULL;
 
 	hashmap *hm = (hashmap *) p->internal;
-	delete(hm);
+	delete (hm);
 	p->internal = NULL;
 }
 
