@@ -137,7 +137,6 @@ struct coalesce {
 	std::vector<int> meta;
 	unsigned long long index;
 	unsigned long long index2;
-	char *metasrc;
 	bool coalesced;
 	long long original_seq;
 
@@ -878,7 +877,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					c.index = partials[i].index;
 					c.index2 = partials[i].index2;
 					c.geom = geoms[j];
-					c.metasrc = meta;
 					c.coalesced = false;
 					c.original_seq = original_seq;
 

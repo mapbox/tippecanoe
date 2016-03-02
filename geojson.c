@@ -138,15 +138,6 @@ void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname) {
 	*fpos += sizeof(unsigned);
 }
 
-void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname) {
-	int len = strlen(s);
-
-	serialize_int(out, len + 1, fpos, fname);
-	fwrite_check(s, sizeof(char), len, out, fname);
-	fwrite_check("", sizeof(char), 1, out, fname);
-	*fpos += len + 1;
-}
-
 void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
@@ -272,17 +263,6 @@ void deserialize_uint(char **f, unsigned *n) {
 void deserialize_byte(char **f, signed char *n) {
 	memcpy(n, *f, sizeof(signed char));
 	*f += sizeof(signed char);
-}
-
-struct pool_val *deserialize_string(char **f, struct pool *p, int type) {
-	struct pool_val *ret;
-	int len;
-
-	deserialize_int(f, &len);
-	ret = pool(p, *f, type);
-	*f += len;
-
-	return ret;
 }
 
 struct index {
