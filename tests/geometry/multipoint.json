@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "point": "multi" },
+      "geometry": {
+        "type": "MultiPoint",
+        "coordinates": [
+          [
+            -79.453125,
+            49.38237278700955
+          ], [
+            11.6015625,
+            52.05249047600099
+          ], [
+            -60.46875,
+            -7.01366792756663
+          ], [
+            23.90625,
+            -12.554563528593656
+          ]
+        ]
+      }
+    }
+  ]
+}
