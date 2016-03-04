@@ -1583,33 +1583,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				tile[z].fullcount++;
 
-				// Keep in sync with write_tile()
-				if (gamma > 0) {
-					if (tile[z].gap > 0) {
-						if (map[i].index == tile[z].previndex) {
-							continue;  // Exact duplicate: can't fulfil the gap requirement
-						}
-
-						if (exp(log((map[i].index - tile[z].previndex) / scale) * gamma) >= tile[z].gap) {
-							// Dot is further from the previous than the nth root of the gap,
-							// so produce it, and choose a new gap at the next point.
-							tile[z].gap = 0;
-						} else {
-							continue;
-						}
-					} else {
-						tile[z].gap = (map[i].index - tile[z].previndex) / scale;
-
-						if (tile[z].gap == 0) {
-							continue;  // Exact duplicate: skip
-						} else if (tile[z].gap < 1) {
-							continue;  // Narrow dot spacing: need to stretch out
-						} else {
-							tile[z].gap = 0;  // Wider spacing than minimum: so pass through unchanged
-						}
-					}
-
-					tile[z].previndex = map[i].index;
+				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
+					continue;
 				}
 
 				tile[z].count++;
@@ -2105,12 +2080,15 @@ int main(int argc, char **argv) {
 		case 'B':
 			if (strcmp(optarg, "g") == 0) {
 				basezoom = -2;
-				basezoom_marker_width = 1;
-			} else if (optarg[0] == 'g') {
+			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				basezoom = -2;
-				basezoom_marker_width = atof(optarg + 1);
-				if (basezoom_marker_width == 0) {
-					fprintf(stderr, "%s: Must specify marker width >0 with -Bg\n", argv[0]);
+				if (optarg[0] == 'g') {
+					basezoom_marker_width = atof(optarg + 1);
+				} else {
+					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+				}
+				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+					fprintf(stderr, "%s: Must specify value >0 with -B%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -2154,6 +2132,17 @@ int main(int argc, char **argv) {
 		case 'r':
 			if (strcmp(optarg, "g") == 0) {
 				droprate = -2;
+			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
+				droprate = -2;
+				if (optarg[0] == 'g') {
+					basezoom_marker_width = atof(optarg + 1);
+				} else {
+					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+				}
+				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+					fprintf(stderr, "%s: Must specify value >0 with -r%c\n", argv[0], optarg[0]);
+					exit(EXIT_FAILURE);
+				}
 			} else {
 				droprate = atof(optarg);
 			}
