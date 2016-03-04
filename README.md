@@ -81,7 +81,7 @@ Options
  * -B _zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
    If you use -Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with -Bg*width* to allow fewer features in the densest tile to
-   compensate for the larger marker.
+   compensate for the larger marker, or -Bf*number* to allow at most *number* features in the densest tile.
  * -d _detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
  * -D _detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
@@ -97,6 +97,8 @@ Options
 
  * -r _rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
    If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
+   You can also specify a marker-width with -rg*width* to allow fewer features in the densest tile to
+   compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
  * -g _gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 ### Doing more

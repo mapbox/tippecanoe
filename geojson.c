@@ -2105,12 +2105,15 @@ int main(int argc, char **argv) {
 		case 'B':
 			if (strcmp(optarg, "g") == 0) {
 				basezoom = -2;
-				basezoom_marker_width = 1;
-			} else if (optarg[0] == 'g') {
+			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				basezoom = -2;
-				basezoom_marker_width = atof(optarg + 1);
-				if (basezoom_marker_width == 0) {
-					fprintf(stderr, "%s: Must specify marker width >0 with -Bg\n", argv[0]);
+				if (optarg[0] == 'g') {
+					basezoom_marker_width = atof(optarg + 1);
+				} else {
+					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+				}
+				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+					fprintf(stderr, "%s: Must specify value >0 with -B%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -2154,6 +2157,17 @@ int main(int argc, char **argv) {
 		case 'r':
 			if (strcmp(optarg, "g") == 0) {
 				droprate = -2;
+			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
+				droprate = -2;
+				if (optarg[0] == 'g') {
+					basezoom_marker_width = atof(optarg + 1);
+				} else {
+					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+				}
+				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+					fprintf(stderr, "%s: Must specify value >0 with -r%c\n", argv[0], optarg[0]);
+					exit(EXIT_FAILURE);
+				}
 			} else {
 				droprate = atof(optarg);
 			}
