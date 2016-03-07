@@ -964,7 +964,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		if (totalsize > 0) {
 			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
-				fprintf(stderr, "Try using -z to set a higher base zoom level.\n");
+				fprintf(stderr, "Try using -B to set a higher base zoom level.\n");
 				return -1;
 			}
 
