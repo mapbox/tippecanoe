@@ -799,7 +799,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				}
 
 				if (gamma > 0) {
-					unsigned long long index = index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 					if (manage_gap(index, &previndex, scale, gamma, &gap)) {
 						continue;
 					}
