@@ -1548,8 +1548,8 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		for (i = 0; i < nmerges; i++) {
-			if (!quiet) {
-				fprintf(stderr, "Reordering geometry: part %d of %d   \r", i, nmerges);
+			if (!quiet && nmerges > 1) {
+				fprintf(stderr, "Reordering geometry: part %d of %d   \r", i + 1, nmerges);
 			}
 
 			long long j;
@@ -1566,7 +1566,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				ix->end = geompos;
 			}
 		}
-		if (!quiet) {
+		if (!quiet && nmerges > 1) {
 			fprintf(stderr, "\n");
 		}
 
@@ -1579,7 +1579,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			exit(EXIT_FAILURE);
 		}
 
-		FILE *f = fopen(indexname, "w");
+		FILE *f = fopen(indexname, "wb");
 		if (f == NULL) {
 			perror(indexname);
 			exit(EXIT_FAILURE);
@@ -1595,6 +1595,17 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (geomfile == NULL) {
 			perror(geomname);
 			exit(EXIT_FAILURE);
+		}
+
+		for (i = 0; i < CPUS; i++) {
+			if (reader[i].geomst.st_size > 0) {
+				if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
+					perror("unmap unsorted geometry");
+				}
+			}
+			if (close(reader[i].geomfd) != 0) {
+				perror("close unsorted geometry");
+			}
 		}
 
 		geompos = 0;
@@ -1809,16 +1820,6 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror("unmap sorted index");
 	}
 
-	for (i = 0; i < CPUS; i++) {
-		if (reader[i].geomst.st_size > 0) {
-			if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
-				perror("unmap unsorted geometry");
-			}
-		}
-		if (close(reader[i].geomfd) != 0) {
-			perror("close unsorted geometry");
-		}
-	}
 	if (close(indexfd) != 0) {
 		perror("close sorted index");
 	}
