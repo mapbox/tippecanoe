@@ -1566,6 +1566,9 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				ix->end = geompos;
 			}
 		}
+		if (!quiet) {
+			fprintf(stderr, "\n");
+		}
 
 		fclose(geomfile);
 
