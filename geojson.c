@@ -551,16 +551,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 
-	serialize_int(metafile, m, metapos, fname);
-	for (i = 0; i < m; i++) {
-		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
-		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
-
-		if (mustfree[i]) {
-			free(metaval[i]);
-		}
-	}
-
 	long long geomstart = *geompos;
 
 	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
@@ -574,8 +564,17 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
 	}
 
+	serialize_int(geomfile, m, geompos, fname);
+	for (i = 0; i < m; i++) {
+		serialize_long_long(geomfile, addpool(poolfile, treefile, metakey[i], VT_STRING), geompos, fname);
+		serialize_long_long(geomfile, addpool(poolfile, treefile, metaval[i], metatype[i]), geompos, fname);
+
+		if (mustfree[i]) {
+			free(metaval[i]);
+		}
+	}
+
 	serialize_int(geomfile, segment, geompos, fname);
-	serialize_long_long(geomfile, metastart, geompos, fname);
 	long long wx = *initial_x, wy = *initial_y;
 	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
 	serialize_byte(geomfile, VT_END, geompos, fname);
@@ -1924,11 +1923,14 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	fclose(poolfile);
 	fclose(metafile);
 
+	char *meta = NULL; // XXX
+#if 0
 	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	char *stringpool = NULL;
 	if (poolpos > 0) {  // Will be 0 if -X was specified
@@ -1939,7 +1941,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 
-	if (geompos == 0 || metapos == 0) {
+	if (geompos == 0) {
 		fprintf(stderr, "did not read any valid geometries\n");
 		exit(EXIT_FAILURE);
 	}

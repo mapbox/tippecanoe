@@ -203,24 +203,17 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
-	struct pool_val *ret;
-	long long off;
-
-	deserialize_long_long(f, &off);
-	ret = pool(p, stringpool + off + 1, stringpool[off]);
-
-	return ret;
+struct pool_val *retrieve_string(long long off, struct pool *p, char *stringpool) {
+	return pool(p, stringpool + off + 1, stringpool[off]);
 }
 
-void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
-	int m;
-	deserialize_int(meta, &m);
+void decode_meta(std::vector<long long> sp_keys, std::vector<long long> sp_values, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+	int m = sp_keys.size();
 
 	int i;
 	for (i = 0; i < m; i++) {
-		struct pool_val *key = retrieve_string(meta, keys, stringpool);
-		struct pool_val *value = retrieve_string(meta, values, stringpool);
+		struct pool_val *key = retrieve_string(sp_keys[i], keys, stringpool);
+		struct pool_val *value = retrieve_string(sp_values[i], values, stringpool);
 
 		intmeta->push_back(key->n);
 		intmeta->push_back(value->n);
@@ -362,7 +355,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> sp_keys, std::vector<long long> sp_values) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -443,8 +436,15 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					if (tippecanoe_maxzoom != -1) {
 						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
 					}
+					serialize_int(geomfile[j], sp_keys.size(), &geompos[j], fname);
+					{
+						unsigned k;
+						for (k = 0; k < sp_keys.size(); k++) {
+							serialize_long_long(geomfile[j], sp_keys[k], &geompos[j], fname);
+							serialize_long_long(geomfile[j], sp_values[k], &geompos[j], fname);
+						}
+					}
 					serialize_int(geomfile[j], segment, &geompos[j], fname);
-					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
 
 					for (unsigned u = 0; u < geom.size(); u++) {
@@ -469,7 +469,6 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 struct partial {
 	std::vector<drawvec> geoms;
 	long long layer;
-	char *meta;
 	signed char t;
 	int segment;
 	long long original_seq;
@@ -481,6 +480,8 @@ struct partial {
 	char *prevent;
 	char *additional;
 	int maxzoom;
+	std::vector<long long> keys;
+	std::vector<long long> values;
 };
 
 struct partial_arg {
@@ -691,12 +692,25 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 			layer >>= 2;
 
+			int metacount;
+			deserialize_int(geoms, &metacount);
+			std::vector<long long> sp_keys, sp_values;
+			{
+				int i;
+				for (i = 0; i < metacount; i++) {
+					long long k, v;
+
+					deserialize_long_long(geoms, &k);
+					deserialize_long_long(geoms, &v);
+
+					sp_keys.push_back(k);
+					sp_values.push_back(v);
+				}
+			}
+
 			int segment;
 			deserialize_int(geoms, &segment);
 
-			long long metastart;
-			deserialize_long_long(geoms, &metastart);
-			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
 			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
@@ -768,7 +782,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, sp_keys, sp_values);
 			}
 
 			if (z < minzoom) {
@@ -821,7 +835,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				partial p;
 				p.geoms.push_back(geom);
 				p.layer = layer;
-				p.meta = meta;
 				p.t = t;
 				p.segment = segment;
 				p.original_seq = original_seq;
@@ -831,6 +844,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				p.prevent = prevent;
 				p.additional = additional;
 				p.maxzoom = maxzoom;
+				p.keys = sp_keys;
+				p.values = sp_values;
 				partials.push_back(p);
 			}
 		}
@@ -881,7 +896,6 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			for (unsigned j = 0; j < geoms.size(); j++) {
 				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
 					struct coalesce c;
-					char *meta = partials[i].meta;
 
 					c.type = t;
 					c.index = partials[i].index;
@@ -890,7 +904,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					c.coalesced = false;
 					c.original_seq = original_seq;
 
-					decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
+					decode_meta(partials[i].keys, partials[i].values, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 					features[layer].push_back(c);
 				}
 			}
