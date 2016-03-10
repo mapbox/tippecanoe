@@ -227,9 +227,7 @@ MacOS:
 
 Linux:
 
-    sudo apt-get install libprotobuf-dev
-    sudo apt-get install protobuf-compiler
-    sudo apt-get install libsqlite3-dev
+    sudo apt-get install libprotobuf-dev protobuf-compiler libsqlite3-dev
 
 Then build:
 
