@@ -995,16 +995,29 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 				midx /= count;
 				midy /= count;
 
+				drawvec c1, c2;
+
 				if (maxy - miny > maxx - minx) {
 					// printf("clipping y to %lld %lld %lld %lld\n", minx, miny, maxx, midy);
-					out.push_back(simple_clip_poly(geoms[i], minx, miny, maxx, midy));
+					c1 = simple_clip_poly(geoms[i], minx, miny, maxx, midy);
 					// printf("          and %lld %lld %lld %lld\n", minx, midy, maxx, maxy);
-					out.push_back(simple_clip_poly(geoms[i], minx, midy, maxx, maxy));
+					c2 = simple_clip_poly(geoms[i], minx, midy, maxx, maxy);
 				} else {
 					// printf("clipping x to %lld %lld %lld %lld\n", minx, miny, midx, maxy);
-					out.push_back(simple_clip_poly(geoms[i], minx, miny, midx, maxy));
+					c1 = simple_clip_poly(geoms[i], minx, miny, midx, maxy);
 					// printf("          and %lld %lld %lld %lld\n", midx, midy, maxx, maxy);
-					out.push_back(simple_clip_poly(geoms[i], midx, miny, maxx, maxy));
+					c2 = simple_clip_poly(geoms[i], midx, miny, maxx, maxy);
+				}
+
+				if (c1.size() >= geoms[i].size()) {
+					fprintf(stderr, "Subdividing complex polygon failed\n");
+				} else {
+					out.push_back(c1);
+				}
+				if (c2.size() >= geoms[i].size()) {
+					fprintf(stderr, "Subdividing complex polygon failed\n");
+				} else {
+					out.push_back(c2);
 				}
 
 				again = true;
