@@ -241,6 +241,8 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
+	bool has_area = false;
+
 	for (unsigned i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			unsigned j;
@@ -248,6 +250,16 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				if (geom[j].op != VT_LINETO) {
 					break;
 				}
+			}
+
+			double area = 0;
+			for (unsigned k = i; k < j; k++) {
+				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+			}
+			area = area / 2;
+			if (area != 0) {
+				has_area = true;
 			}
 
 			ClipperLib::Path path;
@@ -297,6 +309,11 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 			fprintf(stderr, "Polygon clip failed\n");
 		}
 	} else {
+		if (!has_area) {
+			drawvec out;
+			return out;
+		}
+
 		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
 			fprintf(stderr, "Polygon clean failed\n");
 		}
