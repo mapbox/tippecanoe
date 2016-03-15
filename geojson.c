@@ -1413,13 +1413,23 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *indexfile = fopen(indexname, "wb");
-	if (indexfile == NULL) {
-		perror(indexname);
+	unlink(indexname);
+
+	long long wantindex = 0;
+	for (i = 0; i < CPUS; i++) {
+		wantindex += reader[i].indexpos;
+	}
+
+	if (ftruncate(indexfd, wantindex) != 0) {
+		perror("set index length");
 		exit(EXIT_FAILURE);
 	}
 
-	unlink(indexname);
+	char *outmap = mmap(NULL, wantindex, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, 0);
+	if (outmap == MAP_FAILED) {
+		perror("mmap index out");
+		exit(EXIT_FAILURE);
+	}
 
 	long long indexpos = 0;
 	for (i = 0; i < CPUS; i++) {
@@ -1429,10 +1439,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				perror("mmap");
 				exit(EXIT_FAILURE);
 			}
-			if (fwrite(map, reader[i].indexpos, 1, indexfile) != 1) {
-				perror("Reunify index");
-				exit(EXIT_FAILURE);
-			}
+			memcpy(outmap + indexpos, map, reader[i].indexpos);
 			if (munmap(map, reader[i].indexpos) != 0) {
 				perror("unmap unmerged index");
 			}
@@ -1442,7 +1449,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			indexpos += reader[i].indexpos;
 		}
 	}
-	fclose(indexfile);
+	if (munmap(outmap, wantindex) != 0) {
+		perror("munmap index");
+		exit(EXIT_FAILURE);
+	}
 
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 
