@@ -87,6 +87,10 @@ Options
  * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
 
+All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
+or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
+resolution is obtained than by using a smaller _maxzoom_ or _detail_.
+
 ### Properties
 
  * -x _name_: Exclude the named properties from all features
