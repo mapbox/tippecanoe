@@ -102,6 +102,10 @@ compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber
 .IP \(bu 2
 \-b \fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
 .RE
+.PP
+All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
+or about 1cm, is the smallest distinguishable distance. If \fImaxzoom\fP + \fIdetail\fP > 32, no additional
+resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .SS Properties
 .RS
 .IP \(bu 2

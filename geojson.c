@@ -2268,6 +2268,7 @@ int main(int argc, char **argv) {
 	geometry_scale = 32 - (full_detail + maxzoom);
 	if (geometry_scale < 0) {
 		geometry_scale = 0;
+		fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
 	}
 
 	if ((basezoom < 0 || droprate < 0) && (gamma < 0)) {

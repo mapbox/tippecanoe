@@ -1,3 +1,7 @@
+## 1.9.3
+
+* Don't get stuck in a loop trying to split up very small, very complicated polygons
+
 ## 1.9.2
 
 * Increase maximum tile size for tippecanoe-decode
