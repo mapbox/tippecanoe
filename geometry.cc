@@ -328,6 +328,32 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	return out;
 }
 
+void check_polygon(drawvec &geom) {
+	for (unsigned i = 0; i + 1 < geom.size(); i++) {
+		for (unsigned j = i + 1; j + 1 < geom.size(); j++) {
+			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
+				double s1_x = geom[i + 1].x - geom[i + 0].x;
+				double s1_y = geom[i + 1].y - geom[i + 0].y;
+				double s2_x = geom[j + 1].x - geom[j + 0].x;
+				double s2_y = geom[j + 1].y - geom[j + 0].y;
+
+				double s, t;
+				s = (-s1_y * (geom[i + 0].x - geom[j + 0].x) + s1_x * (geom[i + 0].y - geom[j + 0].y)) / (-s2_x * s1_y + s1_x * s2_y);
+				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+				if (t > 0 && t < 1 && s > 0 && s < 1) {
+					fprintf(stderr, "Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+						geom[i + 0].x, geom[i + 0].y,
+						geom[i + 1].x, geom[i + 1].y,
+						geom[j + 0].x, geom[j + 0].y,
+						geom[j + 1].x, geom[j + 1].y);
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}
+}
+
 drawvec close_poly(drawvec &geom) {
 	drawvec out;
 

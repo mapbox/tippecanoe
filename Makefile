@@ -69,7 +69,7 @@ SPACE = $(NULL) $(NULL)
 test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test
 
 %.json.check:
-	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
+	./tippecanoe -ad -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $(patsubst %.check,%,$@) $@.out
 	rm $@.out $@.mbtiles

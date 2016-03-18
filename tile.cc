@@ -537,6 +537,9 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (unsigned i = 0; i < geoms.size(); i++) {
 				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
+				if (additional[A_DEBUG_POLYGON]) {
+					check_polygon(geoms[i]);
+				}
 				geoms[i] = close_poly(geoms[i]);
 			}
 		}
