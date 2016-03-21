@@ -3,7 +3,7 @@ MANDIR ?= $(PREFIX)/share/man/man1/
 
 # inherit from env if set
 CC := $(CC)
-CXX := $(CXX)
+CXX := $(CXX) -std=c++11
 CFLAGS := $(CFLAGS)
 CXXFLAGS := $(CXXFLAGS)
 LDFLAGS := $(LDFLAGS)

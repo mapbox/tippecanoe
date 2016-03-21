@@ -21,10 +21,10 @@ extern "C" {
 drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
-	bbox[0] = LONG_LONG_MAX;
-	bbox[1] = LONG_LONG_MAX;
-	bbox[2] = LONG_LONG_MIN;
-	bbox[3] = LONG_LONG_MIN;
+	bbox[0] = LLONG_MAX;
+	bbox[1] = LLONG_MAX;
+	bbox[2] = LLONG_MIN;
+	bbox[3] = LLONG_MIN;
 
 	long long wx = initial_x, wy = initial_y;
 
@@ -169,7 +169,7 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 			long long d = sqrt(dx * dx + dy * dy);
 
 			long long n;
-			long long next = LONG_LONG_MAX;
+			long long next = LLONG_MAX;
 			for (n = *here; n < *here + d; n = next) {
 				int within;
 
@@ -995,7 +995,7 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 		for (unsigned i = 0; i < geoms.size(); i++) {
 			if (geoms[i].size() > 700) {
 				long long midx = 0, midy = 0, count = 0;
-				long long maxx = LONG_LONG_MIN, maxy = LONG_LONG_MIN, minx = LONG_LONG_MAX, miny = LONG_LONG_MAX;
+				long long maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
 
 				for (unsigned j = 0; j < geoms[i].size(); j++) {
 					if (geoms[i][j].op == VT_MOVETO || geoms[i][j].op == VT_LINETO) {

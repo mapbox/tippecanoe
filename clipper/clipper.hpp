@@ -58,6 +58,7 @@
 #include <ostream>
 #include <functional>
 #include <queue>
+#include <unordered_map>
 #if defined(CLIPPER_IMPL_INCLUDE)
 #include CLIPPER_IMPL_INCLUDE
 #endif
@@ -77,7 +78,7 @@ enum PolyFillType { pftEvenOdd, pftNonZero, pftPositive, pftNegative };
   static cInt const loRange = 0x7FFF;
   static cInt const hiRange = 0x7FFF;
 #else
-  typedef signed long long cInt;
+  typedef std::int64_t cInt;
   static cInt const loRange = 0x3FFFFFFF;
   static cInt const hiRange = 0x3FFFFFFFFFFFFFFFLL;
   typedef signed long long long64;     //used by Int128 class
@@ -235,6 +236,7 @@ struct LocalMinimum;
 struct OutPt;
 struct OutRec;
 struct Join;
+struct OutPtIntersect;
 
 typedef std::vector < OutRec* > PolyOutList;
 typedef std::vector < TEdge* > EdgeList;
@@ -377,6 +379,17 @@ private:
   bool JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2);
   void JoinCommonEdges();
   void DoSimplePolygons();
+  bool FindIntersectLoop(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
+                         std::list<std::pair<const int, OutPtIntersect> > & iList,
+                         OutRec * outRec_parent,
+                         int idx_origin,
+                         int idx_prev,
+                         int idx_search);
+  bool FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
+                     OutPt * op_j,
+                     OutPt * op_k,
+                     OutRec * outRec_j,
+                     OutRec * outRec_k);
   void FixupFirstLefts1(OutRec* OldOutRec, OutRec* NewOutRec);
   void FixupFirstLefts2(OutRec* InnerOutRec, OutRec* OuterOutRec);
   void FixupFirstLefts3(OutRec* OldOutRec, OutRec* NewOutRec);
