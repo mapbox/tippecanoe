@@ -1,3 +1,7 @@
+## 1.9.4
+
+* Tippecanoe-decode can decode .pbf files that aren't in an .mbtiles container
+
 ## 1.9.3
 
 * Don't get stuck in a loop trying to split up very small, very complicated polygons

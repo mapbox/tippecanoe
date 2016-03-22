@@ -5,6 +5,9 @@
 #include <string>
 #include <zlib.h>
 #include <math.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/io/coded_stream.h>
 #include "vector_tile.pb.h"
@@ -358,6 +361,30 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
+
+	int fd = open(fname, O_RDONLY);
+	if (fd >= 0) {
+		struct stat st;
+		if (fstat(fd, &st) == 0) {
+			if (st.st_size < 50 * 1024 * 1024) {
+				char *map = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+				if (map != NULL && map != MAP_FAILED) {
+					if (strcmp(map, "SQLite format 3") != 0) {
+						std::string s = std::string(map, st.st_size);
+						handle(s, z, x, y, 1);
+						munmap(map, st.st_size);
+						return;
+					}
+				}
+				munmap(map, st.st_size);
+			}
+		} else {
+			perror("fstat");
+		}
+		close(fd);
+	} else {
+		perror(fname);
+	}
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
 		fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
