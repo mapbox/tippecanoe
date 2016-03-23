@@ -91,6 +91,28 @@ void init_cpus() {
 	}
 }
 
+static void *nullret;
+
+int pthread_create1(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg) {
+	if (CPUS == 1) {
+		nullret = start_routine(arg);
+		return 0;
+	} else {
+		return pthread_create(thread, attr, start_routine, arg);
+	}
+}
+
+int pthread_join1(pthread_t thread, void **value_ptr) {
+	if (CPUS == 1) {
+		if (value_ptr != NULL) {
+			*value_ptr = nullret;
+		}
+		return 0;
+	} else {
+		return pthread_join(thread, value_ptr);
+	}
+}
+
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
@@ -963,7 +985,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].initial_x = &initial_x[i];
 		pja[i].initial_y = &initial_y[i];
 
-		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
+		if (pthread_create1(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
 			exit(EXIT_FAILURE);
 		}
@@ -972,7 +994,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	for (i = 0; i < CPUS; i++) {
 		void *retval;
 
-		if (pthread_join(pthreads[i], &retval) != 0) {
+		if (pthread_join1(pthreads[i], &retval) != 0) {
 			perror("pthread_join");
 		}
 
@@ -1068,7 +1090,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
 
-	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
+	if (pthread_create1(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
 		exit(EXIT_FAILURE);
 	}
@@ -1269,7 +1291,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
 						if (initial_offset != 0) {
-							if (pthread_join(parallel_parser, NULL) != 0) {
+							if (pthread_join1(parallel_parser, NULL) != 0) {
 								perror("pthread_join");
 								exit(EXIT_FAILURE);
 							}
@@ -1301,7 +1323,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				}
 
 				if (initial_offset != 0) {
-					if (pthread_join(parallel_parser, NULL) != 0) {
+					if (pthread_join1(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
 						exit(EXIT_FAILURE);
 					}
@@ -1312,7 +1334,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				if (ahead > 0) {
 					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
-					if (pthread_join(parallel_parser, NULL) != 0) {
+					if (pthread_join1(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
 					}
 
@@ -1498,7 +1520,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			args[i].unit = unit;
 			args[i].bytes = bytes;
 
-			if (pthread_create(&pthreads[i], NULL, run_sort, &args[i]) != 0) {
+			if (pthread_create1(&pthreads[i], NULL, run_sort, &args[i]) != 0) {
 				perror("pthread_create");
 				exit(EXIT_FAILURE);
 			}
@@ -1507,7 +1529,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		for (i = 0; i < CPUS; i++) {
 			void *retval;
 
-			if (pthread_join(pthreads[i], &retval) != 0) {
+			if (pthread_join1(pthreads[i], &retval) != 0) {
 				perror("pthread_join");
 			}
 		}
@@ -2091,8 +2113,12 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fFXt:g:p:vqa:B:P")) != -1) {
+	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fFXt:g:p:vqa:B:P1")) != -1) {
 		switch (i) {
+		case '1':
+			CPUS = 1;
+			break;
+
 		case 'n':
 			name = optarg;
 			break;

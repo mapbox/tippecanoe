@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sqlite3.h>
+#include <pthread.h>
 #include "pool.h"
 #include "tile.h"
 #include "mbtiles.h"
