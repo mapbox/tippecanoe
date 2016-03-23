@@ -38,6 +38,9 @@ extern int quiet;
 extern int CPUS;
 extern int TEMP_FILES;
 
+int pthread_create1(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
+int pthread_join1(pthread_t thread, void **value_ptr);
+
 static int additional_options[] = {
 #define A_COALESCE ((int) 'c')
 	A_COALESCE,

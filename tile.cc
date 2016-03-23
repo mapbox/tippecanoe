@@ -848,7 +848,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			args[i].partials = &partials;
 
 			if (tasks > 1) {
-				if (pthread_create(&pthreads[i], NULL, partial_feature_worker, &args[i]) != 0) {
+				if (pthread_create1(&pthreads[i], NULL, partial_feature_worker, &args[i]) != 0) {
 					perror("pthread_create");
 					exit(EXIT_FAILURE);
 				}
@@ -861,7 +861,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			for (int i = 0; i < tasks; i++) {
 				void *retval;
 
-				if (pthread_join(pthreads[i], &retval) != 0) {
+				if (pthread_join1(pthreads[i], &retval) != 0) {
 					perror("pthread_join");
 				}
 			}
@@ -1286,7 +1286,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].tasks = dispatches[thread].tasks;
 			args[thread].running = &running;
 
-			if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
+			if (pthread_create1(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 				perror("pthread_create");
 				exit(EXIT_FAILURE);
 			}
@@ -1297,7 +1297,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		for (thread = 0; thread < threads; thread++) {
 			void *retval;
 
-			if (pthread_join(pthreads[thread], &retval) != 0) {
+			if (pthread_join1(pthreads[thread], &retval) != 0) {
 				perror("pthread_join");
 			}
 
