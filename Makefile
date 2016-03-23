@@ -66,7 +66,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test
 
 %.json.check:
 	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
@@ -91,6 +91,11 @@ parallel-test:
 	cmp tests/parallel/linear-file.json tests/parallel/linear-pipe.json
 	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipe.json
 	rm tests/parallel/*.mbtiles tests/parallel/*.json
+
+pbf-test:
+	./tippecanoe-decode tests/pbf/11-328-791.vector.pbf 11 328 791 > tests/pbf/11-328-791.vector.pbf.out
+	cmp tests/pbf/11-328-791.json tests/pbf/11-328-791.vector.pbf.out
+	rm tests/pbf/11-328-791.vector.pbf.out
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
