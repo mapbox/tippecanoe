@@ -370,10 +370,15 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 				char *map = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 				if (map != NULL && map != MAP_FAILED) {
 					if (strcmp(map, "SQLite format 3") != 0) {
-						std::string s = std::string(map, st.st_size);
-						handle(s, z, x, y, 1);
-						munmap(map, st.st_size);
-						return;
+						if (z >= 0) {
+							std::string s = std::string(map, st.st_size);
+							handle(s, z, x, y, 1);
+							munmap(map, st.st_size);
+							return;
+						} else {
+							fprintf(stderr, "Must specify zoom/x/y to decode a single pbf file\n");
+							exit(EXIT_FAILURE);
+						}
 					}
 				}
 				munmap(map, st.st_size);
