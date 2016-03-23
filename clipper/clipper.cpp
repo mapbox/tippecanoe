@@ -1640,13 +1640,8 @@ void Clipper::FixHoleLinkage(OutRec &outrec)
       outrec.FirstLeft->Pts)) return;
 
   OutRec* orfl = outrec.FirstLeft;
-  OutRec* first = orfl;
-  while (orfl && ((orfl->IsHole == outrec.IsHole) || !orfl->Pts)) {
+  while (orfl && ((orfl->IsHole == outrec.IsHole) || !orfl->Pts))
       orfl = orfl->FirstLeft;
-      if (orfl == first) {
-          break;
-      }
-  }
   outrec.FirstLeft = orfl;
 }
 //------------------------------------------------------------------------------
@@ -4506,37 +4501,48 @@ struct OutPtIntersect
 //-----------------------------------------------------------------------------
 
 bool Clipper::FindIntersectLoop(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
-                                std::list<std::pair<const int, OutPtIntersect> > & iList,
+                                std::list<std::pair<int, OutPtIntersect> > & iList,
                                 OutRec * outRec_parent,
                                 int idx_origin,
-                                int idx_prev,
-                                int idx_search)
+                                int idx_search,
+                                std::set<int> & visited,
+                                OutPt * orig_pt,
+                                OutPt * prev_pt)
 {
     auto range = dupeRec.equal_range(idx_search);
     // Check for direct connection
-    for (auto it = range.first; it != range.second; ++it)
+    for (auto it = range.first; it != range.second;)
     {
-        OutRec * itRec = GetOutRec(it->second.op2->Idx);
-        if (itRec->Idx == idx_prev)
+        OutRec * itRec1 = GetOutRec(it->second.op1->Idx);
+        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+        if (itRec1->Idx != idx_search || (!itRec1->IsHole && !itRec2->IsHole))
         {
+            it = dupeRec.erase(it);
             continue;
         }
-        if (itRec->Idx == idx_origin && (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)))
+        if (itRec2->Idx == idx_origin && 
+            (outRec_parent == itRec2 || outRec_parent == ParseFirstLeft(itRec2->FirstLeft)) &&
+            prev_pt->Pt != it->second.op2->Pt &&
+            orig_pt->Pt != it->second.op2->Pt)
         {
             iList.emplace_front(idx_search, it->second);
             return true;
         }
+        ++it;
     }
+    range = dupeRec.equal_range(idx_search);
+    visited.insert(idx_search);
     // Check for connection through chain of other intersections
     for (auto it = range.first; it != range.second; ++it)
     {
         OutRec * itRec = GetOutRec(it->second.op2->Idx);
-        if (itRec->Idx == idx_search || itRec->Idx == idx_prev || 
-            (outRec_parent != itRec && outRec_parent != ParseFirstLeft(itRec->FirstLeft)))
+        if (visited.count(itRec->Idx) > 0 || 
+            (outRec_parent != itRec && outRec_parent != ParseFirstLeft(itRec->FirstLeft))
+            || prev_pt->Pt == it->second.op2->Pt)
         {
             continue;
         }
-        if (FindIntersectLoop(dupeRec, iList, outRec_parent, idx_origin, idx_search, itRec->Idx))
+        if (FindIntersectLoop(dupeRec, iList, outRec_parent, idx_origin, itRec->Idx, visited, orig_pt, it->second.op2))
         {
             iList.emplace_front(idx_search, it->second);
             return true;
@@ -4598,13 +4604,19 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         return false;
     }
     bool found = false;
-    std::list<std::pair<const int, OutPtIntersect> > iList;
+    std::list<std::pair<int, OutPtIntersect> > iList;
     auto range = dupeRec.equal_range(outRec_search->Idx);
     // Check for direct connection
-    for (auto it = range.first; it != range.second; ++it)
+    for (auto it = range.first; it != range.second;)
     {
-        OutRec * itRec = GetOutRec(it->second.op2->Idx);
-        if (itRec->Idx == outRec_origin->Idx)
+        OutRec * itRec1 = GetOutRec(it->second.op1->Idx);
+        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+        if (outRec_search->Idx != itRec1->Idx || outRec_search->Idx == itRec2->Idx)
+        {
+            it = dupeRec.erase(it);
+            continue;
+        }
+        if (itRec2->Idx == outRec_origin->Idx)
         {
             found = true;
             if (op_origin_1->Pt != it->second.op2->Pt)
@@ -4613,15 +4625,21 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
                 break;
             }
         }
+        ++it;
     }
     if (!found)
     {
+        range = dupeRec.equal_range(outRec_search->Idx);
+        std::set<int> visited;
+        visited.insert(outRec_search->Idx);
         // Check for connection through chain of other intersections
         for (auto it = range.first; it != range.second; ++it)
         {
             OutRec * itRec = GetOutRec(it->second.op2->Idx);
-            if (itRec->IsHole && (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)) &&
-                FindIntersectLoop(dupeRec, iList, outRec_parent, outRec_origin->Idx, outRec_search->Idx, itRec->Idx))
+            if (itRec->Idx != outRec_search->Idx &&
+                op_origin_2->Pt != it->second.op2->Pt && 
+                (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)) &&
+                FindIntersectLoop(dupeRec, iList, outRec_parent, outRec_origin->Idx, itRec->Idx, visited, op_origin_2, it->second.op2))
             {
                 found = true;
                 iList.emplace_front(outRec_search->Idx, it->second);
@@ -4642,6 +4660,28 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
     {
         return false;
     }
+    if (outRec_origin->IsHole)
+    {
+        for (auto & iRing : iList)
+        {
+            OutRec * outRec_itr = GetOutRec(iRing.first);
+            if (!outRec_itr->IsHole)
+            {
+                // Make the hole the origin!
+                OutPt * op1 = op_origin_1;
+                op_origin_1 = iRing.second.op1;
+                iRing.second.op1 = op1;
+                OutPt * op2 = op_origin_2;
+                op_origin_2 = iRing.second.op2;
+                iRing.second.op2 = op2;
+                iRing.first = outRec_origin->Idx;
+                outRec_origin = outRec_itr;
+                outRec_parent = outRec_origin;
+                break;
+            }
+        }
+    }
+
     // Switch 
     OutPt * op_origin_1_next = op_origin_1->Next;
     OutPt * op_origin_2_next = op_origin_2->Next;
@@ -4664,7 +4704,7 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
 
     OutRec * outRec_new = CreateOutRec();
     outRec_new->IsHole = false;
-    if (outRec_origin->IsHole == ((Area(op_origin_1) > 0) && m_ReverseOutput))
+    if (outRec_origin->IsHole && ((Area(op_origin_1) < 0) ^ m_ReverseOutput))
     {
         outRec_origin->Pts = op_origin_1;
         outRec_new->Pts = op_origin_2;
@@ -4674,17 +4714,16 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         outRec_origin->Pts = op_origin_2;
         outRec_new->Pts = op_origin_1;
     }
-    
+
     UpdateOutPtIdxs(*outRec_origin);
     UpdateOutPtIdxs(*outRec_new);
     
     outRec_origin->BottomPt = 0;
 
-    std::list<std::pair<const int, OutPtIntersect> > move_list;
+    std::list<std::pair<int, OutPtIntersect> > move_list;
     for (auto iRing : iList)
     {
         OutRec * outRec_itr = GetOutRec(iRing.first);
-        int itr_idx = outRec_itr->Idx;
         outRec_itr->Pts = 0;
         outRec_itr->BottomPt = 0;
         outRec_itr->Idx = outRec_origin->Idx;
@@ -4701,22 +4740,6 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         {
             FixupFirstLefts3(outRec_itr, outRec_origin);
         }
-        auto range_itr = dupeRec.equal_range(itr_idx);
-        if (range_itr.first != range_itr.second)
-        {
-            for (auto it = range_itr.first; it != range_itr.second; ++it)
-            {
-                OutRec * itRec1 = GetOutRec(it->second.op1->Idx);
-                OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
-                if (!(itRec1->Idx == outRec_new->Idx && itRec2->Idx == outRec_origin->Idx) &&
-                     !(itRec2->Idx == outRec_new->Idx && itRec1->Idx == outRec_origin->Idx) &&
-                    (itRec1->IsHole || itRec2->IsHole))
-                {
-                    move_list.emplace_back(itRec1->Idx, it->second);
-                }
-            }
-            dupeRec.erase(itr_idx);
-        }
     }
     if (outRec_origin->IsHole)
     {
@@ -4726,23 +4749,6 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
     {
         outRec_new->FirstLeft = outRec_origin->FirstLeft;
     }
-    auto range_itr = dupeRec.equal_range(outRec_origin->Idx);
-    for (auto it = range_itr.first; it != range_itr.second;)
-    {
-        OutRec * itRec1 = GetOutRec(it->second.op1->Idx);
-        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
-        if (!(itRec1->Idx == outRec_origin->Idx) &&
-            (itRec1->IsHole || itRec2->IsHole))
-        {
-            move_list.emplace_back(itRec1->Idx, it->second);
-            it = dupeRec.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
     if (m_UsingPolyTree)
     {
         if (outRec_origin->IsHole)
@@ -4754,6 +4760,94 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
             FixupFirstLefts1(outRec_origin, outRec_new);
         }
     }
+    for (auto iRing : iList)
+    {
+        auto range_itr = dupeRec.equal_range(iRing.first);
+        if (range_itr.first != range_itr.second)
+        {
+            for (auto it = range_itr.first; it != range_itr.second; ++it)
+            {
+                OutRec * itRec = GetOutRec(it->second.op1->Idx);
+                OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+                if (itRec == itRec2) 
+                {
+                    continue;
+                }
+                OutRec * flRec;
+                OutRec * flRec2;
+                if (itRec->IsHole)
+                {
+                    flRec = ParseFirstLeft(itRec->FirstLeft);
+                }
+                else
+                {
+                    flRec = itRec;
+                }
+                if (itRec2->IsHole)
+                {
+                    flRec2 = ParseFirstLeft(itRec2->FirstLeft);
+                }
+                else
+                {
+                    flRec2 = itRec2;
+                }
+                if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+                {
+                    move_list.emplace_back(itRec->Idx, it->second);
+                }
+            }
+            dupeRec.erase(iRing.first);
+        }
+    }
+    auto range_itr = dupeRec.equal_range(outRec_origin->Idx);
+    for (auto it = range_itr.first; it != range_itr.second;)
+    {
+        OutRec * itRec = GetOutRec(it->second.op1->Idx);
+        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+        if (itRec == itRec2)
+        {
+            it = dupeRec.erase(it);
+            continue;
+        }
+        OutRec * flRec;
+        OutRec * flRec2;
+        if (itRec->IsHole)
+        {
+            flRec = ParseFirstLeft(itRec->FirstLeft);
+        }
+        else
+        {
+            flRec = itRec;
+        }
+        if (itRec2->IsHole)
+        {
+            flRec2 = ParseFirstLeft(itRec2->FirstLeft);
+        }
+        else
+        {
+            flRec2 = itRec2;
+        }
+        if (itRec->Idx != outRec_origin->Idx)
+        {
+            if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+            {
+                move_list.emplace_back(itRec->Idx, it->second);
+            }
+            it = dupeRec.erase(it);
+        }
+        else
+        {
+            if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+            {
+                ++it;
+            }
+            else
+            {
+                it = dupeRec.erase(it);
+            }
+        }
+    }
+
     if (!move_list.empty())
     {
         dupeRec.insert(move_list.begin(), move_list.end());
@@ -4771,6 +4865,7 @@ void Clipper::DoSimplePolygons()
         while (i < m_PolyOuts.size()) 
         {
             OutRec* outrec = m_PolyOuts[i++];
+            FixHoleLinkage(*outrec);
             OutPt* op = outrec->Pts;
             if (!op || outrec->IsOpen) continue;
             do
@@ -4822,6 +4917,7 @@ void Clipper::DoSimplePolygons()
                             outrec->Pts = op;
                             OutRec* outrec2 = CreateOutRec();
                             outrec2->Pts = op2;
+                            UpdateOutPtIdxs(*outrec);
                             UpdateOutPtIdxs(*outrec2);
                             if (Poly2ContainsPoly1(outrec2->Pts, outrec->Pts))
                             {
@@ -4832,15 +4928,33 @@ void Clipper::DoSimplePolygons()
                                 {
                                     FixupFirstLefts2(outrec2, outrec);
                                 }
-                                auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                auto range = dupeRec.equal_range(idx_j);
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
-                                    if (itRec->Idx != idx_k)
+                                    OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+                                    OutRec * flRec;
+                                    OutRec * flRec2;
+                                    if (itRec->IsHole)
                                     {
-                                        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
-                                        if (itRec->IsHole || itRec2->IsHole)
+                                        flRec = ParseFirstLeft(itRec->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec = itRec;
+                                    }
+                                    if (itRec2->IsHole)
+                                    {
+                                        flRec2 = ParseFirstLeft(itRec2->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec2 = itRec2;
+                                    }
+                                    if (itRec->Idx != idx_j)
+                                    {
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
                                         {
                                             move_list.emplace_back(itRec->Idx, it->second);
                                         }
@@ -4848,17 +4962,27 @@ void Clipper::DoSimplePolygons()
                                     }
                                     else
                                     {
-                                        ++it;
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+                                        {
+                                            ++it;
+                                        }
+                                        else
+                                        {
+                                            it = dupeRec.erase(it);
+                                        }
                                     }
                                 }
                                 if (!move_list.empty())
                                 {
                                     dupeRec.insert(move_list.begin(), move_list.end());
                                 }
-                                OutPtIntersect intPt1 = { op, op2 };
-                                OutPtIntersect intPt2 = { op2, op };
-                                dupeRec.emplace(idx_k, intPt1);
-                                dupeRec.emplace(outrec2->Idx, intPt2);
+                                if (!outrec->IsHole)
+                                {
+                                    OutPtIntersect intPt1 = { op, op2 };
+                                    OutPtIntersect intPt2 = { op2, op };
+                                    dupeRec.emplace(idx_j, intPt1);
+                                    dupeRec.emplace(outrec2->Idx, intPt2);
+                                }
                             }
                             else if (Poly2ContainsPoly1(outrec->Pts, outrec2->Pts))
                             {
@@ -4871,15 +4995,33 @@ void Clipper::DoSimplePolygons()
                                 {
                                     FixupFirstLefts2(outrec, outrec2);
                                 }
-                                auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                auto range = dupeRec.equal_range(idx_j);
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
-                                    if (itRec->Idx != idx_k)
+                                    OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+                                    OutRec * flRec;
+                                    OutRec * flRec2;
+                                    if (itRec->IsHole)
                                     {
-                                        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
-                                        if (itRec->IsHole || itRec2->IsHole)
+                                        flRec = ParseFirstLeft(itRec->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec = itRec;
+                                    }
+                                    if (itRec2->IsHole)
+                                    {
+                                        flRec2 = ParseFirstLeft(itRec2->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec2 = itRec2;
+                                    }
+                                    if (itRec->Idx != idx_j)
+                                    {
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
                                         {
                                             move_list.emplace_back(itRec->Idx, it->second);
                                         }
@@ -4887,17 +5029,27 @@ void Clipper::DoSimplePolygons()
                                     }
                                     else
                                     {
-                                        ++it;
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+                                        {
+                                            ++it;
+                                        }
+                                        else
+                                        {
+                                            it = dupeRec.erase(it);
+                                        }
                                     }
                                 }
                                 if (!move_list.empty())
                                 {
                                     dupeRec.insert(move_list.begin(), move_list.end());
                                 }
-                                OutPtIntersect intPt1 = { op, op2 };
-                                OutPtIntersect intPt2 = { op2, op };
-                                dupeRec.emplace(idx_k, intPt1);
-                                dupeRec.emplace(outrec2->Idx, intPt2);
+                                if (!outrec2->IsHole)
+                                {
+                                    OutPtIntersect intPt1 = { op, op2 };
+                                    OutPtIntersect intPt2 = { op2, op };
+                                    dupeRec.emplace(idx_j, intPt1);
+                                    dupeRec.emplace(outrec2->Idx, intPt2);
+                                }
                             }
                             else
                             {
@@ -4908,15 +5060,33 @@ void Clipper::DoSimplePolygons()
                                 {
                                     FixupFirstLefts1(outrec, outrec2);
                                 }
-                                auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                auto range = dupeRec.equal_range(idx_j);
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
-                                    if (itRec->Idx != idx_k)
+                                    OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
+                                    OutRec * flRec;
+                                    OutRec * flRec2;
+                                    if (itRec->IsHole)
                                     {
-                                        OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
-                                        if (itRec->IsHole || itRec2->IsHole)
+                                        flRec = ParseFirstLeft(itRec->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec = itRec;
+                                    }
+                                    if (itRec2->IsHole)
+                                    {
+                                        flRec2 = ParseFirstLeft(itRec2->FirstLeft);
+                                    }
+                                    else
+                                    {
+                                        flRec2 = itRec2;
+                                    }
+                                    if (itRec->Idx != idx_j)
+                                    {
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
                                         {
                                             move_list.emplace_back(itRec->Idx, it->second);
                                         }
@@ -4924,7 +5094,14 @@ void Clipper::DoSimplePolygons()
                                     }
                                     else
                                     {
-                                        ++it;
+                                        if ((itRec->IsHole || itRec2->IsHole) && (flRec == flRec2))
+                                        {
+                                            ++it;
+                                        }
+                                        else
+                                        {
+                                            it = dupeRec.erase(it);
+                                        }
                                     }
                                 }
                                 if (!move_list.empty())
@@ -4935,7 +5112,7 @@ void Clipper::DoSimplePolygons()
                                 {
                                     OutPtIntersect intPt1 = { op, op2 };
                                     OutPtIntersect intPt2 = { op2, op };
-                                    dupeRec.emplace(idx_k, intPt1);
+                                    dupeRec.emplace(idx_j, intPt1);
                                     dupeRec.emplace(outrec2->Idx, intPt2);
                                 }
                             }
