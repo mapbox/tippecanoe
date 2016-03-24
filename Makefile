@@ -3,9 +3,9 @@ MANDIR ?= $(PREFIX)/share/man/man1/
 
 # inherit from env if set
 CC := $(CC)
-CXX := $(CXX) -std=c++11
+CXX := $(CXX)
 CFLAGS := $(CFLAGS)
-CXXFLAGS := $(CXXFLAGS)
+CXXFLAGS := $(CXXFLAGS) -std=c++11
 LDFLAGS := $(LDFLAGS)
 
 all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join

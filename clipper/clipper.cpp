@@ -4865,7 +4865,6 @@ void Clipper::DoSimplePolygons()
         while (i < m_PolyOuts.size()) 
         {
             OutRec* outrec = m_PolyOuts[i++];
-            FixHoleLinkage(*outrec);
             OutPt* op = outrec->Pts;
             if (!op || outrec->IsOpen) continue;
             do
