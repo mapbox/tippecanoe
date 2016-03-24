@@ -208,17 +208,48 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
+double get_area(drawvec &geom, int i, int j) {
+	double area = 0;
+	for (unsigned k = i; k < j; k++) {
+		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+	}
+	area /= 2;
+	return area;
+}
+
+void reverse_ring(drawvec &geom, int start, int end) {
+	drawvec tmp;
+
+	for (unsigned i = start; i < end; i++) {
+		tmp.push_back(geom[i]);
+	}
+
+	for (unsigned i = start; i < end; i++) {
+		geom[i] = tmp[end - 1 - i];
+		if (i == start) {
+			geom[i].op = VT_MOVETO;
+		} else if (i == end - 1) {
+			geom[i].op = VT_LINETO;
+		}
+	}
+}
+
 static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// To make the GeoJSON come out right, we need to do each of the
 	// outer rings followed by its children if any, and then go back
 	// to do any outer-ring children of those children as a new top level.
 
 	ClipperLib::Path p = t->Contour;
+	unsigned before = out.size();
 	for (unsigned i = 0; i < p.size(); i++) {
 		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 	}
 	if (p.size() > 0) {
 		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+	}
+	if (get_area(out, before, out.size()) < 0) {
+		reverse_ring(out, before, out.size());
 	}
 
 	for (int n = 0; n < t->ChildCount(); n++) {
@@ -228,6 +259,10 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 		}
 		if (p.size() > 0) {
 			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		}
+		unsigned before = out.size();
+		if (get_area(out, before, out.size()) > 0) {
+			reverse_ring(out, before, out.size());
 		}
 	}
 
