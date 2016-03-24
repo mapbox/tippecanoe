@@ -1029,6 +1029,12 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 
 		for (unsigned i = 0; i < geoms.size(); i++) {
 			if (geoms[i].size() > 700) {
+				static bool warned = false;
+				if (!warned) {
+					fprintf(stderr, "Warning: splitting up polygon with more than 700 sides\n");
+					warned = true;
+				}
+
 				long long midx = 0, midy = 0, count = 0;
 				long long maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
 
