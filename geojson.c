@@ -800,7 +800,7 @@ struct jsonmap {
 	long long end;
 };
 
-int json_map_read(struct json_pull *jp, char *buffer, int n) {
+ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	struct jsonmap *jm = jp->source;
 
 	if (jm->off + n >= jm->end) {
