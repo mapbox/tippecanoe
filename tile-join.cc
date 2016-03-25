@@ -311,7 +311,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 				mapnik::vector::tile_feature *outfeature = outlayer->add_features();
 				outfeature->set_type(feat.type());
 
-				for (size_t g = 0; g < feat.geometry_size(); g++) {
+				for (int g = 0; g < feat.geometry_size(); g++) {
 					outfeature->add_geometry(feat.geometry(g));
 				}
 
