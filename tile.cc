@@ -165,8 +165,7 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-	unsigned i;
-	for (i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
+	for (size_t i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
 		cmp = c1->meta[i] - c2->meta[i];
 
 		if (cmp != 0) {
@@ -293,8 +292,7 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 		layer->set_version(1);
 		layer->set_extent(1 << line_detail);
 
-		unsigned x;
-		for (x = 0; x < features[i].size(); x++) {
+		for (size_t x = 0; x < features[i].size(); x++) {
 			if (features[i][x].type == VT_LINE || features[i][x].type == VT_POLYGON) {
 				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
 			}
@@ -314,8 +312,7 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 			to_feature(features[i][x].geom, feature);
 			*count += features[i][x].geom.size();
 
-			unsigned y;
-			for (y = 0; y < features[i][x].meta.size(); y++) {
+			for (size_t y = 0; y < features[i][x].meta.size(); y++) {
 				feature->add_tags(features[i][x].meta[y]);
 			}
 		}
@@ -452,7 +449,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
 
-					for (unsigned u = 0; u < geom.size(); u++) {
+					for (size_t u = 0; u < geom.size(); u++) {
 						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 						if (geom[u].op != VT_CLOSEPATH) {
@@ -498,7 +495,7 @@ void *partial_feature_worker(void *v) {
 	struct partial_arg *a = (struct partial_arg *) v;
 	std::vector<struct partial> *partials = a->partials;
 
-	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
+	for (size_t i = a->task; i < (*partials).size(); i += a->tasks) {
 		drawvec geom = (*partials)[i].geoms[0];  // XXX assumption of a single geometry at the beginning
 		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
@@ -540,7 +537,7 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
-			for (unsigned i = 0; i < geoms.size(); i++) {
+			for (size_t i = 0; i < geoms.size(); i++) {
 				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
 				geoms[i] = close_poly(geoms[i]);
 			}
@@ -733,16 +730,16 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					// If the geometry extends off the edge of the world, concatenate on another copy
 					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
-					unsigned n = geom.size();
+					size_t n = geom.size();
 
 					if (bbox[0] < 0) {
-						for (unsigned i = 0; i < n; i++) {
+						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
 						}
 					}
 
 					if (bbox[2] > 1LL << 32) {
-						for (unsigned i = 0; i < n; i++) {
+						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
 						}
 					}
@@ -873,7 +870,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		// This is serial because decode_meta() unifies duplicates
-		for (unsigned i = 0; i < partials.size(); i++) {
+		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> geoms = partials[i].geoms;
 			partials[i].geoms.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
@@ -883,7 +880,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
-			for (unsigned j = 0; j < geoms.size(); j++) {
+			for (size_t j = 0; j < geoms.size(); j++) {
 				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
 					struct coalesce c;
 					char *meta = partials[i].meta;
@@ -915,9 +912,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			std::vector<coalesce> out;
-			unsigned x;
-			for (x = 0; x < features[j].size(); x++) {
-				unsigned y = out.size() - 1;
+			for (size_t x = 0; x < features[j].size(); x++) {
+				size_t y = out.size() - 1;
 
 #if 0
 				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
@@ -926,8 +922,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 #endif
 
 				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
-					unsigned z;
-					for (z = 0; z < features[j][x].geom.size(); z++) {
+					for (size_t z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
 					}
 					out[y].coalesced = true;
@@ -939,7 +934,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			features[j] = out;
 
 			out.clear();
-			for (x = 0; x < features[j].size(); x++) {
+			for (size_t x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);

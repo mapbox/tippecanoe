@@ -196,7 +196,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				uint32_t count = geom >> 3;
 
 				if (op == VT_MOVETO || op == VT_LINETO) {
-					for (unsigned k = 0; k < count; k++) {
+					for (size_t k = 0; k < count; k++) {
 						px += dezig(feat.geometry(g + 1));
 						py += dezig(feat.geometry(g + 2));
 						g += 2;
@@ -220,7 +220,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					printf("\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
 				} else {
 					printf("\"type\": \"MultiPoint\", \"coordinates\": [ ");
-					for (unsigned i = 0; i < ops.size(); i++) {
+					for (size_t i = 0; i < ops.size(); i++) {
 						if (i != 0) {
 							printf(", ");
 						}
@@ -230,7 +230,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				}
 			} else if (feat.type() == VT_LINE) {
 				int movetos = 0;
-				for (unsigned i = 0; i < ops.size(); i++) {
+				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
 						movetos++;
 					}
@@ -238,7 +238,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				if (movetos < 2) {
 					printf("\"type\": \"LineString\", \"coordinates\": [ ");
-					for (unsigned i = 0; i < ops.size(); i++) {
+					for (size_t i = 0; i < ops.size(); i++) {
 						if (i != 0) {
 							printf(", ");
 						}
@@ -248,7 +248,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				} else {
 					printf("\"type\": \"MultiLineString\", \"coordinates\": [ [ ");
 					int state = 0;
-					for (unsigned i = 0; i < ops.size(); i++) {
+					for (size_t i = 0; i < ops.size(); i++) {
 						if (ops[i].op == VT_MOVETO) {
 							if (state == 0) {
 								printf("[ %f, %f ]", ops[i].lon, ops[i].lat);
@@ -268,7 +268,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				std::vector<std::vector<draw> > rings;
 				std::vector<double> areas;
 
-				for (unsigned i = 0; i < ops.size(); i++) {
+				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
 						rings.push_back(std::vector<draw>());
 						areas.push_back(0);
@@ -282,9 +282,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				int outer = 0;
 
-				for (unsigned i = 0; i < rings.size(); i++) {
+				for (size_t i = 0; i < rings.size(); i++) {
 					double area = 0;
-					for (unsigned k = 0; k < rings[i].size(); k++) {
+					for (size_t k = 0; k < rings[i].size(); k++) {
 						if (rings[i][k].op != VT_CLOSEPATH) {
 							area += rings[i][k].lon * rings[i][(k + 1) % rings[i].size()].lat;
 							area -= rings[i][k].lat * rings[i][(k + 1) % rings[i].size()].lon;
@@ -306,7 +306,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				}
 
 				int state = 0;
-				for (unsigned i = 0; i < rings.size(); i++) {
+				for (size_t i = 0; i < rings.size(); i++) {
 					if (areas[i] <= 0) {
 						if (state != 0) {
 							// new multipolygon
@@ -320,7 +320,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 						printf(" ], [ ");
 					}
 
-					for (unsigned j = 0; j < rings[i].size(); j++) {
+					for (size_t j = 0; j < rings[i].size(); j++) {
 						if (rings[i][j].op != VT_CLOSEPATH) {
 							if (j != 0) {
 								printf(", ");

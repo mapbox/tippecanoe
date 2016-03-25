@@ -247,7 +247,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						std::vector<std::string> fields = ii->second;
 						matched = 1;
 
-						for (unsigned i = 1; i < fields.size(); i++) {
+						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
 							int type = VT_STRING;
@@ -311,11 +311,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 				mapnik::vector::tile_feature *outfeature = outlayer->add_features();
 				outfeature->set_type(feat.type());
 
-				for (int g = 0; g < feat.geometry_size(); g++) {
+				for (size_t g = 0; g < feat.geometry_size(); g++) {
 					outfeature->add_geometry(feat.geometry(g));
 				}
 
-				for (unsigned i = 0; i < feature_tags.size(); i++) {
+				for (size_t i = 0; i < feature_tags.size(); i++) {
 					outfeature->add_tags(feature_tags[i]);
 				}
 
@@ -485,8 +485,7 @@ std::vector<std::string> split(char *s) {
 
 std::string dequote(std::string s) {
 	std::string out;
-	unsigned i;
-	for (i = 0; i < s.size(); i++) {
+	for (size_t i = 0; i < s.size(); i++) {
 		if (s[i] == '"') {
 			if (i + 1 < s.size() && s[i + 1] == '"') {
 				out.push_back('"');
@@ -509,7 +508,7 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	if (fgets(s, MAXLINE, f)) {
 		header = split(s);
 
-		for (unsigned i = 0; i < header.size(); i++) {
+		for (size_t i = 0; i < header.size(); i++) {
 			header[i] = dequote(header[i]);
 		}
 	}
@@ -519,7 +518,7 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 			line[0] = dequote(line[0]);
 		}
 
-		for (unsigned i = 0; i < line.size() && i < header.size(); i++) {
+		for (size_t i = 0; i < line.size() && i < header.size(); i++) {
 			// printf("putting %s\n", line[0].c_str());
 			mapping.insert(std::pair<std::string, std::vector<std::string> >(line[0], line));
 		}

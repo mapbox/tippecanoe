@@ -77,9 +77,7 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 }
 
 void to_tile_scale(drawvec &geom, int z, int detail) {
-	unsigned i;
-
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		geom[i].x >>= (32 - detail - z);
 		geom[i].y >>= (32 - detail - z);
 	}
@@ -90,9 +88,8 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 
 	long long x = 0, y = 0;
 	drawvec out;
-	unsigned i;
 
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO && (geom[i].x >> shift) == x && (geom[i].y >> shift) == y) {
 			continue;
 		}
@@ -112,7 +109,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		geom = out;
 		out.resize(0);
 
-		for (i = 0; i < geom.size(); i++) {
+		for (size_t i = 0; i < geom.size(); i++) {
 			if (geom[i].op == VT_MOVETO) {
 				if (i + 1 >= geom.size()) {
 					continue;
@@ -139,7 +136,7 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 		geom = out;
 		out.resize(0);
 
-		for (i = 0; i < geom.size(); i++) {
+		for (size_t i = 0; i < geom.size(); i++) {
 			if (geom[i].op == VT_MOVETO) {
 				if (i > 0 && geom[i - 1].op == VT_LINETO && (geom[i - 1].x >> shift) == (geom[i].x >> shift) && (geom[i - 1].y >> shift) == (geom[i].y >> shift)) {
 					continue;
@@ -159,10 +156,9 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 	long long res = 200LL << (32 - 8 - z);
 	long long portion = res / exp(log(sqrt(droprate)) * (basezoom - z));
 
-	unsigned i;
 	drawvec out;
 
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
 			double dx = (geom[i].x - geom[i - 1].x);
 			double dy = (geom[i].y - geom[i - 1].y);
@@ -214,7 +210,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// to do any outer-ring children of those children as a new top level.
 
 	ClipperLib::Path p = t->Contour;
-	for (unsigned i = 0; i < p.size(); i++) {
+	for (size_t i = 0; i < p.size(); i++) {
 		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 	}
 	if (p.size() > 0) {
@@ -223,7 +219,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 
 	for (int n = 0; n < t->ChildCount(); n++) {
 		ClipperLib::Path p = t->Childs[n]->Contour;
-		for (unsigned i = 0; i < p.size(); i++) {
+		for (size_t i = 0; i < p.size(); i++) {
 			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 		}
 		if (p.size() > 0) {
@@ -243,9 +239,9 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 	bool has_area = false;
 
-	for (unsigned i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -253,7 +249,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 			}
 
 			double area = 0;
-			for (unsigned k = i; k < j; k++) {
+			for (size_t k = i; k < j; k++) {
 				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
 				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
 			}
@@ -265,14 +261,14 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 			ClipperLib::Path path;
 
 			drawvec tmp;
-			for (unsigned k = i; k < j; k++) {
+			for (size_t k = i; k < j; k++) {
 				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
 
 			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
 #if 0
 				fprintf(stderr, "Couldn't add polygon for clipping:");
-				for (unsigned k = i; k < j; k++) {
+				for (size_t k = i; k < j; k++) {
 					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
 				}
 				fprintf(stderr, "\n");
@@ -331,9 +327,9 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 drawvec close_poly(drawvec &geom) {
 	drawvec out;
 
-	for (unsigned i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -346,7 +342,7 @@ drawvec close_poly(drawvec &geom) {
 				}
 			}
 
-			for (unsigned n = i; n < j - 1; n++) {
+			for (size_t n = i; n < j - 1; n++) {
 				out.push_back(geom[n]);
 			}
 			out.push_back(draw(VT_CLOSEPATH, 0, 0));
@@ -425,7 +421,7 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 
 			draw S = in[in.size() - 1];
 
-			for (unsigned e = 0; e < in.size(); e++) {
+			for (size_t e = 0; e < in.size(); e++) {
 				draw E = in[e];
 
 				if (inside(E, edge, minx, miny, maxx, maxy)) {
@@ -459,7 +455,7 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 		}
 
 		out[0].op = VT_MOVETO;
-		for (unsigned i = 1; i < out.size(); i++) {
+		for (size_t i = 1; i < out.size(); i++) {
 			out[i].op = VT_LINETO;
 		}
 	}
@@ -470,9 +466,9 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out;
 
-	for (unsigned i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -480,7 +476,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 			}
 
 			drawvec tmp;
-			for (unsigned k = i; k < j; k++) {
+			for (size_t k = i; k < j; k++) {
 				tmp.push_back(geom[k]);
 			}
 			tmp = clip_poly1(tmp, minx, miny, maxx, maxy);
@@ -490,7 +486,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 					exit(EXIT_FAILURE);
 				}
 			}
-			for (unsigned k = 0; k < tmp.size(); k++) {
+			for (size_t k = 0; k < tmp.size(); k++) {
 				out.push_back(tmp[k]);
 			}
 
@@ -522,9 +518,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	*reduced = true;
 	bool included_last_outer = false;
 
-	for (unsigned i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -532,7 +528,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 			}
 
 			double area = 0;
-			for (unsigned k = i; k < j; k++) {
+			for (size_t k = i; k < j; k++) {
 				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
 				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
 			}
@@ -571,7 +567,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				} else {
 					// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
 
-					for (unsigned k = i; k <= j && k < geom.size(); k++) {
+					for (size_t k = i; k <= j && k < geom.size(); k++) {
 						out.push_back(geom[k]);
 					}
 
@@ -587,7 +583,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 		} else {
 			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
 
-			for (unsigned n = 0; n < geom.size(); n++) {
+			for (size_t n = 0; n < geom.size(); n++) {
 				fprintf(stderr, "%d/%lld/%lld ", geom[n].op, geom[n].x, geom[n].y);
 			}
 			fprintf(stderr, "\n");
@@ -601,7 +597,6 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
-	unsigned i;
 
 	long long min = 0;
 	long long area = 0xFFFFFFFF;
@@ -612,7 +607,7 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 		area += buffer * area / 256;
 	}
 
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].x >= min && geom[i].y >= min && geom[i].x <= area && geom[i].y <= area) {
 			out.push_back(geom[i]);
 		}
@@ -650,7 +645,6 @@ int quick_check(long long *bbox, int z, int detail, long long buffer) {
 
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
-	unsigned i;
 
 	long long min = 0;
 	long long area = 0xFFFFFFFF;
@@ -661,7 +655,7 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 		area += buffer * area / 256;
 	}
 
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
@@ -773,7 +767,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	drawvec out;
 
-	for (unsigned i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (i > 0 && geom[i].op == VT_LINETO && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO)) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
@@ -808,8 +802,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		area = 1LL << (32 - z);
 	}
 
-	unsigned i;
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			geom[i].necessary = 1;
 		} else if (geom[i].op == VT_LINETO) {
@@ -821,9 +814,9 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 
 	geom = impose_tile_boundaries(geom, area);
 
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -839,7 +832,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 	}
 
 	drawvec out;
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].necessary) {
 			out.push_back(geom[i]);
 		}
@@ -855,8 +848,7 @@ drawvec reorder_lines(drawvec &geom) {
 		return geom;
 	}
 
-	unsigned i;
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			if (i != 0) {
 				return geom;
@@ -879,7 +871,7 @@ drawvec reorder_lines(drawvec &geom) {
 
 	if (l1 > l2) {
 		drawvec out;
-		for (i = 0; i < geom.size(); i++) {
+		for (size_t i = 0; i < geom.size(); i++) {
 			out.push_back(geom[geom.size() - 1 - i]);
 		}
 		out[0].op = VT_MOVETO;
@@ -894,14 +886,13 @@ drawvec fix_polygon(drawvec &geom) {
 	int outer = 1;
 	drawvec out;
 
-	unsigned i;
-	for (i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_CLOSEPATH) {
 			outer = 1;
 		} else if (geom[i].op == VT_MOVETO) {
 			// Find the end of the ring
 
-			unsigned j;
+			size_t j;
 			for (j = i + 1; j < geom.size(); j++) {
 				if (geom[j].op != VT_LINETO) {
 					break;
@@ -912,7 +903,7 @@ drawvec fix_polygon(drawvec &geom) {
 			// Close it if it isn't closed.
 
 			drawvec ring;
-			for (unsigned a = i; a < j; a++) {
+			for (size_t a = i; a < j; a++) {
 				ring.push_back(geom[a]);
 			}
 			if (j - i != 0 && (ring[0].x != ring[j - i - 1].x || ring[0].y != ring[j - i - 1].y)) {
@@ -923,7 +914,7 @@ drawvec fix_polygon(drawvec &geom) {
 			// inner/outer expectation
 
 			double area = 0;
-			for (unsigned k = 0; k < ring.size(); k++) {
+			for (size_t k = 0; k < ring.size(); k++) {
 				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
 				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
 			}
@@ -939,7 +930,7 @@ drawvec fix_polygon(drawvec &geom) {
 			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
 			// reversal or closing
 
-			for (unsigned a = 0; a < ring.size(); a++) {
+			for (size_t a = 0; a < ring.size(); a++) {
 				if (a == 0) {
 					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
 				} else {
@@ -966,12 +957,12 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 		bool again = false;
 		std::vector<drawvec> out;
 
-		for (unsigned i = 0; i < geoms.size(); i++) {
+		for (size_t i = 0; i < geoms.size(); i++) {
 			if (geoms[i].size() > 700) {
 				long long midx = 0, midy = 0, count = 0;
 				long long maxx = LONG_LONG_MIN, maxy = LONG_LONG_MIN, minx = LONG_LONG_MAX, miny = LONG_LONG_MAX;
 
-				for (unsigned j = 0; j < geoms[i].size(); j++) {
+				for (size_t j = 0; j < geoms[i].size(); j++) {
 					if (geoms[i][j].op == VT_MOVETO || geoms[i][j].op == VT_LINETO) {
 						midx += geoms[i][j].x;
 						midy += geoms[i][j].y;
