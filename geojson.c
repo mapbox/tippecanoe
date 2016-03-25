@@ -28,11 +28,11 @@
 #include "version.h"
 #include "memfile.h"
 
-int low_detail = 12;
-int full_detail = -1;
-int min_detail = 7;
-int quiet = 0;
+static int low_detail = 12;
+static int full_detail = -1;
+static int min_detail = 7;
 
+int quiet = 0;
 int geometry_scale = 0;
 
 #define GEOM_POINT 0	   /* array of positions */
@@ -43,11 +43,11 @@ int geometry_scale = 0;
 #define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
-const char *geometry_names[GEOM_TYPES] = {
+static const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
 };
 
-int geometry_within[GEOM_TYPES] = {
+static int geometry_within[GEOM_TYPES] = {
 	-1,		 /* point */
 	GEOM_POINT,      /* multipoint */
 	GEOM_POINT,      /* linestring */
@@ -56,7 +56,7 @@ int geometry_within[GEOM_TYPES] = {
 	GEOM_POLYGON,    /* multipolygon */
 };
 
-int mb_geometry[GEOM_TYPES] = {
+static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
@@ -146,7 +146,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 
 	int within = geometry_within[t];
 	if (within >= 0) {
-		int i;
+		size_t i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
 				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {

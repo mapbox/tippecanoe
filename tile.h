@@ -31,7 +31,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 int manage_gap(unsigned long long index, unsigned long long *previndex, double scale, double gamma, double *gap);
 
-extern unsigned initial_x, initial_y;
 extern int geometry_scale;
 extern int quiet;
 
