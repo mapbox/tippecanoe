@@ -815,6 +815,10 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 
 struct json_pull *json_begin_map(char *map, long long len) {
 	struct jsonmap *jm = malloc(sizeof(struct jsonmap));
+	if (jm == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	jm->map = map;
 	jm->off = 0;
@@ -1046,6 +1050,11 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	*is_parsing = 1;
 
 	struct read_parallel_arg *rpa = malloc(sizeof(struct read_parallel_arg));
+	if (rpa == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
+
 	rpa->fd = fd;
 	rpa->fp = fp;
 	rpa->offset = offset;
@@ -1087,6 +1096,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
 		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
 		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
+
+		if (r->metaname == NULL || r->poolname == NULL || r->treename == NULL || r->geomname == NULL || r->indexname == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 
 		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
@@ -1162,6 +1176,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		r->file_bbox = malloc(4 * sizeof(long long));
+		if (r->file_bbox == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
@@ -1364,6 +1382,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	for (i = 0; i < nlayers; i++) {
 		if (layername != NULL) {
 			layernames[i] = strdup(layername);
+			if (layernames[i] == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
 		} else {
 			char *src = argv[i];
 			if (argc < 1) {
@@ -1371,6 +1393,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			char *trunc = layernames[i] = malloc(strlen(src) + 1);
+			if (trunc == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+
 			const char *ocp, *use = src;
 			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {

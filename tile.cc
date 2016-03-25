@@ -232,7 +232,12 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 			}
 
 			// Dup to retain after munmap
-			pool(file_keys, strdup(key->s), value->type);
+			char *copy = strdup(key->s);
+			if (copy == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+			pool(file_keys, copy, value->type);
 
 			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
@@ -1109,6 +1114,10 @@ void *run_thread(void *vargs) {
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
+				if (err == NULL) {
+					perror("Out of memory");
+					exit(EXIT_FAILURE);
+				}
 				*err = z - 1;
 				return err;
 			}
