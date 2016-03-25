@@ -30,6 +30,7 @@ install:
        export LDFLAGS="--coverage";
    elif [[ $(uname -s) == 'Linux' ]]; then
        export CXX=clang++;
+       export CXXFLAGS="-stdlib=libc++";
    fi;
  - make
 
