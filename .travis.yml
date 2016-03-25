@@ -15,7 +15,7 @@ matrix:
       compiler: clang
       addons:
         apt:
-          packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+          packages: [ 'protobuf-compiler', 'libprotobuf-dev', 'libc++-dev' ]
     - os: osx
       compiler: clang
 
