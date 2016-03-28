@@ -57,35 +57,36 @@ Options
 
 ### Naming
 
- * -l _name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
+ * -l _name_ or --layer=_name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
    specified, the files are all merged into the single named layer.
- * -n _name_: Human-readable name (default file.json)
+ * -n _name_ or --name=_name_: Human-readable name (default file.json)
 
 ### File control
 
- * -o _file_.mbtiles: Name the output file.
- * -f: Delete the mbtiles file if it already exists instead of giving an error
- * -F: Proceed (without deleting existing data) if the metadata or tiles table already exists
+ * -o _file_.mbtiles or --output=_file_.mbtiles: Name the output file.
+ * -f or --force: Delete the mbtiles file if it already exists instead of giving an error
+ * -F or --allow-existing: Proceed (without deleting existing data) if the metadata or tiles table already exists
    or if metadata fields can't be set
- * -t _directory_: Put the temporary files in _directory_.
- * -P: Use multiple threads to read different parts of each input file at once.
+ * -t _directory_ or --temporary-directory=_directory_: Put the temporary files in _directory_.
+ * -P or --read-parallel: Use multiple threads to read different parts of each input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
-   own line, because it knows nothing of the top-level structure around the Features.
+   own line, because it knows nothing of the top-level structure around the Features. Spurious "EOF" error
+   messages may result otherwise.
    Performance will be better if the input is a named file that can be mapped into memory
    rather than a stream that can only be read sequentially.
 
 ### Zoom levels and resolution
 
- * -z _zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
- * -Z _zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
- * -B _zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+ * -z _zoom_ or --maximum-zoom=_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+ * -Z _zoom_ or --minimum-zoom=_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+ * -B _zoom_ or --base-zoom=_zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
    If you use -Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with -Bg*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or -Bf*number* to allow at most *number* features in the densest tile.
- * -d _detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
- * -D _detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
- * -m _detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
- * -b _pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
+ * -d _detail_ or --full-detail=_detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
+ * -D _detail_ or --low-detail=_detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
+ * -m _detail_ or --minimum-detail=_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
+ * -b _pixels_ or --buffer=_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
@@ -93,35 +94,35 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Properties
 
- * -x _name_: Exclude the named properties from all features
- * -y _name_: Include the named properties in all features, excluding all those not explicitly named
- * -X: Exclude all properties and encode only geometries
+ * -x _name_ or --exclude=_name_: Exclude the named properties from all features
+ * -y _name_ or --include=_name_: Include the named properties in all features, excluding all those not explicitly named
+ * -X or --exclude-all: Exclude all properties and encode only geometries
 
 ### Point simplification
 
- * -r _rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+ * -r _rate_ or --drop_rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
    If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with -rg*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
- * -g _gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+ * -g _gamma_ or --gamma=_gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
 ### Doing more
 
- * -ac: Coalesce adjacent line and polygon features that have the same properties
- * -ar: Try reversing the directions of lines to make them coalesce and compress better
- * -ao: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
- * -al: Let "dot" dropping at lower zooms apply to lines too
+ * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties
+ * -ar or --reverse: Try reversing the directions of lines to make them coalesce and compress better
+ * -ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
+ * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
 
 ### Doing less
 
- * -ps: Don't simplify lines
- * -pS: Don't simplify lines at maxzoom (but do simplify at lower zooms)
- * -pf: Don't limit tiles to 200,000 features
- * -pk: Don't limit tiles to 500K bytes
- * -pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
- * -pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
- * -pp: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
- * -q: Work quietly instead of reporting progress
+ * -ps or --no-line-simplification: Don't simplify lines
+ * -pS or --simplify-only-low-zooms: Don't simplify lines at maxzoom (but do simplify at lower zooms)
+ * -pf or --no-feature-limit: Don't limit tiles to 200,000 features
+ * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
+ * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+ * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
+ * -pp or --no-polygon-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+ * -q or --quiet: Work quietly instead of reporting progress
 
 Example
 -------

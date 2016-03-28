@@ -8,8 +8,12 @@
 
 #define BUFFER 10000
 
-json_pull *json_begin(int (*read)(struct json_pull *, char *buffer, int n), void *source) {
+json_pull *json_begin(ssize_t (*read)(struct json_pull *, char *buffer, size_t n), void *source) {
 	json_pull *j = malloc(sizeof(json_pull));
+	if (j == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	j->error = NULL;
 	j->line = 1;
@@ -18,9 +22,14 @@ json_pull *json_begin(int (*read)(struct json_pull *, char *buffer, int n), void
 
 	j->read = read;
 	j->source = source;
-	j->buffer = malloc(BUFFER);
 	j->buffer_head = 0;
 	j->buffer_tail = 0;
+
+	j->buffer = malloc(BUFFER);
+	if (j->buffer == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	return j;
 }
@@ -51,7 +60,7 @@ static inline int next(json_pull *j) {
 	}
 }
 
-static int read_file(json_pull *j, char *buffer, int n) {
+static ssize_t read_file(json_pull *j, char *buffer, size_t n) {
 	return fread(buffer, 1, n, j->source);
 }
 
@@ -59,7 +68,7 @@ json_pull *json_begin_file(FILE *f) {
 	return json_begin(read_file, f);
 }
 
-static int read_string(json_pull *j, char *buffer, int n) {
+static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
 	char *cp = j->source;
 	int out = 0;
 
@@ -91,10 +100,14 @@ static inline int read_wrap(json_pull *j) {
 	return c;
 }
 
-#define SIZE_FOR(i) (((i) + 31) & ~31)
+#define SIZE_FOR(i, size) ((size_t)((((i) + 31) & ~31) * size))
 
 static json_object *fabricate_object(json_object *parent, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
+	if (o == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 	o->type = type;
 	o->parent = parent;
 	o->array = NULL;
@@ -111,8 +124,16 @@ static json_object *add_object(json_pull *j, json_type type) {
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
 			if (c->expect == JSON_ITEM) {
-				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
-					c->array = realloc(c->array, SIZE_FOR(c->length + 1) * sizeof(json_object *));
+				if (SIZE_FOR(c->length + 1, sizeof(json_object *)) != SIZE_FOR(c->length, sizeof(json_object *))) {
+					if (SIZE_FOR(c->length + 1, sizeof(json_object *)) < SIZE_FOR(c->length, sizeof(json_object *))) {
+						fprintf(stderr, "Array size overflow\n");
+						exit(EXIT_FAILURE);
+					}
+					c->array = realloc(c->array, SIZE_FOR(c->length + 1, sizeof(json_object *)));
+					if (c->array == NULL) {
+						perror("Out of memory");
+						exit(EXIT_FAILURE);
+					}
 				}
 
 				c->array[c->length++] = o;
@@ -133,9 +154,17 @@ static json_object *add_object(json_pull *j, json_type type) {
 					return NULL;
 				}
 
-				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
-					c->keys = realloc(c->keys, SIZE_FOR(c->length + 1) * sizeof(json_object *));
-					c->values = realloc(c->values, SIZE_FOR(c->length + 1) * sizeof(json_object *));
+				if (SIZE_FOR(c->length + 1, sizeof(json_object *)) != SIZE_FOR(c->length, sizeof(json_object *))) {
+					if (SIZE_FOR(c->length + 1, sizeof(json_object *)) < SIZE_FOR(c->length, sizeof(json_object *))) {
+						fprintf(stderr, "Hash size overflow\n");
+						exit(EXIT_FAILURE);
+					}
+					c->keys = realloc(c->keys, SIZE_FOR(c->length + 1, sizeof(json_object *)));
+					c->values = realloc(c->values, SIZE_FOR(c->length + 1, sizeof(json_object *)));
+					if (c->keys == NULL || c->values == NULL) {
+						perror("Out of memory");
+						exit(EXIT_FAILURE);
+					}
 				}
 
 				c->keys[c->length] = o;
@@ -160,7 +189,7 @@ json_object *json_hash_get(json_object *o, const char *s) {
 		return NULL;
 	}
 
-	int i;
+	size_t i;
 	for (i = 0; i < o->length; i++) {
 		if (o->keys[i] != NULL && o->keys[i]->type == JSON_STRING) {
 			if (strcmp(o->keys[i]->string, s) == 0) {
@@ -174,21 +203,34 @@ json_object *json_hash_get(json_object *o, const char *s) {
 
 struct string {
 	char *buf;
-	int n;
-	int nalloc;
+	size_t n;
+	size_t nalloc;
 };
 
 static void string_init(struct string *s) {
 	s->nalloc = 500;
 	s->buf = malloc(s->nalloc);
+	if (s->buf == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 	s->n = 0;
 	s->buf[0] = '\0';
 }
 
 static void string_append(struct string *s, char c) {
 	if (s->n + 2 >= s->nalloc) {
+		size_t prev = s->nalloc;
 		s->nalloc += 500;
+		if (s->nalloc <= prev) {
+			fprintf(stderr, "String size overflowed\n");
+			exit(EXIT_FAILURE);
+		}
 		s->buf = realloc(s->buf, s->nalloc);
+		if (s->buf == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	s->buf[s->n++] = c;
@@ -196,11 +238,20 @@ static void string_append(struct string *s, char c) {
 }
 
 static void string_append_string(struct string *s, char *add) {
-	int len = strlen(add);
+	size_t len = strlen(add);
 
 	if (s->n + len + 1 >= s->nalloc) {
+		size_t prev = s->nalloc;
 		s->nalloc += 500 + len;
+		if (s->nalloc <= prev) {
+			fprintf(stderr, "String size overflowed\n");
+			exit(EXIT_FAILURE);
+		}
 		s->buf = realloc(s->buf, s->nalloc);
+		if (s->buf == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	for (; *add != '\0'; add++) {
@@ -541,7 +592,7 @@ json_object *json_read_tree(json_pull *p) {
 }
 
 void json_free(json_object *o) {
-	int i;
+	size_t i;
 
 	if (o == NULL) {
 		return;
@@ -551,7 +602,7 @@ void json_free(json_object *o) {
 
 	if (o->type == JSON_ARRAY) {
 		json_object **a = o->array;
-		int n = o->length;
+		size_t n = o->length;
 
 		o->array = NULL;
 		o->length = 0;
@@ -564,7 +615,7 @@ void json_free(json_object *o) {
 	} else if (o->type == JSON_HASH) {
 		json_object **k = o->keys;
 		json_object **v = o->values;
-		int n = o->length;
+		size_t n = o->length;
 
 		o->keys = NULL;
 		o->values = NULL;
@@ -592,7 +643,7 @@ void json_disconnect(json_object *o) {
 
 	if (o->parent != NULL) {
 		if (o->parent->type == JSON_ARRAY) {
-			int i;
+			size_t i;
 
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->array[i] == o) {
@@ -607,7 +658,7 @@ void json_disconnect(json_object *o) {
 		}
 
 		if (o->parent->type == JSON_HASH) {
-			int i;
+			size_t i;
 
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->keys[i] == o) {
@@ -683,7 +734,7 @@ static void json_print(struct string *val, json_object *o) {
 	} else if (o->type == JSON_HASH) {
 		string_append(val, '{');
 
-		int i;
+		size_t i;
 		for (i = 0; i < o->length; i++) {
 			json_print(val, o->keys[i]);
 			string_append(val, ':');
@@ -695,7 +746,7 @@ static void json_print(struct string *val, json_object *o) {
 		string_append(val, '}');
 	} else if (o->type == JSON_ARRAY) {
 		string_append(val, '[');
-		int i;
+		size_t i;
 		for (i = 0; i < o->length; i++) {
 			json_print(val, o->array[i]);
 			if (i + 1 < o->length) {

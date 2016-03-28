@@ -165,8 +165,7 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-	unsigned i;
-	for (i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
+	for (size_t i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
 		cmp = c1->meta[i] - c2->meta[i];
 
 		if (cmp != 0) {
@@ -232,7 +231,12 @@ void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *
 			}
 
 			// Dup to retain after munmap
-			pool(file_keys, strdup(key->s), value->type);
+			char *copy = strdup(key->s);
+			if (copy == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+			pool(file_keys, copy, value->type);
 
 			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
@@ -288,8 +292,7 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 		layer->set_version(1);
 		layer->set_extent(1 << line_detail);
 
-		unsigned x;
-		for (x = 0; x < features[i].size(); x++) {
+		for (size_t x = 0; x < features[i].size(); x++) {
 			if (features[i][x].type == VT_LINE || features[i][x].type == VT_POLYGON) {
 				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
 			}
@@ -309,8 +312,7 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 			to_feature(features[i][x].geom, feature);
 			*count += features[i][x].geom.size();
 
-			unsigned y;
-			for (y = 0; y < features[i][x].meta.size(); y++) {
+			for (size_t y = 0; y < features[i][x].meta.size(); y++) {
 				feature->add_tags(features[i][x].meta[y]);
 			}
 		}
@@ -447,7 +449,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
 
-					for (unsigned u = 0; u < geom.size(); u++) {
+					for (size_t u = 0; u < geom.size(); u++) {
 						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
 
 						if (geom[u].op != VT_CLOSEPATH) {
@@ -478,8 +480,8 @@ struct partial {
 	unsigned long long index2;
 	int z;
 	int line_detail;
-	char *prevent;
-	char *additional;
+	int *prevent;
+	int *additional;
 	int maxzoom;
 };
 
@@ -493,14 +495,14 @@ void *partial_feature_worker(void *v) {
 	struct partial_arg *a = (struct partial_arg *) v;
 	std::vector<struct partial> *partials = a->partials;
 
-	for (unsigned i = a->task; i < (*partials).size(); i += a->tasks) {
+	for (size_t i = a->task; i < (*partials).size(); i += a->tasks) {
 		drawvec geom = (*partials)[i].geoms[0];  // XXX assumption of a single geometry at the beginning
 		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
-		char *prevent = (*partials)[i].prevent;
-		char *additional = (*partials)[i].additional;
+		int *prevent = (*partials)[i].prevent;
+		int *additional = (*partials)[i].additional;
 		int maxzoom = (*partials)[i].maxzoom;
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
@@ -535,7 +537,7 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
-			for (unsigned i = 0; i < geoms.size(); i++) {
+			for (size_t i = 0; i < geoms.size(); i++) {
 				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[i]);
@@ -598,7 +600,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -731,16 +733,16 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					// If the geometry extends off the edge of the world, concatenate on another copy
 					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
-					unsigned n = geom.size();
+					size_t n = geom.size();
 
 					if (bbox[0] < 0) {
-						for (unsigned i = 0; i < n; i++) {
+						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
 						}
 					}
 
 					if (bbox[2] > 1LL << 32) {
-						for (unsigned i = 0; i < n; i++) {
+						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
 						}
 					}
@@ -871,7 +873,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		}
 
 		// This is serial because decode_meta() unifies duplicates
-		for (unsigned i = 0; i < partials.size(); i++) {
+		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> geoms = partials[i].geoms;
 			partials[i].geoms.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
@@ -881,7 +883,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
-			for (unsigned j = 0; j < geoms.size(); j++) {
+			for (size_t j = 0; j < geoms.size(); j++) {
 				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
 					struct coalesce c;
 					char *meta = partials[i].meta;
@@ -913,9 +915,8 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			std::vector<coalesce> out;
-			unsigned x;
-			for (x = 0; x < features[j].size(); x++) {
-				unsigned y = out.size() - 1;
+			for (size_t x = 0; x < features[j].size(); x++) {
+				size_t y = out.size() - 1;
 
 #if 0
 				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
@@ -924,8 +925,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 #endif
 
 				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
-					unsigned z;
-					for (z = 0; z < features[j][x].geom.size(); z++) {
+					for (size_t z = 0; z < features[j][x].geom.size(); z++) {
 						out[y].geom.push_back(features[j][x].geom[z]);
 					}
 					out[y].coalesced = true;
@@ -937,7 +937,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			features[j] = out;
 
 			out.clear();
-			for (x = 0; x < features[j].size(); x++) {
+			for (size_t x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
@@ -1052,8 +1052,8 @@ struct write_tile_args {
 	volatile long long *along;
 	double gamma;
 	int nlayers;
-	char *prevent;
-	char *additional;
+	int *prevent;
+	int *additional;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1112,6 +1112,10 @@ void *run_thread(void *vargs) {
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
+				if (err == NULL) {
+					perror("Out of memory");
+					exit(EXIT_FAILURE);
+				}
 				*err = z - 1;
 				return err;
 			}
@@ -1156,7 +1160,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int *prevent, int *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
