@@ -100,7 +100,7 @@ static inline int read_wrap(json_pull *j) {
 	return c;
 }
 
-#define SIZE_FOR(i) (((i) + 31) & ~31)
+#define SIZE_FOR(i) ((size_t)(((i) + 31) & ~31))
 
 static json_object *fabricate_object(json_object *parent, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
@@ -125,6 +125,10 @@ static json_object *add_object(json_pull *j, json_type type) {
 		if (c->type == JSON_ARRAY) {
 			if (c->expect == JSON_ITEM) {
 				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
+					if (SIZE_FOR(c->length + 1) < SIZE_FOR(c->length)) {
+						fprintf(stderr, "Array size overflow\n");
+						exit(EXIT_FAILURE);
+					}
 					c->array = realloc(c->array, SIZE_FOR(c->length + 1) * sizeof(json_object *));
 					if (c->array == NULL) {
 						perror("Out of memory");
@@ -151,6 +155,10 @@ static json_object *add_object(json_pull *j, json_type type) {
 				}
 
 				if (SIZE_FOR(c->length + 1) != SIZE_FOR(c->length)) {
+					if (SIZE_FOR(c->length + 1) < SIZE_FOR(c->length)) {
+						fprintf(stderr, "Hash size overflow\n");
+						exit(EXIT_FAILURE);
+					}
 					c->keys = realloc(c->keys, SIZE_FOR(c->length + 1) * sizeof(json_object *));
 					c->values = realloc(c->values, SIZE_FOR(c->length + 1) * sizeof(json_object *));
 					if (c->keys == NULL || c->values == NULL) {
