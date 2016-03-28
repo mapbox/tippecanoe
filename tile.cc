@@ -480,8 +480,8 @@ struct partial {
 	unsigned long long index2;
 	int z;
 	int line_detail;
-	char *prevent;
-	char *additional;
+	int *prevent;
+	int *additional;
 	int maxzoom;
 };
 
@@ -501,8 +501,8 @@ void *partial_feature_worker(void *v) {
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
-		char *prevent = (*partials)[i].prevent;
-		char *additional = (*partials)[i].additional;
+		int *prevent = (*partials)[i].prevent;
+		int *additional = (*partials)[i].additional;
 		int maxzoom = (*partials)[i].maxzoom;
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
@@ -597,7 +597,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, char *prevent, char *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -1049,8 +1049,8 @@ struct write_tile_args {
 	volatile long long *along;
 	double gamma;
 	int nlayers;
-	char *prevent;
-	char *additional;
+	int *prevent;
+	int *additional;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1157,7 +1157,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, char *prevent, char *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int *prevent, int *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
