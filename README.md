@@ -70,7 +70,8 @@ Options
  * -t _directory_: Put the temporary files in _directory_.
  * -P: Use multiple threads to read different parts of each input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
-   own line, because it knows nothing of the top-level structure around the Features.
+   own line, because it knows nothing of the top-level structure around the Features. Spurious "EOF" error
+   messages may result otherwise.
    Performance will be better if the input is a named file that can be mapped into memory
    rather than a stream that can only be read sequentially.
 
