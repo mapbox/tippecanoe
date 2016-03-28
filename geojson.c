@@ -891,7 +891,7 @@ void *run_sort(void *v) {
 		// MAP_PRIVATE to avoid disk writes if it fits in memory
 		void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, a->indexfd, start);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap in run_sort");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1450,7 +1450,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (reader[i].indexpos > 0) {
 			void *map = mmap(NULL, reader[i].indexpos, PROT_READ, MAP_PRIVATE, reader[i].indexfd, 0);
 			if (map == MAP_FAILED) {
-				perror("mmap");
+				perror("mmap reunifying index");
 				exit(EXIT_FAILURE);
 			}
 			if (fwrite(map, reader[i].indexpos, 1, indexfile) != 1) {
@@ -1467,6 +1467,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 	fclose(indexfile);
+
+	if (indexpos == 0) {
+		fprintf(stderr, "Did not read any valid geometries\n");
+		exit(EXIT_FAILURE);
+	}
 
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 
@@ -1544,7 +1549,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		char *map = mmap(NULL, indexpos, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, 0);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap unified index");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1599,7 +1604,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		long long pre_merged_geompos = geompos;
 		char *geom_map = mmap(NULL, geompos, PROT_READ, MAP_PRIVATE, geomfd, 0);
 		if (geom_map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap geometry");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1664,7 +1669,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1915,7 +1920,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
-				perror("mmap");
+				perror("mmap unmerged meta");
 				exit(EXIT_FAILURE);
 			}
 			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
