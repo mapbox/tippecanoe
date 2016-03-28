@@ -684,23 +684,49 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
         cInt y2 = ip.Y;
         if (Edge1.Bot.X > ip.X)
         {
-            y1 = Round((ip.X + 0.5) / Edge1.Dx + by1);
-            if (ip.Y >= Edge1.Bot.Y && y1 < Edge1.Bot.Y) y1 = Edge1.Bot.Y;
-            else if (ip.Y <= Edge1.Bot.Y && y1 > Edge1.Bot.Y) y1 = Edge1.Bot.Y;
+            if (Edge1.Bot.Y >= ip.Y)
+            {
+                y1 = std::floor(((ip.X + 0.5) / Edge1.Dx + by1) + 0.5);
+            }
+            else
+            {
+                y1 = std::ceil(((ip.X + 0.5) / Edge1.Dx + by1) - 0.5);
+            }
         }
         else if (Edge1.Bot.X < ip.X)
         {
-            y1 = Round((ip.X - 0.5) / Edge1.Dx + by1);
+            if (Edge1.Bot.Y >= ip.Y)
+            {
+                y1 = std::floor(((ip.X - 0.5) / Edge1.Dx + by1) + 0.5);
+            }
+            else
+            {
+                y1 = std::ceil(((ip.X - 0.5) / Edge1.Dx + by1) - 0.5);
+            }
         }
         if (ip.Y >= Edge1.Bot.Y && y1 < Edge1.Bot.Y) y1 = Edge1.Bot.Y;
         else if (ip.Y <= Edge1.Bot.Y && y1 > Edge1.Bot.Y) y1 = Edge1.Bot.Y;
         if (Edge2.Bot.X > ip.X)
         {
-            y2 = Round((ip.X + 0.5) / Edge2.Dx + by2);
+            if (Edge2.Bot.Y >= ip.Y)
+            {
+                y2 = std::floor(((ip.X + 0.5) / Edge2.Dx + by2) + 0.5);
+            }
+            else
+            {
+                y2 = std::ceil(((ip.X + 0.5) / Edge2.Dx + by2) - 0.5);
+            }
         }
         else if (Edge2.Bot.X < ip.X)
         {
-            y2 = Round((ip.X - 0.5) / Edge2.Dx + by2);
+            if (Edge2.Bot.Y >= ip.Y)
+            {
+                y2 = std::floor(((ip.X - 0.5) / Edge2.Dx + by2) + 0.5);
+            }
+            else
+            {
+                y2 = std::ceil(((ip.X - 0.5) / Edge2.Dx + by2) - 0.5);
+            }
         }
         if (ip.Y >= Edge2.Bot.Y && y2 < Edge2.Bot.Y) y2 = Edge2.Bot.Y;
         else if (ip.Y <= Edge2.Bot.Y && y2 > Edge2.Bot.Y) y2 = Edge2.Bot.Y;
@@ -708,21 +734,49 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
         cInt x2 = ip.X;
         if (Edge1.Bot.Y > ip.Y)
         {
-            x1 = Round((ip.Y + 0.5) * Edge1.Dx + bx1);
+            if (Edge1.Bot.X >= ip.X)
+            {
+                x1 = std::floor(((ip.Y + 0.5) * Edge1.Dx + bx1) + 0.5);
+            }
+            else
+            {
+                x1 = std::ceil(((ip.Y + 0.5) * Edge1.Dx + bx1) - 0.5);
+            }
         }
         else if (Edge1.Bot.Y < ip.Y)
         {
-            x1 = Round((ip.Y - 0.5) * Edge1.Dx + bx1);
+            if (Edge1.Bot.X >= ip.X)
+            {
+                x1 = std::floor(((ip.Y - 0.5) * Edge1.Dx + bx1) + 0.5);
+            }
+            else
+            {
+                x1 = std::ceil(((ip.Y - 0.5) * Edge1.Dx + bx1) - 0.5);
+            }
         }
         if (ip.X >= Edge1.Bot.X && x1 < Edge1.Bot.X) x1 = Edge1.Bot.X;
         else if (ip.X <= Edge1.Bot.X && x1 > Edge1.Bot.X) x1 = Edge1.Bot.X;
         if (Edge2.Bot.Y > ip.Y)
         {
-            x2 = Round((ip.Y + 0.5) * Edge2.Dx + bx2);
+            if (Edge2.Bot.X >= ip.X)
+            {
+                x2 = std::floor(((ip.Y + 0.5) * Edge2.Dx + bx2) + 0.5);
+            }
+            else
+            {
+                x2 = std::ceil(((ip.Y + 0.5) * Edge2.Dx + bx2) - 0.5);
+            }
         }
         else if (Edge2.Bot.Y < ip.Y)
         {
-            x2 = Round((ip.Y - 0.5) * Edge2.Dx + bx2);
+            if (Edge2.Bot.X >= ip.X)
+            {
+                x2 = std::floor(((ip.Y - 0.5) * Edge2.Dx + bx2) + 0.5);
+            }
+            else
+            {
+                x2 = std::ceil(((ip.Y - 0.5) * Edge2.Dx + bx2) - 0.5);
+            }
         }
         if (ip.X >= Edge2.Bot.X && x2 < Edge2.Bot.X) x2 = Edge2.Bot.X;
         else if (ip.X <= Edge2.Bot.X && x2 > Edge2.Bot.X) x2 = Edge2.Bot.X;
