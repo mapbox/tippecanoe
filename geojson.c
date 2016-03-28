@@ -2168,6 +2168,9 @@ int main(int argc, char **argv) {
 
 	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvP", long_options, NULL)) != -1) {
 		switch (i) {
+		case 0:
+			break;
+
 		case 'n':
 			name = optarg;
 			break;
