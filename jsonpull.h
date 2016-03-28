@@ -28,7 +28,7 @@ typedef struct json_object {
 	struct json_object **array;
 	struct json_object **keys;
 	struct json_object **values;
-	int length;
+	size_t length;
 
 	int expect;
 } json_object;
@@ -37,11 +37,11 @@ typedef struct json_pull {
 	char *error;
 	int line;
 
-	int (*read)(struct json_pull *, char *buf, int n);
+	ssize_t (*read)(struct json_pull *, char *buf, size_t n);
 	void *source;
 	char *buffer;
-	int buffer_tail;
-	int buffer_head;
+	ssize_t buffer_tail;
+	ssize_t buffer_head;
 
 	json_object *container;
 	json_object *root;
@@ -50,7 +50,7 @@ typedef struct json_pull {
 json_pull *json_begin_file(FILE *f);
 json_pull *json_begin_string(char *s);
 
-json_pull *json_begin(int (*read)(struct json_pull *, char *buffer, int n), void *source);
+json_pull *json_begin(ssize_t (*read)(struct json_pull *, char *buffer, size_t n), void *source);
 void json_end(json_pull *p);
 
 typedef void (*json_separator_callback)(json_type type, json_pull *j, void *state);

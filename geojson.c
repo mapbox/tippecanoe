@@ -28,11 +28,11 @@
 #include "version.h"
 #include "memfile.h"
 
-int low_detail = 12;
-int full_detail = -1;
-int min_detail = 7;
-int quiet = 0;
+static int low_detail = 12;
+static int full_detail = -1;
+static int min_detail = 7;
 
+int quiet = 0;
 int geometry_scale = 0;
 
 #define GEOM_POINT 0	   /* array of positions */
@@ -43,11 +43,11 @@ int geometry_scale = 0;
 #define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
-const char *geometry_names[GEOM_TYPES] = {
+static const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
 };
 
-int geometry_within[GEOM_TYPES] = {
+static int geometry_within[GEOM_TYPES] = {
 	-1,		 /* point */
 	GEOM_POINT,      /* multipoint */
 	GEOM_POINT,      /* linestring */
@@ -56,7 +56,7 @@ int geometry_within[GEOM_TYPES] = {
 	GEOM_POLYGON,    /* multipolygon */
 };
 
-int mb_geometry[GEOM_TYPES] = {
+static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
@@ -146,7 +146,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 
 	int within = geometry_within[t];
 	if (within >= 0) {
-		int i;
+		size_t i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
 				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
@@ -299,7 +299,7 @@ struct merge {
 	struct merge *next;
 };
 
-static void insert(struct merge *m, struct merge **head, unsigned char *map, int bytes) {
+static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
 		head = &((*head)->next);
 	}
@@ -316,7 +316,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
-			insert(&(merges[i]), &head, map, bytes);
+			insert(&(merges[i]), &head, map);
 		}
 	}
 
@@ -333,7 +333,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		m->next = NULL;
 
 		if (m->start < m->end) {
-			insert(m, &head, map, bytes);
+			insert(m, &head, map);
 		}
 
 		along++;
@@ -445,7 +445,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 	return off;
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -646,7 +646,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
-void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int maxzoom, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -711,7 +711,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y);
+				serialize_geometry(j, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y);
 				json_free(j);
 				continue;
 			}
@@ -744,12 +744,12 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 
 		json_object *geometries = json_hash_get(geometry, "geometries");
 		if (geometries != NULL) {
-			int g;
+			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
+				serialize_geometry(geometries->array[g], properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
 			}
 		} else {
-			serialize_geometry(geometry, properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, maxzoom, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
+			serialize_geometry(geometry, properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y);
 		}
 
 		json_free(j);
@@ -775,7 +775,6 @@ struct parse_json_args {
 	struct memfile *poolfile;
 	struct memfile *treefile;
 	char *fname;
-	int maxzoom;
 	int basezoom;
 	int layer;
 	double droprate;
@@ -789,18 +788,18 @@ struct parse_json_args {
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = v;
 
-	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->maxzoom, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y);
+	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y);
 
 	return NULL;
 }
 
 struct jsonmap {
 	char *map;
-	long long off;
-	long long end;
+	unsigned long long off;
+	unsigned long long end;
 };
 
-int json_map_read(struct json_pull *jp, char *buffer, int n) {
+ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	struct jsonmap *jm = jp->source;
 
 	if (jm->off + n >= jm->end) {
@@ -815,6 +814,10 @@ int json_map_read(struct json_pull *jp, char *buffer, int n) {
 
 struct json_pull *json_begin_map(char *map, long long len) {
 	struct jsonmap *jm = malloc(sizeof(struct jsonmap));
+	if (jm == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	jm->map = map;
 	jm->off = 0;
@@ -888,7 +891,7 @@ void *run_sort(void *v) {
 		// MAP_PRIVATE to avoid disk writes if it fits in memory
 		void *map = mmap(NULL, end - start, PROT_READ | PROT_WRITE, MAP_PRIVATE, a->indexfd, start);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap in run_sort");
 			exit(EXIT_FAILURE);
 		}
 
@@ -912,7 +915,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -953,7 +956,6 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].poolfile = reader[i].poolfile;
 		pja[i].treefile = reader[i].treefile;
 		pja[i].fname = fname;
-		pja[i].maxzoom = maxzoom;
 		pja[i].basezoom = basezoom;
 		pja[i].layer = source < nlayers ? source : 0;
 		pja[i].droprate = droprate;
@@ -1023,7 +1025,7 @@ void *run_read_parallel(void *v) {
 		exit(EXIT_FAILURE);
 	}
 
-	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->maxzoom, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
+	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
 
 	if (munmap(map, a->len) != 0) {
 		perror("munmap source file");
@@ -1038,7 +1040,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int maxzoom, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -1046,6 +1048,11 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	*is_parsing = 1;
 
 	struct read_parallel_arg *rpa = malloc(sizeof(struct read_parallel_arg));
+	if (rpa == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
+
 	rpa->fd = fd;
 	rpa->fp = fp;
 	rpa->offset = offset;
@@ -1059,7 +1066,6 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->include = include;
 	rpa->exclude_all = exclude_all;
 	rpa->fname = fname;
-	rpa->maxzoom = maxzoom;
 	rpa->basezoom = basezoom;
 	rpa->source = source;
 	rpa->nlayers = nlayers;
@@ -1087,6 +1093,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
 		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
 		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
+
+		if (r->metaname == NULL || r->poolname == NULL || r->treename == NULL || r->geomname == NULL || r->indexname == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 
 		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
@@ -1162,6 +1173,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		r->file_bbox = malloc(4 * sizeof(long long));
+		if (r->file_bbox == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
@@ -1222,7 +1237,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 			overall_offset += st.st_size - off;
 
 			if (munmap(map, st.st_size - off) != 0) {
@@ -1276,7 +1291,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 						}
 
 						fflush(readfp);
-						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 						initial_offset += ahead;
 						overall_offset += ahead;
@@ -1310,7 +1325,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, maxzoom, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
 
 					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
@@ -1323,7 +1338,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, maxzoom, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
+				parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0]);
 				json_end(jp);
 				overall_offset = layer_seq;
 			}
@@ -1364,6 +1379,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	for (i = 0; i < nlayers; i++) {
 		if (layername != NULL) {
 			layernames[i] = strdup(layername);
+			if (layernames[i] == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
 		} else {
 			char *src = argv[i];
 			if (argc < 1) {
@@ -1371,6 +1390,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			}
 
 			char *trunc = layernames[i] = malloc(strlen(src) + 1);
+			if (trunc == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+
 			const char *ocp, *use = src;
 			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {
@@ -1426,7 +1450,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (reader[i].indexpos > 0) {
 			void *map = mmap(NULL, reader[i].indexpos, PROT_READ, MAP_PRIVATE, reader[i].indexfd, 0);
 			if (map == MAP_FAILED) {
-				perror("mmap");
+				perror("mmap reunifying index");
 				exit(EXIT_FAILURE);
 			}
 			if (fwrite(map, reader[i].indexpos, 1, indexfile) != 1) {
@@ -1443,6 +1467,11 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		}
 	}
 	fclose(indexfile);
+
+	if (indexpos == 0) {
+		fprintf(stderr, "Did not read any valid geometries\n");
+		exit(EXIT_FAILURE);
+	}
 
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 
@@ -1520,7 +1549,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 
 		char *map = mmap(NULL, indexpos, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, 0);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap unified index");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1575,7 +1604,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		long long pre_merged_geompos = geompos;
 		char *geom_map = mmap(NULL, geompos, PROT_READ, MAP_PRIVATE, geomfd, 0);
 		if (geom_map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap geometry");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1640,7 +1669,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
-			perror("mmap");
+			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
 		}
 
@@ -1891,7 +1920,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
-				perror("mmap");
+				perror("mmap unmerged meta");
 				exit(EXIT_FAILURE);
 			}
 			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {

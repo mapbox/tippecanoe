@@ -118,6 +118,10 @@ static void aprintf(char **buf, const char *format, ...) {
 	va_end(ap);
 
 	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	if (*buf == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 	strcat(*buf, tmp);
 	free(tmp);
 }
@@ -219,6 +223,10 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 	sqlite3_free(sql);
 
 	char *buf = strdup("{");
+	if (buf == NULL) {
+		perror("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 	aprintf(&buf, "\"vector_layers\": [ ");
 
 	int i;

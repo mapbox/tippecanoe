@@ -141,6 +141,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 			pool_init(&((*file_keys)[ll]), 0);
 			(*layernames)[ll] = strdup(ln);
+			if ((*layernames)[ll] == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
 			*nlayers = ll + 1;
 		}
 
@@ -161,6 +165,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 				if (val.has_string_value()) {
 					value = strdup(val.string_value().c_str());
+					if (value == NULL) {
+						perror("Out of memory");
+						exit(EXIT_FAILURE);
+					}
 					type = VT_STRING;
 				} else if (val.has_int_value()) {
 					if (asprintf(&value, "%lld", (long long) val.int_value()) >= 0) {
@@ -196,7 +204,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 				if (!is_pooled(exclude, key, VT_STRING)) {
 					if (!is_pooled(&((*file_keys)[ll]), key, type)) {
-						pool(&((*file_keys)[ll]), strdup(key), type);
+						char *copy = strdup(key);
+						if (copy == NULL) {
+							perror("Out of memory");
+							exit(EXIT_FAILURE);
+						}
+						pool(&((*file_keys)[ll]), copy, type);
 					}
 
 					struct pool_val *k, *v;
@@ -204,13 +217,23 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					if (is_pooled(&keys, key, VT_STRING)) {
 						k = pool(&keys, key, VT_STRING);
 					} else {
-						k = pool(&keys, strdup(key), VT_STRING);
+						char *copy = strdup(key);
+						if (copy == NULL) {
+							perror("Out of memory");
+							exit(EXIT_FAILURE);
+						}
+						k = pool(&keys, copy, VT_STRING);
 					}
 
 					if (is_pooled(&values, value, type)) {
 						v = pool(&values, value, type);
 					} else {
-						v = pool(&values, strdup(value), type);
+						char *copy = strdup(value);
+						if (copy == NULL) {
+							perror("Out of memory");
+							exit(EXIT_FAILURE);
+						}
+						v = pool(&values, copy, type);
 					}
 
 					feature_tags.push_back(k->n);
@@ -224,7 +247,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						std::vector<std::string> fields = ii->second;
 						matched = 1;
 
-						for (unsigned i = 1; i < fields.size(); i++) {
+						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
 							int type = VT_STRING;
@@ -242,7 +265,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
 								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
-									pool(&((*file_keys)[ll]), strdup(sjoinkey), type);
+									char *copy = strdup(sjoinkey);
+									if (copy == NULL) {
+										perror("Out of memory");
+										exit(EXIT_FAILURE);
+									}
+									pool(&((*file_keys)[ll]), copy, type);
 								}
 
 								struct pool_val *k, *v;
@@ -250,13 +278,23 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 								if (is_pooled(&keys, sjoinkey, VT_STRING)) {
 									k = pool(&keys, sjoinkey, VT_STRING);
 								} else {
-									k = pool(&keys, strdup(sjoinkey), VT_STRING);
+									char *copy = strdup(sjoinkey);
+									if (copy == NULL) {
+										perror("Out of memory");
+										exit(EXIT_FAILURE);
+									}
+									k = pool(&keys, copy, VT_STRING);
 								}
 
 								if (is_pooled(&values, sjoinval, type)) {
 									v = pool(&values, sjoinval, type);
 								} else {
-									v = pool(&values, strdup(sjoinval), type);
+									char *copy = strdup(sjoinval);
+									if (copy == NULL) {
+										perror("Out of memory");
+										exit(EXIT_FAILURE);
+									}
+									v = pool(&values, copy, type);
 								}
 
 								feature_tags.push_back(k->n);
@@ -277,7 +315,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					outfeature->add_geometry(feat.geometry(g));
 				}
 
-				for (unsigned i = 0; i < feature_tags.size(); i++) {
+				for (size_t i = 0; i < feature_tags.size(); i++) {
 					outfeature->add_tags(feature_tags[i]);
 				}
 
@@ -447,8 +485,7 @@ std::vector<std::string> split(char *s) {
 
 std::string dequote(std::string s) {
 	std::string out;
-	unsigned i;
-	for (i = 0; i < s.size(); i++) {
+	for (size_t i = 0; i < s.size(); i++) {
 		if (s[i] == '"') {
 			if (i + 1 < s.size() && s[i + 1] == '"') {
 				out.push_back('"');
@@ -471,7 +508,7 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	if (fgets(s, MAXLINE, f)) {
 		header = split(s);
 
-		for (unsigned i = 0; i < header.size(); i++) {
+		for (size_t i = 0; i < header.size(); i++) {
 			header[i] = dequote(header[i]);
 		}
 	}
@@ -481,7 +518,7 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 			line[0] = dequote(line[0]);
 		}
 
-		for (unsigned i = 0; i < line.size() && i < header.size(); i++) {
+		for (size_t i = 0; i < line.size() && i < header.size(); i++) {
 			// printf("putting %s\n", line[0].c_str());
 			mapping.insert(std::pair<std::string, std::vector<std::string> >(line[0], line));
 		}
