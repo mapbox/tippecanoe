@@ -359,9 +359,30 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	return out;
 }
 
+/* pnpoly:
+Copyright (c) 1970-2003, Wm. Randolph Franklin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimers.
+Redistributions in binary form must reproduce the above copyright notice in the documentation and/or other materials provided with the distribution.
+The name of W. Randolph Franklin may not be used to endorse or promote products derived from this Software without specific prior written permission.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+	int i, j, c = 0;
+	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+			c = !c;
+	}
+	return c;
+}
+
 void check_polygon(drawvec &geom) {
-	for (unsigned i = 0; i + 1 < geom.size(); i++) {
-		for (unsigned j = i + 1; j + 1 < geom.size(); j++) {
+	for (size_t i = 0; i + 1 < geom.size(); i++) {
+		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
 			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
 				double s1_x = geom[i + 1].x - geom[i + 0].x;
 				double s1_y = geom[i + 1].y - geom[i + 0].y;
@@ -379,6 +400,55 @@ void check_polygon(drawvec &geom) {
 						geom[j + 0].x, geom[j + 0].y,
 						geom[j + 1].x, geom[j + 1].y);
 					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}
+
+	size_t outer_start = -1;
+	size_t outer_len = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = 0;
+			for (size_t k = i; k < j; k++) {
+				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+			}
+			area = area / 2;
+
+			if (area > 0) {
+				outer_start = i;
+				outer_len = j - i;
+			} else {
+				for (size_t k = i; i < j; i++) {
+					if (!pnpoly(geom, outer_start, outer_len, geom[k].x, geom[k].y)) {
+						bool on_edge = false;
+
+						for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+							if (geom[k].x == geom[l].x || geom[k].y == geom[l].y) {
+								on_edge = true;
+								break;
+							}
+						}
+
+						if (!on_edge) {
+							fprintf(stderr, "%lld,%lld not in outer ring", geom[k].x, geom[k].y);
+
+							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
+							}
+
+							fprintf(stderr, "\n");
+						}
+					}
 				}
 			}
 		}
