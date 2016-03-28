@@ -212,7 +212,12 @@ static void string_init(struct string *s) {
 
 static void string_append(struct string *s, char c) {
 	if (s->n + 2 >= s->nalloc) {
+		size_t prev = s->nalloc;
 		s->nalloc += 500;
+		if (s->nalloc <= prev) {
+			fprintf(stderr, "String size overflowed\n");
+			exit(EXIT_FAILURE);
+		}
 		s->buf = realloc(s->buf, s->nalloc);
 		if (s->buf == NULL) {
 			perror("Out of memory");
@@ -228,7 +233,12 @@ static void string_append_string(struct string *s, char *add) {
 	size_t len = strlen(add);
 
 	if (s->n + len + 1 >= s->nalloc) {
+		size_t prev = s->nalloc;
 		s->nalloc += 500 + len;
+		if (s->nalloc <= prev) {
+			fprintf(stderr, "String size overflowed\n");
+			exit(EXIT_FAILURE);
+		}
 		s->buf = realloc(s->buf, s->nalloc);
 		if (s->buf == NULL) {
 			perror("Out of memory");
