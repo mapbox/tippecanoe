@@ -1491,6 +1491,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		perror(geomname);
 		exit(EXIT_FAILURE);
 	}
+	unlink(geomname);
 	int geomfd2;
 
 	/* Sort the index by geometry */
@@ -1625,6 +1626,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
+		unlink(geomname);
 
 		for (i = 0; i < CPUS; i++) {
 			if (reader[i].geomst.st_size > 0) {
