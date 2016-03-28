@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <sys/resource.h>
 #include <pthread.h>
+#include <getopt.h>
 
 #include "jsonpull.h"
 #include "tile.h"
@@ -34,6 +35,9 @@ static int min_detail = 7;
 
 int quiet = 0;
 int geometry_scale = 0;
+
+static int prevent[256];
+static int additional[256];
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -1080,7 +1084,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, char *prevent, char *additional, int read_parallel, int forcetable) {
+int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -2108,8 +2112,6 @@ int main(int argc, char **argv) {
 	double gamma = 0;
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
-	char prevent[256];
-	char additional[256];
 
 	struct pool exclude, include;
 	pool_init(&exclude, 0);
@@ -2122,7 +2124,49 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	while ((i = getopt(argc, argv, "l:n:z:Z:d:D:m:o:x:y:r:b:fFXt:g:p:vqa:B:P")) != -1) {
+	static struct option long_options[] = {
+		{"name", required_argument, 0, 'n'},
+		{"layer", required_argument, 0, 'l'},
+		{"maximum-zoom", required_argument, 0, 'z'},
+		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"base-zoom", required_argument, 0, 'B'},
+		{"full-detail", required_argument, 0, 'd'},
+		{"low-detail", required_argument, 0, 'D'},
+		{"minimum-detail", required_argument, 0, 'm'},
+		{"output", required_argument, 0, 'o'},
+		{"exclude", required_argument, 0, 'x'},
+		{"include", required_argument, 0, 'y'},
+		{"drop-rate", required_argument, 0, 'r'},
+		{"buffer", required_argument, 0, 'b'},
+		{"temporary-directory", required_argument, 0, 't'},
+		{"gamma", required_argument, 0, 'g'},
+		{"prevent", required_argument, 0, 'p'},
+		{"additional", required_argument, 0, 'a'},
+
+		{"exclude-all", no_argument, 0, 'X'},
+		{"force", no_argument, 0, 'f'},
+		{"allow-existing", no_argument, 0, 'F'},
+		{"quiet", no_argument, 0, 'q'},
+		{"version", no_argument, 0, 'v'},
+		{"read-parallel", no_argument, 0, 'P'},
+
+		{"coalesce", no_argument, &additional[A_COALESCE], 1},
+		{"reverse", no_argument, &additional[A_REVERSE], 1},
+		{"reorder", no_argument, &additional[A_REORDER], 1},
+		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
+
+		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
+		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
+		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
+		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
+		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
+		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
+		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
+
+		{0, 0, 0, 0},
+	};
+
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvP", long_options, NULL)) != -1) {
 		switch (i) {
 		case 'n':
 			name = optarg;

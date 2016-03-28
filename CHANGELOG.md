@@ -1,3 +1,9 @@
+## 1.9.5
+
+* Remove temporary files that were accidentally left behind
+* Be more careful about checking memory allocations and array bounds
+* Add GNU-style long options
+
 ## 1.9.4
 
 * Tippecanoe-decode can decode .pbf files that aren't in an .mbtiles container
