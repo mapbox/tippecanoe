@@ -58,8 +58,9 @@ Options
 ### Naming
 
  * -l _name_ or --layer=_name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
-   specified, the files are all merged into the single named layer.
- * -n _name_ or --name=_name_: Human-readable name (default file.json)
+   specified, the files are all merged into the single named layer, even if they try to specify individual names with -L.
+ * -L _name_:_file.json_ or --named-layer=_name_:_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like -L _name_:<(cat dir/*.json) to specify a layer name for the output of streamed input.
+ * -n _name_ or --name=_name_: Human-readable name for the tileset (default file.json)
 
 ### File control
 

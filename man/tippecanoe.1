@@ -59,48 +59,51 @@ it encounters.
 .SS Naming
 .RS
 .IP \(bu 2
-\-l \fIname\fP: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
-specified, the files are all merged into the single named layer.
+\-l \fIname\fP or \-\-layer=\fIname\fP: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
+specified, the files are all merged into the single named layer, even if they try to specify individual names with \-L.
 .IP \(bu 2
-\-n \fIname\fP: Human\-readable name (default file.json)
+\-L \fIname\fP:\fIfile.json\fP or \-\-named\-layer=\fIname\fP:\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \-L \fIname\fP:<(cat dir/*.json) to specify a layer name for the output of streamed input.
+.IP \(bu 2
+\-n \fIname\fP or \-\-name=\fIname\fP: Human\-readable name for the tileset (default file.json)
 .RE
 .SS File control
 .RS
 .IP \(bu 2
-\-o \fIfile\fP\&.mbtiles: Name the output file.
+\-o \fIfile\fP\&.mbtiles or \-\-output=\fIfile\fP\&.mbtiles: Name the output file.
 .IP \(bu 2
-\-f: Delete the mbtiles file if it already exists instead of giving an error
+\-f or \-\-force: Delete the mbtiles file if it already exists instead of giving an error
 .IP \(bu 2
-\-F: Proceed (without deleting existing data) if the metadata or tiles table already exists
+\-F or \-\-allow\-existing: Proceed (without deleting existing data) if the metadata or tiles table already exists
 or if metadata fields can't be set
 .IP \(bu 2
-\-t \fIdirectory\fP: Put the temporary files in \fIdirectory\fP\&.
+\-t \fIdirectory\fP or \-\-temporary\-directory=\fIdirectory\fP: Put the temporary files in \fIdirectory\fP\&.
 .IP \(bu 2
-\-P: Use multiple threads to read different parts of each input file at once.
+\-P or \-\-read\-parallel: Use multiple threads to read different parts of each input file at once.
 This will only work if the input is line\-delimited JSON with each Feature on its
-own line, because it knows nothing of the top\-level structure around the Features.
+own line, because it knows nothing of the top\-level structure around the Features. Spurious "EOF" error
+messages may result otherwise.
 Performance will be better if the input is a named file that can be mapped into memory
 rather than a stream that can only be read sequentially.
 .RE
 .SS Zoom levels and resolution
 .RS
 .IP \(bu 2
-\-z \fIzoom\fP: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+\-z \fIzoom\fP or \-\-maximum\-zoom=\fIzoom\fP: Maxzoom: the highest zoom level for which tiles are generated (default 14)
 .IP \(bu 2
-\-Z \fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+\-Z \fIzoom\fP or \-\-minimum\-zoom=\fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 .IP \(bu 2
-\-B \fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+\-B \fIzoom\fP or \-\-base\-zoom=\fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
 If you use \-Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
 You can also specify a marker\-width with \-Bg\fIwidth\fP to allow fewer features in the densest tile to
 compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .IP \(bu 2
-\-d \fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 4096)
+\-d \fIdetail\fP or \-\-full\-detail=\fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 4096)
 .IP \(bu 2
-\-D \fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 4096)
+\-D \fIdetail\fP or \-\-low\-detail=\fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 4096)
 .IP \(bu 2
-\-m \fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
+\-m \fIdetail\fP or \-\-minimum\-detail=\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 .IP \(bu 2
-\-b \fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
+\-b \fIpixels\fP or \-\-buffer=\fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
@@ -109,51 +112,51 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .SS Properties
 .RS
 .IP \(bu 2
-\-x \fIname\fP: Exclude the named properties from all features
+\-x \fIname\fP or \-\-exclude=\fIname\fP: Exclude the named properties from all features
 .IP \(bu 2
-\-y \fIname\fP: Include the named properties in all features, excluding all those not explicitly named
+\-y \fIname\fP or \-\-include=\fIname\fP: Include the named properties in all features, excluding all those not explicitly named
 .IP \(bu 2
-\-X: Exclude all properties and encode only geometries
+\-X or \-\-exclude\-all: Exclude all properties and encode only geometries
 .RE
 .SS Point simplification
 .RS
 .IP \(bu 2
-\-r \fIrate\fP: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+\-r \fIrate\fP or \-\-drop\fIrate=\fPrate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
 If you use \-rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
 You can also specify a marker\-width with \-rg\fIwidth\fP to allow fewer features in the densest tile to
 compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .IP \(bu 2
-\-g \fIgamma\fP: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+\-g \fIgamma\fP or \-\-gamma=\fIgamma\fP: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 .RE
 .SS Doing more
 .RS
 .IP \(bu 2
-\-ac: Coalesce adjacent line and polygon features that have the same properties
+\-ac or \-\-coalesce: Coalesce adjacent line and polygon features that have the same properties
 .IP \(bu 2
-\-ar: Try reversing the directions of lines to make them coalesce and compress better
+\-ar or \-\-reverse: Try reversing the directions of lines to make them coalesce and compress better
 .IP \(bu 2
-\-ao: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
+\-ao or \-\-reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
 .IP \(bu 2
-\-al: Let "dot" dropping at lower zooms apply to lines too
+\-al or \-\-drop\-lines: Let "dot" dropping at lower zooms apply to lines too
 .RE
 .SS Doing less
 .RS
 .IP \(bu 2
-\-ps: Don't simplify lines
+\-ps or \-\-no\-line\-simplification: Don't simplify lines
 .IP \(bu 2
-\-pS: Don't simplify lines at maxzoom (but do simplify at lower zooms)
+\-pS or \-\-simplify\-only\-low\-zooms: Don't simplify lines at maxzoom (but do simplify at lower zooms)
 .IP \(bu 2
-\-pf: Don't limit tiles to 200,000 features
+\-pf or \-\-no\-feature\-limit: Don't limit tiles to 200,000 features
 .IP \(bu 2
-\-pk: Don't limit tiles to 500K bytes
+\-pk or \-\-no\-tile\-size\-limit: Don't limit tiles to 500K bytes
 .IP \(bu 2
-\-pd: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
 .IP \(bu 2
-\-pi: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
+\-pi or \-\-preserve\-input\-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
-\-pp: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+\-pp or \-\-no\-polygon\-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
 .IP \(bu 2
-\-q: Work quietly instead of reporting progress
+\-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
 .SH Example
 .PP

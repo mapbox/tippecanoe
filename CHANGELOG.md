@@ -1,3 +1,7 @@
+## 1.9.6
+
+* Add an option to give specific layer names to specific input files
+
 ## 1.9.5
 
 * Remove temporary files that were accidentally left behind
