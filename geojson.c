@@ -64,6 +64,12 @@ static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
+struct source {
+	char *layer;
+	char *file;
+	struct source *next;
+};
+
 int CPUS;
 int TEMP_FILES;
 
@@ -1084,7 +1090,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-int read_json(int argc, char **argv, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
+int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1219,10 +1225,10 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 			reading = "standard input";
 			fd = 0;
 		} else {
-			reading = argv[source];
-			fd = open(argv[source], O_RDONLY);
+			reading = sourcelist[source]->file;
+			fd = open(sourcelist[source]->file, O_RDONLY);
 			if (fd < 0) {
-				perror(argv[source]);
+				perror(sourcelist[source]->file);
 				continue;
 			}
 		}
@@ -1250,7 +1256,7 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
-				perror(argv[source]);
+				perror(sourcelist[source]->file);
 				close(fd);
 				continue;
 			}
@@ -1388,9 +1394,13 @@ int read_json(int argc, char **argv, char *fname, const char *layername, int max
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			char *src = argv[i];
+			char *src;
 			if (argc < 1) {
 				src = fname;
+			} else if (sourcelist[i]->layer != NULL) {
+				src = sourcelist[i]->layer;
+			} else {
+				src = sourcelist[i]->file;
 			}
 
 			char *trunc = layernames[i] = malloc(strlen(src) + 1);
@@ -2113,6 +2123,9 @@ int main(int argc, char **argv) {
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
 
+	int nsources = 0;
+	struct source *sources = NULL;
+
 	struct pool exclude, include;
 	pool_init(&exclude, 0);
 	pool_init(&include, 0);
@@ -2127,6 +2140,7 @@ int main(int argc, char **argv) {
 	static struct option long_options[] = {
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},
+		{"named-layer", required_argument, 0, 'L'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"base-zoom", required_argument, 0, 'B'},
@@ -2166,7 +2180,7 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvP", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2177,6 +2191,32 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			layer = optarg;
+			break;
+
+		case 'L':
+			{
+				char *cp = strchr(optarg, ':');
+				if (cp == NULL || cp == optarg) {
+					fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
+					exit(EXIT_FAILURE);
+				}
+				struct source *src = malloc(sizeof(struct source));
+				if (src == NULL) {
+					perror("Out of memory");
+					exit(EXIT_FAILURE);
+				}
+
+				src->layer = strdup(optarg);
+				src->file = strdup(cp + 1);
+				if (src->layer == NULL || src->file == NULL) {
+					perror("Out of memory");
+					exit(EXIT_FAILURE);
+				}
+				src->layer[cp - optarg] = '\0';
+				src->next = sources;
+				sources = src;
+				nsources++;
+			}
 			break;
 
 		case 'z':
@@ -2315,7 +2355,7 @@ int main(int argc, char **argv) {
 			break;
 
 		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l layername] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [-P] [file.json ...]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l source] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [-P] [file.json ...]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -2368,7 +2408,27 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv, forcetable);
 	int ret = EXIT_SUCCESS;
 
-	ret = read_json(argc - optind, argv + optind, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
+	for (i = optind; i < argc; i++) {
+		struct source *src = malloc(sizeof(struct source));
+		if (src == NULL) {
+			perror("Out of memory");
+			exit(EXIT_FAILURE);
+		}
+
+		src->layer = NULL;
+		src->file = argv[i];
+		src->next = sources;
+		sources = src;
+		nsources++;
+	}
+
+	struct source *sourcelist[nsources];
+	i = nsources - 1;
+	for (; sources != NULL; sources = sources->next) {
+		sourcelist[i--] = sources;
+	}
+
+	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
 
 	mbtiles_close(outdb, argv);
 
