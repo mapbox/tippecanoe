@@ -283,12 +283,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				}
 			}
 
-			double area = 0;
-			for (size_t k = i; k < j; k++) {
-				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
-			}
-			area = area / 2;
+			double area = get_area(geom, i, j);
 			if (area != 0) {
 				has_area = true;
 			}
@@ -417,12 +412,7 @@ void check_polygon(drawvec &geom) {
 				}
 			}
 
-			double area = 0;
-			for (size_t k = i; k < j; k++) {
-				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
-			}
-			area = area / 2;
+			double area = get_area(geom, i, j);
 
 			if (area > 0) {
 				outer_start = i;
@@ -658,12 +648,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				}
 			}
 
-			double area = 0;
-			for (size_t k = i; k < j; k++) {
-				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
-			}
-			area = area / 2;
+			double area = get_area(geom, i, j);
 
 			// XXX There is an ambiguity here: If the area of a ring is 0 and it is followed by holes,
 			// we don't know whether the area-0 ring was a hole too or whether it was the outer ring
@@ -1044,12 +1029,7 @@ drawvec fix_polygon(drawvec &geom) {
 			// Reverse ring if winding order doesn't match
 			// inner/outer expectation
 
-			double area = 0;
-			for (size_t k = 0; k < ring.size(); k++) {
-				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
-				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
-			}
-
+			double area = get_area(ring, 0, ring.size());
 			if ((area > 0) != outer) {
 				drawvec tmp;
 				for (int a = ring.size() - 1; a >= 0; a--) {
