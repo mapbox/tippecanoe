@@ -68,8 +68,9 @@ SPACE = $(NULL) $(NULL)
 
 test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test
 
+# Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
 %.json.check:
-	./tippecanoe -f -o $@.mbtiles $(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
+	./tippecanoe -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $(patsubst %.check,%,$@) $@.out
 	rm $@.out $@.mbtiles
@@ -103,7 +104,7 @@ pbf-test:
 prep-test: $(TESTS)
 
 tests/%.json: Makefile tippecanoe tippecanoe-decode
-	./tippecanoe -f -o $@.check.mbtiles $(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe -f -o $@.check.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
 	./tippecanoe-decode $@.check.mbtiles > $@
 	cmp $(patsubst %.check,%,$@) $@
 	rm $@.check.mbtiles
