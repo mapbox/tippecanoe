@@ -1,3 +1,7 @@
+## 1.9.7
+
+* Fix build problem (wrong spelling of long long max/min constants)
+
 ## 1.9.6
 
 * Add an option to give specific layer names to specific input files
