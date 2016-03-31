@@ -21,6 +21,11 @@
 #include <pthread.h>
 #include <getopt.h>
 
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include "jsonpull.h"
 #include "tile.h"
 #include "pool.h"
@@ -1090,6 +1095,47 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
+void radix(struct reader *r, int nreaders, int *indexfd, int *geomfd) {
+	// Run through the index and geometry for each reader,
+	// splitting the contents out by index into as many
+	// sub-files as we can write to simultaneously.
+
+	// Then sort each of those by index, recursively if it is
+	// too big to fit in memory.
+
+	// Then concatenate each of the sub-outputs into a final output.
+
+	struct rlimit rl;
+
+	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+		perror("getrlimit");
+		exit(EXIT_FAILURE);
+	}
+
+	long long mem;
+
+#ifdef __APPLE__
+	int64_t hw_memsize;
+	size_t len = sizeof(int64_t);
+	if (sysctlbyname("hw.memsize", &hw_memsize, &len, NULL, 0) < 0) {
+		perror("sysctl hw.memsize");
+		exit(EXIT_FAILURE);
+	}
+	mem = hw_memsize;
+#else
+	long long pagesize = sysconf(_SC_PAGESIZE);
+	long long pages = sysconf(_SC_PHYS_PAGES);
+	if (pages < 0 || pagesize < 0) {
+		perror("sysconf _SC_PAGESIZE or _SC_PHYS_PAGES");
+		exit(EXIT_FAILURE);
+	}
+
+	mem = (long long) pages * pagesize;
+#endif
+
+	printf("you have %lld files and %lld memory\n", (long long) rl.rlim_cur, mem);
+}
+
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
 	int ret = EXIT_SUCCESS;
 
@@ -1439,6 +1485,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			}
 		}
 	}
+
+	radix(reader, CPUS, NULL, NULL); // XXX
 
 	/* Join the sub-indices together */
 
