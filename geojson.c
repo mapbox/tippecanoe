@@ -1135,11 +1135,13 @@ void radix(struct reader *reader, int nreaders, int *indexfd, int *geomfd) {
 
 	printf("you have %lld files and %lld memory\n", (long long) rl.rlim_cur, mem);
 
-	long long availfiles = rl.rlim_cur
-		- 2 * nreaders // each reader has a geom and an index
-		- 3; // stdin, stdout, stderr
+	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
+			       - 3			   // pool, meta, mbtiless
+			       - 3;			   // stdin, stdout, stderr
 
-	int splitbits = log(availfiles) / log(2);
+	int splitbits = log(availfiles / 2) / log(2);
+
+	printf("can skim off %d bits\n", splitbits);
 
 	int geomfds[nreaders];
 	int indexfds[nreaders];
@@ -1597,7 +1599,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		}
 	}
 
-	radix(reader, CPUS, NULL, NULL); // XXX
+	radix(reader, CPUS, NULL, NULL);  // XXX
 
 	/* Join the sub-indices together */
 
@@ -2256,31 +2258,29 @@ int main(int argc, char **argv) {
 			layer = optarg;
 			break;
 
-		case 'L':
-			{
-				char *cp = strchr(optarg, ':');
-				if (cp == NULL || cp == optarg) {
-					fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
-					exit(EXIT_FAILURE);
-				}
-				struct source *src = malloc(sizeof(struct source));
-				if (src == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-
-				src->layer = strdup(optarg);
-				src->file = strdup(cp + 1);
-				if (src->layer == NULL || src->file == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-				src->layer[cp - optarg] = '\0';
-				src->next = sources;
-				sources = src;
-				nsources++;
+		case 'L': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
+				exit(EXIT_FAILURE);
 			}
-			break;
+			struct source *src = malloc(sizeof(struct source));
+			if (src == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+
+			src->layer = strdup(optarg);
+			src->file = strdup(cp + 1);
+			if (src->layer == NULL || src->file == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+			src->layer[cp - optarg] = '\0';
+			src->next = sources;
+			sources = src;
+			nsources++;
+		} break;
 
 		case 'z':
 			maxzoom = atoi(optarg);
