@@ -2193,31 +2193,29 @@ int main(int argc, char **argv) {
 			layer = optarg;
 			break;
 
-		case 'L':
-			{
-				char *cp = strchr(optarg, ':');
-				if (cp == NULL || cp == optarg) {
-					fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
-					exit(EXIT_FAILURE);
-				}
-				struct source *src = malloc(sizeof(struct source));
-				if (src == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-
-				src->layer = strdup(optarg);
-				src->file = strdup(cp + 1);
-				if (src->layer == NULL || src->file == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-				src->layer[cp - optarg] = '\0';
-				src->next = sources;
-				sources = src;
-				nsources++;
+		case 'L': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
+				exit(EXIT_FAILURE);
 			}
-			break;
+			struct source *src = malloc(sizeof(struct source));
+			if (src == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+
+			src->layer = strdup(optarg);
+			src->file = strdup(cp + 1);
+			if (src->layer == NULL || src->file == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+			src->layer[cp - optarg] = '\0';
+			src->next = sources;
+			sources = src;
+			nsources++;
+		} break;
 
 		case 'z':
 			maxzoom = atoi(optarg);
