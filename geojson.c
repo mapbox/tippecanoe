@@ -1095,7 +1095,116 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix(struct reader *reader, int nreaders, int *indexfd, int *geomfd) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir) {
+	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
+	int splitbits = log(splits) / log(2);
+	splits = 1 << splitbits;
+
+	FILE *geomfiles[splits];
+	FILE *indexfiles[splits];
+	int geomfds[splits];
+	int indexfds[splits];
+	long long geompos[splits];
+
+	int i;
+	for (i = 0; i < splits; i++) {
+		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
+		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
+
+		geomfds[i] = mkstemp(geomname);
+		if (geomfds[i] < 0) {
+			perror(geomname);
+			exit(EXIT_FAILURE);
+		}
+		indexfds[i] = mkstemp(indexname);
+		if (indexfds[i] < 0) {
+			perror(indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		geomfiles[i] = fopen(geomname, "wb");
+		if (geomfiles[i] == NULL) {
+			perror(geomname);
+			exit(EXIT_FAILURE);
+		}
+		indexfiles[i] = fopen(indexname, "wb");
+		if (indexfiles[i] == NULL) {
+			perror(indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		unlink(geomname);
+		unlink(indexname);
+	}
+
+	for (i = 0; i < inputs; i++) {
+		struct stat geomst, indexst;
+		if (fstat(geomfds_in[i], &geomst) < 0) {
+			perror("stat geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(indexfds_in[i], &indexst) < 0) {
+			perror("stat index");
+			exit(EXIT_FAILURE);
+		}
+
+		if (indexst.st_size == 0) {
+			continue;  // no indices from this input
+		}
+
+		struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
+		if (indexmap == MAP_FAILED) {
+			perror("map index");
+			exit(EXIT_FAILURE);
+		}
+		char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
+		if (geommap == MAP_FAILED) {
+			perror("map geom");
+			exit(EXIT_FAILURE);
+		}
+
+		long long a;
+		for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+			struct index ix = indexmap[a];
+			unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
+			long long pos = geompos[which];
+
+			fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
+			geompos[which] += ix.end - ix.start;
+
+			ix.start = pos;
+			ix.end = geompos[which];
+
+			fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
+		}
+
+		if (munmap(indexmap, indexst.st_size) < 0) {
+			perror("unmap index");
+			exit(EXIT_FAILURE);
+		}
+		if (munmap(geommap, geomst.st_size) < 0) {
+			perror("unmap geom");
+			exit(EXIT_FAILURE);
+		}
+
+		if (close(geomfds_in[i])) {
+			perror("close geom");
+			exit(EXIT_FAILURE);
+		}
+		if (close(indexfds_in[i])) {
+			perror("close index");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (i = 0; i < splits; i++) {
+		printf("%d: %lld\n", i, geompos[i]);
+	}
+}
+
+void radix(struct reader *reader, int nreaders, int *indexfd, int *geomfd, const char *tmpdir) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -1136,21 +1245,25 @@ void radix(struct reader *reader, int nreaders, int *indexfd, int *geomfd) {
 	printf("you have %lld files and %lld memory\n", (long long) rl.rlim_cur, mem);
 
 	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
-			       - 3			   // pool, meta, mbtiless
+			       - 4			   // pool, meta, mbtiles, mbtiles journal
 			       - 3;			   // stdin, stdout, stderr
 
-	int splitbits = log(availfiles / 2) / log(2);
+	// 4 because for each we have output and input FILE and fd for geom and index
+	int splits = availfiles / 4;
 
-	printf("can skim off %d bits\n", splitbits);
+	// Be somewhat conservative about memory availability because the whole point of this
+	// is to keep from thrashing by working on chunks that will fit in memory.
+	mem /= 2;
 
 	int geomfds[nreaders];
 	int indexfds[nreaders];
-	for (int i = 0; i < nreaders; i++) {
+	int i;
+	for (i = 0; i < nreaders; i++) {
 		geomfds[i] = reader[i].geomfd;
 		indexfds[i] = reader[i].indexfd;
 	}
 
-	// radix1(geomfds, indexfds, nreaders);
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir);
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
@@ -1599,7 +1712,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		}
 	}
 
-	radix(reader, CPUS, NULL, NULL);  // XXX
+	radix(reader, CPUS, NULL, NULL, tmpdir);  // XXX
 
 	/* Join the sub-indices together */
 
