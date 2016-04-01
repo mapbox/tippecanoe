@@ -1095,7 +1095,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix(struct reader *r, int nreaders, int *indexfd, int *geomfd) {
+void radix(struct reader *reader, int nreaders, int *indexfd, int *geomfd) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -1134,6 +1134,21 @@ void radix(struct reader *r, int nreaders, int *indexfd, int *geomfd) {
 #endif
 
 	printf("you have %lld files and %lld memory\n", (long long) rl.rlim_cur, mem);
+
+	long long availfiles = rl.rlim_cur
+		- 2 * nreaders // each reader has a geom and an index
+		- 3; // stdin, stdout, stderr
+
+	int splitbits = log(availfiles) / log(2);
+
+	int geomfds[nreaders];
+	int indexfds[nreaders];
+	for (int i = 0; i < nreaders; i++) {
+		geomfds[i] = reader[i].geomfd;
+		indexfds[i] = reader[i].indexfd;
+	}
+
+	// radix1(geomfds, indexfds, nreaders);
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
@@ -1483,6 +1498,102 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			if (!quiet) {
 				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, trunc);
 			}
+		}
+	}
+
+	// Create a combined string pool and a combined metadata file
+	// but keep track of the offsets into it since we still need
+	// segment+offset to find the data.
+
+	long long pool_off[CPUS];
+	long long meta_off[CPUS];
+
+	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+
+	int poolfd = mkstemp(poolname);
+	if (poolfd < 0) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *poolfile = fopen(poolname, "wb");
+	if (poolfile == NULL) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(poolname);
+
+	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+
+	int metafd = mkstemp(metaname);
+	if (metafd < 0) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *metafile = fopen(metaname, "wb");
+	if (metafile == NULL) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(metaname);
+
+	long long metapos = 0;
+	long long poolpos = 0;
+
+	for (i = 0; i < CPUS; i++) {
+		if (reader[i].metapos > 0) {
+			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
+			if (map == MAP_FAILED) {
+				perror("mmap unmerged meta");
+				exit(EXIT_FAILURE);
+			}
+			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
+				perror("Reunify meta");
+				exit(EXIT_FAILURE);
+			}
+			if (munmap(map, reader[i].metapos) != 0) {
+				perror("unmap unmerged meta");
+			}
+		}
+
+		meta_off[i] = metapos;
+		metapos += reader[i].metapos;
+		if (close(reader[i].metafd) != 0) {
+			perror("close unmerged meta");
+		}
+
+		if (reader[i].poolfile->off > 0) {
+			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
+				perror("Reunify string pool");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		pool_off[i] = poolpos;
+		poolpos += reader[i].poolfile->off;
+		memfile_close(reader[i].poolfile);
+	}
+
+	fclose(poolfile);
+	fclose(metafile);
+
+	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
+	if (meta == MAP_FAILED) {
+		perror("mmap meta");
+		exit(EXIT_FAILURE);
+	}
+
+	char *stringpool = NULL;
+	if (poolpos > 0) {  // Will be 0 if -X was specified
+		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
+		if (stringpool == MAP_FAILED) {
+			perror("mmap string pool");
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1934,102 +2045,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
-	}
-
-	// Create a combined string pool and a combined metadata file
-	// but keep track of the offsets into it since we still need
-	// segment+offset to find the data.
-
-	long long pool_off[CPUS];
-	long long meta_off[CPUS];
-
-	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
-	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-
-	int poolfd = mkstemp(poolname);
-	if (poolfd < 0) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *poolfile = fopen(poolname, "wb");
-	if (poolfile == NULL) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-
-	unlink(poolname);
-
-	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
-	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-
-	int metafd = mkstemp(metaname);
-	if (metafd < 0) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *metafile = fopen(metaname, "wb");
-	if (metafile == NULL) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	unlink(metaname);
-
-	long long metapos = 0;
-	long long poolpos = 0;
-
-	for (i = 0; i < CPUS; i++) {
-		if (reader[i].metapos > 0) {
-			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
-			if (map == MAP_FAILED) {
-				perror("mmap unmerged meta");
-				exit(EXIT_FAILURE);
-			}
-			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
-				perror("Reunify meta");
-				exit(EXIT_FAILURE);
-			}
-			if (munmap(map, reader[i].metapos) != 0) {
-				perror("unmap unmerged meta");
-			}
-		}
-
-		meta_off[i] = metapos;
-		metapos += reader[i].metapos;
-		if (close(reader[i].metafd) != 0) {
-			perror("close unmerged meta");
-		}
-
-		if (reader[i].poolfile->off > 0) {
-			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
-				perror("Reunify string pool");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		pool_off[i] = poolpos;
-		poolpos += reader[i].poolfile->off;
-		memfile_close(reader[i].poolfile);
-	}
-
-	fclose(poolfile);
-	fclose(metafile);
-
-	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
-	if (meta == MAP_FAILED) {
-		perror("mmap meta");
-		exit(EXIT_FAILURE);
-	}
-
-	char *stringpool = NULL;
-	if (poolpos > 0) {  // Will be 0 if -X was specified
-		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
-		if (stringpool == MAP_FAILED) {
-			perror("mmap string pool");
-			exit(EXIT_FAILURE);
-		}
 	}
 
 	if (geompos == 0 || metapos == 0) {
