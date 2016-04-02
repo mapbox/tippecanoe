@@ -1241,7 +1241,75 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				exit(EXIT_FAILURE);
 			}
 
-			if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
+			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
+				// XXX Unmap and remap since the sort will change the underlying file
+				if (munmap(indexmap, indexst.st_size) < 0) {
+					perror("unmap index");
+					exit(EXIT_FAILURE);
+				}
+
+				long long indexpos = indexst.st_size;
+				int bytes = sizeof(struct index);
+				if (!quiet) {
+					fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
+				}
+
+				int page = sysconf(_SC_PAGESIZE);
+				long long unit = (50 * 1024 * 1024 / bytes) * bytes;
+				while (unit % page != 0) {
+					unit += bytes;
+				}
+
+				int nmerges = (indexpos + unit - 1) / unit;
+				struct merge merges[nmerges];
+
+				int a;
+				for (a = 0; a < nmerges; a++) {
+					merges[a].start = merges[a].end = 0;
+				}
+
+				pthread_t pthreads[CPUS];
+				struct sort_arg args[CPUS];
+
+				for (a = 0; a < CPUS; a++) {
+					args[a].task = a;
+					args[a].cpus = CPUS;
+					args[a].indexpos = indexpos;
+					args[a].merges = merges;
+					args[a].indexfd = indexfds[i];
+					args[a].nmerges = nmerges;
+					args[a].unit = unit;
+					args[a].bytes = bytes;
+
+					if (pthread_create(&pthreads[a], NULL, run_sort, &args[a]) != 0) {
+						perror("pthread_create");
+						exit(EXIT_FAILURE);
+					}
+				}
+
+				for (a = 0; a < CPUS; a++) {
+					void *retval;
+
+					if (pthread_join(pthreads[a], &retval) != 0) {
+						perror("pthread_join");
+					}
+				}
+
+				if (nmerges != 1) {
+					if (!quiet) {
+						fprintf(stderr, "\n");
+					}
+				}
+
+				indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				if (indexmap == MAP_FAILED) {
+					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					perror("map index");
+					exit(EXIT_FAILURE);
+				}
+
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos);
+			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
 				long long a;
 				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
