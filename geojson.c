@@ -1095,7 +1095,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -1108,6 +1108,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 	int i;
 	for (i = 0; i < splits; i++) {
+		geompos[i] = 0;
+
 		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
@@ -1158,6 +1160,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 		struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
 		if (indexmap == MAP_FAILED) {
+			fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
 			perror("map index");
 			exit(EXIT_FAILURE);
 		}
@@ -1211,6 +1214,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	}
 
 	for (i = 0; i < splits; i++) {
+		int already_closed = 0;
+
 		struct stat geomst, indexst;
 		if (fstat(geomfds[i], &geomst) < 0) {
 			perror("stat geom");
@@ -1221,25 +1226,60 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		if (indexst.st_size >= 0) {
-			if (indexst.st_size > mem) {
+		if (indexst.st_size > 0) {
+			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+			if (indexmap == MAP_FAILED) {
+				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+				perror("map index");
+				exit(EXIT_FAILURE);
+			}
+			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+			if (geommap == MAP_FAILED) {
+				perror("map geom");
+				exit(EXIT_FAILURE);
+			}
+
+			if (indexst.st_size == sizeof(struct index)) {
+				struct index ix = *indexmap;
+				long long pos = *geompos;
+
+				fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
+				*geompos += ix.end - ix.start;
+
+				ix.start = pos;
+				ix.end = *geompos;
+				fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
+			} else {
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out);
+				already_closed = 1;
+			}
+
+			if (munmap(indexmap, indexst.st_size) < 0) {
+				perror("unmap index");
+				exit(EXIT_FAILURE);
+			}
+			if (munmap(geommap, geomst.st_size) < 0) {
+				perror("unmap geom");
+				exit(EXIT_FAILURE);
 			}
 		}
 
-		if (close(geomfds[i]) < 0) {
-			perror("close geom");
-			exit(EXIT_FAILURE);
-		}
-		if (close(indexfds[i]) < 0) {
-			perror("close index");
-			exit(EXIT_FAILURE);
+		if (!already_closed) {
+			if (close(geomfds[i]) < 0) {
+				perror("close geom");
+				exit(EXIT_FAILURE);
+			}
+			if (close(indexfds[i]) < 0) {
+				perror("close index");
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		availfiles += 2;
 	}
 }
 
-void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE *indexfile, int indexfd, const char *tmpdir) {
+void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE *indexfile, int indexfd, const char *tmpdir, long long *geompos) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -1299,7 +1339,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		indexfds[i] = reader[i].indexfd;
 	}
 
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles);
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos);
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
@@ -1781,7 +1821,20 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 	unlink(geomname);
 
-	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir);
+	long long geompos = 0;
+
+	/* initial tile is 0/0/0 */
+	serialize_int(geomfile, 0, &geompos, fname);
+	serialize_uint(geomfile, 0, &geompos, fname);
+	serialize_uint(geomfile, 0, &geompos, fname);
+
+	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos);
+
+	/* end of tile */
+	serialize_byte(geomfile, -2, &geompos, fname);
+
+	fclose(geomfile);
+	fclose(indexfile);
 
 #if 0
 	/* Sort the index by geometry */
@@ -2159,7 +2212,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		perror("stat sorted geom\n");
 		exit(EXIT_FAILURE);
 	}
-	long long geompos = geomst.st_size;
 
 	int fd[TEMP_FILES];
 	off_t size[TEMP_FILES];
