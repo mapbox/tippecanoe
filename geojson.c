@@ -1106,6 +1106,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	int indexfds[splits];
 	long long geompos[splits];
 
+	fprintf(stderr, "prefix %d, splits %d, splitbits %d\n", prefix, splits, splitbits);
+
 	int i;
 	for (i = 0; i < splits; i++) {
 		geompos[i] = 0;
@@ -1239,16 +1241,19 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				exit(EXIT_FAILURE);
 			}
 
-			if (indexst.st_size == sizeof(struct index)) {
-				struct index ix = *indexmap;
-				long long pos = *geompos;
+			if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
+				long long a;
+				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+					struct index ix = indexmap[a];
+					long long pos = *geompos;
 
-				fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
-				*geompos += ix.end - ix.start;
+					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
+					*geompos += ix.end - ix.start;
 
-				ix.start = pos;
-				ix.end = *geompos;
-				fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
+					ix.start = pos;
+					ix.end = *geompos;
+					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
+				}
 			} else {
 				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out);
 				already_closed = 1;
