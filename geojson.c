@@ -899,6 +899,8 @@ void *run_sort(void *v) {
 			perror("mmap in run_sort");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map, end - start, MADV_RANDOM);
+		madvise(map, end - start, MADV_WILLNEED);
 
 		qsort(map, (end - start) / a->bytes, a->bytes, indexcmp);
 
@@ -910,6 +912,7 @@ void *run_sort(void *v) {
 			perror("mmap (write)");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map2, end - start, MADV_SEQUENTIAL);
 
 		memcpy(map2, map, end - start);
 
@@ -1029,6 +1032,7 @@ void *run_read_parallel(void *v) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
+	madvise(map, a->len, MADV_SEQUENTIAL);
 
 	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
 
@@ -1154,11 +1158,15 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			perror("map index");
 			exit(EXIT_FAILURE);
 		}
+		madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
+		madvise(indexmap, indexst.st_size, MADV_WILLNEED);
 		char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
 		if (geommap == MAP_FAILED) {
 			perror("map geom");
 			exit(EXIT_FAILURE);
 		}
+		madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
+		madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
 		long long a;
 		for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
@@ -1224,25 +1232,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size > 0) {
-			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
-			if (indexmap == MAP_FAILED) {
-				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
-				perror("map index");
-				exit(EXIT_FAILURE);
-			}
-			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
-			if (geommap == MAP_FAILED) {
-				perror("map geom");
-				exit(EXIT_FAILURE);
-			}
-
 			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
-				// XXX Unmap and remap since the sort will change the underlying file
-				if (munmap(indexmap, indexst.st_size) < 0) {
-					perror("unmap index");
-					exit(EXIT_FAILURE);
-				}
-
 				long long indexpos = indexst.st_size;
 				int bytes = sizeof(struct index);
 
@@ -1287,15 +1277,49 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					}
 				}
 
-				indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				struct indexmap *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
 					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
 					perror("map index");
 					exit(EXIT_FAILURE);
 				}
+				madvise(indexmap, indexst.st_size, MADV_RANDOM); // sequential, but from several pointers at once
+				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				if (geommap == MAP_FAILED) {
+					perror("map geom");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_RANDOM);
+				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
 				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported);
+
+				if (munmap(indexmap, indexst.st_size) < 0) {
+					perror("unmap index");
+					exit(EXIT_FAILURE);
+				}
+				if (munmap(geommap, geomst.st_size) < 0) {
+					perror("unmap geom");
+					exit(EXIT_FAILURE);
+				}
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
+				struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				if (indexmap == MAP_FAILED) {
+					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					perror("map index");
+					exit(EXIT_FAILURE);
+				}
+				madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
+				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				if (geommap == MAP_FAILED) {
+					perror("map geom");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_RANDOM);
+				madvise(geommap, geomst.st_size, MADV_WILLNEED);
+
 				long long a;
 				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
@@ -1308,6 +1332,15 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					ix.end = *geompos_out;
 					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
 				}
+
+				if (munmap(indexmap, indexst.st_size) < 0) {
+					perror("unmap index");
+					exit(EXIT_FAILURE);
+				}
+				if (munmap(geommap, geomst.st_size) < 0) {
+					perror("unmap geom");
+					exit(EXIT_FAILURE);
+				}
 			} else {
 				// We already reported the progress from splitting this radix out
 				// but we need to split it again, which will be credited with more
@@ -1318,15 +1351,6 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
-			}
-
-			if (munmap(indexmap, indexst.st_size) < 0) {
-				perror("unmap index");
-				exit(EXIT_FAILURE);
-			}
-			if (munmap(geommap, geomst.st_size) < 0) {
-				perror("unmap geom");
-				exit(EXIT_FAILURE);
 			}
 		}
 
@@ -1569,6 +1593,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
 					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					// No error if MAP_FAILED because check is below
+					if (map != MAP_FAILED) {
+						madvise(map, st.st_size - off, MADV_RANDOM); // sequential, but from several pointers at once
+					}
 				}
 			}
 		}
@@ -1818,6 +1846,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				perror("mmap unmerged meta");
 				exit(EXIT_FAILURE);
 			}
+			madvise(map, reader[i].metapos, MADV_SEQUENTIAL);
+			madvise(map, reader[i].metapos, MADV_WILLNEED);
 			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
 				perror("Reunify meta");
 				exit(EXIT_FAILURE);
@@ -1853,6 +1883,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		perror("mmap meta");
 		exit(EXIT_FAILURE);
 	}
+	madvise(meta, metapos, MADV_RANDOM);
 
 	char *stringpool = NULL;
 	if (poolpos > 0) {  // Will be 0 if -X was specified
@@ -1861,9 +1892,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			perror("mmap string pool");
 			exit(EXIT_FAILURE);
 		}
+		madvise(stringpool, poolpos, MADV_RANDOM);
 	}
-
-	/* Join the sub-indices together */
 
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
@@ -1929,6 +1959,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map, indexpos, MADV_SEQUENTIAL);
+		madvise(map, indexpos, MADV_WILLNEED);
 
 		struct tile {
 			unsigned x;

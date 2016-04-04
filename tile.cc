@@ -1092,6 +1092,8 @@ void *run_thread(void *vargs) {
 			perror("mmap geom");
 			exit(EXIT_FAILURE);
 		}
+		madvise(geom, arg->geom_size[j], MADV_SEQUENTIAL);
+		madvise(geom, arg->geom_size[j], MADV_WILLNEED);
 
 		char *geomstart = geom;
 		char *end = geom + arg->geom_size[j];
