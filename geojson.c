@@ -1094,11 +1094,11 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	FILE *indexfiles[splits];
 	int geomfds[splits];
 	int indexfds[splits];
-	long long geompos[splits];
+	long long sub_geompos[splits];
 
 	int i;
 	for (i = 0; i < splits; i++) {
-		geompos[i] = 0;
+		sub_geompos[i] = 0;
 
 		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
@@ -1164,10 +1164,10 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 			struct index ix = indexmap[a];
 			unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
-			long long pos = geompos[which];
+			long long pos = sub_geompos[which];
 
 			fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
-			geompos[which] += ix.end - ix.start;
+			sub_geompos[which] += ix.end - ix.start;
 
 			// Count this as a half-accomplishment, since we will copy again
 			*progress += (ix.end - ix.start) / 2;
@@ -1177,7 +1177,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			}
 
 			ix.start = pos;
-			ix.end = geompos[which];
+			ix.end = sub_geompos[which];
 
 			fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
 		}
@@ -1294,18 +1294,18 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					exit(EXIT_FAILURE);
 				}
 
-				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos, progress, progress_max, progress_reported);
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported);
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
 				long long a;
 				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
-					long long pos = *geompos;
+					long long pos = *geompos_out;
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
-					*geompos += ix.end - ix.start;
+					*geompos_out += ix.end - ix.start;
 
 					ix.start = pos;
-					ix.end = *geompos;
+					ix.end = *geompos_out;
 					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
 				}
 			} else {
