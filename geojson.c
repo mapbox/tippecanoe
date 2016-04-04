@@ -2264,6 +2264,11 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		munmap(map, indexpos);
 	}
 
+	if (indexpos == 0) {
+		fprintf(stderr, "Did not read any valid geometries\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/* Copy geometries to a new file in index order */
 
 	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
@@ -2299,11 +2304,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
-	}
-
-	if (geompos == 0 || metapos == 0) {
-		fprintf(stderr, "did not read any valid geometries\n");
-		exit(EXIT_FAILURE);
 	}
 
 	if (!quiet) {
