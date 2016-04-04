@@ -562,7 +562,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 
-	serialize_int(metafile, m, metapos, fname);
 	for (i = 0; i < m; i++) {
 		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
 		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
@@ -587,6 +586,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_int(geomfile, segment, geompos, fname);
 	serialize_long_long(geomfile, metastart, geompos, fname);
+	serialize_int(geomfile, m, geompos, fname);
 	long long wx = *initial_x, wy = *initial_y;
 	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
 	serialize_byte(geomfile, VT_END, geompos, fname);
@@ -1507,6 +1507,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			struct stringpool p;
 			memfile_write(r->treefile, &p, sizeof(struct stringpool));
 		}
+		// Keep metadata file from being completely empty if no attributes
+		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
 		r->file_bbox = malloc(4 * sizeof(long long));
 		if (r->file_bbox == NULL) {
