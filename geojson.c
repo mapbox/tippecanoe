@@ -1906,180 +1906,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	fclose(geomfile);
 	fclose(indexfile);
 
-#if 0
-	/* Sort the index by geometry */
-
-	{
-		int bytes = sizeof(struct index);
-		if (!quiet) {
-			fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
-		}
-
-		int page = sysconf(_SC_PAGESIZE);
-		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
-		while (unit % page != 0) {
-			unit += bytes;
-		}
-
-		int nmerges = (indexpos + unit - 1) / unit;
-		struct merge merges[nmerges];
-		for (i = 0; i < nmerges; i++) {
-			merges[i].start = merges[i].end = 0;
-		}
-
-		pthread_t pthreads[CPUS];
-		struct sort_arg args[CPUS];
-
-		int i;
-		for (i = 0; i < CPUS; i++) {
-			args[i].task = i;
-			args[i].cpus = CPUS;
-			args[i].indexpos = indexpos;
-			args[i].merges = merges;
-			args[i].indexfd = indexfd;
-			args[i].nmerges = nmerges;
-			args[i].unit = unit;
-			args[i].bytes = bytes;
-
-			if (pthread_create(&pthreads[i], NULL, run_sort, &args[i]) != 0) {
-				perror("pthread_create");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		for (i = 0; i < CPUS; i++) {
-			void *retval;
-
-			if (pthread_join(pthreads[i], &retval) != 0) {
-				perror("pthread_join");
-			}
-		}
-
-		if (nmerges != 1) {
-			if (!quiet) {
-				fprintf(stderr, "\n");
-			}
-		}
-
-		char *map = mmap(NULL, indexpos, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap unified index");
-			exit(EXIT_FAILURE);
-		}
-
-		/*
-		 * This is the last opportunity to access the geometry in
-		 * close to the original order, so that we can reorder it
-		 * without thrashing.
-		 *
-		 * Each of the sorted index chunks originally had contiguous
-		 * geography, so it can be copied relatively cheaply in sorted order
-		 * into the temporary files that are then merged together to produce
-		 * the final geometry.
-		 */
-
-		for (i = 0; i < CPUS; i++) {
-			reader[i].geom_map = NULL;
-
-			if (reader[i].geomst.st_size > 0) {
-				reader[i].geom_map = mmap(NULL, reader[i].geomst.st_size, PROT_READ, MAP_PRIVATE, reader[i].geomfd, 0);
-				if (reader[i].geom_map == MAP_FAILED) {
-					perror("mmap unsorted geometry");
-					exit(EXIT_FAILURE);
-				}
-			}
-		}
-
-		for (i = 0; i < nmerges; i++) {
-			if (!quiet && nmerges > 1) {
-				fprintf(stderr, "Reordering geometry: part %d of %d   \r", i + 1, nmerges);
-			}
-
-			long long j;
-			for (j = merges[i].start; j < merges[i].end; j += sizeof(struct index)) {
-				struct index *ix = (struct index *) (map + j);
-				long long start = geompos;
-
-				fwrite_check(reader[ix->segment].geom_map + ix->start, sizeof(char), ix->end - ix->start, geomfile, fname);
-				geompos += ix->end - ix->start;
-
-				// Repoint the index to where we just copied the geometry
-
-				ix->start = start;
-				ix->end = geompos;
-			}
-		}
-		if (!quiet && nmerges > 1) {
-			fprintf(stderr, "\n");
-		}
-
-		fclose(geomfile);
-
-		long long pre_merged_geompos = geompos;
-		char *geom_map = mmap(NULL, geompos, PROT_READ, MAP_PRIVATE, geomfd, 0);
-		if (geom_map == MAP_FAILED) {
-			perror("mmap geometry");
-			exit(EXIT_FAILURE);
-		}
-
-		FILE *f = fopen(indexname, "wb");
-		if (f == NULL) {
-			perror(indexname);
-			exit(EXIT_FAILURE);
-		}
-
-		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-		geomfd2 = mkstemp(geomname);
-		if (geomfd2 < 0) {
-			perror(geomname);
-			exit(EXIT_FAILURE);
-		}
-		geomfile = fopen(geomname, "wb");
-		if (geomfile == NULL) {
-			perror(geomname);
-			exit(EXIT_FAILURE);
-		}
-		unlink(geomname);
-
-		for (i = 0; i < CPUS; i++) {
-			if (reader[i].geomst.st_size > 0) {
-				if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
-					perror("unmap unsorted geometry");
-				}
-			}
-			if (close(reader[i].geomfd) != 0) {
-				perror("close unsorted geometry");
-			}
-		}
-
-		geompos = 0;
-
-		/* initial tile is 0/0/0 */
-		serialize_int(geomfile, 0, &geompos, fname);
-		serialize_uint(geomfile, 0, &geompos, fname);
-		serialize_uint(geomfile, 0, &geompos, fname);
-
-		merge(merges, nmerges, (unsigned char *) map, f, bytes, indexpos / bytes, geom_map, geomfile, &geompos);
-
-		munmap(map, indexpos);
-		fclose(f);
-		close(indexfd);
-
-		munmap(geom_map, pre_merged_geompos);
-		close(geomfd);
-
-		/* end of tile */
-		serialize_byte(geomfile, -2, &geompos, fname);
-		fclose(geomfile);
-	}
-
-	indexfd = open(indexname, O_RDONLY);
-	if (indexfd < 0) {
-		perror("reopen sorted index");
-		exit(EXIT_FAILURE);
-	}
-#endif
-
 	struct stat indexst;
 	if (fstat(indexfd, &indexst) < 0) {
 		perror("stat index");
@@ -2087,6 +1913,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 	long long indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
+
+	if (!quiet) {
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+	}
 
 	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
@@ -2263,19 +2093,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		exit(EXIT_FAILURE);
 	}
 
-	/* Copy geometries to a new file in index order */
-
-	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
-	if (index_map == MAP_FAILED) {
-		perror("mmap index");
-		exit(EXIT_FAILURE);
-	}
-	unlink(indexname);
-
-	if (munmap(index_map, indexpos) != 0) {
-		perror("unmap sorted index");
-	}
-
 	if (close(indexfd) != 0) {
 		perror("close sorted index");
 	}
@@ -2298,10 +2115,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
-	}
-
-	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
 
 	unsigned midx = 0, midy = 0;
