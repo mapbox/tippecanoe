@@ -323,7 +323,7 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	*head = m;
 }
 
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *along, long long *reported, long long geom_total) {
+static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
 	int i;
 	struct merge *head = NULL;
 
@@ -339,10 +339,10 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		*geompos += ix->end - ix->start;
 
 		// Count this as a half-accomplishment, since we already half-counted it
-		*along += (ix->end - ix->start) / 2;
-		if (!quiet && 100 * *along / geom_total != *reported) {
-			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *along / geom_total);
-			*reported = 100 * *along / geom_total;
+		*progress += (ix->end - ix->start) / 2;
+		if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+			*progress_reported = 100 * *progress / *progress_max;
 		}
 
 		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
@@ -1085,7 +1085,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long geom_total, long long *reported) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -1133,8 +1133,6 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		unlink(indexname);
 	}
 
-	long long along = *geompos_out;
-
 	for (i = 0; i < inputs; i++) {
 		struct stat geomst, indexst;
 		if (fstat(geomfds_in[i], &geomst) < 0) {
@@ -1172,10 +1170,10 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			geompos[which] += ix.end - ix.start;
 
 			// Count this as a half-accomplishment, since we will copy again
-			along += (ix.end - ix.start) / 2;
-			if (!quiet && 100 * along / geom_total != *reported) {
-				fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * along / geom_total);
-				*reported = 100 * along / geom_total;
+			*progress += (ix.end - ix.start) / 2;
+			if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+				fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+				*progress_reported = 100 * *progress / *progress_max;
 			}
 
 			ix.start = pos;
@@ -1296,7 +1294,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					exit(EXIT_FAILURE);
 				}
 
-				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos, &along, reported, geom_total);
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos, progress, progress_max, progress_reported);
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
 				long long a;
 				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
@@ -1311,7 +1309,14 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
 				}
 			} else {
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, geom_total, reported);
+				// We already reported the progress from splitting this radix out
+				// but we need to split it again, which will be credited with more
+				// progress. So increase the total amount of progress to report by
+				// the additional progress that will happpen, which may move the
+				// counter backward but will be an honest estimate of the work remaining.
+				*progress_max += geomst.st_size / 2;
+
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
 			}
 
@@ -1406,8 +1411,8 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		geom_total += geomst.st_size;
 	}
 
-	long long reported = -1;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, geom_total, &reported);
+	long long progress = 0, progress_max = geom_total, progress_reported = -1;
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
