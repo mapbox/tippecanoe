@@ -1037,7 +1037,7 @@ void *run_read_parallel(void *v) {
 
 	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
 
-	madvise(map, a->len, MADV_FREE);
+	madvise(map, a->len, MADV_DONTNEED);
 	if (munmap(map, a->len) != 0) {
 		perror("munmap source file");
 	}
@@ -1192,12 +1192,12 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
 		}
 
-		madvise(indexmap, indexst.st_size, MADV_FREE);
+		madvise(indexmap, indexst.st_size, MADV_DONTNEED);
 		if (munmap(indexmap, indexst.st_size) < 0) {
 			perror("unmap index");
 			exit(EXIT_FAILURE);
 		}
-		madvise(geommap, geomst.st_size, MADV_FREE);
+		madvise(geommap, geomst.st_size, MADV_DONTNEED);
 		if (munmap(geommap, geomst.st_size) < 0) {
 			perror("unmap geom");
 			exit(EXIT_FAILURE);
@@ -1299,12 +1299,12 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported);
 
-				madvise(indexmap, indexst.st_size, MADV_FREE);
+				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
 				if (munmap(indexmap, indexst.st_size) < 0) {
 					perror("unmap index");
 					exit(EXIT_FAILURE);
 				}
-				madvise(geommap, geomst.st_size, MADV_FREE);
+				madvise(geommap, geomst.st_size, MADV_DONTNEED);
 				if (munmap(geommap, geomst.st_size) < 0) {
 					perror("unmap geom");
 					exit(EXIT_FAILURE);
@@ -1339,12 +1339,12 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
 				}
 
-				madvise(indexmap, indexst.st_size, MADV_FREE);
+				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
 				if (munmap(indexmap, indexst.st_size) < 0) {
 					perror("unmap index");
 					exit(EXIT_FAILURE);
 				}
-				madvise(geommap, geomst.st_size, MADV_FREE);
+				madvise(geommap, geomst.st_size, MADV_DONTNEED);
 				if (munmap(geommap, geomst.st_size) < 0) {
 					perror("unmap geom");
 					exit(EXIT_FAILURE);
@@ -1614,7 +1614,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			overall_offset += st.st_size - off;
 
 			if (munmap(map, st.st_size - off) != 0) {
-				madvise(map, st.st_size, MADV_FREE);
+				madvise(map, st.st_size, MADV_DONTNEED);
 				perror("munmap source file");
 			}
 		} else {
@@ -1861,7 +1861,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				perror("Reunify meta");
 				exit(EXIT_FAILURE);
 			}
-			madvise(map, reader[i].metapos, MADV_FREE);
+			madvise(map, reader[i].metapos, MADV_DONTNEED);
 			if (munmap(map, reader[i].metapos) != 0) {
 				perror("unmap unmerged meta");
 			}
@@ -2132,7 +2132,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			}
 		}
 
-		madvise(map, indexpos, MADV_FREE);
+		madvise(map, indexpos, MADV_DONTNEED);
 		munmap(map, indexpos);
 	}
 
@@ -2174,7 +2174,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		ret = EXIT_FAILURE;
 	}
 
-	madvise(meta, metapos, MADV_FREE);
+	madvise(meta, metapos, MADV_DONTNEED);
 	if (munmap(meta, metapos) != 0) {
 		perror("munmap meta");
 	}
@@ -2183,7 +2183,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (poolpos > 0) {
-		madvise(pool, poolpos, MADV_FREE);
+		madvise(pool, poolpos, MADV_DONTNEED);
 		if (munmap(stringpool, poolpos) != 0) {
 			perror("munmap stringpool");
 		}

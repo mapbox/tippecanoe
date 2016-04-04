@@ -1152,7 +1152,7 @@ void *run_thread(void *vargs) {
 			}
 		}
 
-		madvise(geomstart, arg->geom_size[j], MADV_FREE);
+		madvise(geomstart, arg->geom_size[j], MADV_DONTNEED);
 		if (munmap(geomstart, arg->geom_size[j]) != 0) {
 			perror("munmap geom");
 		}
