@@ -1033,7 +1033,7 @@ void *run_read_parallel(void *v) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
-	madvise(map, a->len, MADV_SEQUENTIAL);
+	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
 	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
 
@@ -1287,7 +1287,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					perror("map index");
 					exit(EXIT_FAILURE);
 				}
-				madvise(indexmap, indexst.st_size, MADV_RANDOM); // sequential, but from several pointers at once
+				madvise(indexmap, indexst.st_size, MADV_RANDOM);  // sequential, but from several pointers at once
 				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
 				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
 				if (geommap == MAP_FAILED) {
@@ -1603,7 +1603,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
 					// No error if MAP_FAILED because check is below
 					if (map != MAP_FAILED) {
-						madvise(map, st.st_size - off, MADV_RANDOM); // sequential, but from several pointers at once
+						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
 					}
 				}
 			}
