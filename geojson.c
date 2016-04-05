@@ -338,8 +338,8 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
 		*geompos += ix->end - ix->start;
 
-		// Count this as a half-accomplishment, since we already half-counted it
-		*progress += (ix->end - ix->start) / 2;
+		// Count this as an 75%-accomplishment, since we already 25%-counted it
+		*progress += (ix->end - ix->start) * 3 / 4;
 		if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
 			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
@@ -1179,8 +1179,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
 			sub_geompos[which] += ix.end - ix.start;
 
-			// Count this as a half-accomplishment, since we will copy again
-			*progress += (ix.end - ix.start) / 2;
+			// Count this as a 25%-accomplishment, since we will copy again
+			*progress += (ix.end - ix.start) / 4;
 			if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
 				fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 				*progress_reported = 100 * *progress / *progress_max;
@@ -1241,10 +1241,14 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				int bytes = sizeof(struct index);
 
 				int page = sysconf(_SC_PAGESIZE);
-				long long unit = (50 * 1024 * 1024 / bytes) * bytes;
-				while (unit % page != 0) {
-					unit += bytes;
+				// Don't try to sort more than 2GB at once,
+				// which used to crash Macs and may still
+				long long max_unit = 2LL * 1024 * 1024 * 1024;
+				long long unit = ((indexpos / CPUS + bytes - 1) / bytes) * bytes;
+				if (unit > max_unit) {
+					unit = max_unit;
 				}
+				unit = ((unit + page - 1) / page) * page;
 
 				int nmerges = (indexpos + unit - 1) / unit;
 				struct merge merges[nmerges];
@@ -1334,6 +1338,13 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
 
+					// Count this as an 75%-accomplishment, since we already 25%-counted it
+					*progress += (ix.end - ix.start) * 3 / 4;
+					if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+						fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+						*progress_reported = 100 * *progress / *progress_max;
+					}
+
 					ix.start = pos;
 					ix.end = *geompos_out;
 					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
@@ -1355,7 +1366,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// progress. So increase the total amount of progress to report by
 				// the additional progress that will happpen, which may move the
 				// counter backward but will be an honest estimate of the work remaining.
-				*progress_max += geomst.st_size / 2;
+				*progress_max += geomst.st_size / 4;
 
 				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
@@ -1414,6 +1425,11 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 
 	mem = (long long) pages * pagesize;
 #endif
+
+	// Don't use huge numbers of files that will trouble the file system
+	if (rl.rlim_cur > 5000) {
+		rl.rlim_cur = 5000;
+	}
 
 	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
 			       - 4			   // pool, meta, mbtiles, mbtiles journal
