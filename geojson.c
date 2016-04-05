@@ -1043,6 +1043,7 @@ void *run_read_parallel(void *v) {
 	}
 	if (fclose(a->fp) != 0) {
 		perror("close source file");
+		exit(EXIT_FAILURE);
 	}
 
 	*(a->is_parsing) = 0;
@@ -1216,8 +1217,14 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	}
 
 	for (i = 0; i < splits; i++) {
-		fclose(geomfiles[i]);
-		fclose(indexfiles[i]);
+		if (fclose(geomfiles[i]) != 0) {
+			perror("fclose geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(indexfiles[i]) != 0) {
+			perror("fclose index");
+			exit(EXIT_FAILURE);
+		}
 
 		availfiles += 2;
 	}
@@ -1637,7 +1644,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
 				perror(sourcelist[source]->file);
-				close(fd);
+				if (close(fd) != 0) {
+					perror("close source file");
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			}
 
@@ -1733,7 +1743,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				overall_offset = layer_seq;
 			}
 
-			fclose(fp);
+			if (fclose(fp) != 0) {
+				perror("fclose input");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -1743,9 +1756,18 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	for (i = 0; i < CPUS; i++) {
-		fclose(reader[i].metafile);
-		fclose(reader[i].geomfile);
-		fclose(reader[i].indexfile);
+		if (fclose(reader[i].metafile) != 0) {
+			perror("fclose meta");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].geomfile) != 0) {
+			perror("fclose geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].indexfile) != 0) {
+			perror("fclose index");
+			exit(EXIT_FAILURE);
+		}
 		memfile_close(reader[i].treefile);
 
 		if (fstat(reader[i].geomfd, &reader[i].geomst) != 0) {
@@ -1901,8 +1923,14 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		memfile_close(reader[i].poolfile);
 	}
 
-	fclose(poolfile);
-	fclose(metafile);
+	if (fclose(poolfile) != 0) {
+		perror("fclose pool");
+		exit(EXIT_FAILURE);
+	}
+	if (fclose(metafile) != 0) {
+		perror("fclose meta");
+		exit(EXIT_FAILURE);
+	}
 
 	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
 	if (meta == MAP_FAILED) {
@@ -1964,8 +1992,14 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	/* end of tile */
 	serialize_byte(geomfile, -2, &geompos, fname);
 
-	fclose(geomfile);
-	fclose(indexfile);
+	if (fclose(geomfile) != 0) {
+		perror("fclose geom");
+		exit(EXIT_FAILURE);
+	}
+	if (fclose(indexfile) != 0) {
+		perror("fclose index");
+		exit(EXIT_FAILURE);
+	}
 
 	struct stat indexst;
 	if (fstat(indexfd, &indexst) < 0) {

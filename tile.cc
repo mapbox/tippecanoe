@@ -1316,8 +1316,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		for (j = 0; j < TEMP_FILES; j++) {
-			close(geomfd[j]);
-			fclose(sub[j]);
+			// Can be < 0 if there is only one source file, at z0
+			if (geomfd[j] >= 0) {
+				if (close(geomfd[j]) != 0) {
+					perror("close geom");
+					exit(EXIT_FAILURE);
+				}
+			}
+			if (fclose(sub[j]) != 0) {
+				perror("close subfile");
+				exit(EXIT_FAILURE);
+			}
 
 			struct stat geomst;
 			if (fstat(subfd[j], &geomst) != 0) {
