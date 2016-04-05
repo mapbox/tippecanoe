@@ -1151,57 +1151,55 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		if (indexst.st_size == 0) {
-			continue;  // no indices from this input
-		}
+		if (indexst.st_size != 0) {
+			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
+			if (indexmap == MAP_FAILED) {
+				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
+				perror("map index");
+				exit(EXIT_FAILURE);
+			}
+			madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
+			madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
+			if (geommap == MAP_FAILED) {
+				perror("map geom");
+				exit(EXIT_FAILURE);
+			}
+			madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
+			madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-		struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
-		if (indexmap == MAP_FAILED) {
-			fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
-			perror("map index");
-			exit(EXIT_FAILURE);
-		}
-		madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
-		madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-		char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
-		if (geommap == MAP_FAILED) {
-			perror("map geom");
-			exit(EXIT_FAILURE);
-		}
-		madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
-		madvise(geommap, geomst.st_size, MADV_WILLNEED);
+			long long a;
+			for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+				struct index ix = indexmap[a];
+				unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
+				long long pos = sub_geompos[which];
 
-		long long a;
-		for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
-			struct index ix = indexmap[a];
-			unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
-			long long pos = sub_geompos[which];
+				fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
+				sub_geompos[which] += ix.end - ix.start;
 
-			fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
-			sub_geompos[which] += ix.end - ix.start;
+				// Count this as a 25%-accomplishment, since we will copy again
+				*progress += (ix.end - ix.start) / 4;
+				if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+					fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+					*progress_reported = 100 * *progress / *progress_max;
+				}
 
-			// Count this as a 25%-accomplishment, since we will copy again
-			*progress += (ix.end - ix.start) / 4;
-			if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
-				fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
-				*progress_reported = 100 * *progress / *progress_max;
+				ix.start = pos;
+				ix.end = sub_geompos[which];
+
+				fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
 			}
 
-			ix.start = pos;
-			ix.end = sub_geompos[which];
-
-			fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
-		}
-
-		madvise(indexmap, indexst.st_size, MADV_DONTNEED);
-		if (munmap(indexmap, indexst.st_size) < 0) {
-			perror("unmap index");
-			exit(EXIT_FAILURE);
-		}
-		madvise(geommap, geomst.st_size, MADV_DONTNEED);
-		if (munmap(geommap, geomst.st_size) < 0) {
-			perror("unmap geom");
-			exit(EXIT_FAILURE);
+			madvise(indexmap, indexst.st_size, MADV_DONTNEED);
+			if (munmap(indexmap, indexst.st_size) < 0) {
+				perror("unmap index");
+				exit(EXIT_FAILURE);
+			}
+			madvise(geommap, geomst.st_size, MADV_DONTNEED);
+			if (munmap(geommap, geomst.st_size) < 0) {
+				perror("unmap geom");
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		if (close(geomfds_in[i]) < 0) {
