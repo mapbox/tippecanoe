@@ -1433,6 +1433,12 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	mem = (long long) pages * pagesize;
 #endif
 
+	// Just for code coverage testing. Deeply recursive sorting is very slow
+	// compared to sorting in memory.
+	if (additional[A_PREFER_RADIX_SORT]) {
+		mem = 8192;
+	}
+
 	// Don't use huge numbers of files that will trouble the file system
 	if (rl.rlim_cur > 5000) {
 		rl.rlim_cur = 5000;
@@ -2392,6 +2398,7 @@ int main(int argc, char **argv) {
 		{"reverse", no_argument, &additional[A_REVERSE], 1},
 		{"reorder", no_argument, &additional[A_REORDER], 1},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
+		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},

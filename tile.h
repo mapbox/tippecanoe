@@ -46,6 +46,8 @@ static int additional_options[] = {
 	A_REORDER,
 #define A_LINE_DROP ((int) 'l')
 	A_LINE_DROP,
+#define A_PREFER_RADIX_SORT ((int) 'r')
+	A_PREFER_RADIX_SORT,
 };
 
 static int prevent_options[] = {
