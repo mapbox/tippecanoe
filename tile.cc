@@ -212,10 +212,7 @@ struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
 	return ret;
 }
 
-void decode_meta(char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
-	int m;
-	deserialize_int(meta, &m);
-
+void decode_meta(int m, char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
 	int i;
 	for (i = 0; i < m; i++) {
 		struct pool_val *key = retrieve_string(meta, keys, stringpool);
@@ -364,7 +361,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -447,6 +444,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					}
 					serialize_int(geomfile[j], segment, &geompos[j], fname);
 					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+					serialize_int(geomfile[j], m, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
 
 					for (size_t u = 0; u < geom.size(); u++) {
@@ -471,6 +469,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 struct partial {
 	std::vector<drawvec> geoms;
 	long long layer;
+	int m;
 	char *meta;
 	signed char t;
 	int segment;
@@ -700,7 +699,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			deserialize_int(geoms, &segment);
 
 			long long metastart;
+			int m;
 			deserialize_long_long(geoms, &metastart);
+			deserialize_int(geoms, &m);
 			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
@@ -773,7 +774,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m);
 			}
 
 			if (z < minzoom) {
@@ -826,6 +827,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				partial p;
 				p.geoms.push_back(geom);
 				p.layer = layer;
+				p.m = m;
 				p.meta = meta;
 				p.t = t;
 				p.segment = segment;
@@ -895,7 +897,7 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 					c.coalesced = false;
 					c.original_seq = original_seq;
 
-					decode_meta(&meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
+					decode_meta(partials[i].m, &meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 					features[layer].push_back(c);
 				}
 			}
@@ -1093,6 +1095,8 @@ void *run_thread(void *vargs) {
 			perror("mmap geom");
 			exit(EXIT_FAILURE);
 		}
+		madvise(geom, arg->geom_size[j], MADV_SEQUENTIAL);
+		madvise(geom, arg->geom_size[j], MADV_WILLNEED);
 
 		char *geomstart = geom;
 		char *end = geom + arg->geom_size[j];
@@ -1151,6 +1155,7 @@ void *run_thread(void *vargs) {
 			}
 		}
 
+		madvise(geomstart, arg->geom_size[j], MADV_DONTNEED);
 		if (munmap(geomstart, arg->geom_size[j]) != 0) {
 			perror("munmap geom");
 		}
@@ -1314,8 +1319,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		for (j = 0; j < TEMP_FILES; j++) {
-			close(geomfd[j]);
-			fclose(sub[j]);
+			// Can be < 0 if there is only one source file, at z0
+			if (geomfd[j] >= 0) {
+				if (close(geomfd[j]) != 0) {
+					perror("close geom");
+					exit(EXIT_FAILURE);
+				}
+			}
+			if (fclose(sub[j]) != 0) {
+				perror("close subfile");
+				exit(EXIT_FAILURE);
+			}
 
 			struct stat geomst;
 			if (fstat(subfd[j], &geomst) != 0) {
@@ -1329,6 +1343,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		if (err != INT_MAX) {
 			return err;
+		}
+	}
+
+	int j;
+	for (j = 0; j < TEMP_FILES; j++) {
+		// Can be < 0 if there is only one source file, at z0
+		if (geomfd[j] >= 0) {
+			if (close(geomfd[j]) != 0) {
+				perror("close geom");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 

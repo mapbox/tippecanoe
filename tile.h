@@ -48,6 +48,8 @@ static int additional_options[] = {
 	A_LINE_DROP,
 #define A_DEBUG_POLYGON ((int) 'd')
 	A_DEBUG_POLYGON,
+#define A_PREFER_RADIX_SORT ((int) 'r')
+	A_PREFER_RADIX_SORT,
 };
 
 static int prevent_options[] = {

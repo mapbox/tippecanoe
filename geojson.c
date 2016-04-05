@@ -21,6 +21,11 @@
 #include <pthread.h>
 #include <getopt.h>
 
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include "jsonpull.h"
 #include "tile.h"
 #include "pool.h"
@@ -318,11 +323,9 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	*head = m;
 }
 
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos) {
+static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
 	int i;
 	struct merge *head = NULL;
-	long long along = 0;
-	long long reported = -1;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
@@ -335,6 +338,13 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
 		*geompos += ix->end - ix->start;
 
+		// Count this as an 75%-accomplishment, since we already 25%-counted it
+		*progress += (ix->end - ix->start) * 3 / 4;
+		if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+			*progress_reported = 100 * *progress / *progress_max;
+		}
+
 		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
 		head->start += bytes;
 
@@ -344,15 +354,6 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 
 		if (m->start < m->end) {
 			insert(m, &head, map);
-		}
-
-		along++;
-		long long report = 100 * along / nrec;
-		if (report != reported) {
-			if (!quiet) {
-				fprintf(stderr, "Merging: %lld%%\r", report);
-			}
-			reported = report;
 		}
 	}
 }
@@ -561,7 +562,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 
-	serialize_int(metafile, m, metapos, fname);
 	for (i = 0; i < m; i++) {
 		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
 		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
@@ -586,6 +586,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_int(geomfile, segment, geompos, fname);
 	serialize_long_long(geomfile, metastart, geompos, fname);
+	serialize_int(geomfile, m, geompos, fname);
 	long long wx = *initial_x, wy = *initial_y;
 	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
 	serialize_byte(geomfile, VT_END, geompos, fname);
@@ -888,12 +889,6 @@ void *run_sort(void *v) {
 			end = a->indexpos;
 		}
 
-		if (a->nmerges != 1) {
-			if (!quiet) {
-				fprintf(stderr, "Sorting part %lld of %d  \r", start / a->unit + 1, a->nmerges);
-			}
-		}
-
 		a->merges[start / a->unit].start = start;
 		a->merges[start / a->unit].end = end;
 		a->merges[start / a->unit].next = NULL;
@@ -904,6 +899,8 @@ void *run_sort(void *v) {
 			perror("mmap in run_sort");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map, end - start, MADV_RANDOM);
+		madvise(map, end - start, MADV_WILLNEED);
 
 		qsort(map, (end - start) / a->bytes, a->bytes, indexcmp);
 
@@ -915,9 +912,11 @@ void *run_sort(void *v) {
 			perror("mmap (write)");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map2, end - start, MADV_SEQUENTIAL);
 
 		memcpy(map2, map, end - start);
 
+		// No madvise, since caller will want the sorted data
 		munmap(map, end - start);
 		munmap(map2, end - start);
 	}
@@ -1034,14 +1033,17 @@ void *run_read_parallel(void *v) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
+	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
 	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
 
+	madvise(map, a->len, MADV_DONTNEED);
 	if (munmap(map, a->len) != 0) {
 		perror("munmap source file");
 	}
 	if (fclose(a->fp) != 0) {
 		perror("close source file");
+		exit(EXIT_FAILURE);
 	}
 
 	*(a->is_parsing) = 0;
@@ -1088,6 +1090,388 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 		perror("pthread_create");
 		exit(EXIT_FAILURE);
 	}
+}
+
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
+	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
+	int splitbits = log(splits) / log(2);
+	splits = 1 << splitbits;
+
+	FILE *geomfiles[splits];
+	FILE *indexfiles[splits];
+	int geomfds[splits];
+	int indexfds[splits];
+	long long sub_geompos[splits];
+
+	int i;
+	for (i = 0; i < splits; i++) {
+		sub_geompos[i] = 0;
+
+		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
+		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
+
+		geomfds[i] = mkstemp(geomname);
+		if (geomfds[i] < 0) {
+			perror(geomname);
+			exit(EXIT_FAILURE);
+		}
+		indexfds[i] = mkstemp(indexname);
+		if (indexfds[i] < 0) {
+			perror(indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		geomfiles[i] = fopen(geomname, "wb");
+		if (geomfiles[i] == NULL) {
+			perror(geomname);
+			exit(EXIT_FAILURE);
+		}
+		indexfiles[i] = fopen(indexname, "wb");
+		if (indexfiles[i] == NULL) {
+			perror(indexname);
+			exit(EXIT_FAILURE);
+		}
+
+		availfiles -= 4;
+
+		unlink(geomname);
+		unlink(indexname);
+	}
+
+	for (i = 0; i < inputs; i++) {
+		struct stat geomst, indexst;
+		if (fstat(geomfds_in[i], &geomst) < 0) {
+			perror("stat geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(indexfds_in[i], &indexst) < 0) {
+			perror("stat index");
+			exit(EXIT_FAILURE);
+		}
+
+		if (indexst.st_size != 0) {
+			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
+			if (indexmap == MAP_FAILED) {
+				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
+				perror("map index");
+				exit(EXIT_FAILURE);
+			}
+			madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
+			madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
+			if (geommap == MAP_FAILED) {
+				perror("map geom");
+				exit(EXIT_FAILURE);
+			}
+			madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
+			madvise(geommap, geomst.st_size, MADV_WILLNEED);
+
+			long long a;
+			for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+				struct index ix = indexmap[a];
+				unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
+				long long pos = sub_geompos[which];
+
+				fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
+				sub_geompos[which] += ix.end - ix.start;
+
+				// Count this as a 25%-accomplishment, since we will copy again
+				*progress += (ix.end - ix.start) / 4;
+				if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+					fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+					*progress_reported = 100 * *progress / *progress_max;
+				}
+
+				ix.start = pos;
+				ix.end = sub_geompos[which];
+
+				fwrite_check(&ix, sizeof(struct index), 1, indexfiles[which], "index");
+			}
+
+			madvise(indexmap, indexst.st_size, MADV_DONTNEED);
+			if (munmap(indexmap, indexst.st_size) < 0) {
+				perror("unmap index");
+				exit(EXIT_FAILURE);
+			}
+			madvise(geommap, geomst.st_size, MADV_DONTNEED);
+			if (munmap(geommap, geomst.st_size) < 0) {
+				perror("unmap geom");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (close(geomfds_in[i]) < 0) {
+			perror("close geom");
+			exit(EXIT_FAILURE);
+		}
+		if (close(indexfds_in[i]) < 0) {
+			perror("close index");
+			exit(EXIT_FAILURE);
+		}
+
+		availfiles += 2;
+	}
+
+	for (i = 0; i < splits; i++) {
+		if (fclose(geomfiles[i]) != 0) {
+			perror("fclose geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(indexfiles[i]) != 0) {
+			perror("fclose index");
+			exit(EXIT_FAILURE);
+		}
+
+		availfiles += 2;
+	}
+
+	for (i = 0; i < splits; i++) {
+		int already_closed = 0;
+
+		struct stat geomst, indexst;
+		if (fstat(geomfds[i], &geomst) < 0) {
+			perror("stat geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(indexfds[i], &indexst) < 0) {
+			perror("stat index");
+			exit(EXIT_FAILURE);
+		}
+
+		if (indexst.st_size > 0) {
+			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
+				long long indexpos = indexst.st_size;
+				int bytes = sizeof(struct index);
+
+				int page = sysconf(_SC_PAGESIZE);
+				// Don't try to sort more than 2GB at once,
+				// which used to crash Macs and may still
+				long long max_unit = 2LL * 1024 * 1024 * 1024;
+				long long unit = ((indexpos / CPUS + bytes - 1) / bytes) * bytes;
+				if (unit > max_unit) {
+					unit = max_unit;
+				}
+				unit = ((unit + page - 1) / page) * page;
+
+				int nmerges = (indexpos + unit - 1) / unit;
+				struct merge merges[nmerges];
+
+				int a;
+				for (a = 0; a < nmerges; a++) {
+					merges[a].start = merges[a].end = 0;
+				}
+
+				pthread_t pthreads[CPUS];
+				struct sort_arg args[CPUS];
+
+				for (a = 0; a < CPUS; a++) {
+					args[a].task = a;
+					args[a].cpus = CPUS;
+					args[a].indexpos = indexpos;
+					args[a].merges = merges;
+					args[a].indexfd = indexfds[i];
+					args[a].nmerges = nmerges;
+					args[a].unit = unit;
+					args[a].bytes = bytes;
+
+					if (pthread_create(&pthreads[a], NULL, run_sort, &args[a]) != 0) {
+						perror("pthread_create");
+						exit(EXIT_FAILURE);
+					}
+				}
+
+				for (a = 0; a < CPUS; a++) {
+					void *retval;
+
+					if (pthread_join(pthreads[a], &retval) != 0) {
+						perror("pthread_join");
+					}
+				}
+
+				struct indexmap *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				if (indexmap == MAP_FAILED) {
+					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					perror("map index");
+					exit(EXIT_FAILURE);
+				}
+				madvise(indexmap, indexst.st_size, MADV_RANDOM);  // sequential, but from several pointers at once
+				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				if (geommap == MAP_FAILED) {
+					perror("map geom");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_RANDOM);
+				madvise(geommap, geomst.st_size, MADV_WILLNEED);
+
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported);
+
+				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
+				if (munmap(indexmap, indexst.st_size) < 0) {
+					perror("unmap index");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_DONTNEED);
+				if (munmap(geommap, geomst.st_size) < 0) {
+					perror("unmap geom");
+					exit(EXIT_FAILURE);
+				}
+			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
+				struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				if (indexmap == MAP_FAILED) {
+					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					perror("map index");
+					exit(EXIT_FAILURE);
+				}
+				madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
+				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
+				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				if (geommap == MAP_FAILED) {
+					perror("map geom");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_RANDOM);
+				madvise(geommap, geomst.st_size, MADV_WILLNEED);
+
+				long long a;
+				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+					struct index ix = indexmap[a];
+					long long pos = *geompos_out;
+
+					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
+					*geompos_out += ix.end - ix.start;
+
+					// Count this as an 75%-accomplishment, since we already 25%-counted it
+					*progress += (ix.end - ix.start) * 3 / 4;
+					if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
+						fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+						*progress_reported = 100 * *progress / *progress_max;
+					}
+
+					ix.start = pos;
+					ix.end = *geompos_out;
+					fwrite_check(&ix, sizeof(struct index), 1, indexfile, "index");
+				}
+
+				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
+				if (munmap(indexmap, indexst.st_size) < 0) {
+					perror("unmap index");
+					exit(EXIT_FAILURE);
+				}
+				madvise(geommap, geomst.st_size, MADV_DONTNEED);
+				if (munmap(geommap, geomst.st_size) < 0) {
+					perror("unmap geom");
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				// We already reported the progress from splitting this radix out
+				// but we need to split it again, which will be credited with more
+				// progress. So increase the total amount of progress to report by
+				// the additional progress that will happpen, which may move the
+				// counter backward but will be an honest estimate of the work remaining.
+				*progress_max += geomst.st_size / 4;
+
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
+				already_closed = 1;
+			}
+		}
+
+		if (!already_closed) {
+			if (close(geomfds[i]) < 0) {
+				perror("close geom");
+				exit(EXIT_FAILURE);
+			}
+			if (close(indexfds[i]) < 0) {
+				perror("close index");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		availfiles += 2;
+	}
+}
+
+void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE *indexfile, int indexfd, const char *tmpdir, long long *geompos) {
+	// Run through the index and geometry for each reader,
+	// splitting the contents out by index into as many
+	// sub-files as we can write to simultaneously.
+
+	// Then sort each of those by index, recursively if it is
+	// too big to fit in memory.
+
+	// Then concatenate each of the sub-outputs into a final output.
+
+	struct rlimit rl;
+
+	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+		perror("getrlimit");
+		exit(EXIT_FAILURE);
+	}
+
+	long long mem;
+
+#ifdef __APPLE__
+	int64_t hw_memsize;
+	size_t len = sizeof(int64_t);
+	if (sysctlbyname("hw.memsize", &hw_memsize, &len, NULL, 0) < 0) {
+		perror("sysctl hw.memsize");
+		exit(EXIT_FAILURE);
+	}
+	mem = hw_memsize;
+#else
+	long long pagesize = sysconf(_SC_PAGESIZE);
+	long long pages = sysconf(_SC_PHYS_PAGES);
+	if (pages < 0 || pagesize < 0) {
+		perror("sysconf _SC_PAGESIZE or _SC_PHYS_PAGES");
+		exit(EXIT_FAILURE);
+	}
+
+	mem = (long long) pages * pagesize;
+#endif
+
+	// Just for code coverage testing. Deeply recursive sorting is very slow
+	// compared to sorting in memory.
+	if (additional[A_PREFER_RADIX_SORT]) {
+		mem = 8192;
+	}
+
+	// Don't use huge numbers of files that will trouble the file system
+	if (rl.rlim_cur > 5000) {
+		rl.rlim_cur = 5000;
+	}
+
+	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
+			       - 4			   // pool, meta, mbtiles, mbtiles journal
+			       - 4			   // top-level geom and index output, both FILE and fd
+			       - 3;			   // stdin, stdout, stderr
+
+	// 4 because for each we have output and input FILE and fd for geom and index
+	int splits = availfiles / 4;
+
+	// Be somewhat conservative about memory availability because the whole point of this
+	// is to keep from thrashing by working on chunks that will fit in memory.
+	mem /= 2;
+
+	long long geom_total = 0;
+	int geomfds[nreaders];
+	int indexfds[nreaders];
+	int i;
+	for (i = 0; i < nreaders; i++) {
+		geomfds[i] = reader[i].geomfd;
+		indexfds[i] = reader[i].indexfd;
+
+		struct stat geomst;
+		if (fstat(reader[i].geomfd, &geomst) < 0) {
+			perror("stat geom");
+			exit(EXIT_FAILURE);
+		}
+		geom_total += geomst.st_size;
+	}
+
+	long long progress = 0, progress_max = geom_total, progress_reported = -1;
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
@@ -1181,6 +1565,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			struct stringpool p;
 			memfile_write(r->treefile, &p, sizeof(struct stringpool));
 		}
+		// Keep metadata file from being completely empty if no attributes
+		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
 		r->file_bbox = malloc(4 * sizeof(long long));
 		if (r->file_bbox == NULL) {
@@ -1242,6 +1628,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
 					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					// No error if MAP_FAILED because check is below
+					if (map != MAP_FAILED) {
+						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
+					}
 				}
 			}
 		}
@@ -1251,13 +1641,17 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			overall_offset += st.st_size - off;
 
 			if (munmap(map, st.st_size - off) != 0) {
+				madvise(map, st.st_size, MADV_DONTNEED);
 				perror("munmap source file");
 			}
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
 				perror(sourcelist[source]->file);
-				close(fd);
+				if (close(fd) != 0) {
+					perror("close source file");
+					exit(EXIT_FAILURE);
+				}
 				continue;
 			}
 
@@ -1353,7 +1747,10 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				overall_offset = layer_seq;
 			}
 
-			fclose(fp);
+			if (fclose(fp) != 0) {
+				perror("fclose input");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -1363,9 +1760,18 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	for (i = 0; i < CPUS; i++) {
-		fclose(reader[i].metafile);
-		fclose(reader[i].geomfile);
-		fclose(reader[i].indexfile);
+		if (fclose(reader[i].metafile) != 0) {
+			perror("fclose meta");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].geomfile) != 0) {
+			perror("fclose geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].indexfile) != 0) {
+			perror("fclose index");
+			exit(EXIT_FAILURE);
+		}
 		memfile_close(reader[i].treefile);
 
 		if (fstat(reader[i].geomfd, &reader[i].geomst) != 0) {
@@ -1440,7 +1846,112 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		}
 	}
 
-	/* Join the sub-indices together */
+	// Create a combined string pool and a combined metadata file
+	// but keep track of the offsets into it since we still need
+	// segment+offset to find the data.
+
+	long long pool_off[CPUS];
+	long long meta_off[CPUS];
+
+	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+
+	int poolfd = mkstemp(poolname);
+	if (poolfd < 0) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *poolfile = fopen(poolname, "wb");
+	if (poolfile == NULL) {
+		perror(poolname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(poolname);
+
+	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+
+	int metafd = mkstemp(metaname);
+	if (metafd < 0) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	FILE *metafile = fopen(metaname, "wb");
+	if (metafile == NULL) {
+		perror(metaname);
+		exit(EXIT_FAILURE);
+	}
+
+	unlink(metaname);
+
+	long long metapos = 0;
+	long long poolpos = 0;
+
+	for (i = 0; i < CPUS; i++) {
+		if (reader[i].metapos > 0) {
+			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
+			if (map == MAP_FAILED) {
+				perror("mmap unmerged meta");
+				exit(EXIT_FAILURE);
+			}
+			madvise(map, reader[i].metapos, MADV_SEQUENTIAL);
+			madvise(map, reader[i].metapos, MADV_WILLNEED);
+			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
+				perror("Reunify meta");
+				exit(EXIT_FAILURE);
+			}
+			madvise(map, reader[i].metapos, MADV_DONTNEED);
+			if (munmap(map, reader[i].metapos) != 0) {
+				perror("unmap unmerged meta");
+			}
+		}
+
+		meta_off[i] = metapos;
+		metapos += reader[i].metapos;
+		if (close(reader[i].metafd) != 0) {
+			perror("close unmerged meta");
+		}
+
+		if (reader[i].poolfile->off > 0) {
+			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
+				perror("Reunify string pool");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		pool_off[i] = poolpos;
+		poolpos += reader[i].poolfile->off;
+		memfile_close(reader[i].poolfile);
+	}
+
+	if (fclose(poolfile) != 0) {
+		perror("fclose pool");
+		exit(EXIT_FAILURE);
+	}
+	if (fclose(metafile) != 0) {
+		perror("fclose meta");
+		exit(EXIT_FAILURE);
+	}
+
+	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
+	if (meta == MAP_FAILED) {
+		perror("mmap meta");
+		exit(EXIT_FAILURE);
+	}
+	madvise(meta, metapos, MADV_RANDOM);
+
+	char *stringpool = NULL;
+	if (poolpos > 0) {  // Will be 0 if -X was specified
+		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
+		if (stringpool == MAP_FAILED) {
+			perror("mmap string pool");
+			exit(EXIT_FAILURE);
+		}
+		madvise(stringpool, poolpos, MADV_RANDOM);
+	}
 
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
@@ -1450,7 +1961,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		perror(indexname);
 		exit(EXIT_FAILURE);
 	}
-
 	FILE *indexfile = fopen(indexname, "wb");
 	if (indexfile == NULL) {
 		perror(indexname);
@@ -1459,228 +1969,53 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	unlink(indexname);
 
-	long long indexpos = 0;
-	for (i = 0; i < CPUS; i++) {
-		if (reader[i].indexpos > 0) {
-			void *map = mmap(NULL, reader[i].indexpos, PROT_READ, MAP_PRIVATE, reader[i].indexfd, 0);
-			if (map == MAP_FAILED) {
-				perror("mmap reunifying index");
-				exit(EXIT_FAILURE);
-			}
-			if (fwrite(map, reader[i].indexpos, 1, indexfile) != 1) {
-				perror("Reunify index");
-				exit(EXIT_FAILURE);
-			}
-			if (munmap(map, reader[i].indexpos) != 0) {
-				perror("unmap unmerged index");
-			}
-			if (close(reader[i].indexfd) != 0) {
-				perror("close unmerged index");
-			}
-			indexpos += reader[i].indexpos;
-		}
-	}
-	fclose(indexfile);
-
-	if (indexpos == 0) {
-		fprintf(stderr, "Did not read any valid geometries\n");
-		exit(EXIT_FAILURE);
-	}
-
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
-
-	FILE *geomfile;
-	int geomfd;
-	long long geompos = 0;
-	struct stat geomst;
-
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-	geomfd = mkstemp(geomname);
+
+	int geomfd = mkstemp(geomname);
 	if (geomfd < 0) {
 		perror(geomname);
 		exit(EXIT_FAILURE);
 	}
-	geomfile = fopen(geomname, "wb");
+	FILE *geomfile = fopen(geomname, "wb");
 	if (geomfile == NULL) {
 		perror(geomname);
 		exit(EXIT_FAILURE);
 	}
 	unlink(geomname);
-	int geomfd2;
 
-	/* Sort the index by geometry */
+	long long geompos = 0;
 
-	{
-		int bytes = sizeof(struct index);
-		if (!quiet) {
-			fprintf(stderr, "Sorting %lld features\n", (long long) indexpos / bytes);
-		}
+	/* initial tile is 0/0/0 */
+	serialize_int(geomfile, 0, &geompos, fname);
+	serialize_uint(geomfile, 0, &geompos, fname);
+	serialize_uint(geomfile, 0, &geompos, fname);
 
-		int page = sysconf(_SC_PAGESIZE);
-		long long unit = (50 * 1024 * 1024 / bytes) * bytes;
-		while (unit % page != 0) {
-			unit += bytes;
-		}
+	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos);
 
-		int nmerges = (indexpos + unit - 1) / unit;
-		struct merge merges[nmerges];
-		for (i = 0; i < nmerges; i++) {
-			merges[i].start = merges[i].end = 0;
-		}
+	/* end of tile */
+	serialize_byte(geomfile, -2, &geompos, fname);
 
-		pthread_t pthreads[CPUS];
-		struct sort_arg args[CPUS];
-
-		int i;
-		for (i = 0; i < CPUS; i++) {
-			args[i].task = i;
-			args[i].cpus = CPUS;
-			args[i].indexpos = indexpos;
-			args[i].merges = merges;
-			args[i].indexfd = indexfd;
-			args[i].nmerges = nmerges;
-			args[i].unit = unit;
-			args[i].bytes = bytes;
-
-			if (pthread_create(&pthreads[i], NULL, run_sort, &args[i]) != 0) {
-				perror("pthread_create");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		for (i = 0; i < CPUS; i++) {
-			void *retval;
-
-			if (pthread_join(pthreads[i], &retval) != 0) {
-				perror("pthread_join");
-			}
-		}
-
-		if (nmerges != 1) {
-			if (!quiet) {
-				fprintf(stderr, "\n");
-			}
-		}
-
-		char *map = mmap(NULL, indexpos, PROT_READ | PROT_WRITE, MAP_SHARED, indexfd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap unified index");
-			exit(EXIT_FAILURE);
-		}
-
-		/*
-		 * This is the last opportunity to access the geometry in
-		 * close to the original order, so that we can reorder it
-		 * without thrashing.
-		 *
-		 * Each of the sorted index chunks originally had contiguous
-		 * geography, so it can be copied relatively cheaply in sorted order
-		 * into the temporary files that are then merged together to produce
-		 * the final geometry.
-		 */
-
-		for (i = 0; i < CPUS; i++) {
-			reader[i].geom_map = NULL;
-
-			if (reader[i].geomst.st_size > 0) {
-				reader[i].geom_map = mmap(NULL, reader[i].geomst.st_size, PROT_READ, MAP_PRIVATE, reader[i].geomfd, 0);
-				if (reader[i].geom_map == MAP_FAILED) {
-					perror("mmap unsorted geometry");
-					exit(EXIT_FAILURE);
-				}
-			}
-		}
-
-		for (i = 0; i < nmerges; i++) {
-			if (!quiet && nmerges > 1) {
-				fprintf(stderr, "Reordering geometry: part %d of %d   \r", i + 1, nmerges);
-			}
-
-			long long j;
-			for (j = merges[i].start; j < merges[i].end; j += sizeof(struct index)) {
-				struct index *ix = (struct index *) (map + j);
-				long long start = geompos;
-
-				fwrite_check(reader[ix->segment].geom_map + ix->start, sizeof(char), ix->end - ix->start, geomfile, fname);
-				geompos += ix->end - ix->start;
-
-				// Repoint the index to where we just copied the geometry
-
-				ix->start = start;
-				ix->end = geompos;
-			}
-		}
-		if (!quiet && nmerges > 1) {
-			fprintf(stderr, "\n");
-		}
-
-		fclose(geomfile);
-
-		long long pre_merged_geompos = geompos;
-		char *geom_map = mmap(NULL, geompos, PROT_READ, MAP_PRIVATE, geomfd, 0);
-		if (geom_map == MAP_FAILED) {
-			perror("mmap geometry");
-			exit(EXIT_FAILURE);
-		}
-
-		FILE *f = fopen(indexname, "wb");
-		if (f == NULL) {
-			perror(indexname);
-			exit(EXIT_FAILURE);
-		}
-
-		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-		geomfd2 = mkstemp(geomname);
-		if (geomfd2 < 0) {
-			perror(geomname);
-			exit(EXIT_FAILURE);
-		}
-		geomfile = fopen(geomname, "wb");
-		if (geomfile == NULL) {
-			perror(geomname);
-			exit(EXIT_FAILURE);
-		}
-		unlink(geomname);
-
-		for (i = 0; i < CPUS; i++) {
-			if (reader[i].geomst.st_size > 0) {
-				if (munmap(reader[i].geom_map, reader[i].geomst.st_size) != 0) {
-					perror("unmap unsorted geometry");
-				}
-			}
-			if (close(reader[i].geomfd) != 0) {
-				perror("close unsorted geometry");
-			}
-		}
-
-		geompos = 0;
-
-		/* initial tile is 0/0/0 */
-		serialize_int(geomfile, 0, &geompos, fname);
-		serialize_uint(geomfile, 0, &geompos, fname);
-		serialize_uint(geomfile, 0, &geompos, fname);
-
-		merge(merges, nmerges, (unsigned char *) map, f, bytes, indexpos / bytes, geom_map, geomfile, &geompos);
-
-		munmap(map, indexpos);
-		fclose(f);
-		close(indexfd);
-
-		munmap(geom_map, pre_merged_geompos);
-		close(geomfd);
-
-		/* end of tile */
-		serialize_byte(geomfile, -2, &geompos, fname);
-		fclose(geomfile);
+	if (fclose(geomfile) != 0) {
+		perror("fclose geom");
+		exit(EXIT_FAILURE);
 	}
-
-	indexfd = open(indexname, O_RDONLY);
-	if (indexfd < 0) {
-		perror("reopen sorted index");
+	if (fclose(indexfile) != 0) {
+		perror("fclose index");
 		exit(EXIT_FAILURE);
 	}
 
+	struct stat indexst;
+	if (fstat(indexfd, &indexst) < 0) {
+		perror("stat index");
+		exit(EXIT_FAILURE);
+	}
+	long long indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
+
+	if (!quiet) {
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+	}
 
 	if (basezoom < 0 || droprate < 0) {
 		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
@@ -1688,6 +2023,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
 		}
+		madvise(map, indexpos, MADV_SEQUENTIAL);
+		madvise(map, indexpos, MADV_WILLNEED);
 
 		struct tile {
 			unsigned x;
@@ -1849,20 +2186,13 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			}
 		}
 
+		madvise(map, indexpos, MADV_DONTNEED);
 		munmap(map, indexpos);
 	}
 
-	/* Copy geometries to a new file in index order */
-
-	struct index *index_map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
-	if (index_map == MAP_FAILED) {
-		perror("mmap index");
+	if (indexpos == 0) {
+		fprintf(stderr, "Did not read any valid geometries\n");
 		exit(EXIT_FAILURE);
-	}
-	unlink(indexname);
-
-	if (munmap(index_map, indexpos) != 0) {
-		perror("unmap sorted index");
 	}
 
 	if (close(indexfd) != 0) {
@@ -1871,7 +2201,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	/* Traverse and split the geometries for each zoom level */
 
-	if (fstat(geomfd2, &geomst) != 0) {
+	struct stat geomst;
+	if (fstat(geomfd, &geomst) != 0) {
 		perror("stat sorted geom\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1879,118 +2210,13 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	int fd[TEMP_FILES];
 	off_t size[TEMP_FILES];
 
-	fd[0] = geomfd2;
+	fd[0] = geomfd;
 	size[0] = geomst.st_size;
 
 	int j;
 	for (j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
-	}
-
-	// Create a combined string pool and a combined metadata file
-	// but keep track of the offsets into it since we still need
-	// segment+offset to find the data.
-
-	long long pool_off[CPUS];
-	long long meta_off[CPUS];
-
-	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
-	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-
-	int poolfd = mkstemp(poolname);
-	if (poolfd < 0) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *poolfile = fopen(poolname, "wb");
-	if (poolfile == NULL) {
-		perror(poolname);
-		exit(EXIT_FAILURE);
-	}
-
-	unlink(poolname);
-
-	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
-	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-
-	int metafd = mkstemp(metaname);
-	if (metafd < 0) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *metafile = fopen(metaname, "wb");
-	if (metafile == NULL) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	unlink(metaname);
-
-	long long metapos = 0;
-	long long poolpos = 0;
-
-	for (i = 0; i < CPUS; i++) {
-		if (reader[i].metapos > 0) {
-			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
-			if (map == MAP_FAILED) {
-				perror("mmap unmerged meta");
-				exit(EXIT_FAILURE);
-			}
-			if (fwrite(map, reader[i].metapos, 1, metafile) != 1) {
-				perror("Reunify meta");
-				exit(EXIT_FAILURE);
-			}
-			if (munmap(map, reader[i].metapos) != 0) {
-				perror("unmap unmerged meta");
-			}
-		}
-
-		meta_off[i] = metapos;
-		metapos += reader[i].metapos;
-		if (close(reader[i].metafd) != 0) {
-			perror("close unmerged meta");
-		}
-
-		if (reader[i].poolfile->off > 0) {
-			if (fwrite(reader[i].poolfile->map, reader[i].poolfile->off, 1, poolfile) != 1) {
-				perror("Reunify string pool");
-				exit(EXIT_FAILURE);
-			}
-		}
-
-		pool_off[i] = poolpos;
-		poolpos += reader[i].poolfile->off;
-		memfile_close(reader[i].poolfile);
-	}
-
-	fclose(poolfile);
-	fclose(metafile);
-
-	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
-	if (meta == MAP_FAILED) {
-		perror("mmap meta");
-		exit(EXIT_FAILURE);
-	}
-
-	char *stringpool = NULL;
-	if (poolpos > 0) {  // Will be 0 if -X was specified
-		stringpool = (char *) mmap(NULL, poolpos, PROT_READ, MAP_PRIVATE, poolfd, 0);
-		if (stringpool == MAP_FAILED) {
-			perror("mmap string pool");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	if (geompos == 0 || metapos == 0) {
-		fprintf(stderr, "did not read any valid geometries\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
 
 	unsigned midx = 0, midy = 0;
@@ -2002,6 +2228,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		ret = EXIT_FAILURE;
 	}
 
+	madvise(meta, metapos, MADV_DONTNEED);
 	if (munmap(meta, metapos) != 0) {
 		perror("munmap meta");
 	}
@@ -2010,6 +2237,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (poolpos > 0) {
+		madvise(pool, poolpos, MADV_DONTNEED);
 		if (munmap(stringpool, poolpos) != 0) {
 			perror("munmap stringpool");
 		}
@@ -2169,6 +2397,7 @@ int main(int argc, char **argv) {
 		{"reorder", no_argument, &additional[A_REORDER], 1},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
+		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
@@ -2194,31 +2423,29 @@ int main(int argc, char **argv) {
 			layer = optarg;
 			break;
 
-		case 'L':
-			{
-				char *cp = strchr(optarg, ':');
-				if (cp == NULL || cp == optarg) {
-					fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
-					exit(EXIT_FAILURE);
-				}
-				struct source *src = malloc(sizeof(struct source));
-				if (src == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-
-				src->layer = strdup(optarg);
-				src->file = strdup(cp + 1);
-				if (src->layer == NULL || src->file == NULL) {
-					perror("Out of memory");
-					exit(EXIT_FAILURE);
-				}
-				src->layer[cp - optarg] = '\0';
-				src->next = sources;
-				sources = src;
-				nsources++;
+		case 'L': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
+				exit(EXIT_FAILURE);
 			}
-			break;
+			struct source *src = malloc(sizeof(struct source));
+			if (src == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+
+			src->layer = strdup(optarg);
+			src->file = strdup(cp + 1);
+			if (src->layer == NULL || src->file == NULL) {
+				perror("Out of memory");
+				exit(EXIT_FAILURE);
+			}
+			src->layer[cp - optarg] = '\0';
+			src->next = sources;
+			sources = src;
+			nsources++;
+		} break;
 
 		case 'z':
 			maxzoom = atoi(optarg);
