@@ -1,3 +1,8 @@
+## 1.9.8
+
+* Use an on-disk radix sort for the index to control virtual memory thrashing
+  when the geometry and index are too large to fit in memory
+
 ## 1.9.7
 
 * Fix build problem (wrong spelling of long long max/min constants)
