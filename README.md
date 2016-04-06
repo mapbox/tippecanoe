@@ -113,6 +113,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ar or --reverse: Try reversing the directions of lines to make them coalesce and compress better
  * -ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
  * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
+ * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
 
 ### Doing less
 

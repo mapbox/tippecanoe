@@ -2396,6 +2396,7 @@ int main(int argc, char **argv) {
 		{"reverse", no_argument, &additional[A_REVERSE], 1},
 		{"reorder", no_argument, &additional[A_REORDER], 1},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
+		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
