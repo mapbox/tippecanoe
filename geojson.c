@@ -20,12 +20,14 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <getopt.h>
-#include <sys/param.h>
-#include <sys/mount.h>
 
 #ifdef __APPLE__
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <sys/param.h>
+#include <sys/mount.h>
+#else
+#include <sys/statfs.h>
 #endif
 
 #include "jsonpull.h"
