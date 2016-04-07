@@ -1,3 +1,7 @@
+## 1.9.11
+
+* Fix a line simplification crash when a segment degenerates to a single point
+
 ## 1.9.10
 
 * Warn if temporary disk space starts to run low
