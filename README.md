@@ -69,6 +69,7 @@ Options
  * -F or --allow-existing: Proceed (without deleting existing data) if the metadata or tiles table already exists
    or if metadata fields can't be set
  * -t _directory_ or --temporary-directory=_directory_: Put the temporary files in _directory_.
+   If you don't specify, it will use `/tmp`.
  * -P or --read-parallel: Use multiple threads to read different parts of each input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
    own line, because it knows nothing of the top-level structure around the Features. Spurious "EOF" error
@@ -113,6 +114,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ar or --reverse: Try reversing the directions of lines to make them coalesce and compress better
  * -ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
  * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
+ * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
 
 ### Doing less
 

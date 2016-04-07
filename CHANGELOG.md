@@ -1,3 +1,12 @@
+## 1.9.10
+
+* Warn if temporary disk space starts to run low
+
+## 1.9.9
+
+* Add --drop-polygons to drop a fraction of polygons by zoom level
+* Only complain once about failing to clean polygons
+
 ## 1.9.8
 
 * Use an on-disk radix sort for the index to control virtual memory thrashing

@@ -796,7 +796,9 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 				continue;
 			}
 
-			if (gamma >= 0 && (t == VT_POINT || (additional[A_LINE_DROP] && t == VT_LINE))) {
+			if (gamma >= 0 && (t == VT_POINT ||
+					   (additional[A_LINE_DROP] && t == VT_LINE) ||
+					   (additional[A_POLYGON_DROP] && t == VT_POLYGON))) {
 				seq++;
 				if (seq >= 0) {
 					seq -= interval;

@@ -440,7 +440,12 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 
 		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
-			fprintf(stderr, "Polygon clean failed\n");
+			static bool complained = false;
+
+			if (!complained) {
+				fprintf(stderr, "Polygon clean failed\n");
+				complained = true;
+			}
 		}
 	}
 
