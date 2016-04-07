@@ -831,7 +831,9 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 			geom[i].necessary = 1;
 			geom[j - 1].necessary = 1;
 
-			douglas_peucker(geom, i, j - i, res);
+			if (j - i > 1) {
+				douglas_peucker(geom, i, j - i, res);
+			}
 			i = j - 1;
 		}
 	}
