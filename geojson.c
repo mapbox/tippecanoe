@@ -2573,6 +2573,9 @@ int main(int argc, char **argv) {
 
 		case 't':
 			tmpdir = optarg;
+			if (tmpdir[0] != '/') {
+				fprintf(stderr, "Warning: temp directory %s doesn't begin with /\n", tmpdir);
+			}
 			break;
 
 		case 'g':
