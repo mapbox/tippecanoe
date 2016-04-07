@@ -1,3 +1,7 @@
+## 1.9.10
+
+* Warn if temporary disk space starts to run low
+
 ## 1.9.9
 
 * Add --drop-polygons to drop a fraction of polygons by zoom level
