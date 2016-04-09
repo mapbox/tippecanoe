@@ -25,6 +25,22 @@ struct seg {
 	}
 };
 
+long long min(long long a, long long b) {
+	if (a < b) {
+		return a;
+	} else {
+		return b;
+	}
+}
+
+long long max(long long a, long long b) {
+	if (a > b) {
+		return a;
+	} else {
+		return b;
+	}
+}
+
 void check_intersections(drawvec *dv1, drawvec *dv2) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
@@ -46,8 +62,38 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 		for (ssize_t j = dv2->size() - 1; j > 0; j--) {
 			if ((*dv1)[i - 1].y == (*dv1)[i].y && (*dv2)[i - 1].y == (*dv2)[i].y) {
 				// Both horizontal
+
+				long long dv1xmin = min((*dv1)[i - 1].x, (*dv1)[i].x);
+				long long dv1xmax = max((*dv1)[i - 1].x, (*dv1)[i].x);
+
+				long long dv2xmin = min((*dv2)[j - 1].x, (*dv2)[j].x);
+				long long dv2xmax = max((*dv2)[j - 1].x, (*dv2)[j].x);
+
+				if (dv1xmin == dv2xmin && dv1xmax == dv2xmax) {
+					// They are the same
+				} else if (dv1xmax <= dv2xmin) {
+					// No overlap
+				} else if (dv1xmin >= dv2xmax) {
+					// No overlap
+				} else if (dv1xmin > dv2xmin && dv1xmax < dv2xmax) {
+					// 1 contained within 2
+				} else if (dv2xmin > dv1xmin && dv2xmax < dv1xmax) {
+					// 2 contained within 1
+				} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
+					// right side of 1 is within 2
+				} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
+					// left side of 1 is within 2
+				} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
+					// right side of 2 is within 1
+				} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
+					// left side of 2 is within 1
+				} else {
+					// Can't happen?
+				}
 			} else if ((*dv1)[i - 1].x == (*dv1)[i].x && (*dv2)[i - 1].x == (*dv2)[i].x) {
 				// Both vertical
+			} else if (1 /* XXX */) {
+				// Collinear at some inconvenient angle
 			} else {
 
 			}
