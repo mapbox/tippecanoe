@@ -358,7 +358,7 @@ int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 }
 
 int deserialize_int_io(FILE *f, int *n, long long *geompos) {
-	long long ll;
+	long long ll = 0;
 	int ret = deserialize_long_long_io(f, &ll, geompos);
 	*n = ll;
 	return ret;
