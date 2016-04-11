@@ -332,6 +332,56 @@ void deserialize_byte(char **f, signed char *n) {
 	*f += sizeof(signed char);
 }
 
+int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
+	unsigned long long zigzag = 0;
+	int shift = 0;
+
+	while (1) {
+		int c = getc(f);
+		if (c == EOF) {
+			return 0;
+		}
+		(*geompos)++;
+
+		if ((c & 0x80) == 0) {
+			zigzag |= ((unsigned long long) c) << shift;
+			shift += 7;
+			break;
+		} else {
+			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
+			shift += 7;
+		}
+	}
+
+	*n = (zigzag >> 1) ^ (-(zigzag & 1));
+	return 1;
+}
+
+int deserialize_int_io(FILE *f, int *n, long long *geompos) {
+	long long ll;
+	int ret = deserialize_long_long_io(f, &ll, geompos);
+	*n = ll;
+	return ret;
+}
+
+int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
+	if (fread(n, sizeof(unsigned), 1, f) != 1) {
+		return 0;
+	}
+	*geompos += sizeof(unsigned);
+	return 1;
+}
+
+int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
+	int c = getc(f);
+	if (c == EOF) {
+		return 0;
+	}
+	*n = c;
+	(*geompos)++;
+	return 1;
+}
+
 struct index {
 	long long start;
 	long long end;
