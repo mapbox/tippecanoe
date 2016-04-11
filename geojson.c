@@ -1721,28 +1721,15 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 					ahead += n;
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
-						int already_waited = 0;
-
 						// Don't let the streaming reader get too far ahead of the parsers.
-						// If the buffered input gets huge, block until the parsers are done.
-						while (ahead >= PARSE_MAX && is_parsing != 0) {
+						// If the buffered input gets huge, even if the parsers are still running,
+						// wait for the parser thread instead of continuing to stream input.
+
+						if (is_parsing == 0 || ahead >= PARSE_MAX) {
 							if (initial_offset != 0) {
 								if (pthread_join(parallel_parser, NULL) != 0) {
 									perror("pthread_join");
 									exit(EXIT_FAILURE);
-								}
-							}
-
-							already_waited = 1;
-						}
-
-						if (is_parsing == 0) {
-							if (!already_waited) {
-								if (initial_offset != 0) {
-									if (pthread_join(parallel_parser, NULL) != 0) {
-										perror("pthread_join");
-										exit(EXIT_FAILURE);
-									}
 								}
 							}
 
