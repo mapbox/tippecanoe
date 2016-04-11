@@ -58,16 +58,16 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 
 	// Counting down from size - 1 to 1 so that insertions don't change the index.
 	// The segment is i-1 and i.
-	for (ssize_t i = dv1->size() - 1; i > 0; i--) {
-		for (ssize_t j = dv2->size() - 1; j > 0; j--) {
-			if ((*dv1)[i - 1].y == (*dv1)[i].y && (*dv2)[i - 1].y == (*dv2)[i].y) {
+	for (ssize_t i1 = dv1->size() - 1; i1 > 0; i1--) {
+		for (ssize_t i2 = dv2->size() - 1; i2 > 0; i2--) {
+			if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 				// Both horizontal
 
-				long long dv1xmin = min((*dv1)[i - 1].x, (*dv1)[i].x);
-				long long dv1xmax = max((*dv1)[i - 1].x, (*dv1)[i].x);
+				long long dv1xmin = min((*dv1)[i1 - 1].x, (*dv1)[i1].x);
+				long long dv1xmax = max((*dv1)[i1 - 1].x, (*dv1)[i1].x);
 
-				long long dv2xmin = min((*dv2)[j - 1].x, (*dv2)[j].x);
-				long long dv2xmax = max((*dv2)[j - 1].x, (*dv2)[j].x);
+				long long dv2xmin = min((*dv2)[i2 - 1].x, (*dv2)[i2].x);
+				long long dv2xmax = max((*dv2)[i2 - 1].x, (*dv2)[i2].x);
 
 				if (dv1xmin == dv2xmin && dv1xmax == dv2xmax) {
 					// They are the same
@@ -90,7 +90,7 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 				} else {
 					// Can't happen?
 				}
-			} else if ((*dv1)[i - 1].x == (*dv1)[i].x && (*dv2)[i - 1].x == (*dv2)[i].x) {
+			} else if ((*dv1)[i1 - 1].x == (*dv1)[i1].x && (*dv2)[i2 - 1].x == (*dv2)[i2].x) {
 				// Both vertical
 			} else if (1 /* XXX */) {
 				// Collinear at some inconvenient angle
