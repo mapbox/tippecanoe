@@ -537,9 +537,13 @@ void *partial_feature_worker(void *v) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
 			for (size_t i = 0; i < geoms.size(); i++) {
+				drawvec before;
+				if (additional[A_DEBUG_POLYGON]) {
+					before = geoms[i];
+				}
 				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
 				if (additional[A_DEBUG_POLYGON]) {
-					check_polygon(geoms[i]);
+					check_polygon(geoms[i], before);
 				}
 				geoms[i] = close_poly(geoms[i]);
 			}

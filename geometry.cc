@@ -368,6 +368,47 @@ nextring:
 	}
 }
 
+static void dump(drawvec &geom) {
+	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+
+	bool has_area = false;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = get_area(geom, i, j);
+			if (area != 0) {
+				has_area = true;
+			}
+
+			ClipperLib::Path path;
+			printf("{ ClipperLib::Path path; ");
+
+			drawvec tmp;
+			for (size_t k = i; k < j; k++) {
+				printf("path.push_back(IntPoint(%lld,%lld)); ", geom[k].x, geom[k].y);
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
+			}
+
+			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+			}
+			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); ");
+
+			i = j - 1;
+		} else {
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+		printf("clipper.Execute(ClipperLib::ctUnion, clipped)); }");
+	}
+}
+
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
@@ -479,7 +520,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 	return c;
 }
 
-void check_polygon(drawvec &geom) {
+void check_polygon(drawvec &geom, drawvec &before) {
 	for (size_t i = 0; i + 1 < geom.size(); i++) {
 		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
 			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
@@ -493,12 +534,12 @@ void check_polygon(drawvec &geom) {
 				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 				if (t > 0 && t < 1 && s > 0 && s < 1) {
-					fprintf(stderr, "Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
 						geom[i + 0].x, geom[i + 0].y,
 						geom[i + 1].x, geom[i + 1].y,
 						geom[j + 0].x, geom[j + 0].y,
 						geom[j + 1].x, geom[j + 1].y);
-					exit(EXIT_FAILURE);
+						dump(before);
 				}
 			}
 		}
@@ -538,15 +579,14 @@ void check_polygon(drawvec &geom) {
 						}
 
 						if (!on_edge) {
-							fprintf(stderr, "%lld,%lld at %lld not in outer ring (%lld to %lld)", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
 
+							dump(before);
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
 								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
 							}
 #endif
-
-							fprintf(stderr, "\n");
 						}
 					}
 				}
