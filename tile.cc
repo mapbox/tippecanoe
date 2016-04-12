@@ -713,7 +713,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			signed char feature_minzoom;
 			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
 
-			double progress = floor((((*geompos_in - *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geompos_in + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
