@@ -398,15 +398,15 @@ static void dump(drawvec &geom) {
 
 			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
 			}
-			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); ");
+			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); }\n");
 
 			i = j - 1;
 		} else {
 			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
 			exit(EXIT_FAILURE);
 		}
-		printf("clipper.Execute(ClipperLib::ctUnion, clipped)); }");
 	}
+	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
