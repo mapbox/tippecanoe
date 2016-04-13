@@ -3986,11 +3986,27 @@ void Clipper::FixupFirstLefts2(OutRec* InnerOutRec, OutRec* OuterOutRec)
     {
         if (outRec->IsHole == OuterOutRec->IsHole)
         {
-            outRec->FirstLeft = ParseFirstLeft(OuterOutRec->FirstLeft);
+            if (Poly2ContainsPoly1(outRec->Pts, OuterOutRec->Pts))
+            {
+                outRec->FirstLeft = OuterOutRec;
+            }
+            else
+            {
+                outRec->FirstLeft = ParseFirstLeft(OuterOutRec->FirstLeft);
+            }
         }
         else
         {
-            outRec->FirstLeft = OuterOutRec;
+            if (Area(outRec->Pts) == 0.0 && !Poly2ContainsPoly1(outRec->Pts, OuterOutRec->Pts))
+            {
+                outRec->IsHole = !outRec->IsHole;
+                outRec->FirstLeft = ParseFirstLeft(OuterOutRec->FirstLeft);
+                ReversePolyPtLinks(outRec->Pts);
+            }
+            else
+            {
+                outRec->FirstLeft = OuterOutRec;
+            }
         }
     }
   }
@@ -5215,6 +5231,8 @@ void Clipper::DoSimplePolygons()
                                     dupeRec.emplace(outrec2->Idx, intPt2);
                                 }
                             }
+                            outRec_j = GetOutRec(m_OutPts[j]->Idx);
+                            idx_j = outRec_j->Idx;
                         }
                         continue;
                     }
