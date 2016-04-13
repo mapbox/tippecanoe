@@ -138,7 +138,7 @@ static int pvcmp(const void *v1, const void *v2) {
 	return (*pv1)->type - (*pv2)->type;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers, int forcetable) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers, int forcetable, const char *attribution) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -212,6 +212,17 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 		}
 	}
 	sqlite3_free(sql);
+
+	if (attribution != NULL) {
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('attribution', %Q);", attribution);
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set type: %s\n", err);
+			if (!forcetable) {
+				exit(EXIT_FAILURE);
+			}
+		}
+		sqlite3_free(sql);
+	}
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", "pbf");
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {

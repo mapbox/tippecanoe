@@ -1548,7 +1548,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
 }
 
-int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
+int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -2397,7 +2397,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable);
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -2443,6 +2443,7 @@ int main(int argc, char **argv) {
 	double gamma = 0;
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
+	const char *attribution = NULL;
 
 	int nsources = 0;
 	struct source *sources = NULL;
@@ -2461,6 +2462,7 @@ int main(int argc, char **argv) {
 	static struct option long_options[] = {
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},
+		{"attribution", required_argument, 0, 'A'},
 		{"named-layer", required_argument, 0, 'L'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
@@ -2503,7 +2505,7 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2514,6 +2516,10 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			layer = optarg;
+			break;
+
+		case 'A':
+			attribution = optarg;
 			break;
 
 		case 'L': {
@@ -2752,7 +2758,7 @@ int main(int argc, char **argv) {
 		sourcelist[i--] = sources;
 	}
 
-	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
+	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 

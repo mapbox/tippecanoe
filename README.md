@@ -61,6 +61,7 @@ Options
    specified, the files are all merged into the single named layer, even if they try to specify individual names with -L.
  * -L _name_:_file.json_ or --named-layer=_name_:_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like -L _name_:<(cat dir/*.json) to specify a layer name for the output of streamed input.
  * -n _name_ or --name=_name_: Human-readable name for the tileset (default file.json)
+ * -A _text_ or --attribution=_text_: Attribution (HTML) to be shown with maps that use data from this tileset.
 
 ### File control
 
