@@ -332,6 +332,56 @@ void deserialize_byte(char **f, signed char *n) {
 	*f += sizeof(signed char);
 }
 
+int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
+	unsigned long long zigzag = 0;
+	int shift = 0;
+
+	while (1) {
+		int c = getc(f);
+		if (c == EOF) {
+			return 0;
+		}
+		(*geompos)++;
+
+		if ((c & 0x80) == 0) {
+			zigzag |= ((unsigned long long) c) << shift;
+			shift += 7;
+			break;
+		} else {
+			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
+			shift += 7;
+		}
+	}
+
+	*n = (zigzag >> 1) ^ (-(zigzag & 1));
+	return 1;
+}
+
+int deserialize_int_io(FILE *f, int *n, long long *geompos) {
+	long long ll = 0;
+	int ret = deserialize_long_long_io(f, &ll, geompos);
+	*n = ll;
+	return ret;
+}
+
+int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
+	if (fread(n, sizeof(unsigned), 1, f) != 1) {
+		return 0;
+	}
+	*geompos += sizeof(unsigned);
+	return 1;
+}
+
+int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
+	int c = getc(f);
+	if (c == EOF) {
+		return 0;
+	}
+	*n = c;
+	(*geompos)++;
+	return 1;
+}
+
 struct index {
 	long long start;
 	long long end;
@@ -1498,7 +1548,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
 }
 
-int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
+int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1711,6 +1761,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 #define READ_BUF 2000
 #define PARSE_MIN 10000000
+#define PARSE_MAX (1LL * 1024 * 1024 * 1024)
+
 				char buf[READ_BUF];
 				int n;
 
@@ -1718,34 +1770,40 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 					fwrite_check(buf, sizeof(char), n, readfp, reading);
 					ahead += n;
 
-					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
-						if (initial_offset != 0) {
-							if (pthread_join(parallel_parser, NULL) != 0) {
-								perror("pthread_join");
+					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
+						// Don't let the streaming reader get too far ahead of the parsers.
+						// If the buffered input gets huge, even if the parsers are still running,
+						// wait for the parser thread instead of continuing to stream input.
+
+						if (is_parsing == 0 || ahead >= PARSE_MAX) {
+							if (initial_offset != 0) {
+								if (pthread_join(parallel_parser, NULL) != 0) {
+									perror("pthread_join");
+									exit(EXIT_FAILURE);
+								}
+							}
+
+							fflush(readfp);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+
+							initial_offset += ahead;
+							overall_offset += ahead;
+							checkdisk(reader, CPUS);
+							ahead = 0;
+
+							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
+							readfd = mkstemp(readname);
+							if (readfd < 0) {
+								perror(readname);
 								exit(EXIT_FAILURE);
 							}
+							readfp = fdopen(readfd, "w");
+							if (readfp == NULL) {
+								perror(readname);
+								exit(EXIT_FAILURE);
+							}
+							unlink(readname);
 						}
-
-						fflush(readfp);
-						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
-
-						initial_offset += ahead;
-						overall_offset += ahead;
-						checkdisk(reader, CPUS);
-						ahead = 0;
-
-						sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-						readfd = mkstemp(readname);
-						if (readfd < 0) {
-							perror(readname);
-							exit(EXIT_FAILURE);
-						}
-						readfp = fdopen(readfd, "w");
-						if (readfp == NULL) {
-							perror(readname);
-							exit(EXIT_FAILURE);
-						}
-						unlink(readname);
 					}
 				}
 				if (n < 0) {
@@ -2339,7 +2397,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable);
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -2385,6 +2443,7 @@ int main(int argc, char **argv) {
 	double gamma = 0;
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
+	const char *attribution = NULL;
 
 	int nsources = 0;
 	struct source *sources = NULL;
@@ -2403,6 +2462,7 @@ int main(int argc, char **argv) {
 	static struct option long_options[] = {
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},
+		{"attribution", required_argument, 0, 'A'},
 		{"named-layer", required_argument, 0, 'L'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
@@ -2445,7 +2505,7 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2456,6 +2516,10 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			layer = optarg;
+			break;
+
+		case 'A':
+			attribution = optarg;
 			break;
 
 		case 'L': {
@@ -2694,7 +2758,7 @@ int main(int argc, char **argv) {
 		sourcelist[i--] = sources;
 	}
 
-	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
+	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 

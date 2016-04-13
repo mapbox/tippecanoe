@@ -1,3 +1,8 @@
+## 1.9.12
+
+* Limit the size of the parallel parsing streaming input buffer
+* Add an option to set the tileset's attribution
+
 ## 1.9.11
 
 * Fix a line simplification crash when a segment degenerates to a single point
