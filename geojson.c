@@ -2476,6 +2476,7 @@ int main(int argc, char **argv) {
 	pool_init(&include, 0);
 	int exclude_all = 0;
 	int read_parallel = 0;
+	int files_open_at_start;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
@@ -2713,6 +2714,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	files_open_at_start = open("/dev/null", O_RDONLY);
+	close(files_open_at_start);
+
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2788,6 +2792,13 @@ int main(int argc, char **argv) {
 #ifdef MTRACE
 	muntrace();
 #endif
+
+	i = open("/dev/null", O_RDONLY);
+	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
+	if (i > files_open_at_start) {
+		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
+		exit(EXIT_FAILURE);
+	}
 
 	return ret;
 }
