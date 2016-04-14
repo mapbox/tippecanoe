@@ -81,6 +81,7 @@ struct source {
 
 int CPUS;
 int TEMP_FILES;
+long long MAX_FILES;
 static long long diskfree;
 
 #define MAX_ZOOM 24
@@ -146,15 +147,49 @@ void init_cpus() {
 	// Round down to a power of 2
 	CPUS = 1 << (int) (log(CPUS) / log(2));
 
-	TEMP_FILES = 64;
 	struct rlimit rl;
 	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
 		perror("getrlimit");
+		exit(EXIT_FAILURE);
 	} else {
-		TEMP_FILES = rl.rlim_cur / 3;
-		if (TEMP_FILES > CPUS * 4) {
-			TEMP_FILES = CPUS * 4;
+		MAX_FILES = rl.rlim_cur;
+	}
+
+	// Don't really want too many temporary files, because the file system
+	// will start to bog down eventually
+	if (MAX_FILES > 2000) {
+		MAX_FILES = 2000;
+	}
+
+	// MacOS can run out of system file descriptors
+	// even if we stay under the rlimit, so try to
+	// find out the real limit.
+	long long fds[MAX_FILES];
+	long long i;
+	for (i = 0; i < MAX_FILES; i++) {
+		fds[i] = open("/dev/null", O_RDONLY);
+		if (fds[i] < 0) {
+			break;
 		}
+	}
+	long long j;
+	for (j = 0; j < i; j++) {
+		if (close(fds[j]) < 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	// Scale down because we really don't want to run the system out of files
+	MAX_FILES = i * 3 / 4;
+	if (MAX_FILES < 32) {
+		fprintf(stderr, "Can't open a useful number of files: %lld\n", MAX_FILES);
+		exit(EXIT_FAILURE);
+	}
+
+	TEMP_FILES = (MAX_FILES - 10) / 2;
+	if (TEMP_FILES > CPUS * 4) {
+		TEMP_FILES = CPUS * 4;
 	}
 }
 
@@ -1166,7 +1201,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -1208,7 +1243,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles -= 4;
+		*availfiles -= 4;
 
 		unlink(geomname);
 		unlink(indexname);
@@ -1285,7 +1320,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1298,7 +1333,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1447,7 +1482,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// counter backward but will be an honest estimate of the work remaining.
 				*progress_max += geomst.st_size / 4;
 
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
 			}
 		}
@@ -1461,9 +1496,9 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				perror("close index");
 				exit(EXIT_FAILURE);
 			}
-		}
 
-		availfiles += 2;
+			*availfiles += 2;
+		}
 	}
 }
 
@@ -1476,13 +1511,6 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	// too big to fit in memory.
 
 	// Then concatenate each of the sub-outputs into a final output.
-
-	struct rlimit rl;
-
-	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-		perror("getrlimit");
-		exit(EXIT_FAILURE);
-	}
 
 	long long mem;
 
@@ -1511,15 +1539,10 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		mem = 8192;
 	}
 
-	// Don't use huge numbers of files that will trouble the file system
-	if (rl.rlim_cur > 5000) {
-		rl.rlim_cur = 5000;
-	}
-
-	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
-			       - 4			   // pool, meta, mbtiles, mbtiles journal
-			       - 4			   // top-level geom and index output, both FILE and fd
-			       - 3;			   // stdin, stdout, stderr
+	long long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
+			       - 4			 // pool, meta, mbtiles, mbtiles journal
+			       - 4			 // top-level geom and index output, both FILE and fd
+			       - 3;			 // stdin, stdout, stderr
 
 	// 4 because for each we have output and input FILE and fd for geom and index
 	int splits = availfiles / 4;
@@ -1545,7 +1568,13 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+	long long availfiles_before = availfiles;
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+
+	if (availfiles - 2 * nreaders != availfiles_before) {
+		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
+		exit(EXIT_FAILURE);
+	}
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
@@ -2453,10 +2482,33 @@ int main(int argc, char **argv) {
 	pool_init(&include, 0);
 	int exclude_all = 0;
 	int read_parallel = 0;
+	int files_open_at_start;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
+	}
+
+	{
+		char dup[256];
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
+			if (dup[additional_options[i]]) {
+				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[additional_options[i]] = 1;
+		}
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
+			if (dup[prevent_options[i]]) {
+				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[prevent_options[i]] = 1;
+		}
 	}
 
 	static struct option long_options[] = {
@@ -2690,6 +2742,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	files_open_at_start = open("/dev/null", O_RDONLY);
+	close(files_open_at_start);
+
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2765,6 +2820,13 @@ int main(int argc, char **argv) {
 #ifdef MTRACE
 	muntrace();
 #endif
+
+	i = open("/dev/null", O_RDONLY);
+	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
+	if (i > files_open_at_start) {
+		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
+		exit(EXIT_FAILURE);
+	}
 
 	return ret;
 }
