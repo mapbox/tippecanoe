@@ -1201,7 +1201,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -1243,7 +1243,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles -= 4;
+		*availfiles -= 4;
 
 		unlink(geomname);
 		unlink(indexname);
@@ -1320,7 +1320,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1333,7 +1333,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1482,7 +1482,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// counter backward but will be an honest estimate of the work remaining.
 				*progress_max += geomst.st_size / 4;
 
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
 			}
 		}
@@ -1496,9 +1496,9 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				perror("close index");
 				exit(EXIT_FAILURE);
 			}
-		}
 
-		availfiles += 2;
+			*availfiles += 2;
+		}
 	}
 }
 
@@ -1568,7 +1568,13 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+	long long availfiles_before = availfiles;
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+
+	if (availfiles - 2 * nreaders != availfiles_before) {
+		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
+		exit(EXIT_FAILURE);
+	}
 }
 
 int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
