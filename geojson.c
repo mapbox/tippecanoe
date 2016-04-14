@@ -2483,6 +2483,28 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
+	{
+		char dup[256];
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
+			if (dup[additional_options[i]]) {
+				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[additional_options[i]] = 1;
+		}
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
+			if (dup[prevent_options[i]]) {
+				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[prevent_options[i]] = 1;
+		}
+	}
+
 	static struct option long_options[] = {
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},

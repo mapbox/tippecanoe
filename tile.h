@@ -52,7 +52,7 @@ static int additional_options[] = {
 	A_LINE_DROP,
 #define A_POLYGON_DROP ((int) 'p')
 	A_POLYGON_DROP,
-#define A_PREFER_RADIX_SORT ((int) 'r')
+#define A_PREFER_RADIX_SORT ((int) 'R')
 	A_PREFER_RADIX_SORT,
 };
 
