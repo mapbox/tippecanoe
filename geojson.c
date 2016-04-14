@@ -147,43 +147,49 @@ void init_cpus() {
 	// Round down to a power of 2
 	CPUS = 1 << (int) (log(CPUS) / log(2));
 
-	TEMP_FILES = 64;
-	MAX_FILES = 64;
-
 	struct rlimit rl;
 	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
 		perror("getrlimit");
+		exit(EXIT_FAILURE);
 	} else {
-		// MacOS can run out of system file descriptors
-		// even if we stay under the rlimit, so try to
-		// find out the real limit.
+		MAX_FILES = rl.rlim_cur;
+	}
 
-		long long fds[rl.rlim_cur];
-		long long i;
-		for (i = 0; i < rl.rlim_cur; i++) {
-			fds[i] = open("/dev/null", O_RDONLY);
-			if (fds[i] < 0) {
-				break;
-			}
-		}
+	// Don't really want too many temporary files, because the file system
+	// will start to bog down eventually
+	if (MAX_FILES > 2000) {
+		MAX_FILES = 2000;
+	}
 
-		MAX_FILES = i * 3 / 4;
-		if (MAX_FILES > 2000) {
-			MAX_FILES = 2000;
+	// MacOS can run out of system file descriptors
+	// even if we stay under the rlimit, so try to
+	// find out the real limit.
+	long long fds[MAX_FILES];
+	long long i;
+	for (i = 0; i < MAX_FILES; i++) {
+		fds[i] = open("/dev/null", O_RDONLY);
+		if (fds[i] < 0) {
+			break;
 		}
+	}
+	long long j;
+	for (j = 0; j < i; j++) {
+		if (close(fds[j]) < 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
+	}
 
-		long long j;
-		for (j = 0; j < i; j++) {
-			if (close(fds[j]) < 0) {
-				perror("close");
-				exit(EXIT_FAILURE);
-			}
-		}
+	// Scale down because we really don't want to run the system out of files
+	MAX_FILES = i * 3 / 4;
+	if (MAX_FILES < 32) {
+		fprintf(stderr, "Can't open a useful number of files: %lld\n", MAX_FILES);
+		exit(EXIT_FAILURE);
+	}
 
-		TEMP_FILES = MAX_FILES / 3;
-		if (TEMP_FILES > CPUS * 4) {
-			TEMP_FILES = CPUS * 4;
-		}
+	TEMP_FILES = (MAX_FILES - 10) / 2;
+	if (TEMP_FILES > CPUS * 4) {
+		TEMP_FILES = CPUS * 4;
 	}
 }
 
@@ -1533,10 +1539,10 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		mem = 8192;
 	}
 
-	long long availfiles = MAX_FILES - 2 * nreaders    // each reader has a geom and an index
-			       - 4			   // pool, meta, mbtiles, mbtiles journal
-			       - 4			   // top-level geom and index output, both FILE and fd
-			       - 3;			   // stdin, stdout, stderr
+	long long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
+			       - 4			 // pool, meta, mbtiles, mbtiles journal
+			       - 4			 // top-level geom and index output, both FILE and fd
+			       - 3;			 // stdin, stdout, stderr
 
 	// 4 because for each we have output and input FILE and fd for geom and index
 	int splits = availfiles / 4;

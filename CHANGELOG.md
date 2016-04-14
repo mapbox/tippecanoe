@@ -1,3 +1,7 @@
+## 1.9.13
+
+* Don't trust the OS so much about how many files can be open
+
 ## 1.9.12
 
 * Limit the size of the parallel parsing streaming input buffer
