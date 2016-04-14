@@ -81,6 +81,7 @@ struct source {
 
 int CPUS;
 int TEMP_FILES;
+long long MAX_FILES;
 static long long diskfree;
 
 #define MAX_ZOOM 24
@@ -146,15 +147,49 @@ void init_cpus() {
 	// Round down to a power of 2
 	CPUS = 1 << (int) (log(CPUS) / log(2));
 
-	TEMP_FILES = 64;
 	struct rlimit rl;
 	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
 		perror("getrlimit");
+		exit(EXIT_FAILURE);
 	} else {
-		TEMP_FILES = rl.rlim_cur / 3;
-		if (TEMP_FILES > CPUS * 4) {
-			TEMP_FILES = CPUS * 4;
+		MAX_FILES = rl.rlim_cur;
+	}
+
+	// Don't really want too many temporary files, because the file system
+	// will start to bog down eventually
+	if (MAX_FILES > 2000) {
+		MAX_FILES = 2000;
+	}
+
+	// MacOS can run out of system file descriptors
+	// even if we stay under the rlimit, so try to
+	// find out the real limit.
+	long long fds[MAX_FILES];
+	long long i;
+	for (i = 0; i < MAX_FILES; i++) {
+		fds[i] = open("/dev/null", O_RDONLY);
+		if (fds[i] < 0) {
+			break;
 		}
+	}
+	long long j;
+	for (j = 0; j < i; j++) {
+		if (close(fds[j]) < 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	// Scale down because we really don't want to run the system out of files
+	MAX_FILES = i * 3 / 4;
+	if (MAX_FILES < 32) {
+		fprintf(stderr, "Can't open a useful number of files: %lld\n", MAX_FILES);
+		exit(EXIT_FAILURE);
+	}
+
+	TEMP_FILES = (MAX_FILES - 10) / 2;
+	if (TEMP_FILES > CPUS * 4) {
+		TEMP_FILES = CPUS * 4;
 	}
 }
 
@@ -330,6 +365,56 @@ void deserialize_uint(char **f, unsigned *n) {
 void deserialize_byte(char **f, signed char *n) {
 	memcpy(n, *f, sizeof(signed char));
 	*f += sizeof(signed char);
+}
+
+int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
+	unsigned long long zigzag = 0;
+	int shift = 0;
+
+	while (1) {
+		int c = getc(f);
+		if (c == EOF) {
+			return 0;
+		}
+		(*geompos)++;
+
+		if ((c & 0x80) == 0) {
+			zigzag |= ((unsigned long long) c) << shift;
+			shift += 7;
+			break;
+		} else {
+			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
+			shift += 7;
+		}
+	}
+
+	*n = (zigzag >> 1) ^ (-(zigzag & 1));
+	return 1;
+}
+
+int deserialize_int_io(FILE *f, int *n, long long *geompos) {
+	long long ll = 0;
+	int ret = deserialize_long_long_io(f, &ll, geompos);
+	*n = ll;
+	return ret;
+}
+
+int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
+	if (fread(n, sizeof(unsigned), 1, f) != 1) {
+		return 0;
+	}
+	*geompos += sizeof(unsigned);
+	return 1;
+}
+
+int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
+	int c = getc(f);
+	if (c == EOF) {
+		return 0;
+	}
+	*n = c;
+	(*geompos)++;
+	return 1;
 }
 
 struct index {
@@ -1116,7 +1201,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	}
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, int availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -1158,7 +1243,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles -= 4;
+		*availfiles -= 4;
 
 		unlink(geomname);
 		unlink(indexname);
@@ -1235,7 +1320,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1248,7 +1333,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			exit(EXIT_FAILURE);
 		}
 
-		availfiles += 2;
+		*availfiles += 2;
 	}
 
 	for (i = 0; i < splits; i++) {
@@ -1397,7 +1482,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// counter backward but will be an honest estimate of the work remaining.
 				*progress_max += geomst.st_size / 4;
 
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
 				already_closed = 1;
 			}
 		}
@@ -1411,9 +1496,9 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				perror("close index");
 				exit(EXIT_FAILURE);
 			}
-		}
 
-		availfiles += 2;
+			*availfiles += 2;
+		}
 	}
 }
 
@@ -1426,13 +1511,6 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	// too big to fit in memory.
 
 	// Then concatenate each of the sub-outputs into a final output.
-
-	struct rlimit rl;
-
-	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-		perror("getrlimit");
-		exit(EXIT_FAILURE);
-	}
 
 	long long mem;
 
@@ -1461,15 +1539,10 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		mem = 8192;
 	}
 
-	// Don't use huge numbers of files that will trouble the file system
-	if (rl.rlim_cur > 5000) {
-		rl.rlim_cur = 5000;
-	}
-
-	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
-			       - 4			   // pool, meta, mbtiles, mbtiles journal
-			       - 4			   // top-level geom and index output, both FILE and fd
-			       - 3;			   // stdin, stdout, stderr
+	long long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
+			       - 4			 // pool, meta, mbtiles, mbtiles journal
+			       - 4			 // top-level geom and index output, both FILE and fd
+			       - 3;			 // stdin, stdout, stderr
 
 	// 4 because for each we have output and input FILE and fd for geom and index
 	int splits = availfiles / 4;
@@ -1495,10 +1568,16 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+	long long availfiles_before = availfiles;
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+
+	if (availfiles - 2 * nreaders != availfiles_before) {
+		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
+		exit(EXIT_FAILURE);
+	}
 }
 
-int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable) {
+int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1711,6 +1790,8 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 #define READ_BUF 2000
 #define PARSE_MIN 10000000
+#define PARSE_MAX (1LL * 1024 * 1024 * 1024)
+
 				char buf[READ_BUF];
 				int n;
 
@@ -1718,34 +1799,40 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 					fwrite_check(buf, sizeof(char), n, readfp, reading);
 					ahead += n;
 
-					if (buf[n - 1] == '\n' && ahead > PARSE_MIN && is_parsing == 0) {
-						if (initial_offset != 0) {
-							if (pthread_join(parallel_parser, NULL) != 0) {
-								perror("pthread_join");
+					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
+						// Don't let the streaming reader get too far ahead of the parsers.
+						// If the buffered input gets huge, even if the parsers are still running,
+						// wait for the parser thread instead of continuing to stream input.
+
+						if (is_parsing == 0 || ahead >= PARSE_MAX) {
+							if (initial_offset != 0) {
+								if (pthread_join(parallel_parser, NULL) != 0) {
+									perror("pthread_join");
+									exit(EXIT_FAILURE);
+								}
+							}
+
+							fflush(readfp);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+
+							initial_offset += ahead;
+							overall_offset += ahead;
+							checkdisk(reader, CPUS);
+							ahead = 0;
+
+							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
+							readfd = mkstemp(readname);
+							if (readfd < 0) {
+								perror(readname);
 								exit(EXIT_FAILURE);
 							}
+							readfp = fdopen(readfd, "w");
+							if (readfp == NULL) {
+								perror(readname);
+								exit(EXIT_FAILURE);
+							}
+							unlink(readname);
 						}
-
-						fflush(readfp);
-						start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
-
-						initial_offset += ahead;
-						overall_offset += ahead;
-						checkdisk(reader, CPUS);
-						ahead = 0;
-
-						sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-						readfd = mkstemp(readname);
-						if (readfd < 0) {
-							perror(readname);
-							exit(EXIT_FAILURE);
-						}
-						readfp = fdopen(readfd, "w");
-						if (readfp == NULL) {
-							perror(readname);
-							exit(EXIT_FAILURE);
-						}
-						unlink(readname);
 					}
 				}
 				if (n < 0) {
@@ -2339,7 +2426,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable);
+	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
 	for (i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
@@ -2385,6 +2472,7 @@ int main(int argc, char **argv) {
 	double gamma = 0;
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
+	const char *attribution = NULL;
 
 	int nsources = 0;
 	struct source *sources = NULL;
@@ -2394,15 +2482,39 @@ int main(int argc, char **argv) {
 	pool_init(&include, 0);
 	int exclude_all = 0;
 	int read_parallel = 0;
+	int files_open_at_start;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
 	}
 
+	{
+		char dup[256];
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
+			if (dup[additional_options[i]]) {
+				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[additional_options[i]] = 1;
+		}
+
+		memset(dup, 0, sizeof(dup));
+		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
+			if (dup[prevent_options[i]]) {
+				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
+				exit(EXIT_FAILURE);
+			}
+			dup[prevent_options[i]] = 1;
+		}
+	}
+
 	static struct option long_options[] = {
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},
+		{"attribution", required_argument, 0, 'A'},
 		{"named-layer", required_argument, 0, 'L'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
@@ -2445,7 +2557,7 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2456,6 +2568,10 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			layer = optarg;
+			break;
+
+		case 'A':
+			attribution = optarg;
 			break;
 
 		case 'L': {
@@ -2626,6 +2742,9 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	files_open_at_start = open("/dev/null", O_RDONLY);
+	close(files_open_at_start);
+
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2694,13 +2813,20 @@ int main(int argc, char **argv) {
 		sourcelist[i--] = sources;
 	}
 
-	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable);
+	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 
 #ifdef MTRACE
 	muntrace();
 #endif
+
+	i = open("/dev/null", O_RDONLY);
+	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
+	if (i > files_open_at_start) {
+		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
+		exit(EXIT_FAILURE);
+	}
 
 	return ret;
 }
