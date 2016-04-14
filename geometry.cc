@@ -20,7 +20,7 @@ extern "C" {
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 
-drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
+drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
 	bbox[0] = LLONG_MAX;
@@ -33,7 +33,7 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 	while (1) {
 		draw d;
 
-		deserialize_byte(meta, &d.op);
+		deserialize_byte_io(meta, &d.op, geompos);
 		if (d.op == VT_END) {
 			break;
 		}
@@ -41,8 +41,8 @@ drawvec decode_geometry(char **meta, int z, unsigned tx, unsigned ty, int detail
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
 			long long dx, dy;
 
-			deserialize_long_long(meta, &dx);
-			deserialize_long_long(meta, &dy);
+			deserialize_long_long_io(meta, &dx, geompos);
+			deserialize_long_long_io(meta, &dy, geompos);
 
 			wx += dx << geometry_scale;
 			wy += dy << geometry_scale;
@@ -1092,7 +1092,9 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 			geom[i].necessary = 1;
 			geom[j - 1].necessary = 1;
 
-			douglas_peucker(geom, i, j - i, res);
+			if (j - i > 1) {
+				douglas_peucker(geom, i, j - i, res);
+			}
 			i = j - 1;
 		}
 	}

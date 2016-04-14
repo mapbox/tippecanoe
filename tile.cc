@@ -603,11 +603,11 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, char *geomstart, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
-	char *og = *geoms;
+	long long og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
 	int max_zoom_increment = log(child_shards) / log(4);
@@ -676,45 +676,51 @@ long long write_tile(char **geoms, char *metabase, char *stringpool, int z, unsi
 		memset(within, '\0', sizeof(within));
 		memset(geompos, '\0', sizeof(geompos));
 
-		*geoms = og;
+		if (*geompos_in != og) {
+			if (fseek(geoms, og, SEEK_SET) != 0) {
+				perror("fseek geom");
+				exit(EXIT_FAILURE);
+			}
+			*geompos_in = og;
+		}
 
 		while (1) {
 			signed char t;
-			deserialize_byte(geoms, &t);
+			deserialize_byte_io(geoms, &t, geompos_in);
 			if (t < 0) {
 				break;
 			}
 
 			long long original_seq;
-			deserialize_long_long(geoms, &original_seq);
+			deserialize_long_long_io(geoms, &original_seq, geompos_in);
 
 			long long layer;
-			deserialize_long_long(geoms, &layer);
+			deserialize_long_long_io(geoms, &layer, geompos_in);
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
 			if (layer & 2) {
-				deserialize_int(geoms, &tippecanoe_minzoom);
+				deserialize_int_io(geoms, &tippecanoe_minzoom, geompos_in);
 			}
 			if (layer & 1) {
-				deserialize_int(geoms, &tippecanoe_maxzoom);
+				deserialize_int_io(geoms, &tippecanoe_maxzoom, geompos_in);
 			}
 			layer >>= 2;
 
 			int segment;
-			deserialize_int(geoms, &segment);
+			deserialize_int_io(geoms, &segment, geompos_in);
 
 			long long metastart;
 			int m;
-			deserialize_long_long(geoms, &metastart);
-			deserialize_int(geoms, &m);
+			deserialize_long_long_io(geoms, &metastart, geompos_in);
+			deserialize_int_io(geoms, &m, geompos_in);
 			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
-			drawvec geom = decode_geometry(geoms, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
+			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
 
 			signed char feature_minzoom;
-			deserialize_byte(geoms, &feature_minzoom);
+			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
 
-			double progress = floor((((*geoms - geomstart + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geompos_in + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
@@ -1096,29 +1102,28 @@ void *run_thread(void *vargs) {
 
 		// printf("%lld of geom_size\n", (long long) geom_size[j]);
 
-		char *geom = (char *) mmap(NULL, arg->geom_size[j], PROT_READ, MAP_PRIVATE, arg->geomfd[j], 0);
-		if (geom == MAP_FAILED) {
+		FILE *geom = fdopen(arg->geomfd[j], "rb");
+		if (geom == NULL) {
 			perror("mmap geom");
 			exit(EXIT_FAILURE);
 		}
-		madvise(geom, arg->geom_size[j], MADV_SEQUENTIAL);
-		madvise(geom, arg->geom_size[j], MADV_WILLNEED);
 
-		char *geomstart = geom;
-		char *end = geom + arg->geom_size[j];
-		char *prevgeom = geom;
+		long long geompos = 0;
+		long long prevgeom = 0;
 
-		while (geom < end) {
+		while (1) {
 			int z;
 			unsigned x, y;
 
-			deserialize_int(&geom, &z);
-			deserialize_uint(&geom, &x);
-			deserialize_uint(&geom, &y);
+			if (!deserialize_int_io(geom, &z, &geompos)) {
+				break;
+			}
+			deserialize_uint_io(geom, &x, &geompos);
+			deserialize_uint_io(geom, &y, &geompos);
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(&geom, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, geomstart, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -1152,8 +1157,8 @@ void *run_thread(void *vargs) {
 				}
 			}
 
-			*arg->along += geom - prevgeom;
-			prevgeom = geom;
+			*arg->along += geompos - prevgeom;
+			prevgeom = geompos;
 
 			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
@@ -1161,10 +1166,12 @@ void *run_thread(void *vargs) {
 			}
 		}
 
-		madvise(geomstart, arg->geom_size[j], MADV_DONTNEED);
-		if (munmap(geomstart, arg->geom_size[j]) != 0) {
-			perror("munmap geom");
+		if (fclose(geom) != 0) {
+			perror("close geom");
+			exit(EXIT_FAILURE);
 		}
+		// Since the fclose() has closed the underlying file descriptor
+		arg->geomfd[j] = -1;
 	}
 
 	arg->running--;

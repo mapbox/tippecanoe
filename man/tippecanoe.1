@@ -65,6 +65,8 @@ specified, the files are all merged into the single named layer, even if they tr
 \-L \fIname\fP:\fIfile.json\fP or \-\-named\-layer=\fIname\fP:\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \-L \fIname\fP:<(cat dir/*.json) to specify a layer name for the output of streamed input.
 .IP \(bu 2
 \-n \fIname\fP or \-\-name=\fIname\fP: Human\-readable name for the tileset (default file.json)
+.IP \(bu 2
+\-A \fItext\fP or \-\-attribution=\fItext\fP: Attribution (HTML) to be shown with maps that use data from this tileset.
 .RE
 .SS File control
 .RS
