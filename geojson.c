@@ -81,6 +81,7 @@ struct source {
 
 int CPUS;
 int TEMP_FILES;
+long long MAX_FILES;
 static long long diskfree;
 
 #define MAX_ZOOM 24
@@ -147,11 +148,39 @@ void init_cpus() {
 	CPUS = 1 << (int) (log(CPUS) / log(2));
 
 	TEMP_FILES = 64;
+	MAX_FILES = 64;
+
 	struct rlimit rl;
 	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
 		perror("getrlimit");
 	} else {
-		TEMP_FILES = rl.rlim_cur / 3;
+		// MacOS can run out of system file descriptors
+		// even if we stay under the rlimit, so try to
+		// find out the real limit.
+
+		long long fds[rl.rlim_cur];
+		long long i;
+		for (i = 0; i < rl.rlim_cur; i++) {
+			fds[i] = open("/dev/null", O_RDONLY);
+			if (fds[i] < 0) {
+				break;
+			}
+		}
+
+		MAX_FILES = i * 3 / 4;
+		if (MAX_FILES > 2000) {
+			MAX_FILES = 2000;
+		}
+
+		long long j;
+		for (j = 0; j < i; j++) {
+			if (close(fds[j]) < 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		TEMP_FILES = MAX_FILES / 3;
 		if (TEMP_FILES > CPUS * 4) {
 			TEMP_FILES = CPUS * 4;
 		}
@@ -1477,13 +1506,6 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 
 	// Then concatenate each of the sub-outputs into a final output.
 
-	struct rlimit rl;
-
-	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
-		perror("getrlimit");
-		exit(EXIT_FAILURE);
-	}
-
 	long long mem;
 
 #ifdef __APPLE__
@@ -1511,12 +1533,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		mem = 8192;
 	}
 
-	// Don't use huge numbers of files that will trouble the file system
-	if (rl.rlim_cur > 5000) {
-		rl.rlim_cur = 5000;
-	}
-
-	long long availfiles = rl.rlim_cur - 2 * nreaders  // each reader has a geom and an index
+	long long availfiles = MAX_FILES - 2 * nreaders    // each reader has a geom and an index
 			       - 4			   // pool, meta, mbtiles, mbtiles journal
 			       - 4			   // top-level geom and index output, both FILE and fd
 			       - 3;			   // stdin, stdout, stderr
