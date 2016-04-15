@@ -138,6 +138,7 @@ void init_cpus() {
 	if (CPUS < 1) {
 		CPUS = 1;
 	}
+	/* XXX */ CPUS = 1;
 
 	// Guard against short struct index.segment
 	if (CPUS > 32767) {

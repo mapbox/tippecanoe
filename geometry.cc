@@ -11,6 +11,7 @@
 #include <limits.h>
 #include "geometry.hh"
 #include "clipper/clipper.hpp"
+#include "scan.hh"
 
 extern "C" {
 #include "tile.h"
@@ -235,6 +236,8 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+	scan(geom);
+
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	bool has_area = false;

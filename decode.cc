@@ -190,6 +190,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			std::vector<draw> ops;
 
+			if (feat.geometry_size() == 0) {
+				fprintf(stderr, "empty geometry\n");
+				exit(EXIT_FAILURE);
+			}
+
 			for (int g = 0; g < feat.geometry_size(); g++) {
 				uint32_t geom = feat.geometry(g);
 				uint32_t op = geom & 7;
