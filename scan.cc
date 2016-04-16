@@ -51,14 +51,14 @@ static void dump(drawvec *dv) {
 }
 
 static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
-        double s1_x = p1.x - p0.x;
-        double s1_y = p1.y - p0.y;
-        double s2_x = p3.x - p2.x;
-        double s2_y = p3.y - p2.y;
+	double s1_x = p1.x - p0.x;
+	double s1_y = p1.y - p0.y;
+	double s2_x = p3.x - p2.x;
+	double s2_y = p3.y - p2.y;
 
-        double s, t;
-        s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-        t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+	double s, t;
+	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	if (s > 0 && s < 1 && t > 0 && t < 1) {
 		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
@@ -175,7 +175,7 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 					}
 				} else if (((double) (*dv1)[i1].y - (*dv1)[i1 - 1].y) / ((*dv1)[i1].x - (*dv1)[i1 - 1].x) ==
 					   ((double) (*dv2)[i2].y - (*dv2)[i2 - 1].y) / ((*dv2)[i2].x - (*dv2)[i2 - 1].x)) {
-					// Collinear or parallel at some inconvenient angle
+// Collinear or parallel at some inconvenient angle
 
 #if 0
 					printf("%f == %f\n", (((double) (*dv1)[i1].y - (*dv1)[i1 - 1].y) / ((*dv1)[i1].x - (*dv1)[i1 - 1].x)),
@@ -341,20 +341,30 @@ void scan(drawvec &geom) {
 		}
 	}
 
-#if 0
-	for (size_t i = 0; i < geom.size(); i++) {
-		for (size_t j = 0; j < segs[i].size(); j++) {
-			printf("%lld,%lld ", segs[i][j].x, segs[i][j].y);
-		}
-		printf("\n");
-	}
-	printf("\n");
-#endif
-
 	// At this point we have a whole lot of polygon edges and need to reconstruct
 	// polygons from them.
 
-	// First, remove all exact duplicates, since those are places where an inner ring
+	std::vector<drawvec> edges;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
+			drawvec dv;
+
+			if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
+				dv.push_back(segs[i][j]);
+				dv.push_back(segs[i][j + 1]);
+			} else {
+				dv.push_back(segs[i][j + 1]);
+				dv.push_back(segs[i][j]);
+			}
+
+			edges.push_back(dv);
+		}
+	}
+
+	// std::sort(edges.begin(), edges.end());
+
+	// First, remove all pairs of exact duplicates, since those are places where an inner ring
 	// exactly matches up to the edge of an outer ring, and they need to be cut down
 	// to just one ring.
 
