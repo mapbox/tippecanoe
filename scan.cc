@@ -232,12 +232,20 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 				} else {
 					draw intersection = get_line_intersection((*dv1)[i1 - 1], (*dv1)[i1], (*dv2)[i2 - 1], (*dv2)[i2]);
 					if (intersection.op != -1) {
-						dv1->insert(dv1->begin() + i1, intersection);
-						dv2->insert(dv2->begin() + i2, intersection);
-						printf("intersected:\n");
-						dump(dv1);
-						dump(dv2);
-						again = true;
+						if ((intersection.x != (*dv1)[i1 - 1].x || intersection.y != (*dv1)[i1 - 1].y) &&
+						    (intersection.x != (*dv1)[i1].x || intersection.y != (*dv1)[i1].y)) {
+							printf("intersected 1:\n");
+							dv1->insert(dv1->begin() + i1, intersection);
+							again = true;
+							dump(dv1);
+						}
+						if ((intersection.x != (*dv2)[i2 - 1].x || intersection.y != (*dv2)[i2 - 1].y) &&
+						    (intersection.x != (*dv2)[i2].x || intersection.y != (*dv2)[i2].y)) {
+							printf("intersected 2:\n");
+							dv2->insert(dv2->begin() + i2, intersection);
+							again = true;
+							dump(dv2);
+						}
 					}
 				}
 			}
