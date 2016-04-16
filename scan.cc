@@ -50,6 +50,23 @@ static void dump(drawvec *dv) {
 	printf("\n");
 }
 
+static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
+        double s1_x = p1.x - p0.x;
+        double s1_y = p1.y - p0.y;
+        double s2_x = p3.x - p2.x;
+        double s2_y = p3.y - p2.y;
+
+        double s, t;
+        s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+        t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s > 0 && s < 1 && t > 0 && t < 1) {
+		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+	} else {
+		return draw(-1, -1, -1);
+	}
+}
+
 void check_intersections(drawvec *dv1, drawvec *dv2) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
@@ -75,6 +92,7 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 			for (ssize_t i2 = dv2->size() - 1; i2 > 0; i2--) {
 				if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 					// Both horizontal
+					// XXX Can this just be a special case of non-vertical not same angle?
 
 					if ((*dv1)[i1].y == (*dv2)[i2].y) {  // and collinear
 						long long dv1xmin = min((*dv1)[i1 - 1].x, (*dv1)[i1].x);
@@ -212,6 +230,15 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 						}
 					}
 				} else {
+					draw intersection = get_line_intersection((*dv1)[i1 - 1], (*dv1)[i1], (*dv2)[i2 - 1], (*dv2)[i2]);
+					if (intersection.op != -1) {
+						dv1->insert(dv1->begin() + i1, intersection);
+						dv2->insert(dv2->begin() + i2, intersection);
+						printf("intersected:\n");
+						dump(dv1);
+						dump(dv2);
+						again = true;
+					}
 				}
 			}
 		}
@@ -306,6 +333,7 @@ void scan(drawvec &geom) {
 		}
 	}
 
+#if 0
 	for (size_t i = 0; i < geom.size(); i++) {
 		for (size_t j = 0; j < segs[i].size(); j++) {
 			printf("%lld,%lld ", segs[i][j].x, segs[i][j].y);
@@ -313,6 +341,7 @@ void scan(drawvec &geom) {
 		printf("\n");
 	}
 	printf("\n");
+#endif
 
 	// At this point we have a whole lot of polygon edges and need to reconstruct
 	// polygons from them.
