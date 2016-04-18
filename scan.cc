@@ -56,6 +56,11 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	double s2_x = p3.x - p2.x;
 	double s2_y = p3.y - p2.y;
 
+	if (-s2_x * s1_y + s1_x * s2_y == 0) {
+		fprintf(stderr, "Dividing by 0: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
+			p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+	}
+
 	double s, t;
 	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
 	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
@@ -92,7 +97,11 @@ bool check_intersections(drawvec *dv1, drawvec *dv2) {
 
 		for (ssize_t i1 = dv1->size() - 1; i1 > 0; i1--) {
 			for (ssize_t i2 = dv2->size() - 1; i2 > 0; i2--) {
-				if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
+				if ((*dv1)[i1 - 1].x == (*dv1)[i1].x && (*dv1)[i1 - 1].y == (*dv1)[i1]. y) {
+					// 0-length first segment
+				} else if ((*dv2)[i2 - 1].x == (*dv2)[i2].x && (*dv2)[i2 - 1].y == (*dv2)[i2]. y) {
+					// 0-length second segment
+				} else if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 					// Both horizontal
 					// XXX Can this just be a special case of non-vertical not same angle?
 
