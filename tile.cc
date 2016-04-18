@@ -538,7 +538,6 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (size_t i = 0; i < geoms.size(); i++) {
 				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
-				geoms[i] = close_poly(geoms[i]);
 			}
 		}
 
@@ -948,6 +947,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
+				}
+
+				if (features[j][x].type == VT_POLYGON) {
+					if (features[j][x].coalesced) {
+						features[j][x].geom = clean_or_clip_poly(features[j][x].geom, 0, 0, 0, false);
+					}
+
+					features[j][x].geom = close_poly(features[j][x].geom);
 				}
 
 				if (features[j][x].geom.size() > 0) {
