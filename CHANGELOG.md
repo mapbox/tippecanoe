@@ -1,3 +1,7 @@
+## 1.9.14
+
+* Clean up polygons after coalescing, if necessary
+
 ## 1.9.13
 
 * Don't trust the OS so much about how many files can be open

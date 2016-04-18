@@ -1,0 +1,20 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-135.703125,-31.353637,-3.515625,79.171335",
+"center": "-3.515625,0.000000,0",
+"description": "tests/overlap/out/-z0.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ] }",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/overlap/out/-z0.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in" }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -33.398438, 79.038437 ], [ -3.515625, 61.312452 ], [ -37.265625, 34.957995 ], [ -71.367188, 29.916852 ], [ -103.359375, 39.368279 ], [ -117.070312, 60.108670 ], [ -113.906250, 69.442128 ], [ -93.515625, 75.342282 ], [ -74.882812, 79.171335 ], [ -33.398438, 79.038437 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -28.125000, 59.756395 ], [ -10.195312, 50.513427 ], [ -5.625000, 8.407168 ], [ -17.578125, -22.593726 ], [ -75.937500, -31.353637 ], [ -118.125000, -9.795678 ], [ -135.703125, 29.228890 ], [ -113.906250, 53.173119 ], [ -81.562500, 63.391522 ], [ -28.125000, 59.756395 ] ] ] } }
+] }
+] }
+] }
