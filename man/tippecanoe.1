@@ -134,7 +134,9 @@ compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber
 .SS Doing more
 .RS
 .IP \(bu 2
-\-ac or \-\-coalesce: Coalesce adjacent line and polygon features that have the same properties
+\-ac or \-\-coalesce: Coalesce adjacent line and polygon features that have the same properties.
+Note that when overlapping polygons are coalesced, the overlapping region is treated as a hole,
+which may not be what you want.
 .IP \(bu 2
 \-ar or \-\-reverse: Try reversing the directions of lines to make them coalesce and compress better
 .IP \(bu 2

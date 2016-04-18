@@ -111,7 +111,9 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Doing more
 
- * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties
+ * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties.
+   Note that when overlapping polygons are coalesced, the overlapping region is treated as a hole,
+   which may not be what you want.
  * -ar or --reverse: Try reversing the directions of lines to make them coalesce and compress better
  * -ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
  * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
