@@ -102,9 +102,9 @@ bool check_intersections(drawvec *dv1, drawvec *dv2) {
 
 		for (ssize_t i1 = dv1->size() - 1; i1 > 0; i1--) {
 			for (ssize_t i2 = dv2->size() - 1; i2 > 0; i2--) {
-				if ((*dv1)[i1 - 1].x == (*dv1)[i1].x && (*dv1)[i1 - 1].y == (*dv1)[i1]. y) {
+				if ((*dv1)[i1 - 1].x == (*dv1)[i1].x && (*dv1)[i1 - 1].y == (*dv1)[i1].y) {
 					// 0-length first segment
-				} else if ((*dv2)[i2 - 1].x == (*dv2)[i2].x && (*dv2)[i2 - 1].y == (*dv2)[i2]. y) {
+				} else if ((*dv2)[i2 - 1].x == (*dv2)[i2].x && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 					// 0-length second segment
 				} else if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 					// Both horizontal
@@ -255,6 +255,43 @@ bool check_intersections(drawvec *dv1, drawvec *dv2) {
 	return did_something;
 }
 
+int edgecmp(const drawvec &a, const drawvec &b){
+	size_t i;
+
+	for (i = 0; i < a.size() && i < b.size(); i++) {
+		if (a[i].x < b[i].x) {
+			return -1;
+		} else if (a[i].x > b[i].x) {
+			return 1;
+		} else {
+			if (a[i].y < b[i].y) {
+				return -1;
+			} else if (a[i].y > b[i].y) {
+				return 1;
+			}
+		}
+	}
+
+	if (a.size() < b.size()) {
+		return -1;
+	} else if (a.size() > b.size()) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+struct s_edgecmp {
+	bool operator()(const drawvec &a, const drawvec &b) {
+		int cmp = edgecmp(a, b);
+		if (cmp < 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+} s_edgecmp;
+
 void scan(drawvec &geom) {
 	// Following the Bentley-Ottmann sweep-line concept,
 	// but less clever about the active set
@@ -355,42 +392,49 @@ void scan(drawvec &geom) {
 	// At this point we have a whole lot of polygon edges and need to reconstruct
 	// polygons from them.
 
-	if (did_something) {
-		std::vector<drawvec> edges;
+	std::vector<drawvec> edges;
 
-		printf("0 setlinewidth\n");
+	for (size_t i = 0; i < geom.size(); i++) {
+		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
+			drawvec dv;
 
-		for (size_t i = 0; i < geom.size(); i++) {
-			for (size_t j = 1; j + 1 < segs[i].size(); j++) {
-				printf("%lld %lld .3 0 360 arc fill ", segs[i][j].x, segs[i][j].y);
+			if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
+				dv.push_back(segs[i][j]);
+				dv.push_back(segs[i][j + 1]);
+			} else {
+				dv.push_back(segs[i][j + 1]);
+				dv.push_back(segs[i][j]);
 			}
 
-			for (size_t j = 0; j + 1 < segs[i].size(); j++) {
-				drawvec dv;
-
-				printf("%lld %lld moveto %lld %lld lineto stroke\n",
-					segs[i][j].x, segs[i][j].y, segs[i][j + 1].x, segs[i][j + 1].y);
-
-				if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
-					dv.push_back(segs[i][j]);
-					dv.push_back(segs[i][j + 1]);
-				} else {
-					dv.push_back(segs[i][j + 1]);
-					dv.push_back(segs[i][j]);
-				}
-
-				edges.push_back(dv);
-			}
+			edges.push_back(dv);
 		}
-
-		printf("showpage\n");
 	}
 
-	// std::sort(edges.begin(), edges.end());
+	std::sort(edges.begin(), edges.end(), s_edgecmp);
+
+	// Original segments are no longer needed
+
+	delete[] segs;
 
 	// First, remove all pairs of exact duplicates, since those are places where an inner ring
 	// exactly matches up to the edge of an outer ring, and they need to be cut down
 	// to just one ring.
+
+	std::vector<drawvec> edges2;
+
+	for (size_t i = 0; i < edges.size(); i++) {
+		if (i + 1 < edges.size() && edgecmp(edges[i], edges[i + 1]) == 0) {
+			i++;
+		} else {
+			edges2.push_back(edges[i]);
+		}
+	}
+
+	printf("0 setlinewidth .5 .setopacityalpha\n");
+
+	for (size_t i = 0; i < edges2.size(); i++) {
+		printf("%lld %lld moveto %lld %lld lineto stroke\n", edges2[i][0].x, edges2[i][0].y, edges2[i][1].x, edges2[i][1].y);
+	}
 
 	// Then index each remaining segment by its start and endpoint.
 
