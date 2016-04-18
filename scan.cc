@@ -43,11 +43,11 @@ long long max(long long a, long long b) {
 }
 
 static void dump(drawvec *dv) {
-	printf("--> ");
+	fprintf(stderr, "--> ");
 	for (size_t i = 0; i < dv->size(); i++) {
-		printf("%lld,%lld ", (*dv)[i].x, (*dv)[i].y);
+		fprintf(stderr, "%lld,%lld ", (*dv)[i].x, (*dv)[i].y);
 	}
-	printf("\n");
+	fprintf(stderr, "\n");
 }
 
 static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
@@ -67,7 +67,7 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	}
 }
 
-void check_intersections(drawvec *dv1, drawvec *dv2) {
+bool check_intersections(drawvec *dv1, drawvec *dv2) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
 
@@ -75,11 +75,13 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 	// but that is what is necessary to keep from having irreconcilable self-intersections.
 
 	// The messy part: after inserting a point, making sure that the movement doesn't
-	// cause any new intersections.
+	// cause any new intersections. So recheck after making a change.
+
+	bool did_something = false;
 
 	// Don't check a segment against itself, since it's all overlaps
 	if (dv1 == dv2) {
-		return;
+		return did_something;
 	}
 
 	// Counting down from size - 1 to 1 so that insertions don't change the index.
@@ -110,22 +112,18 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 						} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
 							// right side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, (*dv2)[i2].y));
-							dump(dv2);
 							again = true;
 						} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
 							// left side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, (*dv2)[i2].y));
-							dump(dv2);
 							again = true;
 						} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
 							// right side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, (*dv1)[i1].y));
-							dump(dv1);
 							again = true;
 						} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
 							// left side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, (*dv1)[i1].y));
-							dump(dv1);
 							again = true;
 						} else {
 							// Can't happen?
@@ -151,22 +149,18 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 						} else if (dv1ymax > dv2ymin && dv1ymax < dv2ymax) {
 							// right side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
-							dump(dv2);
 							again = true;
 						} else if (dv1ymin > dv2ymin && dv1ymin < dv2ymax) {
 							// left side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
-							dump(dv2);
 							again = true;
 						} else if (dv2ymax > dv1ymin && dv2ymax < dv1ymax) {
 							// right side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
-							dump(dv1);
 							again = true;
 						} else if (dv2ymin > dv1ymin && dv2ymin < dv1ymax) {
 							// left side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
-							dump(dv1);
 							again = true;
 						} else {
 							// Can't happen?
@@ -203,26 +197,18 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 						} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
 							// right side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, (*dv2)[i2 - 1].y + (dv1xmax - (*dv2)[i2 - 1].x) * slope));
-							printf("collinear: 1 %f %f\n", b1, slope);
-							dump(dv2);
 							again = true;
 						} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
 							// left side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, (*dv2)[i2 - 1].y + (dv1xmin - (*dv2)[i2 - 1].x) * slope));
-							printf("collinear: 2 %f %f\n", b1, slope);
-							dump(dv2);
 							again = true;
 						} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
 							// right side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, (*dv1)[i1 - 1].y + (dv2xmax - (*dv1)[i1 - 1].x) * slope));
-							printf("collinear: 3 %f %f\n", b1, slope);
-							dump(dv1);
 							again = true;
 						} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
 							// left side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, (*dv1)[i1 - 1].y + (dv2xmin - (*dv1)[i1 - 1].x) * slope));
-							printf("collinear: 4 %f %f\n", b1, slope);
-							dump(dv1);
 							again = true;
 						} else {
 							// Can't happen?
@@ -234,23 +220,23 @@ void check_intersections(drawvec *dv1, drawvec *dv2) {
 					if (intersection.op != -1) {
 						if ((intersection.x != (*dv1)[i1 - 1].x || intersection.y != (*dv1)[i1 - 1].y) &&
 						    (intersection.x != (*dv1)[i1].x || intersection.y != (*dv1)[i1].y)) {
-							printf("intersected 1:\n");
 							dv1->insert(dv1->begin() + i1, intersection);
 							again = true;
-							dump(dv1);
+							did_something = true;
 						}
 						if ((intersection.x != (*dv2)[i2 - 1].x || intersection.y != (*dv2)[i2 - 1].y) &&
 						    (intersection.x != (*dv2)[i2].x || intersection.y != (*dv2)[i2].y)) {
-							printf("intersected 2:\n");
 							dv2->insert(dv2->begin() + i2, intersection);
 							again = true;
-							dump(dv2);
+							did_something = true;
 						}
 					}
 				}
 			}
 		}
 	}
+
+	return did_something;
 }
 
 void scan(drawvec &geom) {
@@ -309,12 +295,14 @@ void scan(drawvec &geom) {
 	std::sort(lefts.begin(), lefts.end());
 	std::sort(rights.begin(), rights.end());
 
+	bool did_something = false;
+
 	for (size_t i = 0; i < endpoints.size(); i++) {
 		// Skip over duplicate endpoints
 		while (i + 1 < endpoints.size() && endpoints[i] == endpoints[i + 1]) {
 			i++;
 		}
-		seg here(i, NULL);
+		seg here(endpoints[i], NULL);
 
 		// Add the segments that start here to the active set
 
@@ -328,7 +316,7 @@ void scan(drawvec &geom) {
 
 		for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
 			for (std::set<drawvec *>::iterator it2 = active.begin(); it2 != active.end(); it2++) {
-				check_intersections(*it, *it2);
+				did_something = check_intersections(*it, *it2) || did_something;
 			}
 		}
 
@@ -341,25 +329,43 @@ void scan(drawvec &geom) {
 		}
 	}
 
+	if (!active.empty()) {
+		fprintf(stderr, "Something still in active\n");
+		for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
+			dump(*it);
+		}
+	}
+
 	// At this point we have a whole lot of polygon edges and need to reconstruct
 	// polygons from them.
 
-	std::vector<drawvec> edges;
+	if (did_something) {
+		std::vector<drawvec> edges;
 
-	for (size_t i = 0; i < geom.size(); i++) {
-		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
-			drawvec dv;
+		printf("0 setlinewidth\n");
 
-			if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
-				dv.push_back(segs[i][j]);
-				dv.push_back(segs[i][j + 1]);
-			} else {
-				dv.push_back(segs[i][j + 1]);
-				dv.push_back(segs[i][j]);
+		for (size_t i = 0; i < geom.size(); i++) {
+			for (size_t j = 0; j + 1 < segs[i].size(); j++) {
+				drawvec dv;
+
+				printf("%lld %lld .3 0 360 arc fill %lld %lld .3 0 360 arc fill ",
+					segs[i][j].x, segs[i][j].y, segs[i][j + 1].x, segs[i][j + 1].y);
+				printf("%lld %lld moveto %lld %lld lineto stroke\n",
+					segs[i][j].x, segs[i][j].y, segs[i][j + 1].x, segs[i][j + 1].y);
+
+				if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
+					dv.push_back(segs[i][j]);
+					dv.push_back(segs[i][j + 1]);
+				} else {
+					dv.push_back(segs[i][j + 1]);
+					dv.push_back(segs[i][j]);
+				}
+
+				edges.push_back(dv);
 			}
-
-			edges.push_back(dv);
 		}
+
+		printf("showpage\n");
 	}
 
 	// std::sort(edges.begin(), edges.end());
