@@ -65,7 +65,12 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
 	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
-	if (s > 0 && s < 1 && t > 0 && t < 1) {
+	// Include it if the intersection is at the endpoint of either line but not both
+	if ((s == 0 || s == 1) && (t > 0 && t < 1)) {
+		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+	} else if ((t == 0 || t == 1) && (s > 0 && s < 1)) {
+		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+	} else if (s > 0 && s < 1 && t > 0 && t < 1) {
 		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
 	} else {
 		return draw(-1, -1, -1);
@@ -231,17 +236,19 @@ bool check_intersections(drawvec *dv1, drawvec *dv2) {
 						    (intersection.x != (*dv1)[i1].x || intersection.y != (*dv1)[i1].y)) {
 							dv1->insert(dv1->begin() + i1, intersection);
 							again = true;
-							did_something = true;
 						}
 						if ((intersection.x != (*dv2)[i2 - 1].x || intersection.y != (*dv2)[i2 - 1].y) &&
 						    (intersection.x != (*dv2)[i2].x || intersection.y != (*dv2)[i2].y)) {
 							dv2->insert(dv2->begin() + i2, intersection);
 							again = true;
-							did_something = true;
 						}
 					}
 				}
 			}
+		}
+
+		if (again) {
+			did_something = true;
 		}
 	}
 
@@ -354,11 +361,13 @@ void scan(drawvec &geom) {
 		printf("0 setlinewidth\n");
 
 		for (size_t i = 0; i < geom.size(); i++) {
+			for (size_t j = 1; j + 1 < segs[i].size(); j++) {
+				printf("%lld %lld .3 0 360 arc fill ", segs[i][j].x, segs[i][j].y);
+			}
+
 			for (size_t j = 0; j + 1 < segs[i].size(); j++) {
 				drawvec dv;
 
-				printf("%lld %lld .3 0 360 arc fill %lld %lld .3 0 360 arc fill ",
-					segs[i][j].x, segs[i][j].y, segs[i][j + 1].x, segs[i][j + 1].y);
 				printf("%lld %lld moveto %lld %lld lineto stroke\n",
 					segs[i][j].x, segs[i][j].y, segs[i][j + 1].x, segs[i][j + 1].y);
 
