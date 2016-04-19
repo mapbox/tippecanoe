@@ -758,17 +758,36 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (quick != 1) {
+				drawvec clipped;
+
+				// Do the clipping, even if we are going to include the whole feature,
+				// so that we can know whether the feature itself, or only the feature's
+				// bounding box, touches the tile.
+
 				if (t == VT_LINE) {
-					geom = clip_lines(geom, z, line_detail, buffer);
+					clipped = clip_lines(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POLYGON) {
-					geom = simple_clip_poly(geom, z, line_detail, buffer);
+					clipped = simple_clip_poly(geom, z, line_detail, buffer);
 				}
 				if (t == VT_POINT) {
-					geom = clip_point(geom, z, line_detail, buffer);
+					clipped = clip_point(geom, z, line_detail, buffer);
 				}
 
-				geom = remove_noop(geom, t, 0);
+				clipped = remove_noop(clipped, t, 0);
+
+				// Must clip at z0 even if we don't want clipping, to handle features
+				// that are duplicated across the date line
+
+				if (prevent[P_CLIPPING] && z != 0) {
+					if (clipped.size() == 0) {
+						geom.clear();
+					} else {
+						// geom is unchanged
+					}
+				} else {
+					geom = clipped;
+				}
 			}
 
 			if (geom.size() > 0) {

@@ -163,6 +163,8 @@ which may not be what you want.
 .IP \(bu 2
 \-pp or \-\-no\-polygon\-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
 .IP \(bu 2
+\-pc or \-\-no\-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
+.IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
 .SH Example
