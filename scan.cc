@@ -530,6 +530,9 @@ drawvec scan(drawvec &geom) {
 						if (diff < 0) {
 							diff += 2 * M_PI;
 						}
+						if (diff > M_PI) {
+							diff -= 2 * M_PI;
+						}
 
 						if (diff < bestangle) {
 							bestangle = diff;

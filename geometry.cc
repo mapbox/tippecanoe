@@ -364,7 +364,11 @@ static drawvec decode_rings(drawvec &geom) {
 				rings[rings[i].children[j]].parent = -2;
 			}
 		} else if (rings[i].parent != -2) {
-			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
+			fprintf(stderr, "Found ring with child area %Lf but no parent %lld\n", rings[i].area, (long long) i);
+			for (size_t j = 0; j < rings[i].data.size(); j++) {
+				fprintf(stderr, "%lld,%lld ", rings[i].data[j].x, rings[i].data[j].y);
+			}
+			fprintf(stderr, "\n");
 		}
 	}
 
