@@ -2758,8 +2758,10 @@ int main(int argc, char **argv) {
 				}
 			}
 			if (width + 16 >= 80) {
-				fprintf(stderr, " [file.json ...]");
+				fprintf(stderr, "\n        ");
+				width = 8;
 			}
+			fprintf(stderr, " [file.json ...]");
 		}
 			exit(EXIT_FAILURE);
 		}
