@@ -514,7 +514,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 	int i, j, c = 0;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
 		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
-		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (double) (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
 			c = !c;
 	}
 	return c;
