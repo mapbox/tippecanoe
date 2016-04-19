@@ -503,6 +503,82 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	return out;
 }
 
+void check_polygon(drawvec &geom, drawvec &before) {
+	for (size_t i = 0; i + 1 < geom.size(); i++) {
+		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
+			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
+				double s1_x = geom[i + 1].x - geom[i + 0].x;
+				double s1_y = geom[i + 1].y - geom[i + 0].y;
+				double s2_x = geom[j + 1].x - geom[j + 0].x;
+				double s2_y = geom[j + 1].y - geom[j + 0].y;
+
+				double s, t;
+				s = (-s1_y * (geom[i + 0].x - geom[j + 0].x) + s1_x * (geom[i + 0].y - geom[j + 0].y)) / (-s2_x * s1_y + s1_x * s2_y);
+				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+				if (t > 0 && t < 1 && s > 0 && s < 1) {
+					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+						geom[i + 0].x, geom[i + 0].y,
+						geom[i + 1].x, geom[i + 1].y,
+						geom[j + 0].x, geom[j + 0].y,
+						geom[j + 1].x, geom[j + 1].y);
+						dump(before);
+				}
+			}
+		}
+	}
+
+	size_t outer_start = -1;
+	size_t outer_len = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = get_area(geom, i, j);
+
+#if 0
+			fprintf(stderr, "looking at %lld to %lld, area %f\n", (long long) i, (long long) j, area);
+#endif
+
+			if (area > 0) {
+				outer_start = i;
+				outer_len = j - i;
+			} else {
+				for (size_t k = i; k < j; k++) {
+					if (!pnpoly(geom, outer_start, outer_len, geom[k].x, geom[k].y)) {
+						bool on_edge = false;
+
+						for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+							if (geom[k].x == geom[l].x || geom[k].y == geom[l].y) {
+								on_edge = true;
+								break;
+							}
+						}
+
+						if (!on_edge) {
+							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+
+							dump(before);
+#if 0
+							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
+							}
+#endif
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
 drawvec close_poly(drawvec &geom) {
 	drawvec out;
 
