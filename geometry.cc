@@ -19,6 +19,8 @@ extern "C" {
 #include "projection.h"
 }
 
+void draw_ring(drawvec &geom, int start, int len);
+
 drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
@@ -268,9 +270,28 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 	int i, j, c = 0;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
 		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
-		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (double) (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
 			c = !c;
 	}
+	return c;
+}
+
+static int pnpoly_not_exact(drawvec &vert, const size_t start, const size_t nvert, const long long testx, const long long testy) {
+	int i, j, c = 0;
+	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (double) (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+			c = !c;
+	}
+
+	if (c) {
+		for (i = start; i < start + nvert; i++) {
+			if (testx == vert[i].x && testy == vert[i].y) {
+				return 0;
+			}
+		}
+	}
+
 	return c;
 }
 
@@ -313,9 +334,18 @@ static drawvec decode_rings(drawvec &geom) {
 	for (size_t i = 0; i < rings.size(); i++) {
 		for (size_t j = i + 1; j < rings.size(); j++) {
 			for (size_t k = 0; k < rings[i].data.size(); k++) {
-				if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[k].x, rings[i].data[k].y)) {
+				if (pnpoly_not_exact(rings[j].data, 0, rings[j].data.size(), rings[i].data[k].x, rings[i].data[k].y)) {
+					// printf("%lld,%lld means inside ring with %lld,%lld\n", rings[i].data[k].x, rings[i].data[k].y, rings[j].data[0].x, rings[j].data[0].y);
 					rings[i].parent = j;
 					rings[j].children.push_back(i);
+
+#if 0
+					printf(".1 setlinewidth\n");
+					draw_ring(rings[i].data, 0, rings[i].data.size());
+					draw_ring(rings[j].data, 0, rings[j].data.size());
+					printf("showpage\n");
+#endif
+
 					goto nextring;
 				}
 			}
@@ -323,6 +353,12 @@ static drawvec decode_rings(drawvec &geom) {
 	nextring:
 		;
 	}
+
+	// Make sure rings have the correct orientation.
+	// Parent rings will have positive area.
+	// A child rings will have a negative area, unless it is
+	// a child of a ring with a negative area, which means
+	// it is doubly-nested and should have positive area.
 
 	for (size_t ii = rings.size(); ii > 0; ii--) {
 		size_t i = ii - 1;
@@ -332,13 +368,18 @@ static drawvec decode_rings(drawvec &geom) {
 				rings[i].area = -rings[i].area;
 				reverse_ring(rings[i].data, 0, rings[i].data.size());
 			}
-		} else {
+		} else {  // It is a child
 			if ((rings[i].area > 0) == (rings[rings[i].parent].area > 0)) {
 				rings[i].area = -rings[i].area;
 				reverse_ring(rings[i].data, 0, rings[i].data.size());
 			}
 		}
 	}
+
+	// Start from the largest ring and work downward.
+	// Each parent ring is followed by its children.
+	// If those children have children, they will appear as
+	// another smaller parent ring later on.
 
 	for (size_t ii = rings.size(); ii > 0; ii--) {
 		size_t i = ii - 1;
@@ -539,6 +580,35 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
+void draw_xing(drawvec &geom, int bad1, int bad2) {
+	printf("0 setlinewidth ");
+	for (size_t i = 0; i + 1 < geom.size(); i++) {
+		if (geom[i + 1].op == VT_LINETO) {
+			if (i == bad1 || i == bad2) {
+				printf(".2 setlinewidth 1 .5 0 setrgbcolor ");
+			}
+			printf("%lld %lld moveto %lld %lld lineto stroke ", geom[i].x, geom[i].y, geom[i + 1].x, geom[i + 1].y);
+			if (i == bad1 || i == bad2) {
+				printf("0 setlinewidth 0 setgray ");
+			}
+		}
+	}
+	printf("\n");
+	printf("showpage\n");
+}
+
+void draw_ring(drawvec &geom, int start, int len) {
+	double area = get_area(geom, start, start + len);
+	if (area < 0) {
+		printf("1 .5 0 setrgbcolor ");
+	} else {
+		printf("0 setgray ");
+	}
+	for (int i = start; i + 1 < start + len; i++) {
+		printf("%lld %lld moveto %lld %lld lineto stroke\n", geom[i].x, geom[i].y, geom[i + 1].x, geom[i + 1].y);
+	}
+}
+
 void check_polygon(drawvec &geom, drawvec &before) {
 	for (size_t i = 0; i + 1 < geom.size(); i++) {
 		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
@@ -553,12 +623,13 @@ void check_polygon(drawvec &geom, drawvec &before) {
 				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 				if (t > 0 && t < 1 && s > 0 && s < 1) {
-					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+					printf("%% Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
 					       geom[i + 0].x, geom[i + 0].y,
 					       geom[i + 1].x, geom[i + 1].y,
 					       geom[j + 0].x, geom[j + 0].y,
 					       geom[j + 1].x, geom[j + 1].y);
-					dump(before);
+
+					draw_xing(geom, i, j);
 				}
 			}
 		}
@@ -566,6 +637,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 
 	size_t outer_start = -1;
 	size_t outer_len = 0;
+	double outer_area = 0;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -585,31 +657,66 @@ void check_polygon(drawvec &geom, drawvec &before) {
 			if (area > 0) {
 				outer_start = i;
 				outer_len = j - i;
+				outer_area = area;
 			} else {
 				for (size_t k = i; k < j; k++) {
 					if (!pnpoly(geom, outer_start, outer_len, geom[k].x, geom[k].y)) {
 						bool on_edge = false;
 
 						for (size_t l = outer_start; l < outer_start + outer_len; l++) {
-							if (geom[k].x == geom[l].x || geom[k].y == geom[l].y) {
+							if (geom[k].x == geom[l].x && geom[k].y == geom[l].y) {
 								on_edge = true;
 								break;
 							}
 						}
 
 						if (!on_edge) {
-							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+							printf("%% %lld,%lld at %lld, area %f not in outer ring (%lld to %lld) area %f\n", geom[k].x, geom[k].y, (long long) k, area, (long long) outer_start, (long long) (outer_start + outer_len), outer_area);
 
-							dump(before);
 #if 0
-							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
-								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
+							printf("in ring:");
+							for (size_t a = i; a < j; a++) {
+								if (pnpoly_not_exact(geom, outer_start, outer_len, geom[a].x, geom[a].y)) {
+									printf(" %lld,%lld", geom[a].x, geom[a].y);
+								}
 							}
+							printf("\n");
+
+							printf("inner ring:");
+							for (size_t a = i; a < j; a++) {
+								printf(" %lld,%lld", geom[a].x, geom[a].y);
+							}
+							printf("\n");
+							printf("outer ring:");
+							for (size_t a = outer_start; a < outer_start + outer_len; a++) {
+								printf(" %lld,%lld", geom[a].x, geom[a].y);
+							}
+							printf("\n");
 #endif
+
+							printf("0 setlinewidth\n");
+							draw_ring(geom, outer_start, outer_len);
+							if (geom[i].op != VT_MOVETO) {
+								fprintf(stderr, "i not at start of ring\n");
+							}
+							if (j < geom.size() && geom[j].op != VT_MOVETO) {
+								fprintf(stderr, "j not at start of ring: %d\n", geom[j].op);
+							}
+							draw_ring(geom, i, j - i);
+							printf("%lld %lld .5 0 360 arc fill\n", geom[k].x, geom[k].y);
+							printf("showpage\n");
+
+#if 0
+							draw_xing(geom, -2, -2);
+#endif
+
+							goto next_ring;
 						}
 					}
 				}
 			}
+		next_ring:
+			i = j - 1;
 		}
 	}
 }

@@ -557,6 +557,11 @@ drawvec scan(drawvec &geom) {
 				} else {
 					out.push_back(draw(VT_MOVETO, next.x, next.y));
 					best->clear();
+
+					// If we've looped, stop instead of trying to add more to the ring
+					if (out[0].x == out[out.size() - 1].x && out[0].y == out[out.size() - 1].y) {
+						break;
+					}
 				}
 			}
 
