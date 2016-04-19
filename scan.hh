@@ -1,0 +1,1 @@
+drawvec scan(drawvec &geom);

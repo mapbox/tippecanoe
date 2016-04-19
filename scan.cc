@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <math.h>
 #include <vector>
 #include <list>
 #include <queue>
 #include <set>
+#include <map>
 #include <algorithm>
 #include <sqlite3.h>
 #include "geometry.hh"
@@ -23,6 +25,31 @@ struct seg {
 
 	bool operator<(const seg &s) const {
 		return index < s.index;
+	}
+};
+
+struct loc {
+	long long x;
+	long long y;
+
+	bool operator<(const loc &other) const {
+		if (x < other.x) {
+			return true;
+		}
+		if (x == other.x && y < other.y) {
+			return true;
+		}
+
+		return false;
+	}
+
+	loc(const draw &d) {
+		x = d.x;
+		y = d.y;
+	}
+
+	loc() {
+
 	}
 };
 
@@ -255,7 +282,7 @@ bool check_intersections(drawvec *dv1, drawvec *dv2) {
 	return did_something;
 }
 
-int edgecmp(const drawvec &a, const drawvec &b){
+int edgecmp(const drawvec &a, const drawvec &b) {
 	size_t i;
 
 	for (i = 0; i < a.size() && i < b.size(); i++) {
@@ -292,7 +319,7 @@ struct s_edgecmp {
 	}
 } s_edgecmp;
 
-void scan(drawvec &geom) {
+drawvec scan(drawvec &geom) {
 	// Following the Bentley-Ottmann sweep-line concept,
 	// but less clever about the active set
 
@@ -396,17 +423,19 @@ void scan(drawvec &geom) {
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
-			drawvec dv;
+			if (segs[i][j].x != segs[i][j + 1].x || segs[i][j].y != segs[i][j + 1].y) {
+				drawvec dv;
 
-			if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
-				dv.push_back(segs[i][j]);
-				dv.push_back(segs[i][j + 1]);
-			} else {
-				dv.push_back(segs[i][j + 1]);
-				dv.push_back(segs[i][j]);
+				if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
+					dv.push_back(segs[i][j]);
+					dv.push_back(segs[i][j + 1]);
+				} else {
+					dv.push_back(segs[i][j + 1]);
+					dv.push_back(segs[i][j]);
+				}
+
+				edges.push_back(dv);
 			}
-
-			edges.push_back(dv);
 		}
 	}
 
@@ -430,18 +459,114 @@ void scan(drawvec &geom) {
 		}
 	}
 
+#if 0
 	printf("0 setlinewidth .5 .setopacityalpha\n");
 
 	for (size_t i = 0; i < edges2.size(); i++) {
 		printf("%lld %lld moveto %lld %lld lineto stroke\n", edges2[i][0].x, edges2[i][0].y, edges2[i][1].x, edges2[i][1].y);
 	}
+#endif
 
 	// Then index each remaining segment by its start and endpoint.
 
+	std::multimap<loc, drawvec *> origins;
+
+	for (size_t i = 0; i < edges2.size(); i++) {
+		loc l1 = loc(edges2[i][0]);
+		origins.insert(std::pair<struct loc, drawvec *>(l1, &edges2[i]));
+
+		loc l2 = loc(edges2[i][1]);
+		origins.insert(std::pair<struct loc, drawvec *>(l2, &edges2[i]));
+	}
+
 	// Use that to reconstruct rings:
 	// From each arbitrary starting point, follow the right hand rule to form a ring from it,
-	// removing those segments from further consideration.
+	// removing those segments from further consideration. (Marking as used means setting
+	// the size of the edge to 0.)
+
+	drawvec ret;
+
+	for (size_t i = 0; i < edges2.size(); i++) {
+		if (edges2[i].size() > 0) {
+			drawvec out;
+
+			out.push_back(edges2[i][0]);
+			out.push_back(edges2[i][1]);
+			edges2[i].clear();
+
+			while (1) {
+				struct loc here = loc(out[out.size() - 1]);
+				double angle = atan2(out[out.size() - 1].y - out[out.size() - 2].y, out[out.size() - 1].x - out[out.size() - 2].x);
+				if (angle < 0) {
+					angle += 2 * M_PI;
+				}
+
+				std::pair<std::multimap<loc, drawvec *>::iterator, std::multimap<loc, drawvec *>::iterator> options;
+				options = origins.equal_range(here);
+
+				drawvec *best = NULL;
+				double bestangle = 2 * M_PI;
+				loc next;
+
+				for (std::multimap<loc, drawvec *>::iterator it = options.first; it != options.second; ++it) {
+					drawvec *option = it->second;
+
+					if (option->size() != 0) {
+						loc other;
+
+						if ((*option)[0].x == here.x && (*option)[0].y == here.y) {
+							other = loc((*option)[1]);
+						} else if ((*option)[1].x == here.x && (*option)[1].y == here.y) {
+							other = loc((*option)[0]);
+						} else {
+							fprintf(stderr, "Can't happen\n");
+						}
+
+						double angle2 = atan2(other.y - out[out.size() - 1].y, other.x - out[out.size() - 1].x);
+						if (angle2 < 0) {
+							angle2 += 2 * M_PI;
+						}
+
+						double diff = angle2 - angle;
+						if (diff < 0) {
+							diff += 2 * M_PI;
+						}
+
+						if (diff < bestangle) {
+							bestangle = diff;
+							best = option;
+							next = other;
+						}
+
+#if 0
+						printf("from %lld,%lld %lld,%lld found %lld,%lld to %lld,%lld: %f\n",
+							out[out.size() - 2].x, out[out.size() - 2].y, out[out.size() - 1].x, out[out.size() - 1].y,
+							(*option)[0].x, (*option)[0].y, (*option)[1].x, (*option)[1].y, diff);
+#endif
+					}
+				}
+
+				if (best == NULL) {
+					if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+						fprintf(stderr, "Polygon is not a loop\n");
+					}
+
+					break;
+				} else {
+					out.push_back(draw(VT_MOVETO, next.x, next.y));
+					best->clear();
+				}
+			}
+
+			ret.push_back(draw(VT_MOVETO, out[0].x, out[0].y));
+			for (size_t j = 1; j < out.size(); j++) {
+				ret.push_back(draw(VT_LINETO, out[j].x, out[j].y));
+			}
+		}
+	}
 
 	// Then afterward, use point-in-polygon tests to figure out which rings are inside
 	// which other rings.
+
+	return ret;
 }
