@@ -510,7 +510,7 @@ void *partial_feature_worker(void *v) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				geom = simplify_lines(geom, z, line_detail);
+				geom = simplify_lines(geom, z, line_detail, !prevent[P_CLIPPING]);
 			}
 		}
 
@@ -965,7 +965,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			for (size_t x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
-					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0);
+					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0, !prevent[P_CLIPPING]);
 				}
 
 				if (features[j][x].type == VT_POLYGON) {

@@ -800,7 +800,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) {
 	int res = 1 << (32 - detail - z);
 	long long area = 0xFFFFFFFF;
 	if (z != 0) {
@@ -817,7 +817,9 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		}
 	}
 
-	geom = impose_tile_boundaries(geom, area);
+	if (mark_tile_bounds) {
+		geom = impose_tile_boundaries(geom, area);
+	}
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
