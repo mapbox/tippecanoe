@@ -205,6 +205,172 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
+double get_area(drawvec &geom, int i, int j) {
+	double area = 0;
+	for (unsigned k = i; k < j; k++) {
+		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+	}
+	area /= 2;
+	return area;
+}
+
+void reverse_ring(drawvec &geom, int start, int end) {
+	drawvec tmp;
+
+	for (unsigned i = start; i < end; i++) {
+		tmp.push_back(geom[i]);
+	}
+
+	for (unsigned i = start; i < end; i++) {
+		geom[i] = tmp[end - 1 - i];
+		if (i == start) {
+			geom[i].op = VT_MOVETO;
+		} else if (i == end - 1) {
+			geom[i].op = VT_LINETO;
+		}
+	}
+}
+
+struct ring {
+	drawvec data;
+	long double area;
+	long long parent;
+	std::vector<size_t> children;
+
+	ring(drawvec &_data) {
+		data = _data;
+		area = get_area(_data, 0, _data.size());
+		parent = -1;
+	}
+
+	bool operator<(const ring &o) const {
+		if (fabs(this->area) < fabs(o.area)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
+/* pnpoly:
+Copyright (c) 1970-2003, Wm. Randolph Franklin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimers.
+Redistributions in binary form must reproduce the above copyright notice in the documentation and/or other materials provided with the distribution.
+The name of W. Randolph Franklin may not be used to endorse or promote products derived from this Software without specific prior written permission.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+	int i, j, c = 0;
+	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+			c = !c;
+	}
+	return c;
+}
+
+static drawvec decode_rings(drawvec &geom) {
+	// We don't know at this point which rings are inside other rings.
+
+	// So instead, we pull out all the rings, sort them by absolute area,
+	// and go through them, looking for the
+	// smallest parent that contains a point from it, since we are
+	// guaranteed that at least one point in the polygon is strictly
+	// inside its parent (not on one of its boundary lines).
+
+	// Once we have that, we can run through the outer rings that have
+	// an even number of parents,
+
+	std::vector<ring> rings;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			drawvec dv;
+			dv.push_back(geom[i]);
+
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+				dv.push_back(geom[j]);
+			}
+
+			rings.push_back(ring(dv));
+			i = j - 1;
+		}
+	}
+
+	std::sort(rings.begin(), rings.end());
+
+	drawvec out;
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		for (size_t j = i + 1; j < rings.size(); j++) {
+			for (size_t k = 0; k < rings[i].data.size(); k++) {
+				if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[k].x, rings[i].data[k].y)) {
+					rings[i].parent = j;
+					rings[j].children.push_back(i);
+					goto nextring;
+				}
+			}
+		}
+	nextring:
+		;
+	}
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].parent < 0) {
+			if (rings[i].area < 0) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		} else {
+			if ((rings[i].area > 0) == (rings[rings[i].parent].area > 0)) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		}
+	}
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].area > 0) {
+#if 0
+			fprintf(stderr, "ring area %Lf at %lld\n", rings[i].area, (long long) out.size());
+#endif
+
+			for (size_t j = 0; j < rings[i].data.size(); j++) {
+				out.push_back(rings[i].data[j]);
+			}
+
+			for (size_t j = 0; j < rings[i].children.size(); j++) {
+#if 0
+				fprintf(stderr, "ring area %Lf at %lld\n", rings[rings[i].children[j]].area, (long long) out.size());
+#endif
+
+				for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
+					out.push_back(rings[rings[i].children[j]].data[k]);
+				}
+
+				rings[rings[i].children[j]].parent = -2;
+			}
+		} else if (rings[i].parent != -2) {
+			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
+		}
+	}
+
+	return out;
+}
+
 static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// To make the GeoJSON come out right, we need to do each of the
 	// outer rings followed by its children if any, and then go back
@@ -236,7 +402,8 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
-	scan(geom);
+	drawvec cleaned = scan(geom);
+	return decode_rings(cleaned);
 
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 

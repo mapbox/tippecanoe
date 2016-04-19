@@ -49,7 +49,6 @@ struct loc {
 	}
 
 	loc() {
-
 	}
 };
 
