@@ -54,6 +54,8 @@ static int additional_options[] = {
 	A_POLYGON_DROP,
 #define A_PREFER_RADIX_SORT ((int) 'R')
 	A_PREFER_RADIX_SORT,
+#define A_DEBUG_POLYGON ((int) 'd')
+	A_DEBUG_POLYGON,
 };
 
 static int prevent_options[] = {
