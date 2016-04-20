@@ -621,6 +621,14 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	return out;
 }
 
+bool tile_contains(int z, int detail, long long x, long long y) {
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+	return (x >= 0 && x <= area && y >= 0 && y <= area);
+}
+
 int quick_check(long long *bbox, int z, int detail, long long buffer) {
 	long long min = 0;
 	long long area = 0xFFFFFFFF;

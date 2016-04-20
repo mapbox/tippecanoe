@@ -708,6 +708,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			long long bbox[4];
 
 			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
+			
+			long long center_x, center_y;
+			center_x = (bbox[2] + bbox[0]) / 2;
+			center_y = (bbox[3] + bbox[1]) / 2;
 
 			signed char feature_minzoom;
 			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
@@ -815,6 +819,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (t == VT_POINT && z < feature_minzoom && gamma < 0) {
 				continue;
+			}
+
+			if (prevent[P_CLIPPING] && !tile_contains(z, detail, center_x, center_y)) {
+			    continue;			
 			}
 
 			if (gamma >= 0 && (t == VT_POINT ||

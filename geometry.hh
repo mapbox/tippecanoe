@@ -30,3 +30,4 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds);
 drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
+bool tile_contains(int z, int detail, long long x, long long y);
