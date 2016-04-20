@@ -510,7 +510,7 @@ void *partial_feature_worker(void *v) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				geom = simplify_lines(geom, z, line_detail, !prevent[P_CLIPPING]);
+				geom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
 			}
 		}
 
@@ -757,7 +757,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			if (quick != 1) {
+			// Can't accept the quick check if guaranteeing no duplication, since the
+			// overlap might have been in the buffer.
+			if (quick != 1 || prevent[P_DUPLICATION]) {
 				drawvec clipped;
 
 				// Do the clipping, even if we are going to include the whole feature,
@@ -779,7 +781,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				// Must clip at z0 even if we don't want clipping, to handle features
 				// that are duplicated across the date line
 
-				if (prevent[P_CLIPPING] && z != 0) {
+				if (prevent[P_DUPLICATION] && z != 0) {
+					if (point_within_tile((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2, z, line_detail, buffer)) {
+						// geom is unchanged
+					} else {
+						geom.clear();
+					}
+				} else if (prevent[P_CLIPPING] && z != 0) {
 					if (clipped.size() == 0) {
 						geom.clear();
 					} else {
@@ -965,7 +973,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			for (size_t x = 0; x < features[j].size(); x++) {
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
-					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0, !prevent[P_CLIPPING]);
+					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0,
+									     !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
 				}
 
 				if (features[j][x].type == VT_POLYGON) {

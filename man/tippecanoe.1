@@ -165,6 +165,8 @@ which may not be what you want.
 .IP \(bu 2
 \-pc or \-\-no\-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
 .IP \(bu 2
+\-pD or \-\-no\-duplication: As with \-\-no\-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
+.IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
 .SH Example

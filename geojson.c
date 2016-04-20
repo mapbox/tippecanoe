@@ -2555,6 +2555,7 @@ int main(int argc, char **argv) {
 		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
+		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
 
 		{0, 0, 0, 0},
 	};
