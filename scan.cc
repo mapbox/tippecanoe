@@ -321,77 +321,40 @@ struct s_edgecmp {
 
 typedef drawvec *dvp;
 
-struct xcmp {
-	bool operator()(const dvp &a, const dvp &b) {
-		size_t i;
-		for (i = 0; i < a->size() && i < b->size(); i++) {
-			long long cmp = (*a)[i].x - (*b)[i].x;
-			if (cmp == 0) {
-				cmp = (*a)[i].y - (*b)[i].y;
-			}
-			if (cmp < 0) {
-				return true;
-			} else if (cmp > 0) {
-				return false;
-			}
-		}
-		if (a->size() < b->size()) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-} xcmp;
-
-struct ycmp {
-	bool operator()(const dvp &a, const dvp &b) {
-		size_t i;
-		for (i = 0; i < a->size() && i < b->size(); i++) {
-			long long cmp = (*a)[i].y - (*b)[i].y;
-			if (cmp == 0) {
-				cmp = (*a)[i].x - (*b)[i].x;
-			}
-			if (cmp < 0) {
-				return true;
-			} else if (cmp > 0) {
-				return false;
-			}
-		}
-		if (a->size() < b->size()) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-} ycmp;
-
 bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
+	std::vector<long long> points;
+
 	if (direction == 0) {
-		std::sort(segs.begin(), segs.end(), xcmp);
+		for (size_t i = 0; i < segs.size(); i++) {
+			points.push_back(((*segs[i])[0].x + (*segs[i])[segs[i]->size() - 1].x) / 2);
+		}
 	} else {
-		std::sort(segs.begin(), segs.end(), ycmp);
+		for (size_t i = 0; i < segs.size(); i++) {
+			points.push_back(((*segs[i])[0].y + (*segs[i])[segs[i]->size() - 1].y) / 2);
+		}
 	}
+
+	std::sort(points.begin(), points.end());
+	long long median = points[points.size() / 2];
 
 	std::vector<drawvec *> one;
 	std::vector<drawvec *> two;
 
-	drawvec *median = segs[segs.size() / 2];
-
 	if (direction == 0) {
 		for (size_t i = 0; i < segs.size(); i++) {
-			if ((*segs[i])[0].x <= (*median)[0].x || (*segs[i])[segs[i]->size() - 1].x <= (*median)[0].x) {
+			if ((*segs[i])[0].x <= median || (*segs[i])[segs[i]->size() - 1].x <= median) {
 				one.push_back(segs[i]);
 			}
-			if ((*segs[i])[0].x >= (*median)[0].x || (*segs[i])[segs[i]->size() - 1].x >= (*median)[0].x) {
+			if ((*segs[i])[0].x >= median || (*segs[i])[segs[i]->size() - 1].x >= median) {
 				two.push_back(segs[i]);
 			}
 		}
 	} else {
 		for (size_t i = 0; i < segs.size(); i++) {
-			if ((*segs[i])[0].y <= (*median)[0].y || (*segs[i])[segs[i]->size() - 1].y <= (*median)[0].y) {
+			if ((*segs[i])[0].y <= median || (*segs[i])[segs[i]->size() - 1].y <= median) {
 				one.push_back(segs[i]);
 			}
-			if ((*segs[i])[0].y >= (*median)[0].y || (*segs[i])[segs[i]->size() - 1].y >= (*median)[0].y) {
+			if ((*segs[i])[0].y >= median || (*segs[i])[segs[i]->size() - 1].y >= median) {
 				two.push_back(segs[i]);
 			}
 		}
