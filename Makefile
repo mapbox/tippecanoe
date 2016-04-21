@@ -38,6 +38,9 @@ LIBS = -L/usr/local/lib
 tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o scan.o
 	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
 
+abuse: abuse.o clip.o geometry.o projection.o scan.o
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
+
 tippecanoe-enumerate: enumerate.o
 	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
