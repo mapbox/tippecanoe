@@ -656,6 +656,15 @@ int quick_check(long long *bbox, int z, int detail, long long buffer) {
 	return 2;
 }
 
+bool point_within_tile(long long x, long long y, int z, int detail, long long buffer) {
+	// No adjustment for buffer, because the point must be
+	// strictly within the tile to appear exactly once
+
+	long long area = 1LL << (32 - z);
+
+	return x >= 0 && y >= 0 && x < area && y < area;
+}
+
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 
