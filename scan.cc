@@ -18,6 +18,7 @@ extern "C" {
 struct loc {
 	long long x;
 	long long y;
+	int direction;
 
 	bool operator<(const loc &other) const {
 		if (x < other.x) {
@@ -30,9 +31,10 @@ struct loc {
 		return false;
 	}
 
-	loc(const draw &d) {
+	loc(const draw &d, int _direction) {
 		x = d.x;
 		y = d.y;
+		direction = _direction;
 	}
 
 	loc() {
@@ -487,10 +489,10 @@ drawvec scan(drawvec &geom) {
 	std::multimap<loc, drawvec *> origins;
 
 	for (size_t i = 0; i < edges2.size(); i++) {
-		loc l1 = loc(edges2[i][0]);
+		loc l1 = loc(edges2[i][0], 1);
 		origins.insert(std::pair<struct loc, drawvec *>(l1, &edges2[i]));
 
-		loc l2 = loc(edges2[i][1]);
+		loc l2 = loc(edges2[i][1], 0);
 		origins.insert(std::pair<struct loc, drawvec *>(l2, &edges2[i]));
 	}
 
@@ -510,7 +512,7 @@ drawvec scan(drawvec &geom) {
 			edges2[i].clear();
 
 			while (1) {
-				struct loc here = loc(out[out.size() - 1]);
+				struct loc here = loc(out[out.size() - 1], -1);
 				double angle = atan2(out[out.size() - 1].y - out[out.size() - 2].y, out[out.size() - 1].x - out[out.size() - 2].x);
 				if (angle < 0) {
 					angle += 2 * M_PI;
@@ -527,15 +529,7 @@ drawvec scan(drawvec &geom) {
 					drawvec *option = it->second;
 
 					if (option->size() != 0) {
-						loc other;
-
-						if ((*option)[0].x == here.x && (*option)[0].y == here.y) {
-							other = loc((*option)[1]);
-						} else if ((*option)[1].x == here.x && (*option)[1].y == here.y) {
-							other = loc((*option)[0]);
-						} else {
-							fprintf(stderr, "Can't happen\n");
-						}
+						loc other = loc((*option)[it->first.direction], -1);
 
 						double angle2 = atan2(other.y - out[out.size() - 1].y, other.x - out[out.size() - 1].x);
 						if (angle2 < 0) {
