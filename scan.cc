@@ -15,20 +15,6 @@ extern "C" {
 #include "tile.h"
 };
 
-struct seg {
-	long long index;
-	drawvec *dv;
-
-	seg(long long _index, drawvec *_dv) {
-		index = _index;
-		dv = _dv;
-	}
-
-	bool operator<(const seg &s) const {
-		return index < s.index;
-	}
-};
-
 struct loc {
 	long long x;
 	long long y;
