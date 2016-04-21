@@ -250,6 +250,12 @@ struct ring {
 		if (fabs(this->area) < fabs(o.area)) {
 			return true;
 		} else {
+			if (fabs(this->area) == fabs(o.area)) {
+				if (edgecmp(this->data, o.data) < 0) {
+					return true;
+				}
+			}
+
 			return false;
 		}
 	}
@@ -327,7 +333,7 @@ static drawvec decode_rings(drawvec &geom) {
 		}
 	}
 
-	std::sort(rings.begin(), rings.end());
+	std::stable_sort(rings.begin(), rings.end());
 
 	drawvec out;
 

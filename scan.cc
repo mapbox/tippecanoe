@@ -369,8 +369,8 @@ drawvec scan(drawvec &geom) {
 	//	Remove the ones that end there from the active set
 
 	std::sort(endpoints.begin(), endpoints.end());
-	std::sort(lefts.begin(), lefts.end());
-	std::sort(rights.begin(), rights.end());
+	std::stable_sort(lefts.begin(), lefts.end());
+	std::stable_sort(rights.begin(), rights.end());
 
 	bool did_something = true;
 
@@ -449,7 +449,7 @@ drawvec scan(drawvec &geom) {
 		}
 	}
 
-	std::sort(edges.begin(), edges.end(), s_edgecmp);
+	std::stable_sort(edges.begin(), edges.end(), s_edgecmp);
 
 	// Original segments are no longer needed
 
