@@ -621,6 +621,14 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	return out;
 }
 
+bool tile_contains(int z, int detail, long long x, long long y) {
+	long long area = 0xFFFFFFFF;
+	if (z != 0) {
+		area = 1LL << (32 - z);
+	}
+	return (x >= 0 && x <= area && y >= 0 && y <= area);
+}
+
 int quick_check(long long *bbox, int z, int detail, long long buffer) {
 	long long min = 0;
 	long long area = 0xFFFFFFFF;
@@ -646,6 +654,15 @@ int quick_check(long long *bbox, int z, int detail, long long buffer) {
 
 	// some overlap of edge
 	return 2;
+}
+
+bool point_within_tile(long long x, long long y, int z, int detail, long long buffer) {
+	// No adjustment for buffer, because the point must be
+	// strictly within the tile to appear exactly once
+
+	long long area = 1LL << (32 - z);
+
+	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
@@ -800,7 +817,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) {
 	int res = 1 << (32 - detail - z);
 	long long area = 0xFFFFFFFF;
 	if (z != 0) {
@@ -817,7 +834,9 @@ drawvec simplify_lines(drawvec &geom, int z, int detail) {
 		}
 	}
 
-	geom = impose_tile_boundaries(geom, area);
+	if (mark_tile_bounds) {
+		geom = impose_tile_boundaries(geom, area);
+	}
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
