@@ -103,7 +103,7 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	}
 }
 
-bool check_intersections(drawvec *dv1, drawvec *dv2) {
+bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
 
@@ -368,50 +368,61 @@ drawvec scan(drawvec &geom) {
 	//	Check the active set for intersections
 	//	Remove the ones that end there from the active set
 
-	std::set<drawvec *> active;
-
 	std::sort(endpoints.begin(), endpoints.end());
 	std::sort(lefts.begin(), lefts.end());
 	std::sort(rights.begin(), rights.end());
 
-	bool did_something = false;
+	bool did_something = true;
 
-	for (size_t i = 0; i < endpoints.size(); i++) {
-		// Skip over duplicate endpoints
-		while (i + 1 < endpoints.size() && endpoints[i] == endpoints[i + 1]) {
-			i++;
-		}
-		seg here(endpoints[i], NULL);
+	while (did_something) {
+		std::set<drawvec *> active;
+		did_something = false;
 
-		// Add the segments that start here to the active set
+		for (size_t i = 0; i < endpoints.size(); i++) {
+			// Skip over duplicate endpoints
+			while (i + 1 < endpoints.size() && endpoints[i] == endpoints[i + 1]) {
+				i++;
+			}
+			seg here(endpoints[i], NULL);
 
-		std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> starting =
-			std::equal_range(lefts.begin(), lefts.end(), here);
-		for (std::vector<seg>::iterator it = starting.first; it != starting.second; it++) {
-			active.insert(it->dv);
-		}
+			// Add the segments that start here to the active set
 
-		// Check the active set for intersections
+			std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> starting =
+				std::equal_range(lefts.begin(), lefts.end(), here);
+			for (std::vector<seg>::iterator it = starting.first; it != starting.second; it++) {
+				active.insert(it->dv);
+				// fprintf(stderr, "+++ at %lld %p ", endpoints[i], it->dv);
+				// dump(it->dv);
+			}
 
-		for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
-			for (std::set<drawvec *>::iterator it2 = active.begin(); it2 != active.end(); it2++) {
-				did_something = check_intersections(*it, *it2) || did_something;
+			// Check the active set for intersections
+
+			// fprintf(stderr, "at %lld\n", endpoints[i]);
+
+			for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
+				for (std::set<drawvec *>::iterator it2 = active.begin(); it2 != active.end(); it2++) {
+					if (check_intersections(*it, *it2, endpoints[i])) {
+						did_something = true;
+					}
+				}
+			}
+
+			// Remove the segments that end here from the active set
+
+			std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> ending =
+				std::equal_range(rights.begin(), rights.end(), here);
+			for (std::vector<seg>::iterator it = ending.first; it != ending.second; it++) {
+				active.erase(it->dv);
+				// fprintf(stderr, "--- at %lld %p ", endpoints[i], it->dv);
+				// dump(it->dv);
 			}
 		}
 
-		// Remove the segments that end here from the active set
-
-		std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> ending =
-			std::equal_range(rights.begin(), rights.end(), here);
-		for (std::vector<seg>::iterator it = ending.first; it != ending.second; it++) {
-			active.erase(it->dv);
-		}
-	}
-
-	if (!active.empty()) {
-		fprintf(stderr, "Something still in active\n");
-		for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
-			dump(*it);
+		if (!active.empty()) {
+			fprintf(stderr, "Something still in active\n");
+			for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
+				dump(*it);
+			}
 		}
 	}
 
