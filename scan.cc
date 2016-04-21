@@ -52,7 +52,7 @@ struct loc {
 	}
 };
 
-long long min(long long a, long long b) {
+static long long min(long long a, long long b) {
 	if (a < b) {
 		return a;
 	} else {
@@ -60,7 +60,7 @@ long long min(long long a, long long b) {
 	}
 }
 
-long long max(long long a, long long b) {
+static long long max(long long a, long long b) {
 	if (a > b) {
 		return a;
 	} else {
@@ -81,6 +81,13 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	double s1_y = p1.y - p0.y;
 	double s2_x = p3.x - p2.x;
 	double s2_y = p3.y - p2.y;
+
+	if (max(p0.y, p1.y) < min(p2.y, p3.y)) {
+		return draw(-1, -1, -1);
+	}
+	if (min(p0.y, p1.y) > max(p2.y, p3.y)) {
+		return draw(-1, -1, -1);
+	}
 
 	if (-s2_x * s1_y + s1_x * s2_y == 0) {
 		fprintf(stderr, "Dividing by 0: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
@@ -108,7 +115,7 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	}
 }
 
-bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
+static bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
 
