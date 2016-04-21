@@ -1,3 +1,7 @@
+## 1.9.15
+
+* Add option not to clip features
+
 ## 1.9.14
 
 * Clean up polygons after coalescing, if necessary

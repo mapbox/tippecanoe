@@ -71,4 +71,8 @@ static int prevent_options[] = {
 	P_INPUT_ORDER,
 #define P_POLYGON_SPLIT ((int) 'p')
 	P_POLYGON_SPLIT,
+#define P_CLIPPING ((int) 'c')
+	P_CLIPPING,
+#define P_DUPLICATION ((int) 'D')
+	P_DUPLICATION,
 };
