@@ -20,6 +20,7 @@ extern "C" {
 }
 
 void draw_ring(drawvec &geom, int start, int len);
+void draw_xing(drawvec &geom, int bad1, int bad2);
 
 drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
@@ -329,6 +330,11 @@ static drawvec decode_rings(drawvec &geom) {
 			}
 
 			rings.push_back(ring(dv));
+
+			if (dv[dv.size() - 1].x != dv[0].x || dv[dv.size() - 1].y != dv[0].y) {
+				fprintf(stderr, "Polygon not closed\n");
+			}
+
 			i = j - 1;
 		}
 	}
@@ -593,14 +599,13 @@ void draw_xing(drawvec &geom, int bad1, int bad2) {
 			if (i == bad1 || i == bad2) {
 				printf(".2 setlinewidth 1 .5 0 setrgbcolor ");
 			}
-			printf("%lld %lld moveto %lld %lld lineto stroke ", geom[i].x, geom[i].y, geom[i + 1].x, geom[i + 1].y);
+			printf("%lld %lld moveto %lld %lld lineto stroke ", geom[i].x, 4095 - geom[i].y, geom[i + 1].x, 4095 - geom[i + 1].y);
 			if (i == bad1 || i == bad2) {
 				printf("0 setlinewidth 0 setgray ");
 			}
 		}
 	}
 	printf("\n");
-	printf("showpage\n");
 }
 
 void draw_ring(drawvec &geom, int start, int len) {

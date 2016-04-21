@@ -93,11 +93,11 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 
 	// Include it if the intersection is at the endpoint of either line but not both
 	if ((s == 0 || s == 1) && (t > 0 && t < 1)) {
-		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else if ((t == 0 || t == 1) && (s > 0 && s < 1)) {
-		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else if (s > 0 && s < 1 && t > 0 && t < 1) {
-		return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
+		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else {
 		return draw(-1, -1, -1);
 	}
@@ -132,44 +132,6 @@ bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 					// 0-length first segment
 				} else if ((*dv2)[i2 - 1].x == (*dv2)[i2].x && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
 					// 0-length second segment
-				} else if ((*dv1)[i1 - 1].y == (*dv1)[i1].y && (*dv2)[i2 - 1].y == (*dv2)[i2].y) {
-					// Both horizontal
-					// XXX Can this just be a special case of non-vertical not same angle?
-
-					if ((*dv1)[i1].y == (*dv2)[i2].y) {  // and collinear
-						long long dv1xmin = min((*dv1)[i1 - 1].x, (*dv1)[i1].x);
-						long long dv1xmax = max((*dv1)[i1 - 1].x, (*dv1)[i1].x);
-
-						long long dv2xmin = min((*dv2)[i2 - 1].x, (*dv2)[i2].x);
-						long long dv2xmax = max((*dv2)[i2 - 1].x, (*dv2)[i2].x);
-
-						if (dv1xmin == dv2xmin && dv1xmax == dv2xmax) {
-							// They are the same
-						} else if (dv1xmax <= dv2xmin) {
-							// No overlap
-						} else if (dv1xmin >= dv2xmax) {
-							// No overlap
-						} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
-							// right side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, (*dv2)[i2].y));
-							again = true;
-						} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
-							// left side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, (*dv2)[i2].y));
-							again = true;
-						} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
-							// right side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, (*dv1)[i1].y));
-							again = true;
-						} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
-							// left side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, (*dv1)[i1].y));
-							again = true;
-						} else {
-							// Can't happen?
-							fprintf(stderr, "Can't happen horizontal\n");
-						}
-					}
 				} else if ((*dv1)[i1 - 1].x == (*dv1)[i1].x && (*dv2)[i2 - 1].x == (*dv2)[i2].x) {
 					// Both vertical
 
@@ -209,12 +171,11 @@ bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 					}
 				} else if (((double) (*dv1)[i1].y - (*dv1)[i1 - 1].y) / ((*dv1)[i1].x - (*dv1)[i1 - 1].x) ==
 					   ((double) (*dv2)[i2].y - (*dv2)[i2 - 1].y) / ((*dv2)[i2].x - (*dv2)[i2 - 1].x)) {
-// Collinear or parallel at some inconvenient angle
-
 #if 0
 					printf("%f == %f\n", (((double) (*dv1)[i1].y - (*dv1)[i1 - 1].y) / ((*dv1)[i1].x - (*dv1)[i1 - 1].x)),
 					       ((double) (*dv2)[i2].y - (*dv2)[i2 - 1].y) / ((*dv2)[i2].x - (*dv2)[i2 - 1].x));
 #endif
+					// Collinear or parallel horizontally or at some inconvenient angle
 
 					double slope = ((double) (*dv1)[i1].y - (*dv1)[i1 - 1].y) / ((*dv1)[i1].x - (*dv1)[i1 - 1].x);
 					double b1 = (*dv1)[i1].y - (slope * (*dv1)[i1].x);
@@ -236,19 +197,19 @@ bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 							// No overlap
 						} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
 							// right side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, (*dv2)[i2 - 1].y + (dv1xmax - (*dv2)[i2 - 1].x) * slope));
+							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, round((*dv2)[i2 - 1].y + (dv1xmax - (*dv2)[i2 - 1].x) * slope)));
 							again = true;
 						} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
 							// left side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, (*dv2)[i2 - 1].y + (dv1xmin - (*dv2)[i2 - 1].x) * slope));
+							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, round((*dv2)[i2 - 1].y + (dv1xmin - (*dv2)[i2 - 1].x) * slope)));
 							again = true;
 						} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
 							// right side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, (*dv1)[i1 - 1].y + (dv2xmax - (*dv1)[i1 - 1].x) * slope));
+							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, round((*dv1)[i1 - 1].y + (dv2xmax - (*dv1)[i1 - 1].x) * slope)));
 							again = true;
 						} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
 							// left side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, (*dv1)[i1 - 1].y + (dv2xmin - (*dv1)[i1 - 1].x) * slope));
+							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, round((*dv1)[i1 - 1].y + (dv2xmin - (*dv1)[i1 - 1].x) * slope)));
 							again = true;
 						} else {
 							// Can't happen?
