@@ -133,6 +133,19 @@ static bool check_intersections(drawvec *dv1, drawvec *dv2) {
 		return did_something;
 	}
 
+	if (min((*dv1)[0].y, (*dv1)[dv1->size() - 1].y) > max((*dv2)[0].y, (*dv2)[dv2->size() - 1].y)) {
+		return false;
+	}
+	if (max((*dv1)[0].y, (*dv1)[dv1->size() - 1].y) < min((*dv2)[0].y, (*dv2)[dv2->size() - 1].y)) {
+		return false;
+	}
+	if (min((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) > max((*dv1)[0].y, (*dv1)[dv1->size() - 1].y)) {
+		return false;
+	}
+	if (max((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) < min((*dv1)[0].y, (*dv1)[dv1->size() - 1].y)) {
+		return false;
+	}
+
 	// Counting down from size - 1 to 1 so that insertions don't change the index.
 	// The segment is i-1 and i.
 	bool again = true;
@@ -415,10 +428,12 @@ drawvec scan(drawvec &geom) {
 	size_t n = 0;
 	for (size_t i = 0; i < geom.size() - 1; i++) {
 		if (geom[i + 1].op == VT_LINETO) {
-			segs[n].push_back(geom[i]);
-			segs[n].push_back(geom[i + 1]);
-			todo.push_back(&segs[n]);
-			n++;
+			if (geom[i].x != geom[i + 1].x || geom[i].y != geom[i + 1].y) {
+				segs[n].push_back(geom[i]);
+				segs[n].push_back(geom[i + 1]);
+				todo.push_back(&segs[n]);
+				n++;
+			}
 		}
 	}
 
