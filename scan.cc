@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
 #include <vector>
 #include <list>
 #include <queue>
@@ -115,7 +116,7 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	}
 }
 
-static bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
+static bool check_intersections(drawvec *dv1, drawvec *dv2) {
 	// Go through the sub-segments from each ring segment, looking for cases that intersect.
 	// If they do intersect, insert a new intermediate point at the intersection.
 
@@ -318,120 +319,152 @@ struct s_edgecmp {
 	}
 } s_edgecmp;
 
+typedef drawvec *dvp;
+
+struct xcmp {
+	bool operator()(const dvp &a, const dvp &b) {
+		size_t i;
+		for (i = 0; i < a->size() && i < b->size(); i++) {
+			long long cmp = (*a)[i].x - (*b)[i].x;
+			if (cmp == 0) {
+				cmp = (*a)[i].y - (*b)[i].y;
+			}
+			if (cmp < 0) {
+				return true;
+			} else if (cmp > 0) {
+				return false;
+			}
+		}
+		if (a->size() < b->size()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+} xcmp;
+
+struct ycmp {
+	bool operator()(const dvp &a, const dvp &b) {
+		size_t i;
+		for (i = 0; i < a->size() && i < b->size(); i++) {
+			long long cmp = (*a)[i].y - (*b)[i].y;
+			if (cmp == 0) {
+				cmp = (*a)[i].x - (*b)[i].x;
+			}
+			if (cmp < 0) {
+				return true;
+			} else if (cmp > 0) {
+				return false;
+			}
+		}
+		if (a->size() < b->size()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+} ycmp;
+
+bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
+	if (direction == 0) {
+		std::sort(segs.begin(), segs.end(), xcmp);
+	} else {
+		std::sort(segs.begin(), segs.end(), ycmp);
+	}
+
+	std::vector<drawvec *> one;
+	std::vector<drawvec *> two;
+
+	drawvec *median = segs[segs.size() / 2];
+
+	if (direction == 0) {
+		for (size_t i = 0; i < segs.size(); i++) {
+			if ((*segs[i])[0].x <= (*median)[0].x || (*segs[i])[segs[i]->size() - 1].x <= (*median)[0].x) {
+				one.push_back(segs[i]);
+			}
+			if ((*segs[i])[0].x >= (*median)[0].x || (*segs[i])[segs[i]->size() - 1].x >= (*median)[0].x) {
+				two.push_back(segs[i]);
+			}
+		}
+	} else {
+		for (size_t i = 0; i < segs.size(); i++) {
+			if ((*segs[i])[0].y <= (*median)[0].y || (*segs[i])[segs[i]->size() - 1].y <= (*median)[0].y) {
+				one.push_back(segs[i]);
+			}
+			if ((*segs[i])[0].y >= (*median)[0].y || (*segs[i])[segs[i]->size() - 1].y >= (*median)[0].y) {
+				two.push_back(segs[i]);
+			}
+		}
+	}
+
+	bool again = false;
+
+	if (one.size() >= segs.size() || two.size() >= segs.size()) {
+		for (size_t i = 0; i + 1 < segs.size(); i++) {
+			for (size_t j = i + 1; j < segs.size(); j++) {
+				if (check_intersections(segs[i], segs[j])) {
+					again = true;
+				}
+			}
+		}
+
+		return again;
+	}
+
+	if (one.size() > 20) {
+		if (partition(one, !direction, cost)) {
+			again = true;
+		}
+	} else {
+		for (size_t i = 0; i + 1 < one.size(); i++) {
+			for (size_t j = i + 1; j < one.size(); j++) {
+				if (check_intersections(one[i], one[j])) {
+					again = true;
+				}
+			}
+		}
+	}
+
+	if (two.size() > 20) {
+		if (partition(two, !direction, cost)) {
+			again = true;
+		}
+	} else {
+		for (size_t i = 0; i + 1 < two.size(); i++) {
+			for (size_t j = i + 1; j < two.size(); j++) {
+				if (check_intersections(two[i], two[j])) {
+					again = true;
+				}
+			}
+		}
+	}
+
+	cost += segs.size();
+	return again;
+}
+
 drawvec scan(drawvec &geom) {
-	// Following the Bentley-Ottmann sweep-line concept,
-	// but less clever about the active set
+	// Decompose the polygon into segments.
 
 	drawvec *segs = new drawvec[geom.size()];
-
-	std::vector<long long> endpoints;
-	std::vector<seg> lefts;
-	std::vector<seg> rights;
-
-	// Make an ordered list of endpoints
-	// Make a list of segments ordered by left side
-	// Make a list of segments ordered by right side
+	std::vector<drawvec *> todo;
 
 	size_t n = 0;
 	for (size_t i = 0; i < geom.size() - 1; i++) {
 		if (geom[i + 1].op == VT_LINETO) {
-			// There will be duplicates, but we'll skip over them
-			endpoints.push_back(geom[i].x);
-			endpoints.push_back(geom[i + 1].x);
-
-			drawvec dv;
-			if (geom[i].x < geom[i + 1].x || (geom[i].x == geom[i + 1].x && geom[i].y < geom[i + 1].y)) {
-				dv.push_back(geom[i]);
-				dv.push_back(geom[i + 1]);
-			} else {
-				dv.push_back(geom[i + 1]);
-				dv.push_back(geom[i]);
-			}
-
-			segs[n] = dv;
-
-			if (geom[i].x < geom[i + 1].x) {
-				lefts.push_back(seg(geom[i].x, &segs[n]));
-				rights.push_back(seg(geom[i + 1].x, &segs[n]));
-			} else {
-				lefts.push_back(seg(geom[i + 1].x, &segs[n]));
-				rights.push_back(seg(geom[i].x, &segs[n]));
-			}
-
+			segs[n].push_back(geom[i]);
+			segs[n].push_back(geom[i + 1]);
+			todo.push_back(&segs[n]);
 			n++;
 		}
 	}
 
-	// Run through the endpoints
-	// At each:
-	//	Add the ones that start there to the active set
-	//	Check the active set for intersections
-	//	Remove the ones that end there from the active set
+	// Split the segments by bounding box into smaller subsets
+	// until the cost of further splitting exceeds the benefit
+	// of fewer comparisons.
 
-	std::sort(endpoints.begin(), endpoints.end());
-	std::stable_sort(lefts.begin(), lefts.end());
-	std::stable_sort(rights.begin(), rights.end());
-
-	bool did_something = true;
-
-	while (did_something) {
-		std::set<drawvec *> active;
-		did_something = false;
-
-		for (size_t i = 0; i < endpoints.size(); i++) {
-			// Skip over duplicate endpoints
-			while (i + 1 < endpoints.size() && endpoints[i] == endpoints[i + 1]) {
-				i++;
-			}
-			seg here(endpoints[i], NULL);
-
-			// Add the segments that start here to the active set
-
-			std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> starting =
-				std::equal_range(lefts.begin(), lefts.end(), here);
-			for (std::vector<seg>::iterator it = starting.first; it != starting.second; it++) {
-				active.insert(it->dv);
-				// fprintf(stderr, "+++ at %lld %p ", endpoints[i], it->dv);
-				// dump(it->dv);
-			}
-
-			// Check the active set for intersections
-
-			// fprintf(stderr, "at %lld\n", endpoints[i]);
-
-			for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
-				for (std::set<drawvec *>::iterator it2 = active.begin(); it2 != active.end(); it2++) {
-					// Checks are symmetrical, so don't check the same segment
-					// as both first and second argument
-					if ((void *) *it2 > (void *) *it) {
-						drawvec *dv1 = *it, *dv2 = *it2;
-						if (min((*dv1)[0].y, (*dv1)[dv1->size() - 1].y) <= max((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) &&
-						    min((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) <= max((*dv1)[0].y, (*dv1)[dv1->size() - 1].y)) {
-							if (check_intersections(*it, *it2, endpoints[i])) {
-								did_something = true;
-							}
-						}
-					}
-				}
-			}
-
-			// Remove the segments that end here from the active set
-
-			std::pair<std::vector<seg>::iterator, std::vector<seg>::iterator> ending =
-				std::equal_range(rights.begin(), rights.end(), here);
-			for (std::vector<seg>::iterator it = ending.first; it != ending.second; it++) {
-				active.erase(it->dv);
-				// fprintf(stderr, "--- at %lld %p ", endpoints[i], it->dv);
-				// dump(it->dv);
-			}
-		}
-
-		if (!active.empty()) {
-			fprintf(stderr, "Something still in active\n");
-			for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
-				dump(*it);
-			}
-		}
+	while (partition(todo, 0, 0)) {
+		// Repeat until no additional changes
 	}
 
 	// At this point we have a whole lot of polygon edges and need to reconstruct
@@ -439,7 +472,7 @@ drawvec scan(drawvec &geom) {
 
 	std::vector<drawvec> edges;
 
-	for (size_t i = 0; i < geom.size(); i++) {
+	for (size_t i = 0; i < n; i++) {
 		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
 			if (segs[i][j].x != segs[i][j + 1].x || segs[i][j].y != segs[i][j + 1].y) {
 				drawvec dv;
