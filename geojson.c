@@ -2512,6 +2512,8 @@ int main(int argc, char **argv) {
 	}
 
 	static struct option long_options[] = {
+		{"output", required_argument, 0, 'o'},
+
 		{"name", required_argument, 0, 'n'},
 		{"layer", required_argument, 0, 'l'},
 		{"attribution", required_argument, 0, 'A'},
@@ -2522,7 +2524,6 @@ int main(int argc, char **argv) {
 		{"full-detail", required_argument, 0, 'd'},
 		{"low-detail", required_argument, 0, 'D'},
 		{"minimum-detail", required_argument, 0, 'm'},
-		{"output", required_argument, 0, 'o'},
 		{"exclude", required_argument, 0, 'x'},
 		{"include", required_argument, 0, 'y'},
 		{"drop-rate", required_argument, 0, 'r'},
@@ -2554,6 +2555,8 @@ int main(int argc, char **argv) {
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
 		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
+		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
+		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
 
 		{0, 0, 0, 0},
 	};
@@ -2737,8 +2740,31 @@ int main(int argc, char **argv) {
 			read_parallel = 1;
 			break;
 
-		default:
-			fprintf(stderr, "Usage: %s -o out.mbtiles [-n name] [-l source] [-z maxzoom] [-Z minzoom] [-B basezoom] [-d detail] [-D lower-detail] [-m min-detail] [-x excluded-field ...] [-y included-field ...] [-X] [-r droprate] [-b buffer] [-t tmpdir] [-a rco] [-p sfkld] [-q] [-P] [file.json ...]\n", argv[0]);
+		default: {
+			int width = 7 + strlen(argv[0]);
+			fprintf(stderr, "Usage: %s", argv[0]);
+			int i;
+			for (i = 0; long_options[i].name != NULL; i++) {
+				if (width + strlen(long_options[i].name) + 9 >= 80) {
+					fprintf(stderr, "\n        ");
+					width = 8;
+				}
+				width += strlen(long_options[i].name) + 9;
+				if (strcmp(long_options[i].name, "output") == 0) {
+					fprintf(stderr, " --%s=output.mbtiles", long_options[i].name);
+					width += 9;
+				} else if (long_options[i].has_arg) {
+					fprintf(stderr, " [--%s=...]", long_options[i].name);
+				} else {
+					fprintf(stderr, " [--%s]", long_options[i].name);
+				}
+			}
+			if (width + 16 >= 80) {
+				fprintf(stderr, "\n        ");
+				width = 8;
+			}
+			fprintf(stderr, " [file.json ...]");
+		}
 			exit(EXIT_FAILURE);
 		}
 	}
