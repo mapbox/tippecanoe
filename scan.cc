@@ -404,8 +404,12 @@ drawvec scan(drawvec &geom) {
 					// Checks are symmetrical, so don't check the same segment
 					// as both first and second argument
 					if ((void *) *it2 > (void *) *it) {
-						if (check_intersections(*it, *it2, endpoints[i])) {
-							did_something = true;
+						drawvec *dv1 = *it, *dv2 = *it2;
+						if (min((*dv1)[0].y, (*dv1)[dv1->size() - 1].y) <= max((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) &&
+						    min((*dv2)[0].y, (*dv2)[dv2->size() - 1].y) <= max((*dv1)[0].y, (*dv1)[dv1->size() - 1].y)) {
+							if (check_intersections(*it, *it2, endpoints[i])) {
+								did_something = true;
+							}
 						}
 					}
 				}
