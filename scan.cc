@@ -89,6 +89,11 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 
 	double s, t;
 	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s < 0 || s > 1) {
+		return draw(-1, -1, -1);
+	}
+
 	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	// Include it if the intersection is at the endpoint of either line but not both
@@ -149,17 +154,41 @@ bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 						} else if (dv1ymin >= dv2ymax) {
 							// No overlap
 						} else if (dv1ymax > dv2ymin && dv1ymax < dv2ymax) {
-							// right side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
-							again = true;
+							if (dv1ymin > dv2ymin && dv1ymin < dv2ymax) {
+								// all of 1 is within 2
+								if ((*dv2)[i2 - 1].y < (*dv2)[i2].y) {
+									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
+									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
+								} else {
+									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
+									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
+								}
+								again = true;
+							} else {
+								// right side of 1 is within 2
+								dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
+								again = true;
+							}
 						} else if (dv1ymin > dv2ymin && dv1ymin < dv2ymax) {
 							// left side of 1 is within 2
 							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
 							again = true;
 						} else if (dv2ymax > dv1ymin && dv2ymax < dv1ymax) {
-							// right side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
-							again = true;
+							if (dv2ymin > dv1ymin && dv2ymin < dv1ymax) {
+								// all of 2 is within 1
+								if ((*dv1)[i1 - 1].y < (*dv1)[i1].y) {
+									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
+									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
+								} else {
+									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
+									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
+								}
+								again = true;
+							} else {
+								// right side of 2 is within 1
+								dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
+								again = true;
+							}
 						} else if (dv2ymin > dv1ymin && dv2ymin < dv1ymax) {
 							// left side of 2 is within 1
 							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
@@ -237,6 +266,9 @@ bool check_intersections(drawvec *dv1, drawvec *dv2, long long where) {
 		if (again) {
 			did_something = true;
 		}
+
+		// Caller will repeat
+		again = false;
 	}
 
 	return did_something;
@@ -362,8 +394,12 @@ drawvec scan(drawvec &geom) {
 
 			for (std::set<drawvec *>::iterator it = active.begin(); it != active.end(); it++) {
 				for (std::set<drawvec *>::iterator it2 = active.begin(); it2 != active.end(); it2++) {
-					if (check_intersections(*it, *it2, endpoints[i])) {
-						did_something = true;
+					// Checks are symmetrical, so don't check the same segment
+					// as both first and second argument
+					if ((void *) *it2 > (void *) *it) {
+						if (check_intersections(*it, *it2, endpoints[i])) {
+							did_something = true;
+						}
 					}
 				}
 			}
