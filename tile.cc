@@ -38,68 +38,24 @@ extern "C" {
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int to_feature(drawvec &geom, mapnik::vector::tile_feature *feature) {
-	int px = 0, py = 0;
-	int cmd_idx = -1;
-	int cmd = -1;
-	int length = 0;
-	int drew = 0;
-	int i;
+std::vector<pb_geometry> to_feature(drawvec &geom) {
+	std::vector<pb_geometry> out;
 
-	int n = geom.size();
-	for (i = 0; i < n; i++) {
-		int op = geom[i].op;
+	for (size_t i = 0; i < geom.size(); i++) {
+		out.push_back(pb_geometry(geom[i].op, geom[i].x, geom[i].y));
+	}
 
-		if (op != cmd) {
-			if (cmd_idx >= 0) {
-				if (feature != NULL) {
-					feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
-				}
-			}
+	return out;
+}
 
-			cmd = op;
-			length = 0;
-
-			if (feature != NULL) {
-				cmd_idx = feature->geometry_size();
-				feature->add_geometry(0);
-			}
-		}
-
-		if (op == VT_MOVETO || op == VT_LINETO) {
-			long long wwx = geom[i].x;
-			long long wwy = geom[i].y;
-
-			int dx = wwx - px;
-			int dy = wwy - py;
-
-			if (feature != NULL) {
-				feature->add_geometry((dx << 1) ^ (dx >> 31));
-				feature->add_geometry((dy << 1) ^ (dy >> 31));
-			}
-
-			px = wwx;
-			py = wwy;
-			length++;
-
-			if (op == VT_LINETO && (dx != 0 || dy != 0)) {
-				drew = 1;
-			}
-		} else if (op == VT_CLOSEPATH) {
-			length++;
-		} else {
-			fprintf(stderr, "\nInternal error: corrupted geometry\n");
-			exit(EXIT_FAILURE);
+bool draws_something(drawvec &geom) {
+	for (size_t i = 1; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO && (geom[i].x != geom[i - 1].x || geom[i].y != geom[i - 1].y)) {
+			return true;
 		}
 	}
 
-	if (cmd_idx >= 0) {
-		if (feature != NULL) {
-			feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
-		}
-	}
-
-	return drew;
+	return false;
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
@@ -247,8 +203,8 @@ static int is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
-	mapnik::vector::tile tile;
+pb_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
+	pb_tile tile;
 
 	int i;
 	for (i = 0; i < nlayers; i++) {
@@ -256,61 +212,63 @@ mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector
 			continue;
 		}
 
-		mapnik::vector::tile_layer *layer = tile.add_layers();
+		pb_layer layer;
 
-		layer->set_name(layernames[i]);
-		layer->set_version(1);
-		layer->set_extent(1 << line_detail);
+		layer.name = layernames[i];
+		layer.version = 1;
+		layer.extent = 1 << line_detail;
 
 		for (size_t x = 0; x < features[i].size(); x++) {
 			if (features[i][x].type == VT_LINE || features[i][x].type == VT_POLYGON) {
 				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
 			}
 
-			mapnik::vector::tile_feature *feature = layer->add_features();
+			pb_feature pbf;
+			pbf.type = features[i][x].type;
 
-			if (features[i][x].type == VT_POINT) {
-				feature->set_type(mapnik::vector::tile::Point);
-			} else if (features[i][x].type == VT_LINE) {
-				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (features[i][x].type == VT_POLYGON) {
-				feature->set_type(mapnik::vector::tile::Polygon);
-			} else {
-				feature->set_type(mapnik::vector::tile::Unknown);
-			}
-
-			to_feature(features[i][x].geom, feature);
+			pbf.geometry = to_feature(features[i][x].geom);
 			*count += features[i][x].geom.size();
 
 			for (size_t y = 0; y < features[i][x].meta.size(); y++) {
-				feature->add_tags(features[i][x].meta[y]);
+				pbf.tags.push_back(features[i][x].meta[y]);
 			}
+
+			layer.features.push_back(pbf);
 		}
 
 		struct pool_val *pv;
 		for (pv = keys[i]->head; pv != NULL; pv = pv->next) {
-			layer->add_keys(pv->s, strlen(pv->s));
+			layer.keys.push_back(std::string(pv->s, strlen(pv->s)));
 		}
 		for (pv = values[i]->head; pv != NULL; pv = pv->next) {
-			mapnik::vector::tile_value *tv = layer->add_values();
+			pb_value tv;
 
 			if (pv->type == VT_NUMBER) {
 				long long v;
 				if (is_integer(pv->s, &v)) {
 					if (v >= 0) {
-						tv->set_int_value(v);
+						tv.type = pb_int;
+						tv.numeric_value.int_value = v;
 					} else {
-						tv->set_sint_value(v);
+						tv.type = pb_sint;
+						tv.numeric_value.sint_value = v;
 					}
 				} else {
-					tv->set_double_value(atof(pv->s));
+					tv.type = pb_double;
+					tv.numeric_value.double_value = atof(pv->s);
 				}
 			} else if (pv->type == VT_BOOLEAN) {
-				tv->set_bool_value(pv->s[0] == 't');
+				tv.type = pb_bool;
+				tv.numeric_value.bool_value = (pv->s[0] == 't');
 			} else {
-				tv->set_string_value(pv->s);
+				tv.type = pb_string;
+				tv.string_value = pv->s;
 			}
+
+			layer.values.push_back(tv);
 		}
+
+		tile.layers.push_back(layer);
 	}
 
 	return tile;
@@ -890,7 +848,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
 			for (size_t j = 0; j < geoms.size(); j++) {
-				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
+				if (t == VT_POINT || draws_something(geoms[j])) {
 					struct coalesce c;
 					char *meta = partials[i].meta;
 
@@ -986,7 +944,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				return -1;
 			}
 
-			mapnik::vector::tile tile = create_tile(layernames, line_detail, features, &count, keys, values, nlayers);
+			pb_tile tile = create_tile(layernames, line_detail, features, &count, keys, values, nlayers);
 
 			int i;
 			for (i = 0; i < nlayers; i++) {
@@ -994,11 +952,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				pool_free(&values1[i]);
 			}
 
-			std::string s;
-			std::string compressed;
-
-			tile.SerializeToString(&s);
-			compress(s, compressed);
+			std::string compressed = pb_encode(tile);
 
 			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {

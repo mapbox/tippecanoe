@@ -60,3 +60,4 @@ struct pb_tile {
 };
 
 bool pb_decode(std::string &message, pb_tile &out);
+std::string pb_encode(pb_tile &in);

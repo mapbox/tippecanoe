@@ -96,6 +96,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					printf(", ");
 				}
 
+				if (feat.tags[t] >= layer.keys.size()) {
+					fprintf(stderr, "Error: out of bounds feature key\n");
+					exit(EXIT_FAILURE);
+				}
+				if (feat.tags[t + 1] >= layer.values.size()) {
+					fprintf(stderr, "Error: out of bounds feature value\n");
+					exit(EXIT_FAILURE);
+				}
+
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				pb_value const &val = layer.values[feat.tags[t + 1]];
 

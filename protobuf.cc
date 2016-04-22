@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string>
 #include <vector>
 #include <zlib.h>
@@ -94,7 +95,7 @@ bool pb_decode(std::string &message, pb_tile &out) {
 		return false;
 	}
 
-	for (int l = 0; l < tile.layers_size(); l++) {
+	for (size_t l = 0; l < tile.layers_size(); l++) {
 		mapnik::vector::tile_layer layer = tile.layers(l);
 		pb_layer pbl;
 		pbl.extent = layer.extent();
@@ -134,7 +135,7 @@ bool pb_decode(std::string &message, pb_tile &out) {
 			pbl.values.push_back(pbv);
 		}
 
-		for (int f = 0; f < layer.features_size(); f++) {
+		for (size_t f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
 			pb_feature pbf;
 			pbf.type = feat.type();
@@ -169,4 +170,120 @@ bool pb_decode(std::string &message, pb_tile &out) {
 	}
 
 	return true;
+}
+
+std::string pb_encode(pb_tile &in) {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	mapnik::vector::tile tile;
+
+	for (size_t i = 0; i < in.layers.size(); i++) {
+		mapnik::vector::tile_layer *layer = tile.add_layers();
+
+		layer->set_name(in.layers[i].name);
+		layer->set_version(in.layers[i].version);
+		layer->set_extent(in.layers[i].extent);
+
+		for (size_t k = 0; k < in.layers[i].keys.size(); k++) {
+			layer->add_keys(in.layers[i].keys[k]);
+		}
+		for (size_t v = 0; v < in.layers[i].values.size(); v++) {
+			mapnik::vector::tile_value *tv = layer->add_values();
+			pb_value &pbv = in.layers[i].values[v];
+
+			if (pbv.type == pb_string) {
+				tv->set_string_value(pbv.string_value);
+			} else if (pbv.type == pb_float) {
+				tv->set_float_value(pbv.numeric_value.float_value);
+			} else if (pbv.type == pb_double) {
+				tv->set_double_value(pbv.numeric_value.double_value);
+			} else if (pbv.type == pb_int) {
+				tv->set_int_value(pbv.numeric_value.int_value);
+			} else if (pbv.type == pb_uint) {
+				tv->set_uint_value(pbv.numeric_value.uint_value);
+			} else if (pbv.type == pb_sint) {
+				tv->set_sint_value(pbv.numeric_value.sint_value);
+			} else if (pbv.type == pb_bool) {
+				tv->set_bool_value(pbv.numeric_value.bool_value);
+			}
+		}
+
+		for (size_t f = 0; f < in.layers[i].features.size(); f++) {
+			mapnik::vector::tile_feature *feature = layer->add_features();
+			if (feature == NULL) {
+				perror("add feature");
+				exit(EXIT_FAILURE);
+			}
+
+			int type = in.layers[i].features[f].type;
+			if (type == pb_point) {
+				feature->set_type(mapnik::vector::tile::Point);
+			} else if (type == pb_linestring) {
+				feature->set_type(mapnik::vector::tile::LineString);
+			} else if (type == pb_polygon) {
+				feature->set_type(mapnik::vector::tile::Polygon);
+			} else {
+				fprintf(stderr, "Corrupt geometry type\n");
+				exit(EXIT_FAILURE);
+			}
+
+			for (size_t t = 0; t < in.layers[i].features[f].tags.size(); t++) {
+				feature->add_tags(in.layers[i].features[f].tags[t]);
+			}
+
+			int px = 0, py = 0;
+			int cmd_idx = -1;
+			int cmd = -1;
+			int length = 0;
+
+			std::vector<pb_geometry> &geom = in.layers[i].features[f].geometry;
+
+			for (size_t g = 0; g < geom.size(); g++) {
+				int op = geom[g].op;
+
+				if (op != cmd) {
+					if (cmd_idx >= 0) {
+						feature->set_geometry(cmd_idx, (length << 3) | (cmd & ((1 << 3) - 1)));
+					}
+
+					cmd = op;
+					length = 0;
+					cmd_idx = feature->geometry_size();
+					feature->add_geometry(0);
+				}
+
+				if (op == pb_moveto || op == pb_lineto) {
+					long long wwx = geom[g].x;
+					long long wwy = geom[g].y;
+
+					int dx = wwx - px;
+					int dy = wwy - py;
+
+					if (feature != NULL) {
+						feature->add_geometry((dx << 1) ^ (dx >> 31));
+						feature->add_geometry((dy << 1) ^ (dy >> 31));
+					}
+
+					px = wwx;
+					py = wwy;
+					length++;
+				} else if (op == pb_closepath) {
+					length++;
+				} else {
+					fprintf(stderr, "\nInternal error: corrupted geometry\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			if (cmd_idx >= 0) {
+				feature->set_geometry(cmd_idx, (length << 3) | (cmd & ((1 << 3) - 1)));
+			}
+		}
+	}
+
+	std::string s, compressed;
+	tile.SerializeToString(&s);
+	compress(s, compressed);
+
+	return compressed;
 }
