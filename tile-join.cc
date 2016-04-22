@@ -8,7 +8,7 @@
 #include <map>
 #include <zlib.h>
 #include <math.h>
-#include "protobuf.hh"
+#include "mvt.hh"
 #include "vector_tile.pb.h"
 #include "tile.h"
 

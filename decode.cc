@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/io/coded_stream.h>
-#include "protobuf.hh"
+#include "mvt.hh"
 #include "vector_tile.pb.h"
 #include "tile.h"
 
@@ -47,9 +47,9 @@ struct draw {
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
-	pb_tile tile;
+	mvt_tile tile;
 
-	if (!pb_decode(message, tile)) {
+	if (!mvt_decode(message, tile)) {
 		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -63,7 +63,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	printf(", \"features\": [\n");
 
 	for (int l = 0; l < tile.layers.size(); l++) {
-		pb_layer &layer = tile.layers[l];
+		mvt_layer &layer = tile.layers[l];
 		int extent = layer.extent;
 
 		if (describe) {
@@ -81,7 +81,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 		}
 
 		for (int f = 0; f < layer.features.size(); f++) {
-			pb_feature &feat = layer.features[f];
+			mvt_feature &feat = layer.features[f];
 
 			if (within) {
 				printf(",\n");
@@ -106,16 +106,16 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				}
 
 				const char *key = layer.keys[feat.tags[t]].c_str();
-				pb_value const &val = layer.values[feat.tags[t + 1]];
+				mvt_value const &val = layer.values[feat.tags[t + 1]];
 
-				if (val.type == pb_string) {
+				if (val.type == mvt_string) {
 					printq(key);
 					printf(": ");
 					printq(val.string_value.c_str());
-				} else if (val.type == pb_int) {
+				} else if (val.type == mvt_int) {
 					printq(key);
 					printf(": %lld", (long long) val.numeric_value.int_value);
-				} else if (val.type == pb_double) {
+				} else if (val.type == mvt_double) {
 					printq(key);
 					double v = val.numeric_value.double_value;
 					if (v == (long long) v) {
@@ -123,7 +123,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.type == pb_float) {
+				} else if (val.type == mvt_float) {
 					printq(key);
 					double v = val.numeric_value.float_value;
 					if (v == (long long) v) {
@@ -131,13 +131,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.type == pb_sint) {
+				} else if (val.type == mvt_sint) {
 					printq(key);
 					printf(": %lld", (long long) val.numeric_value.sint_value);
-				} else if (val.type == pb_uint) {
+				} else if (val.type == mvt_uint) {
 					printq(key);
 					printf(": %lld", (long long) val.numeric_value.uint_value);
-				} else if (val.type == pb_bool) {
+				} else if (val.type == mvt_bool) {
 					printq(key);
 					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
 				}

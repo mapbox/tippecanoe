@@ -18,7 +18,7 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
-#include "protobuf.hh"
+#include "mvt.hh"
 #include "vector_tile.pb.h"
 #include "geometry.hh"
 
@@ -38,11 +38,11 @@ extern "C" {
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
-std::vector<pb_geometry> to_feature(drawvec &geom) {
-	std::vector<pb_geometry> out;
+std::vector<mvt_geometry> to_feature(drawvec &geom) {
+	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(pb_geometry(geom[i].op, geom[i].x, geom[i].y));
+		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
 	}
 
 	return out;
@@ -203,8 +203,8 @@ static int is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-pb_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
-	pb_tile tile;
+mvt_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
+	mvt_tile tile;
 
 	int i;
 	for (i = 0; i < nlayers; i++) {
@@ -212,7 +212,7 @@ pb_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<
 			continue;
 		}
 
-		pb_layer layer;
+		mvt_layer layer;
 
 		layer.name = layernames[i];
 		layer.version = 1;
@@ -223,7 +223,7 @@ pb_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<
 				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
 			}
 
-			pb_feature pbf;
+			mvt_feature pbf;
 			pbf.type = features[i][x].type;
 
 			pbf.geometry = to_feature(features[i][x].geom);
@@ -241,27 +241,27 @@ pb_tile create_tile(char **layernames, int line_detail, std::vector<std::vector<
 			layer.keys.push_back(std::string(pv->s, strlen(pv->s)));
 		}
 		for (pv = values[i]->head; pv != NULL; pv = pv->next) {
-			pb_value tv;
+			mvt_value tv;
 
 			if (pv->type == VT_NUMBER) {
 				long long v;
 				if (is_integer(pv->s, &v)) {
 					if (v >= 0) {
-						tv.type = pb_int;
+						tv.type = mvt_int;
 						tv.numeric_value.int_value = v;
 					} else {
-						tv.type = pb_sint;
+						tv.type = mvt_sint;
 						tv.numeric_value.sint_value = v;
 					}
 				} else {
-					tv.type = pb_double;
+					tv.type = mvt_double;
 					tv.numeric_value.double_value = atof(pv->s);
 				}
 			} else if (pv->type == VT_BOOLEAN) {
-				tv.type = pb_bool;
+				tv.type = mvt_bool;
 				tv.numeric_value.bool_value = (pv->s[0] == 't');
 			} else {
-				tv.type = pb_string;
+				tv.type = mvt_string;
 				tv.string_value = pv->s;
 			}
 
@@ -944,7 +944,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				return -1;
 			}
 
-			pb_tile tile = create_tile(layernames, line_detail, features, &count, keys, values, nlayers);
+			mvt_tile tile = create_tile(layernames, line_detail, features, &count, keys, values, nlayers);
 
 			int i;
 			for (i = 0; i < nlayers; i++) {
@@ -952,7 +952,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				pool_free(&values1[i]);
 			}
 
-			std::string compressed = pb_encode(tile);
+			std::string compressed = mvt_encode(tile);
 
 			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {

@@ -4,7 +4,7 @@
 #include <zlib.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/io/coded_stream.h>
-#include "protobuf.hh"
+#include "mvt.hh"
 #include "vector_tile.pb.h"
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -75,7 +75,7 @@ int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
 }
 
-bool pb_decode(std::string &message, pb_tile &out) {
+bool mvt_decode(std::string &message, mvt_tile &out) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
@@ -97,7 +97,7 @@ bool pb_decode(std::string &message, pb_tile &out) {
 
 	for (size_t l = 0; l < tile.layers_size(); l++) {
 		mapnik::vector::tile_layer layer = tile.layers(l);
-		pb_layer pbl;
+		mvt_layer pbl;
 		pbl.extent = layer.extent();
 		pbl.name = layer.name();
 
@@ -107,28 +107,28 @@ bool pb_decode(std::string &message, pb_tile &out) {
 
 		for (size_t i = 0; i < layer.values_size(); i++) {
 			mapnik::vector::tile_value const &val = layer.values(i);
-			pb_value pbv;
+			mvt_value pbv;
 
 			if (val.has_string_value()) {
-				pbv.type = pb_string;
+				pbv.type = mvt_string;
 				pbv.string_value = val.string_value();
 			} else if (val.has_float_value()) {
-				pbv.type = pb_float;
+				pbv.type = mvt_float;
 				pbv.numeric_value.float_value = val.float_value();
 			} else if (val.has_double_value()) {
-				pbv.type = pb_double;
+				pbv.type = mvt_double;
 				pbv.numeric_value.double_value = val.double_value();
 			} else if (val.has_int_value()) {
-				pbv.type = pb_int;
+				pbv.type = mvt_int;
 				pbv.numeric_value.int_value = val.int_value();
 			} else if (val.has_uint_value()) {
-				pbv.type = pb_uint;
+				pbv.type = mvt_uint;
 				pbv.numeric_value.uint_value = val.uint_value();
 			} else if (val.has_sint_value()) {
-				pbv.type = pb_sint;
+				pbv.type = mvt_sint;
 				pbv.numeric_value.sint_value = val.sint_value();
 			} else if (val.has_bool_value()) {
-				pbv.type = pb_bool;
+				pbv.type = mvt_bool;
 				pbv.numeric_value.bool_value = val.bool_value();
 			}
 
@@ -137,7 +137,7 @@ bool pb_decode(std::string &message, pb_tile &out) {
 
 		for (size_t f = 0; f < layer.features_size(); f++) {
 			mapnik::vector::tile_feature feat = layer.features(f);
-			pb_feature pbf;
+			mvt_feature pbf;
 			pbf.type = feat.type();
 
 			for (size_t i = 0; i < feat.tags_size(); i++) {
@@ -150,16 +150,16 @@ bool pb_decode(std::string &message, pb_tile &out) {
 				uint32_t op = geom & 7;
 				uint32_t count = geom >> 3;
 
-				if (op == pb_moveto || op == pb_lineto) {
+				if (op == mvt_moveto || op == mvt_lineto) {
 					for (size_t k = 0; k < count; k++) {
 						px += dezig(feat.geometry(g + 1));
 						py += dezig(feat.geometry(g + 2));
 						g += 2;
 
-						pbf.geometry.push_back(pb_geometry(op, px, py));
+						pbf.geometry.push_back(mvt_geometry(op, px, py));
 					}
 				} else {
-					pbf.geometry.push_back(pb_geometry(op, 0, 0));
+					pbf.geometry.push_back(mvt_geometry(op, 0, 0));
 				}
 			}
 
@@ -172,7 +172,7 @@ bool pb_decode(std::string &message, pb_tile &out) {
 	return true;
 }
 
-std::string pb_encode(pb_tile &in) {
+std::string mvt_encode(mvt_tile &in) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	mapnik::vector::tile tile;
@@ -189,21 +189,21 @@ std::string pb_encode(pb_tile &in) {
 		}
 		for (size_t v = 0; v < in.layers[i].values.size(); v++) {
 			mapnik::vector::tile_value *tv = layer->add_values();
-			pb_value &pbv = in.layers[i].values[v];
+			mvt_value &pbv = in.layers[i].values[v];
 
-			if (pbv.type == pb_string) {
+			if (pbv.type == mvt_string) {
 				tv->set_string_value(pbv.string_value);
-			} else if (pbv.type == pb_float) {
+			} else if (pbv.type == mvt_float) {
 				tv->set_float_value(pbv.numeric_value.float_value);
-			} else if (pbv.type == pb_double) {
+			} else if (pbv.type == mvt_double) {
 				tv->set_double_value(pbv.numeric_value.double_value);
-			} else if (pbv.type == pb_int) {
+			} else if (pbv.type == mvt_int) {
 				tv->set_int_value(pbv.numeric_value.int_value);
-			} else if (pbv.type == pb_uint) {
+			} else if (pbv.type == mvt_uint) {
 				tv->set_uint_value(pbv.numeric_value.uint_value);
-			} else if (pbv.type == pb_sint) {
+			} else if (pbv.type == mvt_sint) {
 				tv->set_sint_value(pbv.numeric_value.sint_value);
-			} else if (pbv.type == pb_bool) {
+			} else if (pbv.type == mvt_bool) {
 				tv->set_bool_value(pbv.numeric_value.bool_value);
 			}
 		}
@@ -216,11 +216,11 @@ std::string pb_encode(pb_tile &in) {
 			}
 
 			int type = in.layers[i].features[f].type;
-			if (type == pb_point) {
+			if (type == mvt_point) {
 				feature->set_type(mapnik::vector::tile::Point);
-			} else if (type == pb_linestring) {
+			} else if (type == mvt_linestring) {
 				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (type == pb_polygon) {
+			} else if (type == mvt_polygon) {
 				feature->set_type(mapnik::vector::tile::Polygon);
 			} else {
 				fprintf(stderr, "Corrupt geometry type\n");
@@ -236,7 +236,7 @@ std::string pb_encode(pb_tile &in) {
 			int cmd = -1;
 			int length = 0;
 
-			std::vector<pb_geometry> &geom = in.layers[i].features[f].geometry;
+			std::vector<mvt_geometry> &geom = in.layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
 				int op = geom[g].op;
@@ -252,7 +252,7 @@ std::string pb_encode(pb_tile &in) {
 					feature->add_geometry(0);
 				}
 
-				if (op == pb_moveto || op == pb_lineto) {
+				if (op == mvt_moveto || op == mvt_lineto) {
 					long long wwx = geom[g].x;
 					long long wwy = geom[g].y;
 
@@ -267,7 +267,7 @@ std::string pb_encode(pb_tile &in) {
 					px = wwx;
 					py = wwy;
 					length++;
-				} else if (op == pb_closepath) {
+				} else if (op == mvt_closepath) {
 					length++;
 				} else {
 					fprintf(stderr, "\nInternal error: corrupted geometry\n");
