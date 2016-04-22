@@ -12,7 +12,6 @@
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/io/coded_stream.h>
 #include "mvt.hh"
-#include "vector_tile.pb.h"
 #include "tile.h"
 
 extern "C" {

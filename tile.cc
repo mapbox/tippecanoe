@@ -19,7 +19,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include "mvt.hh"
-#include "vector_tile.pb.h"
 #include "geometry.hh"
 
 extern "C" {
@@ -557,8 +556,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
-		GOOGLE_PROTOBUF_VERIFY_VERSION;
-
 		struct pool keys1[nlayers], values1[nlayers];
 		struct pool *keys[nlayers], *values[nlayers];
 		int i;

@@ -9,7 +9,6 @@
 #include <zlib.h>
 #include <math.h>
 #include "mvt.hh"
-#include "vector_tile.pb.h"
 #include "tile.h"
 
 extern "C" {
@@ -28,34 +27,24 @@ struct stats {
 };
 
 void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
-	mapnik::vector::tile tile;
-	mapnik::vector::tile outtile;
+	mvt_tile tile;
+	mvt_tile outtile;
 	int features_added = 0;
 
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		decompress(message, uncompressed);
-		if (!tile.ParseFromString(uncompressed)) {
-			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
-			exit(EXIT_FAILURE);
-		}
-	} else if (!tile.ParseFromString(message)) {
-		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
+	if (!mvt_decode(message, tile)) {
+		fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
 
-	for (int l = 0; l < tile.layers_size(); l++) {
-		mapnik::vector::tile_layer layer = tile.layers(l);
-		mapnik::vector::tile_layer *outlayer = outtile.add_layers();
+	for (size_t l = 0; l < tile.layers.size(); l++) {
+		mvt_layer &layer = tile.layers[l];
+		mvt_layer outlayer;
 
-		outlayer->set_name(layer.name());
-		outlayer->set_version(layer.version());
-		outlayer->set_extent(layer.extent());
+		outlayer.name = layer.name;
+		outlayer.version = layer.version;
+		outlayer.extent = layer.extent;
 
-		const char *ln = layer.name().c_str();
+		const char *ln = layer.name.c_str();
 
 		int ll;
 		for (ll = 0; ll < *nlayers; ll++) {
@@ -89,46 +78,46 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 		pool_init(&keys, 0);
 		pool_init(&values, 0);
 
-		for (int f = 0; f < layer.features_size(); f++) {
-			mapnik::vector::tile_feature feat = layer.features(f);
+		for (size_t f = 0; f < layer.features.size(); f++) {
+			mvt_feature feat = layer.features[f];
 			std::vector<int> feature_tags;
 			int matched = 0;
 
-			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
-				const char *key = layer.keys(feat.tags(t)).c_str();
-				mapnik::vector::tile_value const &val = layer.values(feat.tags(t + 1));
+			for (int t = 0; t + 1 < feat.tags.size(); t += 2) {
+				const char *key = layer.keys[feat.tags[t]].c_str();
+				mvt_value &val = layer.values[feat.tags[t + 1]];
 				char *value;
 				int type = -1;
 
-				if (val.has_string_value()) {
-					value = strdup(val.string_value().c_str());
+				if (val.type == mvt_string) {
+					value = strdup(val.string_value.c_str());
 					if (value == NULL) {
 						perror("Out of memory");
 						exit(EXIT_FAILURE);
 					}
 					type = VT_STRING;
-				} else if (val.has_int_value()) {
-					if (asprintf(&value, "%lld", (long long) val.int_value()) >= 0) {
+				} else if (val.type == mvt_int) {
+					if (asprintf(&value, "%lld", (long long) val.numeric_value.int_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_double_value()) {
-					if (asprintf(&value, "%g", val.double_value()) >= 0) {
+				} else if (val.type == mvt_double) {
+					if (asprintf(&value, "%g", val.numeric_value.double_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_float_value()) {
-					if (asprintf(&value, "%g", val.float_value()) >= 0) {
+				} else if (val.type == mvt_float) {
+					if (asprintf(&value, "%g", val.numeric_value.float_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_bool_value()) {
-					if (asprintf(&value, "%s", val.bool_value() ? "true" : "false") >= 0) {
+				} else if (val.type == mvt_bool) {
+					if (asprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false") >= 0) {
 						type = VT_BOOLEAN;
 					}
-				} else if (val.has_sint_value()) {
-					if (asprintf(&value, "%lld", (long long) val.sint_value()) >= 0) {
+				} else if (val.type == mvt_sint) {
+					if (asprintf(&value, "%lld", (long long) val.numeric_value.sint_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_uint_value()) {
-					if (asprintf(&value, "%llu", (long long) val.uint_value()) >= 0) {
+				} else if (val.type == mvt_uint) {
+					if (asprintf(&value, "%llu", (long long) val.numeric_value.uint_value) >= 0) {
 						type = VT_NUMBER;
 					}
 				} else {
@@ -245,50 +234,51 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			}
 
 			if (matched || !ifmatched) {
-				mapnik::vector::tile_feature *outfeature = outlayer->add_features();
-				outfeature->set_type(feat.type());
-
-				for (int g = 0; g < feat.geometry_size(); g++) {
-					outfeature->add_geometry(feat.geometry(g));
-				}
+				mvt_feature outfeature;
+				outfeature.type = feat.type;
+				outfeature.geometry = feat.geometry;
 
 				for (size_t i = 0; i < feature_tags.size(); i++) {
-					outfeature->add_tags(feature_tags[i]);
+					outfeature.tags.push_back(feature_tags[i]);
 				}
 
 				features_added++;
+				outlayer.features.push_back(outfeature);
 			}
 		}
 
 		struct pool_val *pv;
 		for (pv = keys.head; pv != NULL; pv = pv->next) {
-			outlayer->add_keys(pv->s, strlen(pv->s));
+			outlayer.keys.push_back(std::string(pv->s, strlen(pv->s)));
 		}
 		for (pv = values.head; pv != NULL; pv = pv->next) {
-			mapnik::vector::tile_value *tv = outlayer->add_values();
+			mvt_value tv;
 
 			if (pv->type == VT_NUMBER) {
-				tv->set_double_value(atof(pv->s));
+				tv.type = mvt_double;
+				tv.numeric_value.double_value = atof(pv->s);
 			} else if (pv->type == VT_BOOLEAN) {
-				tv->set_bool_value(pv->s[0] == 't');
+				tv.type = mvt_bool;
+				tv.numeric_value.bool_value = (pv->s[0] == 't');
 			} else {
-				tv->set_string_value(pv->s);
+				tv.type = mvt_string;
+				tv.string_value = std::string(pv->s);
 			}
+
+			outlayer.values.push_back(tv);
 		}
 
 		pool_free_strings(&keys);
 		pool_free_strings(&values);
+
+		outtile.layers.push_back(outlayer);
 	}
 
 	if (features_added == 0) {
 		return;
 	}
 
-	std::string s;
-	std::string compressed;
-
-	outtile.SerializeToString(&s);
-	compress(s, compressed);
+	std::string compressed = mvt_encode(outtile);
 
 	if (compressed.size() > 500000) {
 		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());
