@@ -410,16 +410,16 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 drawvec scan(drawvec &geom) {
 	// Decompose the polygon into segments.
 
-	drawvec *segs = new drawvec[geom.size()];
-	std::vector<drawvec *> todo;
+	std::vector<drawvec *> segs;
 
 	size_t n = 0;
 	for (size_t i = 0; i < geom.size() - 1; i++) {
 		if (geom[i + 1].op == VT_LINETO) {
 			if (geom[i].x != geom[i + 1].x || geom[i].y != geom[i + 1].y) {
-				segs[n].push_back(geom[i]);
-				segs[n].push_back(geom[i + 1]);
-				todo.push_back(&segs[n]);
+				drawvec *dv = new drawvec;
+				dv->push_back(geom[i]);
+				dv->push_back(geom[i + 1]);
+				segs.push_back(dv);
 				n++;
 			}
 		}
@@ -429,7 +429,7 @@ drawvec scan(drawvec &geom) {
 	// until the cost of further splitting exceeds the benefit
 	// of fewer comparisons.
 
-	while (partition(todo, 0, 0)) {
+	while (partition(segs, 0, 0)) {
 		// Repeat until no additional changes
 	}
 
@@ -438,17 +438,17 @@ drawvec scan(drawvec &geom) {
 
 	std::vector<drawvec> edges;
 
-	for (size_t i = 0; i < n; i++) {
-		for (size_t j = 0; j + 1 < segs[i].size(); j++) {
-			if (segs[i][j].x != segs[i][j + 1].x || segs[i][j].y != segs[i][j + 1].y) {
+	for (size_t i = 0; i < segs.size(); i++) {
+		for (size_t j = 0; j + 1 < (*segs[i]).size(); j++) {
+			if ((*segs[i])[j].x != (*segs[i])[j + 1].x || (*segs[i])[j].y != (*segs[i])[j + 1].y) {
 				drawvec dv;
 
-				if (segs[i][j].x < segs[i][j + 1].x || (segs[i][j].x == segs[i][j + 1].x && segs[i][j].y < segs[i][j + 1].y)) {
-					dv.push_back(segs[i][j]);
-					dv.push_back(segs[i][j + 1]);
+				if ((*segs[i])[j].x < (*segs[i])[j + 1].x || ((*segs[i])[j].x == (*segs[i])[j + 1].x && (*segs[i])[j].y < (*segs[i])[j + 1].y)) {
+					dv.push_back((*segs[i])[j]);
+					dv.push_back((*segs[i])[j + 1]);
 				} else {
-					dv.push_back(segs[i][j + 1]);
-					dv.push_back(segs[i][j]);
+					dv.push_back((*segs[i])[j + 1]);
+					dv.push_back((*segs[i])[j]);
 				}
 
 				edges.push_back(dv);
@@ -460,7 +460,10 @@ drawvec scan(drawvec &geom) {
 
 	// Original segments are no longer needed
 
-	delete[] segs;
+	for (size_t i = 0; i < segs.size(); i++) {
+		delete segs[i];
+		segs[i] = NULL;
+	}
 
 	// First, remove all pairs of exact duplicates, since those are places where an inner ring
 	// exactly matches up to the edge of an outer ring, and they need to be cut down
