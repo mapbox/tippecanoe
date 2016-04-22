@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <string>
+#include <vector>
 #include <zlib.h>
 #include <math.h>
 #include <fcntl.h>
@@ -45,23 +46,10 @@ struct draw {
 };
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	int within = 0;
+	pb_tile tile;
 
-	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
-	mapnik::vector::tile tile;
-
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		decompress(message, uncompressed);
-		google::protobuf::io::ArrayInputStream stream(uncompressed.c_str(), uncompressed.length());
-		google::protobuf::io::CodedInputStream codedstream(&stream);
-		codedstream.SetTotalBytesLimit(10 * 67108864, 5 * 67108864);
-		if (!tile.ParseFromCodedStream(&codedstream)) {
-			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
-			exit(EXIT_FAILURE);
-		}
-	} else if (!tile.ParseFromString(message)) {
+	if (!pb_decode(message, tile)) {
 		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -74,9 +62,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	printf(", \"features\": [\n");
 
-	for (int l = 0; l < tile.layers_size(); l++) {
-		mapnik::vector::tile_layer layer = tile.layers(l);
-		int extent = layer.extent();
+	for (int l = 0; l < tile.layers.size(); l++) {
+		pb_layer &layer = tile.layers[l];
+		int extent = layer.extent;
 
 		if (describe) {
 			if (l != 0) {
@@ -85,16 +73,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			printf("{ \"type\": \"FeatureCollection\"");
 			printf(", \"properties\": { \"layer\": ");
-			printq(layer.name().c_str());
+			printq(layer.name.c_str());
 			printf(" }");
 			printf(", \"features\": [\n");
 
 			within = 0;
 		}
 
-		for (int f = 0; f < layer.features_size(); f++) {
-			mapnik::vector::tile_feature feat = layer.features(f);
-			int px = 0, py = 0;
+		for (int f = 0; f < layer.features.size(); f++) {
+			pb_feature &feat = layer.features[f];
 
 			if (within) {
 				printf(",\n");
@@ -104,46 +91,46 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf("{ \"type\": \"Feature\"");
 			printf(", \"properties\": { ");
 
-			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
+			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				if (t != 0) {
 					printf(", ");
 				}
 
-				const char *key = layer.keys(feat.tags(t)).c_str();
-				mapnik::vector::tile_value const &val = layer.values(feat.tags(t + 1));
+				const char *key = layer.keys[feat.tags[t]].c_str();
+				pb_value const &val = layer.values[feat.tags[t + 1]];
 
-				if (val.has_string_value()) {
+				if (val.type == pb_string) {
 					printq(key);
 					printf(": ");
-					printq(val.string_value().c_str());
-				} else if (val.has_int_value()) {
+					printq(val.string_value.c_str());
+				} else if (val.type == pb_int) {
 					printq(key);
-					printf(": %lld", (long long) val.int_value());
-				} else if (val.has_double_value()) {
+					printf(": %lld", (long long) val.numeric_value.int_value);
+				} else if (val.type == pb_double) {
 					printq(key);
-					double v = val.double_value();
+					double v = val.numeric_value.double_value;
 					if (v == (long long) v) {
 						printf(": %lld", (long long) v);
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.has_float_value()) {
+				} else if (val.type == pb_float) {
 					printq(key);
-					double v = val.float_value();
+					double v = val.numeric_value.float_value;
 					if (v == (long long) v) {
 						printf(": %lld", (long long) v);
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.has_sint_value()) {
+				} else if (val.type == pb_sint) {
 					printq(key);
-					printf(": %lld", (long long) val.sint_value());
-				} else if (val.has_uint_value()) {
+					printf(": %lld", (long long) val.numeric_value.sint_value);
+				} else if (val.type == pb_uint) {
 					printq(key);
-					printf(": %lld", (long long) val.uint_value());
-				} else if (val.has_bool_value()) {
+					printf(": %lld", (long long) val.numeric_value.uint_value);
+				} else if (val.type == pb_bool) {
 					printq(key);
-					printf(": %s", val.bool_value() ? "true" : "false");
+					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
 				}
 			}
 
@@ -151,32 +138,26 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			std::vector<draw> ops;
 
-			for (int g = 0; g < feat.geometry_size(); g++) {
-				uint32_t geom = feat.geometry(g);
-				uint32_t op = geom & 7;
-				uint32_t count = geom >> 3;
+			for (int g = 0; g < feat.geometry.size(); g++) {
+				int op = feat.geometry[g].op;
+				long long px = feat.geometry[g].x;
+				long long py = feat.geometry[g].y;
 
 				if (op == VT_MOVETO || op == VT_LINETO) {
-					for (size_t k = 0; k < count; k++) {
-						px += dezig(feat.geometry(g + 1));
-						py += dezig(feat.geometry(g + 2));
-						g += 2;
+					long long scale = 1LL << (32 - z);
+					long long wx = scale * x + (scale / extent) * px;
+					long long wy = scale * y + (scale / extent) * py;
 
-						long long scale = 1LL << (32 - z);
-						long long wx = scale * x + (scale / extent) * px;
-						long long wy = scale * y + (scale / extent) * py;
+					double lat, lon;
+					tile2latlon(wx, wy, 32, &lat, &lon);
 
-						double lat, lon;
-						tile2latlon(wx, wy, 32, &lat, &lon);
-
-						ops.push_back(draw(op, lon, lat));
-					}
+					ops.push_back(draw(op, lon, lat));
 				} else {
 					ops.push_back(draw(op, 0, 0));
 				}
 			}
 
-			if (feat.type() == VT_POINT) {
+			if (feat.type == VT_POINT) {
 				if (ops.size() == 1) {
 					printf("\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
 				} else {
@@ -189,7 +170,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 					printf(" ]");
 				}
-			} else if (feat.type() == VT_LINE) {
+			} else if (feat.type == VT_LINE) {
 				int movetos = 0;
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
@@ -225,7 +206,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 					printf(" ] ]");
 				}
-			} else if (feat.type() == VT_POLYGON) {
+			} else if (feat.type == VT_POLYGON) {
 				std::vector<std::vector<draw> > rings;
 				std::vector<double> areas;
 

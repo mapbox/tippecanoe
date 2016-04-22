@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 #include <zlib.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -71,4 +72,101 @@ int compress(std::string const &input, std::string &output) {
 
 int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
+}
+
+bool pb_decode(std::string &message, pb_tile &out) {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
+	mapnik::vector::tile tile;
+	out.layers.clear();
+
+	if (is_compressed(message)) {
+		std::string uncompressed;
+		decompress(message, uncompressed);
+		google::protobuf::io::ArrayInputStream stream(uncompressed.c_str(), uncompressed.length());
+		google::protobuf::io::CodedInputStream codedstream(&stream);
+		codedstream.SetTotalBytesLimit(10 * 67108864, 5 * 67108864);
+		if (!tile.ParseFromCodedStream(&codedstream)) {
+			return false;
+		}
+	} else if (!tile.ParseFromString(message)) {
+		return false;
+	}
+
+	for (int l = 0; l < tile.layers_size(); l++) {
+		mapnik::vector::tile_layer layer = tile.layers(l);
+		pb_layer pbl;
+		pbl.extent = layer.extent();
+		pbl.name = layer.name();
+
+		for (size_t i = 0; i < layer.keys_size(); i++) {
+			pbl.keys.push_back(layer.keys(i));
+		}
+
+		for (size_t i = 0; i < layer.values_size(); i++) {
+			mapnik::vector::tile_value const &val = layer.values(i);
+			pb_value pbv;
+
+			if (val.has_string_value()) {
+				pbv.type = pb_string;
+				pbv.string_value = val.string_value();
+			} else if (val.has_float_value()) {
+				pbv.type = pb_float;
+				pbv.numeric_value.float_value = val.float_value();
+			} else if (val.has_double_value()) {
+				pbv.type = pb_double;
+				pbv.numeric_value.double_value = val.double_value();
+			} else if (val.has_int_value()) {
+				pbv.type = pb_int;
+				pbv.numeric_value.int_value = val.int_value();
+			} else if (val.has_uint_value()) {
+				pbv.type = pb_uint;
+				pbv.numeric_value.uint_value = val.uint_value();
+			} else if (val.has_sint_value()) {
+				pbv.type = pb_sint;
+				pbv.numeric_value.sint_value = val.sint_value();
+			} else if (val.has_bool_value()) {
+				pbv.type = pb_bool;
+				pbv.numeric_value.bool_value = val.bool_value();
+			}
+
+			pbl.values.push_back(pbv);
+		}
+
+		for (int f = 0; f < layer.features_size(); f++) {
+			mapnik::vector::tile_feature feat = layer.features(f);
+			pb_feature pbf;
+			pbf.type = feat.type();
+
+			for (size_t i = 0; i < feat.tags_size(); i++) {
+				pbf.tags.push_back(feat.tags(i));
+			}
+
+			long long px = 0, py = 0;
+			for (size_t g = 0; g < feat.geometry_size(); g++) {
+				uint32_t geom = feat.geometry(g);
+				uint32_t op = geom & 7;
+				uint32_t count = geom >> 3;
+
+				if (op == pb_moveto || op == pb_lineto) {
+					for (size_t k = 0; k < count; k++) {
+						px += dezig(feat.geometry(g + 1));
+						py += dezig(feat.geometry(g + 2));
+						g += 2;
+
+						pbf.geometry.push_back(pb_geometry(op, px, py));
+					}
+				} else {
+					pbf.geometry.push_back(pb_geometry(op, 0, 0));
+				}
+			}
+
+			pbl.features.push_back(pbf);
+		}
+
+		out.layers.push_back(pbl);
+	}
+
+	return true;
 }
