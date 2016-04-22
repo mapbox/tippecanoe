@@ -35,16 +35,16 @@ C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
 INCLUDES = -I/usr/local/include
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o
+tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o protobuf.o
 	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
 	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
-tippecanoe-decode: decode.o vector_tile.pb.o projection.o
+tippecanoe-decode: decode.o vector_tile.pb.o projection.o protobuf.o
 	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
 
-tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
+tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o protobuf.o
 	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
 
 libjsonpull.a: jsonpull.o
