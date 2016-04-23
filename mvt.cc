@@ -2,11 +2,9 @@
 #include <string>
 #include <vector>
 #include <zlib.h>
-#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
-#include <google/protobuf/io/coded_stream.h>
 #include "mvt.hh"
-#include "vector_tile.pb.h"
 #include "protozero/pbf_reader.hpp"
+#include "protozero/pbf_writer.hpp"
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
@@ -237,63 +235,54 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 }
 
 std::string mvt_encode(mvt_tile &in) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
+	std::string data;
 
-	mapnik::vector::tile tile;
+	protozero::pbf_writer writer(data);
 
 	for (size_t i = 0; i < in.layers.size(); i++) {
-		mapnik::vector::tile_layer *layer = tile.add_layers();
+		std::string layer_string;
+		protozero::pbf_writer layer_writer(layer_string);
 
-		layer->set_name(in.layers[i].name);
-		layer->set_version(in.layers[i].version);
-		layer->set_extent(in.layers[i].extent);
+		layer_writer.add_uint32(15, 1); /* version */
+		layer_writer.add_string(1, in.layers[i].name); /* name */
+		layer_writer.add_uint32(5, in.layers[i].extent); /* extent */
 
-		for (size_t k = 0; k < in.layers[i].keys.size(); k++) {
-			layer->add_keys(in.layers[i].keys[k]);
+		for (size_t j = 0; j < in.layers[i].keys.size(); j++) {
+			layer_writer.add_string(3, in.layers[i].keys[j]); /* key */
 		}
+
 		for (size_t v = 0; v < in.layers[i].values.size(); v++) {
-			mapnik::vector::tile_value *tv = layer->add_values();
+			std::string value_string;
+			protozero::pbf_writer value_writer(value_string);
 			mvt_value &pbv = in.layers[i].values[v];
 
 			if (pbv.type == mvt_string) {
-				tv->set_string_value(pbv.string_value);
+				value_writer.add_string(1, pbv.string_value);
 			} else if (pbv.type == mvt_float) {
-				tv->set_float_value(pbv.numeric_value.float_value);
+				value_writer.add_float(2, pbv.numeric_value.float_value);
 			} else if (pbv.type == mvt_double) {
-				tv->set_double_value(pbv.numeric_value.double_value);
+				value_writer.add_double(3, pbv.numeric_value.double_value);
 			} else if (pbv.type == mvt_int) {
-				tv->set_int_value(pbv.numeric_value.int_value);
+				value_writer.add_int64(4, pbv.numeric_value.int_value);
 			} else if (pbv.type == mvt_uint) {
-				tv->set_uint_value(pbv.numeric_value.uint_value);
+				value_writer.add_uint64(5, pbv.numeric_value.uint_value);
 			} else if (pbv.type == mvt_sint) {
-				tv->set_sint_value(pbv.numeric_value.sint_value);
+				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
 			} else if (pbv.type == mvt_bool) {
-				tv->set_bool_value(pbv.numeric_value.bool_value);
+				value_writer.add_bool(7, pbv.numeric_value.bool_value);
 			}
+
+			layer_writer.add_message(4, value_string);
 		}
 
 		for (size_t f = 0; f < in.layers[i].features.size(); f++) {
-			mapnik::vector::tile_feature *feature = layer->add_features();
-			if (feature == NULL) {
-				perror("add feature");
-				exit(EXIT_FAILURE);
-			}
+			std::string feature_string;
+			protozero::pbf_writer feature_writer(feature_string);
 
-			int type = in.layers[i].features[f].type;
-			if (type == mvt_point) {
-				feature->set_type(mapnik::vector::tile::Point);
-			} else if (type == mvt_linestring) {
-				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (type == mvt_polygon) {
-				feature->set_type(mapnik::vector::tile::Polygon);
-			} else {
-				fprintf(stderr, "Corrupt geometry type\n");
-				exit(EXIT_FAILURE);
-			}
+			feature_writer.add_enum(3, in.layers[i].features[f].type);
+			feature_writer.add_packed_uint32(2, std::begin(in.layers[i].features[f].tags), std::end(in.layers[i].features[f].tags));
 
-			for (size_t t = 0; t < in.layers[i].features[f].tags.size(); t++) {
-				feature->add_tags(in.layers[i].features[f].tags[t]);
-			}
+			std::vector<uint32_t> geometry;
 
 			int px = 0, py = 0;
 			int cmd_idx = -1;
@@ -307,13 +296,13 @@ std::string mvt_encode(mvt_tile &in) {
 
 				if (op != cmd) {
 					if (cmd_idx >= 0) {
-						feature->set_geometry(cmd_idx, (length << 3) | (cmd & ((1 << 3) - 1)));
+						geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
 					}
 
 					cmd = op;
 					length = 0;
-					cmd_idx = feature->geometry_size();
-					feature->add_geometry(0);
+					cmd_idx = geometry.size();
+					geometry.push_back(0);
 				}
 
 				if (op == mvt_moveto || op == mvt_lineto) {
@@ -323,10 +312,8 @@ std::string mvt_encode(mvt_tile &in) {
 					int dx = wwx - px;
 					int dy = wwy - py;
 
-					if (feature != NULL) {
-						feature->add_geometry((dx << 1) ^ (dx >> 31));
-						feature->add_geometry((dy << 1) ^ (dy >> 31));
-					}
+					geometry.push_back((dx << 1) ^ (dx >> 31));
+					geometry.push_back((dy << 1) ^ (dy >> 31));
 
 					px = wwx;
 					py = wwy;
@@ -340,14 +327,18 @@ std::string mvt_encode(mvt_tile &in) {
 			}
 
 			if (cmd_idx >= 0) {
-				feature->set_geometry(cmd_idx, (length << 3) | (cmd & ((1 << 3) - 1)));
+				geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
 			}
+
+			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
+			layer_writer.add_message(2, feature_string);
 		}
+
+		writer.add_message(3, layer_string);
 	}
 
-	std::string s, compressed;
-	tile.SerializeToString(&s);
-	compress(s, compressed);
+	std::string compressed;
+	compress(data, compressed);
 
 	return compressed;
 }

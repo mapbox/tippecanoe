@@ -1,3 +1,7 @@
+## 1.9.16
+
+* Switch to protozero as the library for reading and writing protocol buffers
+
 ## 1.9.15
 
 * Add option not to clip features

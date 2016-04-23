@@ -231,16 +231,12 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires protoc and sqlite3. Rebuilding the manpage
+Requires sqlite3 (should already be installed on MacOS). Rebuilding the manpage
 uses md2man (`gem install md2man`).
-
-MacOS:
-
-    brew install protobuf
 
 Linux:
 
-    sudo apt-get install libprotobuf-dev protobuf-compiler libsqlite3-dev
+    sudo apt-get install libsqlite3-dev
 
 Then build:
 
