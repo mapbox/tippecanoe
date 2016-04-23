@@ -32,7 +32,7 @@ PG=
 H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
 C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
 
-INCLUDES = -I/usr/local/include
+INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o

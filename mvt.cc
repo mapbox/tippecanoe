@@ -6,6 +6,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include "mvt.hh"
 #include "vector_tile.pb.h"
+#include "protozero/pbf_reader.hpp"
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
@@ -76,97 +77,160 @@ int dezig(unsigned n) {
 }
 
 bool mvt_decode(std::string &message, mvt_tile &out) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
-	mapnik::vector::tile tile;
 	out.layers.clear();
+	std::string src;
 
 	if (is_compressed(message)) {
 		std::string uncompressed;
 		decompress(message, uncompressed);
-		google::protobuf::io::ArrayInputStream stream(uncompressed.c_str(), uncompressed.length());
-		google::protobuf::io::CodedInputStream codedstream(&stream);
-		codedstream.SetTotalBytesLimit(10 * 67108864, 5 * 67108864);
-		if (!tile.ParseFromCodedStream(&codedstream)) {
-			return false;
-		}
-	} else if (!tile.ParseFromString(message)) {
-		return false;
+		src = uncompressed;
+	} else {
+		src = message;
 	}
 
-	for (size_t l = 0; l < tile.layers_size(); l++) {
-		mapnik::vector::tile_layer layer = tile.layers(l);
-		mvt_layer pbl;
-		pbl.extent = layer.extent();
-		pbl.name = layer.name();
+	protozero::pbf_reader reader(src);
 
-		for (size_t i = 0; i < layer.keys_size(); i++) {
-			pbl.keys.push_back(layer.keys(i));
-		}
+	while (reader.next()) {
+		switch (reader.tag()) {
+		case 3: /* layer */
+		{
+			protozero::pbf_reader layer_reader(reader.get_message());
+			mvt_layer layer;
 
-		for (size_t i = 0; i < layer.values_size(); i++) {
-			mapnik::vector::tile_value const &val = layer.values(i);
-			mvt_value pbv;
+			while (layer_reader.next()) {
+				switch (layer_reader.tag()) {
+				case 1: /* name */
+					layer.name = layer_reader.get_string();
+					break;
 
-			if (val.has_string_value()) {
-				pbv.type = mvt_string;
-				pbv.string_value = val.string_value();
-			} else if (val.has_float_value()) {
-				pbv.type = mvt_float;
-				pbv.numeric_value.float_value = val.float_value();
-			} else if (val.has_double_value()) {
-				pbv.type = mvt_double;
-				pbv.numeric_value.double_value = val.double_value();
-			} else if (val.has_int_value()) {
-				pbv.type = mvt_int;
-				pbv.numeric_value.int_value = val.int_value();
-			} else if (val.has_uint_value()) {
-				pbv.type = mvt_uint;
-				pbv.numeric_value.uint_value = val.uint_value();
-			} else if (val.has_sint_value()) {
-				pbv.type = mvt_sint;
-				pbv.numeric_value.sint_value = val.sint_value();
-			} else if (val.has_bool_value()) {
-				pbv.type = mvt_bool;
-				pbv.numeric_value.bool_value = val.bool_value();
-			}
+				case 3: /* key */
+					layer.keys.push_back(layer_reader.get_string());
+					break;
 
-			pbl.values.push_back(pbv);
-		}
+				case 4: /* value */
+				{
+					protozero::pbf_reader value_reader(layer_reader.get_message());
+					mvt_value value;
 
-		for (size_t f = 0; f < layer.features_size(); f++) {
-			mapnik::vector::tile_feature feat = layer.features(f);
-			mvt_feature pbf;
-			pbf.type = feat.type();
+					while (value_reader.next()) {
+						switch (value_reader.tag()) {
+						case 1: /* string */
+							value.type = mvt_string;
+							value.string_value = value_reader.get_string();
+							break;
 
-			for (size_t i = 0; i < feat.tags_size(); i++) {
-				pbf.tags.push_back(feat.tags(i));
-			}
+						case 2: /* float */
+							value.type = mvt_float;
+							value.numeric_value.float_value = value_reader.get_float();
+							break;
 
-			long long px = 0, py = 0;
-			for (size_t g = 0; g < feat.geometry_size(); g++) {
-				uint32_t geom = feat.geometry(g);
-				uint32_t op = geom & 7;
-				uint32_t count = geom >> 3;
+						case 3: /* double */
+							value.type = mvt_double;
+							value.numeric_value.double_value = value_reader.get_double();
+							break;
 
-				if (op == mvt_moveto || op == mvt_lineto) {
-					for (size_t k = 0; k < count; k++) {
-						px += dezig(feat.geometry(g + 1));
-						py += dezig(feat.geometry(g + 2));
-						g += 2;
+						case 4: /* int */
+							value.type = mvt_int;
+							value.numeric_value.int_value = value_reader.get_int64();
+							break;
 
-						pbf.geometry.push_back(mvt_geometry(op, px, py));
+						case 5: /* uint */
+							value.type = mvt_uint;
+							value.numeric_value.uint_value = value_reader.get_uint64();
+							break;
+
+						case 6: /* sint */
+							value.type = mvt_sint;
+							value.numeric_value.sint_value = value_reader.get_sint64();
+							break;
+
+						case 7: /* bool */
+							value.type = mvt_bool;
+							value.numeric_value.bool_value = value_reader.get_bool();
+							break;
+
+						default:
+							value_reader.skip();
+							break;
+						}
 					}
-				} else {
-					pbf.geometry.push_back(mvt_geometry(op, 0, 0));
+
+					layer.values.push_back(value);
+				} break;
+
+				case 5: /* extent */
+					layer.extent = layer_reader.get_uint32();
+					break;
+
+				case 2: /* feature */
+				{
+					protozero::pbf_reader feature_reader(layer_reader.get_message());
+					mvt_feature feature;
+					std::vector<uint32_t> geoms;
+
+					while (feature_reader.next()) {
+						switch (feature_reader.tag()) {
+						case 2: /* tag */
+						{
+							auto pi = feature_reader.get_packed_uint32();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								feature.tags.push_back(*it);
+							}
+						} break;
+
+						case 3: /* feature type */
+							feature.type = feature_reader.get_enum();
+							break;
+
+						case 4: /* geometry */
+						{
+							auto pi = feature_reader.get_packed_uint32();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								geoms.push_back(*it);
+							}
+						} break;
+
+						default:
+							feature_reader.skip();
+							break;
+						}
+					}
+
+					long long px = 0, py = 0;
+					for (size_t g = 0; g < geoms.size(); g++) {
+						uint32_t geom = geoms[g];
+						uint32_t op = geom & 7;
+						uint32_t count = geom >> 3;
+
+						if (op == mvt_moveto || op == mvt_lineto) {
+							for (size_t k = 0; k < count && g + 2 < geoms.size(); k++) {
+								px += dezig(geoms[g + 1]);
+								py += dezig(geoms[g + 2]);
+								g += 2;
+
+								feature.geometry.push_back(mvt_geometry(op, px, py));
+							}
+						} else {
+							feature.geometry.push_back(mvt_geometry(op, 0, 0));
+						}
+					}
+
+					layer.features.push_back(feature);
+				} break;
+
+				default:
+					layer_reader.skip();
+					break;
 				}
 			}
 
-			pbl.features.push_back(pbf);
-		}
+			out.layers.push_back(layer);
+		} break;
 
-		out.layers.push_back(pbl);
+		default:
+			reader.skip();
+			break;
+		}
 	}
 
 	return true;

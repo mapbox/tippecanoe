@@ -4,15 +4,25 @@ int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 enum mvt_geometry_type {
-	mvt_point = 1, mvt_linestring = 2, mvt_polygon = 3
+	mvt_point = 1,
+	mvt_linestring = 2,
+	mvt_polygon = 3
 };
 
 enum mvt_operation {
-	mvt_moveto = 1, mvt_lineto = 2, mvt_closepath = 7
+	mvt_moveto = 1,
+	mvt_lineto = 2,
+	mvt_closepath = 7
 };
 
 enum mvt_value_type {
-	mvt_string, mvt_float, mvt_double, mvt_int, mvt_uint, mvt_sint, mvt_bool
+	mvt_string,
+	mvt_float,
+	mvt_double,
+	mvt_int,
+	mvt_uint,
+	mvt_sint,
+	mvt_bool
 };
 
 struct mvt_value {
