@@ -33,16 +33,16 @@ INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
 	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o projection.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
