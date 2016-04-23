@@ -61,7 +61,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	printf(", \"features\": [\n");
 
-	for (int l = 0; l < tile.layers.size(); l++) {
+	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
 		int extent = layer.extent;
 
@@ -79,7 +79,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			within = 0;
 		}
 
-		for (int f = 0; f < layer.features.size(); f++) {
+		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature &feat = layer.features[f];
 
 			if (within) {
@@ -146,7 +146,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			std::vector<draw> ops;
 
-			for (int g = 0; g < feat.geometry.size(); g++) {
+			for (size_t g = 0; g < feat.geometry.size(); g++) {
 				int op = feat.geometry[g].op;
 				long long px = feat.geometry[g].x;
 				long long py = feat.geometry[g].y;

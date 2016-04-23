@@ -154,7 +154,8 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 					}
 
 					layer.values.push_back(value);
-				} break;
+					break;
+				}
 
 				case 5: /* extent */
 					layer.extent = layer_reader.get_uint32();
@@ -174,7 +175,8 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.tags.push_back(*it);
 							}
-						} break;
+							break;
+						}
 
 						case 3: /* feature type */
 							feature.type = feature_reader.get_enum();
@@ -186,7 +188,8 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 							for (auto it = pi.first; it != pi.second; ++it) {
 								geoms.push_back(*it);
 							}
-						} break;
+							break;
+						}
 
 						default:
 							feature_reader.skip();
@@ -214,7 +217,8 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 					}
 
 					layer.features.push_back(feature);
-				} break;
+					break;
+				}
 
 				default:
 					layer_reader.skip();
@@ -223,7 +227,8 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 			}
 
 			out.layers.push_back(layer);
-		} break;
+			break;
+		}
 
 		default:
 			reader.skip();
@@ -243,8 +248,8 @@ std::string mvt_encode(mvt_tile &in) {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
-		layer_writer.add_uint32(15, 1); /* version */
-		layer_writer.add_string(1, in.layers[i].name); /* name */
+		layer_writer.add_uint32(15, 1);			 /* version */
+		layer_writer.add_string(1, in.layers[i].name);   /* name */
 		layer_writer.add_uint32(5, in.layers[i].extent); /* extent */
 
 		for (size_t j = 0; j < in.layers[i].keys.size(); j++) {
