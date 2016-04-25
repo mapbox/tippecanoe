@@ -65,7 +65,6 @@ static int is_integer(const char *s, long long *v);
 struct coalesce {
 	int type;
 	drawvec geom;
-	int segment;
 	int m;
 	char *meta;
 	char *stringpool;
@@ -838,9 +837,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.coalesced = false;
 					c.original_seq = original_seq;
 					c.m = partials[i].m;
-					c.segment = partials[i].segment;
 					c.meta = partials[i].meta;
-					c.stringpool = stringpool + pool_off[c.segment];
+					c.stringpool = stringpool + pool_off[partials[i].segment];
 
 					features[layer].push_back(c);
 				}
@@ -912,29 +910,29 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		mvt_tile tile;
 
 		for (size_t j = 0; j < features.size(); j++) {
-			mvt_layer mvtl;
+			mvt_layer layer;
 
-			mvtl.name = layernames[j];
-			mvtl.version = 2;
-			mvtl.extent = 1 << line_detail;
+			layer.name = layernames[j];
+			layer.version = 2;
+			layer.extent = 1 << line_detail;
 
 			for (size_t x = 0; x < features[j].size(); x++) {
-				mvt_feature mvtf;
+				mvt_feature feature;
 
 				if (features[j][x].type == VT_LINE || features[j][x].type == VT_POLYGON) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 				}
 
-				mvtf.type = features[j][x].type;
-				mvtf.geometry = to_feature(features[j][x].geom);
+				feature.type = features[j][x].type;
+				feature.geometry = to_feature(features[j][x].geom);
 				count += features[j][x].geom.size();
 
-				decode_meta(features[j][x].m, &features[j][x].meta, stringpool + pool_off[features[j][x].segment], mvtl, mvtf, file_keys[j]);
-				mvtl.features.push_back(mvtf);
+				decode_meta(features[j][x].m, &features[j][x].meta, features[j][x].stringpool, layer, feature, file_keys[j]);
+				layer.features.push_back(feature);
 			}
 
-			if (mvtl.features.size() > 0) {
-				tile.layers.push_back(mvtl);
+			if (layer.features.size() > 0) {
+				tile.layers.push_back(layer);
 			}
 		}
 
