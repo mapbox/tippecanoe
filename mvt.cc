@@ -248,7 +248,7 @@ std::string mvt_encode(mvt_tile &in) {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
-		layer_writer.add_uint32(15, 1);			 /* version */
+		layer_writer.add_uint32(15, 2);			 /* version */
 		layer_writer.add_string(1, in.layers[i].name);   /* name */
 		layer_writer.add_uint32(5, in.layers[i].extent); /* extent */
 
