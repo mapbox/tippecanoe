@@ -215,7 +215,7 @@ mvt_tile create_tile(char **layernames, int line_detail, std::vector<std::vector
 		mvt_layer layer;
 
 		layer.name = layernames[i];
-		layer.version = 1;
+		layer.version = 2;
 		layer.extent = 1 << line_detail;
 
 		for (size_t x = 0; x < features[i].size(); x++) {

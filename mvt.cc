@@ -254,9 +254,9 @@ std::string mvt_tile::encode() {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
-		layer_writer.add_uint32(15, 2);			 /* version */
-		layer_writer.add_string(1, layers[i].name);   /* name */
-		layer_writer.add_uint32(5, layers[i].extent); /* extent */
+		layer_writer.add_uint32(15, layers[i].version); /* version */
+		layer_writer.add_string(1, layers[i].name);     /* name */
+		layer_writer.add_uint32(5, layers[i].extent);   /* extent */
 
 		for (size_t j = 0; j < layers[i].keys.size(); j++) {
 			layer_writer.add_string(3, layers[i].keys[j]); /* key */
