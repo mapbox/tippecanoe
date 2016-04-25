@@ -58,6 +58,7 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
+int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 static int is_integer(const char *s, long long *v);
 
@@ -67,6 +68,7 @@ struct coalesce {
 	int segment;
 	int m;
 	char *meta;
+	char *stringpool;
 	unsigned long long index;
 	unsigned long long index2;
 	bool coalesced;
@@ -97,26 +99,10 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-#if 0 /* XXX */
+	char *m1 = c1->meta;
+	char *m2 = c2->meta;
 
-	for (size_t i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
-		cmp = c1->meta[i] - c2->meta[i];
-
-		if (cmp != 0) {
-			return cmp;
-		}
-	}
-
-	if (c1->meta.size() < c2->meta.size()) {
-		return -1;
-	} else if (c1->meta.size() > c2->meta.size()) {
-		return 1;
-	} else {
-		return 0;
-	}
-#endif
-
-	return 0;
+	return metacmp(c1->m, &m1, c1->stringpool, c2->m, &m2, c2->stringpool);
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
@@ -204,6 +190,51 @@ void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_fea
 				exit(EXIT_FAILURE);
 			}
 		}
+	}
+}
+
+int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2) {
+	// XXX
+	// Ideally this would make identical features compare the same lexically
+	// even if their attributes were declared in different orders in different instances.
+	// In practice, this is probably good enough to put "identical" features together.
+
+	int i;
+	for (i = 0; i < m1 && i < m2; i++) {
+		mvt_value key1 = retrieve_string(meta1, stringpool1, NULL);
+		mvt_value key2 = retrieve_string(meta2, stringpool2, NULL);
+
+		if (key1.string_value < key2.string_value) {
+			return -1;
+		} else if (key1.string_value > key2.string_value) {
+			return 1;
+		}
+
+		long long off1;
+		deserialize_long_long(meta1, &off1);
+		int type1 = stringpool1[off1];
+		char *s1 = stringpool1 + off1 + 1;
+
+		long long off2;
+		deserialize_long_long(meta2, &off2);
+		int type2 = stringpool2[off2];
+		char *s2 = stringpool2 + off2 + 1;
+
+		if (type1 != type2) {
+			return type1 - type2;
+		}
+		int cmp = strcmp(s1, s2);
+		if (s1 != s2) {
+			return cmp;
+		}
+	}
+
+	if (m1 < m2) {
+		return -1;
+	} else if (m1 > m2) {
+		return 1;
+	} else {
+		return 0;
 	}
 }
 
@@ -787,7 +818,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
-		// This is serial because decode_meta() unifies duplicates
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> geoms = partials[i].geoms;
 			partials[i].geoms.clear();  // avoid keeping two copies in memory
@@ -810,6 +840,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.m = partials[i].m;
 					c.segment = partials[i].segment;
 					c.meta = partials[i].meta;
+					c.stringpool = stringpool + pool_off[c.segment];
 
 					features[layer].push_back(c);
 				}
