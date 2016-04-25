@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <zlib.h>
 #include "mvt.hh"
 #include "protozero/pbf_reader.hpp"
@@ -232,6 +234,13 @@ bool mvt_tile::decode(std::string &message) {
 				}
 			}
 
+			for (size_t i = 0; i < layer.keys.size(); i++) {
+				layer.key_map.insert(std::pair<std::string, size_t>(layer.keys[i], i));
+			}
+			for (size_t i = 0; i < layer.values.size(); i++) {
+				layer.value_map.insert(std::pair<mvt_value, size_t>(layer.values[i], i));
+			}
+
 			layers.push_back(layer);
 			break;
 		}
@@ -352,4 +361,49 @@ std::string mvt_tile::encode() {
 	compress(data, compressed);
 
 	return compressed;
+}
+
+bool mvt_value::operator<(const mvt_value &o) const {
+	if (type < o.type) {
+		return true;
+	}
+	if (type == o.type) {
+		if ((type == mvt_string && string_value < o.string_value) ||
+		    (type == mvt_float && numeric_value.float_value < o.numeric_value.float_value) ||
+		    (type == mvt_double && numeric_value.double_value < o.numeric_value.double_value) ||
+		    (type == mvt_int && numeric_value.int_value < o.numeric_value.int_value) ||
+		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
+		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
+		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
+	size_t ko, vo;
+
+	std::map<std::string, size_t>::iterator ki = key_map.find(key);
+	std::map<mvt_value, size_t>::iterator vi = value_map.find(value);
+
+	if (ki == key_map.end()) {
+		ko = keys.size();
+		keys.push_back(key);
+		key_map.insert(std::pair<std::string, size_t>(key, ko));
+	} else {
+		ko = ki->second;
+	}
+
+	if (vi == value_map.end()) {
+		vo = values.size();
+		values.push_back(value);
+		value_map.insert(std::pair<mvt_value, size_t>(value, vo));
+	} else {
+		vo = vi->second;
+	}
+
+	feature.tags.push_back(ko);
+	feature.tags.push_back(vo);
 }

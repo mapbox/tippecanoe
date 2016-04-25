@@ -75,13 +75,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			*nlayers = ll + 1;
 		}
 
-		struct pool keys, values;
-		pool_init(&keys, 0);
-		pool_init(&values, 0);
-
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
-			std::vector<int> feature_tags;
+			mvt_feature outfeature;
 			int matched = 0;
 
 			for (int t = 0; t + 1 < feat.tags.size(); t += 2) {
@@ -139,32 +135,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						pool(&((*file_keys)[ll]), copy, type);
 					}
 
-					struct pool_val *k, *v;
-
-					if (is_pooled(&keys, key, VT_STRING)) {
-						k = pool(&keys, key, VT_STRING);
-					} else {
-						char *copy = strdup(key);
-						if (copy == NULL) {
-							perror("Out of memory");
-							exit(EXIT_FAILURE);
-						}
-						k = pool(&keys, copy, VT_STRING);
-					}
-
-					if (is_pooled(&values, value, type)) {
-						v = pool(&values, value, type);
-					} else {
-						char *copy = strdup(value);
-						if (copy == NULL) {
-							perror("Out of memory");
-							exit(EXIT_FAILURE);
-						}
-						v = pool(&values, copy, type);
-					}
-
-					feature_tags.push_back(k->n);
-					feature_tags.push_back(v->n);
+					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
@@ -188,7 +159,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 							}
 
 							const char *sjoinkey = joinkey.c_str();
-							const char *sjoinval = joinval.c_str();
 
 							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
 								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
@@ -200,32 +170,16 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 									pool(&((*file_keys)[ll]), copy, type);
 								}
 
-								struct pool_val *k, *v;
-
-								if (is_pooled(&keys, sjoinkey, VT_STRING)) {
-									k = pool(&keys, sjoinkey, VT_STRING);
+								mvt_value outval;
+								if (type == VT_STRING) {
+									outval.type = mvt_string;
+									outval.string_value = joinval;
 								} else {
-									char *copy = strdup(sjoinkey);
-									if (copy == NULL) {
-										perror("Out of memory");
-										exit(EXIT_FAILURE);
-									}
-									k = pool(&keys, copy, VT_STRING);
+									outval.type = mvt_double;
+									outval.numeric_value.double_value = atof(joinval.c_str());
 								}
 
-								if (is_pooled(&values, sjoinval, type)) {
-									v = pool(&values, sjoinval, type);
-								} else {
-									char *copy = strdup(sjoinval);
-									if (copy == NULL) {
-										perror("Out of memory");
-										exit(EXIT_FAILURE);
-									}
-									v = pool(&values, copy, type);
-								}
-
-								feature_tags.push_back(k->n);
-								feature_tags.push_back(v->n);
+								outlayer.tag(outfeature, joinkey, outval);
 							}
 						}
 					}
@@ -235,42 +189,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			}
 
 			if (matched || !ifmatched) {
-				mvt_feature outfeature;
 				outfeature.type = feat.type;
 				outfeature.geometry = feat.geometry;
-
-				for (size_t i = 0; i < feature_tags.size(); i++) {
-					outfeature.tags.push_back(feature_tags[i]);
-				}
 
 				features_added++;
 				outlayer.features.push_back(outfeature);
 			}
 		}
-
-		struct pool_val *pv;
-		for (pv = keys.head; pv != NULL; pv = pv->next) {
-			outlayer.keys.push_back(std::string(pv->s, strlen(pv->s)));
-		}
-		for (pv = values.head; pv != NULL; pv = pv->next) {
-			mvt_value tv;
-
-			if (pv->type == VT_NUMBER) {
-				tv.type = mvt_double;
-				tv.numeric_value.double_value = atof(pv->s);
-			} else if (pv->type == VT_BOOLEAN) {
-				tv.type = mvt_bool;
-				tv.numeric_value.bool_value = (pv->s[0] == 't');
-			} else {
-				tv.type = mvt_string;
-				tv.string_value = std::string(pv->s);
-			}
-
-			outlayer.values.push_back(tv);
-		}
-
-		pool_free_strings(&keys);
-		pool_free_strings(&values);
 
 		outtile.layers.push_back(outlayer);
 	}

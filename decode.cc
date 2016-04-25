@@ -4,6 +4,7 @@
 #include <sqlite3.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <zlib.h>
 #include <math.h>
 #include <fcntl.h>

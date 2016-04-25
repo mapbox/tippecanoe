@@ -1,3 +1,6 @@
+struct mvt_value;
+struct mvt_layer;
+
 enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
@@ -45,6 +48,8 @@ struct mvt_value {
 		long long sint_value;
 		bool bool_value;
 	} numeric_value;
+
+	bool operator<(const mvt_value &o) const;
 };
 
 struct mvt_layer {
@@ -54,6 +59,13 @@ struct mvt_layer {
 	std::vector<std::string> keys;
 	std::vector<mvt_value> values;
 	int extent;
+
+	// Add a key-value pair to a feature, using this layer's constant pool
+	void tag(mvt_feature &feature, std::string key, mvt_value value);
+
+	// For tracking the key-value constants already used in this layer
+	std::map<std::string, size_t> key_map;
+	std::map<mvt_value, size_t> value_map;
 };
 
 struct mvt_tile {
