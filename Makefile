@@ -5,7 +5,7 @@ MANDIR ?= $(PREFIX)/share/man/man1/
 CC := $(CC)
 CXX := $(CXX)
 CFLAGS := $(CFLAGS)
-CXXFLAGS := $(CXXFLAGS) -std=c++0x
+CXXFLAGS := $(CXXFLAGS) -std=c++11
 LDFLAGS := $(LDFLAGS)
 
 all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
