@@ -1,7 +1,16 @@
-bool is_compressed(std::string const &data);
-int decompress(std::string const &input, std::string &output);
-int compress(std::string const &input, std::string &output);
-int dezig(unsigned n);
+enum mvt_operation {
+	mvt_moveto = 1,
+	mvt_lineto = 2,
+	mvt_closepath = 7
+};
+
+struct mvt_geometry {
+	int /* mvt_operation */ op;
+	long long x;
+	long long y;
+
+	mvt_geometry(int op, long long x, long long y);
+};
 
 enum mvt_geometry_type {
 	mvt_point = 1,
@@ -9,10 +18,10 @@ enum mvt_geometry_type {
 	mvt_polygon = 3
 };
 
-enum mvt_operation {
-	mvt_moveto = 1,
-	mvt_lineto = 2,
-	mvt_closepath = 7
+struct mvt_feature {
+	std::vector<unsigned> tags;
+	int /* mvt_geometry_type */ type;
+	std::vector<mvt_geometry> geometry;
 };
 
 enum mvt_value_type {
@@ -38,24 +47,6 @@ struct mvt_value {
 	} numeric_value;
 };
 
-struct mvt_geometry {
-	int /* mvt_operation */ op;
-	long long x;
-	long long y;
-
-	mvt_geometry(int op, long long x, long long y) {
-		this->op = op;
-		this->x = x;
-		this->y = y;
-	}
-};
-
-struct mvt_feature {
-	std::vector<unsigned> tags;
-	int /* mvt_geometry_type */ type;
-	std::vector<mvt_geometry> geometry;
-};
-
 struct mvt_layer {
 	int version;
 	std::string name;
@@ -67,7 +58,12 @@ struct mvt_layer {
 
 struct mvt_tile {
 	std::vector<mvt_layer> layers;
+
+	std::string encode();
+	bool decode(std::string &message);
 };
 
-bool mvt_decode(std::string &message, mvt_tile &out);
-std::string mvt_encode(mvt_tile &in);
+bool is_compressed(std::string const &data);
+int decompress(std::string const &input, std::string &output);
+int compress(std::string const &input, std::string &output);
+int dezig(unsigned n);

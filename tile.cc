@@ -950,7 +950,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				pool_free(&values1[i]);
 			}
 
-			std::string compressed = mvt_encode(tile);
+			std::string compressed = tile.encode();
 
 			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {

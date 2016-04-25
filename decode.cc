@@ -48,7 +48,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
 	mvt_tile tile;
 
-	if (!mvt_decode(message, tile)) {
+	if (!tile.decode(message)) {
 		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}

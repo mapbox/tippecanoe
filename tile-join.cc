@@ -32,7 +32,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 	mvt_tile outtile;
 	int features_added = 0;
 
-	if (!mvt_decode(message, tile)) {
+	if (!tile.decode(message)) {
 		fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -279,7 +279,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 		return;
 	}
 
-	std::string compressed = mvt_encode(outtile);
+	std::string compressed = outtile.encode();
 
 	if (compressed.size() > 500000) {
 		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());

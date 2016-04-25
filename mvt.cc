@@ -6,6 +6,12 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 
+mvt_geometry::mvt_geometry(int op, long long x, long long y) {
+	this->op = op;
+	this->x = x;
+	this->y = y;
+}
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
 	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
@@ -74,8 +80,8 @@ int dezig(unsigned n) {
 	return (n >> 1) ^ (-(n & 1));
 }
 
-bool mvt_decode(std::string &message, mvt_tile &out) {
-	out.layers.clear();
+bool mvt_tile::decode(std::string &message) {
+	layers.clear();
 	std::string src;
 
 	if (is_compressed(message)) {
@@ -226,7 +232,7 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 				}
 			}
 
-			out.layers.push_back(layer);
+			layers.push_back(layer);
 			break;
 		}
 
@@ -239,27 +245,27 @@ bool mvt_decode(std::string &message, mvt_tile &out) {
 	return true;
 }
 
-std::string mvt_encode(mvt_tile &in) {
+std::string mvt_tile::encode() {
 	std::string data;
 
 	protozero::pbf_writer writer(data);
 
-	for (size_t i = 0; i < in.layers.size(); i++) {
+	for (size_t i = 0; i < layers.size(); i++) {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
 		layer_writer.add_uint32(15, 2);			 /* version */
-		layer_writer.add_string(1, in.layers[i].name);   /* name */
-		layer_writer.add_uint32(5, in.layers[i].extent); /* extent */
+		layer_writer.add_string(1, layers[i].name);   /* name */
+		layer_writer.add_uint32(5, layers[i].extent); /* extent */
 
-		for (size_t j = 0; j < in.layers[i].keys.size(); j++) {
-			layer_writer.add_string(3, in.layers[i].keys[j]); /* key */
+		for (size_t j = 0; j < layers[i].keys.size(); j++) {
+			layer_writer.add_string(3, layers[i].keys[j]); /* key */
 		}
 
-		for (size_t v = 0; v < in.layers[i].values.size(); v++) {
+		for (size_t v = 0; v < layers[i].values.size(); v++) {
 			std::string value_string;
 			protozero::pbf_writer value_writer(value_string);
-			mvt_value &pbv = in.layers[i].values[v];
+			mvt_value &pbv = layers[i].values[v];
 
 			if (pbv.type == mvt_string) {
 				value_writer.add_string(1, pbv.string_value);
@@ -280,12 +286,12 @@ std::string mvt_encode(mvt_tile &in) {
 			layer_writer.add_message(4, value_string);
 		}
 
-		for (size_t f = 0; f < in.layers[i].features.size(); f++) {
+		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
 
-			feature_writer.add_enum(3, in.layers[i].features[f].type);
-			feature_writer.add_packed_uint32(2, std::begin(in.layers[i].features[f].tags), std::end(in.layers[i].features[f].tags));
+			feature_writer.add_enum(3, layers[i].features[f].type);
+			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
 
 			std::vector<uint32_t> geometry;
 
@@ -294,7 +300,7 @@ std::string mvt_encode(mvt_tile &in) {
 			int cmd = -1;
 			int length = 0;
 
-			std::vector<mvt_geometry> &geom = in.layers[i].features[f].geometry;
+			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
 				int op = geom[g].op;
