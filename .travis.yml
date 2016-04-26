@@ -1,4 +1,4 @@
-language: c
+language: generic
 
 sudo: false
 
@@ -6,25 +6,24 @@ matrix:
   include:
     - os: linux
       compiler: gcc
-      env: COVERAGE=gcov-4.9
+      env: COVERAGE=gcov-4.9 CC="gcc-4.9" CXX="g++-4.9"
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: [ 'g++-4.9', 'protobuf-compiler', 'libprotobuf-dev' ]
+          packages: [ 'g++-4.9' ]
     - os: linux
       compiler: clang
+      env: CC="clang-3.5" CXX="clang++-3.5"
       addons:
         apt:
-          packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5' ]
     - os: osx
       compiler: clang
 
 
 install:
- - if [[ $(uname -s) == 'Darwin' ]]; then brew install protobuf; fi;
  - if [ -n "${COVERAGE}" ]; then
-       export CXX=g++-4.9;
-       export CC=gcc-4.9;
        export CXXFLAGS="--coverage -g";
        export CFLAGS="--coverage -g";
        export LDFLAGS="--coverage";

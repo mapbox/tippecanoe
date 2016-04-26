@@ -18,6 +18,8 @@ extern "C" {
 #include "projection.h"
 }
 
+static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
+
 drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
@@ -204,34 +206,207 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
-	// To make the GeoJSON come out right, we need to do each of the
-	// outer rings followed by its children if any, and then go back
-	// to do any outer-ring children of those children as a new top level.
+double get_area(drawvec &geom, int i, int j) {
+	double area = 0;
+	for (unsigned k = i; k < j; k++) {
+		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
+		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+	}
+	area /= 2;
+	return area;
+}
+
+void reverse_ring(drawvec &geom, int start, int end) {
+	drawvec tmp;
+
+	for (unsigned i = start; i < end; i++) {
+		tmp.push_back(geom[i]);
+	}
+
+	for (unsigned i = start; i < end; i++) {
+		geom[i] = tmp[end - 1 - i];
+		if (i == start) {
+			geom[i].op = VT_MOVETO;
+		} else if (i == end - 1) {
+			geom[i].op = VT_LINETO;
+		}
+	}
+}
+
+struct ring {
+	drawvec data;
+	long double area;
+	long long parent;
+	std::vector<size_t> children;
+
+	ring(drawvec &_data) {
+		data = _data;
+		area = get_area(_data, 0, _data.size());
+		parent = -1;
+	}
+
+	bool operator<(const ring &o) const {
+		if (fabs(this->area) < fabs(o.area)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
+static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
+	// Supposedly outer ring
 
 	ClipperLib::Path p = t->Contour;
+	drawvec dv;
 	for (size_t i = 0; i < p.size(); i++) {
-		out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 	}
 	if (p.size() > 0) {
-		out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		dv.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 	}
+	out.push_back(dv);
+
+	// Supposedly inner rings
 
 	for (int n = 0; n < t->ChildCount(); n++) {
 		ClipperLib::Path p = t->Childs[n]->Contour;
+		drawvec dv;
 		for (size_t i = 0; i < p.size(); i++) {
-			out.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+			dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
 		}
 		if (p.size() > 0) {
-			out.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+			dv.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
 		}
+		out.push_back(dv);
 	}
+
+	// Recurse to supposedly outer rings (children of the children)
 
 	for (int n = 0; n < t->ChildCount(); n++) {
 		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
-			decode_clipped(t->Childs[n]->Childs[m], out);
+			decode_rings(t->Childs[n]->Childs[m], out);
 		}
 	}
+}
+
+static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
+	// The output of Clipper supposedly produces the outer rings
+	// as top level objects, with links to any inner-ring children
+	// they may have, each of which then has links to any outer rings
+	// that it has, and so on. This doesn't actually work.
+
+	// So instead, we pull out all the rings, sort them by absolute area,
+	// and go through them, looking for the
+	// smallest parent that contains a point from it, since we are
+	// guaranteed that at least one point in the polygon is strictly
+	// inside its parent (not on one of its boundary lines).
+
+	// Once we have that, we can run through the outer rings that have
+	// an even number of parents, 
+
+	std::vector<ring> rings;
+	decode_rings(t, rings);
+	std::sort(rings.begin(), rings.end());
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		for (size_t j = i + 1; j < rings.size(); j++) {
+			for (size_t k = 0; k < rings[i].data.size(); k++) {
+				if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[k].x, rings[i].data[k].y)) {
+					rings[i].parent = j;
+					rings[j].children.push_back(i);
+					goto nextring;
+				}
+			}
+		}
+nextring:
+		;
+	}
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].parent < 0) {
+			if (rings[i].area < 0) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		} else {
+			if ((rings[i].area > 0) == (rings[rings[i].parent].area > 0)) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		}
+	}
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].area > 0) {
+#if 0
+			fprintf(stderr, "ring area %Lf at %lld\n", rings[i].area, (long long) out.size());
+#endif
+
+			for (size_t j = 0; j < rings[i].data.size(); j++) {
+				out.push_back(rings[i].data[j]);
+			}
+
+			for (size_t j = 0; j < rings[i].children.size(); j++) {
+#if 0
+				fprintf(stderr, "ring area %Lf at %lld\n", rings[rings[i].children[j]].area, (long long) out.size());
+#endif
+
+				for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
+					out.push_back(rings[rings[i].children[j]].data[k]);
+				}
+
+				rings[rings[i].children[j]].parent = -2;
+			}
+		} else if (rings[i].parent != -2) {
+			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
+		}
+	}
+}
+
+static void dump(drawvec &geom) {
+	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+
+	bool has_area = false;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = get_area(geom, i, j);
+			if (area != 0) {
+				has_area = true;
+			}
+
+			ClipperLib::Path path;
+			printf("{ ClipperLib::Path path; ");
+
+			drawvec tmp;
+			for (size_t k = i; k < j; k++) {
+				printf("path.push_back(IntPoint(%lld,%lld)); ", geom[k].x, geom[k].y);
+				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
+			}
+
+			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+			}
+			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); }\n");
+
+			i = j - 1;
+		} else {
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			exit(EXIT_FAILURE);
+		}
+	}
+	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
@@ -248,12 +423,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				}
 			}
 
-			double area = 0;
-			for (size_t k = i; k < j; k++) {
-				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
-			}
-			area = area / 2;
+			double area = get_area(geom, i, j);
 			if (area != 0) {
 				has_area = true;
 			}
@@ -327,6 +497,102 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	}
 
 	return out;
+}
+
+/* pnpoly:
+Copyright (c) 1970-2003, Wm. Randolph Franklin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimers.
+Redistributions in binary form must reproduce the above copyright notice in the documentation and/or other materials provided with the distribution.
+The name of W. Randolph Franklin may not be used to endorse or promote products derived from this Software without specific prior written permission.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+	int i, j, c = 0;
+	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
+		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
+		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (double) (vert[j + start].y - vert[i + start].y) + vert[i + start].x))
+			c = !c;
+	}
+	return c;
+}
+
+void check_polygon(drawvec &geom, drawvec &before) {
+	for (size_t i = 0; i + 1 < geom.size(); i++) {
+		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
+			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
+				double s1_x = geom[i + 1].x - geom[i + 0].x;
+				double s1_y = geom[i + 1].y - geom[i + 0].y;
+				double s2_x = geom[j + 1].x - geom[j + 0].x;
+				double s2_y = geom[j + 1].y - geom[j + 0].y;
+
+				double s, t;
+				s = (-s1_y * (geom[i + 0].x - geom[j + 0].x) + s1_x * (geom[i + 0].y - geom[j + 0].y)) / (-s2_x * s1_y + s1_x * s2_y);
+				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+				if (t > 0 && t < 1 && s > 0 && s < 1) {
+					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+						geom[i + 0].x, geom[i + 0].y,
+						geom[i + 1].x, geom[i + 1].y,
+						geom[j + 0].x, geom[j + 0].y,
+						geom[j + 1].x, geom[j + 1].y);
+						dump(before);
+				}
+			}
+		}
+	}
+
+	size_t outer_start = -1;
+	size_t outer_len = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = get_area(geom, i, j);
+
+#if 0
+			fprintf(stderr, "looking at %lld to %lld, area %f\n", (long long) i, (long long) j, area);
+#endif
+
+			if (area > 0) {
+				outer_start = i;
+				outer_len = j - i;
+			} else {
+				for (size_t k = i; k < j; k++) {
+					if (!pnpoly(geom, outer_start, outer_len, geom[k].x, geom[k].y)) {
+						bool on_edge = false;
+
+						for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+							if (geom[k].x == geom[l].x || geom[k].y == geom[l].y) {
+								on_edge = true;
+								break;
+							}
+						}
+
+						if (!on_edge) {
+							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+
+							dump(before);
+#if 0
+							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
+							}
+#endif
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 drawvec close_poly(drawvec &geom) {
@@ -532,12 +798,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				}
 			}
 
-			double area = 0;
-			for (size_t k = i; k < j; k++) {
-				area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-				area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
-			}
-			area = area / 2;
+			double area = get_area(geom, i, j);
 
 			// XXX There is an ambiguity here: If the area of a ring is 0 and it is followed by holes,
 			// we don't know whether the area-0 ring was a hole too or whether it was the outer ring
@@ -931,12 +1192,7 @@ drawvec fix_polygon(drawvec &geom) {
 			// Reverse ring if winding order doesn't match
 			// inner/outer expectation
 
-			double area = 0;
-			for (size_t k = 0; k < ring.size(); k++) {
-				area += (long double) ring[k].x * (long double) ring[(k + 1) % ring.size()].y;
-				area -= (long double) ring[k].y * (long double) ring[(k + 1) % ring.size()].x;
-			}
-
+			double area = get_area(ring, 0, ring.size());
 			if ((area > 0) != outer) {
 				drawvec tmp;
 				for (int a = ring.size() - 1; a >= 0; a--) {
@@ -977,6 +1233,12 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 
 		for (size_t i = 0; i < geoms.size(); i++) {
 			if (geoms[i].size() > 700) {
+				static bool warned = false;
+				if (!warned) {
+					fprintf(stderr, "Warning: splitting up polygon with more than 700 sides\n");
+					warned = true;
+				}
+
 				long long midx = 0, midy = 0, count = 0;
 				long long maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
 

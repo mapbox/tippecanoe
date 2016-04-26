@@ -50,6 +50,8 @@ static int additional_options[] = {
 	A_REORDER,
 #define A_LINE_DROP ((int) 'l')
 	A_LINE_DROP,
+#define A_DEBUG_POLYGON ((int) 'd')
+	A_DEBUG_POLYGON,
 #define A_POLYGON_DROP ((int) 'p')
 	A_POLYGON_DROP,
 #define A_PREFER_RADIX_SORT ((int) 'R')
