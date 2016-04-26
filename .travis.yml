@@ -32,6 +32,10 @@ matrix:
     - os: osx
       compiler: clang
       env: BUILDTYPE=Release
+    # debug+osx
+    - os: osx
+      compiler: clang
+      env: BUILDTYPE=Debug
 
 
 install:
