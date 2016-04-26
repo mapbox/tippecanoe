@@ -15,7 +15,15 @@ matrix:
     # debug+address-santizer build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=0 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5' ]
+    # debug+leak-santizer build
+    - os: linux
+      compiler: clang
+      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
