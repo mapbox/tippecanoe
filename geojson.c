@@ -87,12 +87,6 @@ static long long diskfree;
 #define MAX_ZOOM 24
 
 struct reader {
-	char *metaname;
-	char *poolname;
-	char *treename;
-	char *geomname;
-	char *indexname;
-
 	int metafd;
 	int poolfd;
 	int treefd;
@@ -1585,83 +1579,78 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
-		r->metaname = malloc(strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1);
-		r->poolname = malloc(strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1);
-		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
-		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
-		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
+		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+		char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+		char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
+		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
-		if (r->metaname == NULL || r->poolname == NULL || r->treename == NULL || r->geomname == NULL || r->indexname == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
+		sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+		sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+		sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
+		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-		sprintf(r->treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
-		sprintf(r->geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-		sprintf(r->indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
-
-		r->metafd = mkstemp(r->metaname);
+		r->metafd = mkstemp(metaname);
 		if (r->metafd < 0) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
-		r->poolfd = mkstemp(r->poolname);
+		r->poolfd = mkstemp(poolname);
 		if (r->poolfd < 0) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
-		r->treefd = mkstemp(r->treename);
+		r->treefd = mkstemp(treename);
 		if (r->treefd < 0) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfd = mkstemp(r->geomname);
+		r->geomfd = mkstemp(geomname);
 		if (r->geomfd < 0) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfd = mkstemp(r->indexname);
+		r->indexfd = mkstemp(indexname);
 		if (r->indexfd < 0) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 
-		r->metafile = fopen(r->metaname, "wb");
+		r->metafile = fopen(metaname, "wb");
 		if (r->metafile == NULL) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
 		r->poolfile = memfile_open(r->poolfd);
 		if (r->poolfile == NULL) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
 		r->treefile = memfile_open(r->treefd);
 		if (r->treefile == NULL) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfile = fopen(r->geomname, "wb");
+		r->geomfile = fopen(geomname, "wb");
 		if (r->geomfile == NULL) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfile = fopen(r->indexname, "wb");
+		r->indexfile = fopen(indexname, "wb");
 		if (r->indexfile == NULL) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 		r->metapos = 0;
 		r->geompos = 0;
 		r->indexpos = 0;
 
-		unlink(r->metaname);
-		unlink(r->poolname);
-		unlink(r->treename);
-		unlink(r->geomname);
-		unlink(r->indexname);
+		unlink(metaname);
+		unlink(poolname);
+		unlink(treename);
+		unlink(geomname);
+		unlink(indexname);
 
 		// To distinguish a null value
 		{
