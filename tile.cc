@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <limits.h>
 #include <zlib.h>
@@ -18,7 +19,7 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
-#include "vector_tile.pb.h"
+#include "mvt.hh"
 #include "geometry.hh"
 
 extern "C" {
@@ -37,104 +38,36 @@ extern "C" {
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-static inline int compress(std::string const &input, std::string &output) {
-	z_stream deflate_s;
-	deflate_s.zalloc = Z_NULL;
-	deflate_s.zfree = Z_NULL;
-	deflate_s.opaque = Z_NULL;
-	deflate_s.avail_in = 0;
-	deflate_s.next_in = Z_NULL;
-	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
-	deflate_s.next_in = (Bytef *) input.data();
-	deflate_s.avail_in = input.size();
-	size_t length = 0;
-	do {
-		size_t increase = input.size() / 2 + 1024;
-		output.resize(length + increase);
-		deflate_s.avail_out = increase;
-		deflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = deflate(&deflate_s, Z_FINISH);
-		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			return -1;
-		}
-		length += (increase - deflate_s.avail_out);
-	} while (deflate_s.avail_out == 0);
-	deflateEnd(&deflate_s);
-	output.resize(length);
-	return 0;
+std::vector<mvt_geometry> to_feature(drawvec &geom) {
+	std::vector<mvt_geometry> out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
+	}
+
+	return out;
 }
 
-int to_feature(drawvec &geom, mapnik::vector::tile_feature *feature) {
-	int px = 0, py = 0;
-	int cmd_idx = -1;
-	int cmd = -1;
-	int length = 0;
-	int drew = 0;
-	int i;
-
-	int n = geom.size();
-	for (i = 0; i < n; i++) {
-		int op = geom[i].op;
-
-		if (op != cmd) {
-			if (cmd_idx >= 0) {
-				if (feature != NULL) {
-					feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
-				}
-			}
-
-			cmd = op;
-			length = 0;
-
-			if (feature != NULL) {
-				cmd_idx = feature->geometry_size();
-				feature->add_geometry(0);
-			}
-		}
-
-		if (op == VT_MOVETO || op == VT_LINETO) {
-			long long wwx = geom[i].x;
-			long long wwy = geom[i].y;
-
-			int dx = wwx - px;
-			int dy = wwy - py;
-
-			if (feature != NULL) {
-				feature->add_geometry((dx << 1) ^ (dx >> 31));
-				feature->add_geometry((dy << 1) ^ (dy >> 31));
-			}
-
-			px = wwx;
-			py = wwy;
-			length++;
-
-			if (op == VT_LINETO && (dx != 0 || dy != 0)) {
-				drew = 1;
-			}
-		} else if (op == VT_CLOSEPATH) {
-			length++;
-		} else {
-			fprintf(stderr, "\nInternal error: corrupted geometry\n");
-			exit(EXIT_FAILURE);
+bool draws_something(drawvec &geom) {
+	for (size_t i = 1; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO && (geom[i].x != geom[i - 1].x || geom[i].y != geom[i - 1].y)) {
+			return true;
 		}
 	}
 
-	if (cmd_idx >= 0) {
-		if (feature != NULL) {
-			feature->set_geometry(cmd_idx, (length << CMD_BITS) | (cmd & ((1 << CMD_BITS) - 1)));
-		}
-	}
-
-	return drew;
+	return false;
 }
 
+int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
+static int is_integer(const char *s, long long *v);
 
 struct coalesce {
 	int type;
 	drawvec geom;
-	std::vector<int> meta;
+	int m;
+	char *meta;
+	char *stringpool;
 	unsigned long long index;
 	unsigned long long index2;
 	bool coalesced;
@@ -165,21 +98,10 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-	for (size_t i = 0; i < c1->meta.size() && i < c2->meta.size(); i++) {
-		cmp = c1->meta[i] - c2->meta[i];
+	char *m1 = c1->meta;
+	char *m2 = c2->meta;
 
-		if (cmp != 0) {
-			return cmp;
-		}
-	}
-
-	if (c1->meta.size() < c2->meta.size()) {
-		return -1;
-	} else if (c1->meta.size() > c2->meta.size()) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return metacmp(c1->m, &m1, c1->stringpool, c2->m, &m2, c2->stringpool);
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
@@ -202,44 +124,116 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-struct pool_val *retrieve_string(char **f, struct pool *p, char *stringpool) {
-	struct pool_val *ret;
+mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
 	long long off;
-
 	deserialize_long_long(f, &off);
-	ret = pool(p, stringpool + off + 1, stringpool[off]);
 
-	return ret;
+	int type = stringpool[off];
+	char *s = stringpool + off + 1;
+
+	if (otype != NULL) {
+		*otype = type;
+	}
+
+	mvt_value tv;
+	if (type == VT_NUMBER) {
+		long long v;
+		if (is_integer(s, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			tv.type = mvt_double;
+			tv.numeric_value.double_value = atof(s);
+		}
+	} else if (type == VT_BOOLEAN) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = (s[0] == 't');
+	} else {
+		tv.type = mvt_string;
+		tv.string_value = s;
+	}
+
+	return tv;
 }
 
-void decode_meta(int m, char **meta, char *stringpool, struct pool *keys, struct pool *values, struct pool *file_keys, std::vector<int> *intmeta) {
+void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_feature &feature, struct pool *file_keys) {
 	int i;
 	for (i = 0; i < m; i++) {
-		struct pool_val *key = retrieve_string(meta, keys, stringpool);
-		struct pool_val *value = retrieve_string(meta, values, stringpool);
+		int otype;
+		mvt_value key = retrieve_string(meta, stringpool, NULL);
+		mvt_value value = retrieve_string(meta, stringpool, &otype);
 
-		intmeta->push_back(key->n);
-		intmeta->push_back(value->n);
+		layer.tag(feature, key.string_value, value);
 
-		if (!is_pooled(file_keys, key->s, value->type)) {
+		if (!is_pooled(file_keys, key.string_value.c_str(), otype)) {
 			if (pthread_mutex_lock(&var_lock) != 0) {
 				perror("pthread_mutex_lock");
 				exit(EXIT_FAILURE);
 			}
 
 			// Dup to retain after munmap
-			char *copy = strdup(key->s);
+			char *copy = strdup(key.string_value.c_str());
 			if (copy == NULL) {
 				perror("Out of memory");
 				exit(EXIT_FAILURE);
 			}
-			pool(file_keys, copy, value->type);
+			pool(file_keys, copy, otype);
 
 			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
 				exit(EXIT_FAILURE);
 			}
 		}
+	}
+}
+
+int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2) {
+	// XXX
+	// Ideally this would make identical features compare the same lexically
+	// even if their attributes were declared in different orders in different instances.
+	// In practice, this is probably good enough to put "identical" features together.
+
+	int i;
+	for (i = 0; i < m1 && i < m2; i++) {
+		mvt_value key1 = retrieve_string(meta1, stringpool1, NULL);
+		mvt_value key2 = retrieve_string(meta2, stringpool2, NULL);
+
+		if (key1.string_value < key2.string_value) {
+			return -1;
+		} else if (key1.string_value > key2.string_value) {
+			return 1;
+		}
+
+		long long off1;
+		deserialize_long_long(meta1, &off1);
+		int type1 = stringpool1[off1];
+		char *s1 = stringpool1 + off1 + 1;
+
+		long long off2;
+		deserialize_long_long(meta2, &off2);
+		int type2 = stringpool2[off2];
+		char *s2 = stringpool2 + off2 + 1;
+
+		if (type1 != type2) {
+			return type1 - type2;
+		}
+		int cmp = strcmp(s1, s2);
+		if (s1 != s2) {
+			return cmp;
+		}
+	}
+
+	if (m1 < m2) {
+		return -1;
+	} else if (m1 > m2) {
+		return 1;
+	} else {
+		return 0;
 	}
 }
 
@@ -272,75 +266,6 @@ static int is_integer(const char *s, long long *v) {
 	}
 
 	return 1;
-}
-
-mapnik::vector::tile create_tile(char **layernames, int line_detail, std::vector<std::vector<coalesce> > &features, long long *count, struct pool **keys, struct pool **values, int nlayers) {
-	mapnik::vector::tile tile;
-
-	int i;
-	for (i = 0; i < nlayers; i++) {
-		if (features[i].size() == 0) {
-			continue;
-		}
-
-		mapnik::vector::tile_layer *layer = tile.add_layers();
-
-		layer->set_name(layernames[i]);
-		layer->set_version(1);
-		layer->set_extent(1 << line_detail);
-
-		for (size_t x = 0; x < features[i].size(); x++) {
-			if (features[i][x].type == VT_LINE || features[i][x].type == VT_POLYGON) {
-				features[i][x].geom = remove_noop(features[i][x].geom, features[i][x].type, 0);
-			}
-
-			mapnik::vector::tile_feature *feature = layer->add_features();
-
-			if (features[i][x].type == VT_POINT) {
-				feature->set_type(mapnik::vector::tile::Point);
-			} else if (features[i][x].type == VT_LINE) {
-				feature->set_type(mapnik::vector::tile::LineString);
-			} else if (features[i][x].type == VT_POLYGON) {
-				feature->set_type(mapnik::vector::tile::Polygon);
-			} else {
-				feature->set_type(mapnik::vector::tile::Unknown);
-			}
-
-			to_feature(features[i][x].geom, feature);
-			*count += features[i][x].geom.size();
-
-			for (size_t y = 0; y < features[i][x].meta.size(); y++) {
-				feature->add_tags(features[i][x].meta[y]);
-			}
-		}
-
-		struct pool_val *pv;
-		for (pv = keys[i]->head; pv != NULL; pv = pv->next) {
-			layer->add_keys(pv->s, strlen(pv->s));
-		}
-		for (pv = values[i]->head; pv != NULL; pv = pv->next) {
-			mapnik::vector::tile_value *tv = layer->add_values();
-
-			if (pv->type == VT_NUMBER) {
-				long long v;
-				if (is_integer(pv->s, &v)) {
-					if (v >= 0) {
-						tv->set_int_value(v);
-					} else {
-						tv->set_sint_value(v);
-					}
-				} else {
-					tv->set_double_value(atof(pv->s));
-				}
-			} else if (pv->type == VT_BOOLEAN) {
-				tv->set_bool_value(pv->s[0] == 't');
-			} else {
-				tv->set_string_value(pv->s);
-			}
-		}
-	}
-
-	return tile;
 }
 
 struct sll {
@@ -633,19 +558,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
-		GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-		struct pool keys1[nlayers], values1[nlayers];
-		struct pool *keys[nlayers], *values[nlayers];
-		int i;
-		for (i = 0; i < nlayers; i++) {
-			pool_init(&keys1[i], 0);
-			pool_init(&values1[i], 0);
-
-			keys[i] = &keys1[i];
-			values[i] = &values1[i];
-		}
-
 		long long count = 0;
 		double accum_area = 0;
 
@@ -666,7 +578,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		std::vector<struct partial> partials;
 		std::vector<std::vector<coalesce> > features;
-		for (i = 0; i < nlayers; i++) {
+		for (size_t i = 0; i < nlayers; i++) {
 			features.push_back(std::vector<coalesce>());
 		}
 
@@ -912,21 +824,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
-		// This is serial because decode_meta() unifies duplicates
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> geoms = partials[i].geoms;
 			partials[i].geoms.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
 			signed char t = partials[i].t;
-			int segment = partials[i].segment;
 			long long original_seq = partials[i].original_seq;
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
 			for (size_t j = 0; j < geoms.size(); j++) {
-				if (t == VT_POINT || to_feature(geoms[j], NULL)) {
+				if (t == VT_POINT || draws_something(geoms[j])) {
 					struct coalesce c;
-					char *meta = partials[i].meta;
 
 					c.type = t;
 					c.index = partials[i].index;
@@ -934,8 +843,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.geom = geoms[j];
 					c.coalesced = false;
 					c.original_seq = original_seq;
+					c.m = partials[i].m;
+					c.meta = partials[i].meta;
+					c.stringpool = stringpool + pool_off[partials[i].segment];
 
-					decode_meta(partials[i].m, &meta, stringpool + pool_off[segment], keys[layer], values[layer], file_keys[layer], &c.meta);
 					features[layer].push_back(c);
 				}
 			}
@@ -1003,6 +914,35 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
+		mvt_tile tile;
+
+		for (size_t j = 0; j < features.size(); j++) {
+			mvt_layer layer;
+
+			layer.name = layernames[j];
+			layer.version = 2;
+			layer.extent = 1 << line_detail;
+
+			for (size_t x = 0; x < features[j].size(); x++) {
+				mvt_feature feature;
+
+				if (features[j][x].type == VT_LINE || features[j][x].type == VT_POLYGON) {
+					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
+				}
+
+				feature.type = features[j][x].type;
+				feature.geometry = to_feature(features[j][x].geom);
+				count += features[j][x].geom.size();
+
+				decode_meta(features[j][x].m, &features[j][x].meta, features[j][x].stringpool, layer, feature, file_keys[j]);
+				layer.features.push_back(feature);
+			}
+
+			if (layer.features.size() > 0) {
+				tile.layers.push_back(layer);
+			}
+		}
+
 		if (z == 0 && unclipped_features < original_features / 2) {
 			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
 			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
@@ -1020,19 +960,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				return -1;
 			}
 
-			mapnik::vector::tile tile = create_tile(layernames, line_detail, features, &count, keys, values, nlayers);
-
-			int i;
-			for (i = 0; i < nlayers; i++) {
-				pool_free(&keys1[i]);
-				pool_free(&values1[i]);
-			}
-
-			std::string s;
-			std::string compressed;
-
-			tile.SerializeToString(&s);
-			compress(s, compressed);
+			std::string compressed = tile.encode();
 
 			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
@@ -1065,12 +993,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				return count;
 			}
 		} else {
-			int i;
-			for (i = 0; i < nlayers; i++) {
-				pool_free(&keys1[i]);
-				pool_free(&values1[i]);
-			}
-
 			return count;
 		}
 	}

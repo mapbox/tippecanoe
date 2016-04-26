@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sqlite3.h>
 #include <limits.h>
@@ -8,7 +9,7 @@
 #include <map>
 #include <zlib.h>
 #include <math.h>
-#include "vector_tile.pb.h"
+#include "mvt.hh"
 #include "tile.h"
 
 extern "C" {
@@ -26,99 +27,25 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline bool is_compressed(std::string const &data) {
-	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
-}
-
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline int decompress(std::string const &input, std::string &output) {
-	z_stream inflate_s;
-	inflate_s.zalloc = Z_NULL;
-	inflate_s.zfree = Z_NULL;
-	inflate_s.opaque = Z_NULL;
-	inflate_s.avail_in = 0;
-	inflate_s.next_in = Z_NULL;
-	if (inflateInit2(&inflate_s, 32 + 15) != Z_OK) {
-		fprintf(stderr, "error: %s\n", inflate_s.msg);
-	}
-	inflate_s.next_in = (Bytef *) input.data();
-	inflate_s.avail_in = input.size();
-	size_t length = 0;
-	do {
-		output.resize(length + 2 * input.size());
-		inflate_s.avail_out = 2 * input.size();
-		inflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = inflate(&inflate_s, Z_FINISH);
-		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			fprintf(stderr, "error: %s\n", inflate_s.msg);
-			return 0;
-		}
-
-		length += (2 * input.size() - inflate_s.avail_out);
-	} while (inflate_s.avail_out == 0);
-	inflateEnd(&inflate_s);
-	output.resize(length);
-	return 1;
-}
-
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-static inline int compress(std::string const &input, std::string &output) {
-	z_stream deflate_s;
-	deflate_s.zalloc = Z_NULL;
-	deflate_s.zfree = Z_NULL;
-	deflate_s.opaque = Z_NULL;
-	deflate_s.avail_in = 0;
-	deflate_s.next_in = Z_NULL;
-	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
-	deflate_s.next_in = (Bytef *) input.data();
-	deflate_s.avail_in = input.size();
-	size_t length = 0;
-	do {
-		size_t increase = input.size() / 2 + 1024;
-		output.resize(length + increase);
-		deflate_s.avail_out = increase;
-		deflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = deflate(&deflate_s, Z_FINISH);
-		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			return -1;
-		}
-		length += (increase - deflate_s.avail_out);
-	} while (deflate_s.avail_out == 0);
-	deflateEnd(&deflate_s);
-	output.resize(length);
-	return 0;
-}
-
 void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
-
-	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
-	mapnik::vector::tile tile;
-	mapnik::vector::tile outtile;
+	mvt_tile tile;
+	mvt_tile outtile;
 	int features_added = 0;
 
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		decompress(message, uncompressed);
-		if (!tile.ParseFromString(uncompressed)) {
-			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
-			exit(EXIT_FAILURE);
-		}
-	} else if (!tile.ParseFromString(message)) {
-		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
+	if (!tile.decode(message)) {
+		fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
 
-	for (int l = 0; l < tile.layers_size(); l++) {
-		mapnik::vector::tile_layer layer = tile.layers(l);
-		mapnik::vector::tile_layer *outlayer = outtile.add_layers();
+	for (size_t l = 0; l < tile.layers.size(); l++) {
+		mvt_layer &layer = tile.layers[l];
+		mvt_layer outlayer;
 
-		outlayer->set_name(layer.name());
-		outlayer->set_version(layer.version());
-		outlayer->set_extent(layer.extent());
+		outlayer.name = layer.name;
+		outlayer.version = layer.version;
+		outlayer.extent = layer.extent;
 
-		const char *ln = layer.name().c_str();
+		const char *ln = layer.name.c_str();
 
 		int ll;
 		for (ll = 0; ll < *nlayers; ll++) {
@@ -148,50 +75,46 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			*nlayers = ll + 1;
 		}
 
-		struct pool keys, values;
-		pool_init(&keys, 0);
-		pool_init(&values, 0);
-
-		for (int f = 0; f < layer.features_size(); f++) {
-			mapnik::vector::tile_feature feat = layer.features(f);
-			std::vector<int> feature_tags;
+		for (size_t f = 0; f < layer.features.size(); f++) {
+			mvt_feature feat = layer.features[f];
+			mvt_feature outfeature;
 			int matched = 0;
 
-			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
-				const char *key = layer.keys(feat.tags(t)).c_str();
-				mapnik::vector::tile_value const &val = layer.values(feat.tags(t + 1));
+			for (int t = 0; t + 1 < feat.tags.size(); t += 2) {
+				const char *key = layer.keys[feat.tags[t]].c_str();
+				mvt_value &val = layer.values[feat.tags[t + 1]];
 				char *value;
 				int type = -1;
 
-				if (val.has_string_value()) {
-					value = strdup(val.string_value().c_str());
+				if (val.type == mvt_string) {
+					value = strdup(val.string_value.c_str());
 					if (value == NULL) {
 						perror("Out of memory");
 						exit(EXIT_FAILURE);
 					}
 					type = VT_STRING;
-				} else if (val.has_int_value()) {
-					if (asprintf(&value, "%lld", (long long) val.int_value()) >= 0) {
+				} else if (val.type == mvt_int) {
+					if (asprintf(&value, "%lld", (long long) val.numeric_value.int_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_double_value()) {
-					if (asprintf(&value, "%g", val.double_value()) >= 0) {
+				} else if (val.type == mvt_double) {
+					if (asprintf(&value, "%g", val.numeric_value.double_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_float_value()) {
-					if (asprintf(&value, "%g", val.float_value()) >= 0) {
+				} else if (val.type == mvt_float) {
+					if (asprintf(&value, "%g", val.numeric_value.float_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_bool_value()) {
-					if (asprintf(&value, "%s", val.bool_value() ? "true" : "false") >= 0) {
+				} else if (val.type == mvt_bool) {
+					if (asprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false") >= 0) {
 						type = VT_BOOLEAN;
 					}
-				} else if (val.has_sint_value()) {
-					if (asprintf(&value, "%lld", (long long) val.sint_value()) >= 0) {
+				} else if (val.type == mvt_sint) {
+					if (asprintf(&value, "%lld", (long long) val.numeric_value.sint_value) >= 0) {
 						type = VT_NUMBER;
 					}
-				} else if (val.has_uint_value()) {
-					if (asprintf(&value, "%llu", (long long) val.uint_value()) >= 0) {
+				} else if (val.type == mvt_uint) {
+					if (asprintf(&value, "%llu", (long long) val.numeric_value.uint_value) >= 0) {
 						type = VT_NUMBER;
 					}
 				} else {
@@ -212,32 +135,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						pool(&((*file_keys)[ll]), copy, type);
 					}
 
-					struct pool_val *k, *v;
-
-					if (is_pooled(&keys, key, VT_STRING)) {
-						k = pool(&keys, key, VT_STRING);
-					} else {
-						char *copy = strdup(key);
-						if (copy == NULL) {
-							perror("Out of memory");
-							exit(EXIT_FAILURE);
-						}
-						k = pool(&keys, copy, VT_STRING);
-					}
-
-					if (is_pooled(&values, value, type)) {
-						v = pool(&values, value, type);
-					} else {
-						char *copy = strdup(value);
-						if (copy == NULL) {
-							perror("Out of memory");
-							exit(EXIT_FAILURE);
-						}
-						v = pool(&values, copy, type);
-					}
-
-					feature_tags.push_back(k->n);
-					feature_tags.push_back(v->n);
+					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
@@ -261,7 +159,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 							}
 
 							const char *sjoinkey = joinkey.c_str();
-							const char *sjoinval = joinval.c_str();
 
 							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
 								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
@@ -273,32 +170,16 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 									pool(&((*file_keys)[ll]), copy, type);
 								}
 
-								struct pool_val *k, *v;
-
-								if (is_pooled(&keys, sjoinkey, VT_STRING)) {
-									k = pool(&keys, sjoinkey, VT_STRING);
+								mvt_value outval;
+								if (type == VT_STRING) {
+									outval.type = mvt_string;
+									outval.string_value = joinval;
 								} else {
-									char *copy = strdup(sjoinkey);
-									if (copy == NULL) {
-										perror("Out of memory");
-										exit(EXIT_FAILURE);
-									}
-									k = pool(&keys, copy, VT_STRING);
+									outval.type = mvt_double;
+									outval.numeric_value.double_value = atof(joinval.c_str());
 								}
 
-								if (is_pooled(&values, sjoinval, type)) {
-									v = pool(&values, sjoinval, type);
-								} else {
-									char *copy = strdup(sjoinval);
-									if (copy == NULL) {
-										perror("Out of memory");
-										exit(EXIT_FAILURE);
-									}
-									v = pool(&values, copy, type);
-								}
-
-								feature_tags.push_back(k->n);
-								feature_tags.push_back(v->n);
+								outlayer.tag(outfeature, joinkey, outval);
 							}
 						}
 					}
@@ -308,50 +189,22 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			}
 
 			if (matched || !ifmatched) {
-				mapnik::vector::tile_feature *outfeature = outlayer->add_features();
-				outfeature->set_type(feat.type());
-
-				for (int g = 0; g < feat.geometry_size(); g++) {
-					outfeature->add_geometry(feat.geometry(g));
-				}
-
-				for (size_t i = 0; i < feature_tags.size(); i++) {
-					outfeature->add_tags(feature_tags[i]);
-				}
+				outfeature.type = feat.type;
+				outfeature.geometry = feat.geometry;
 
 				features_added++;
+				outlayer.features.push_back(outfeature);
 			}
 		}
 
-		struct pool_val *pv;
-		for (pv = keys.head; pv != NULL; pv = pv->next) {
-			outlayer->add_keys(pv->s, strlen(pv->s));
-		}
-		for (pv = values.head; pv != NULL; pv = pv->next) {
-			mapnik::vector::tile_value *tv = outlayer->add_values();
-
-			if (pv->type == VT_NUMBER) {
-				tv->set_double_value(atof(pv->s));
-			} else if (pv->type == VT_BOOLEAN) {
-				tv->set_bool_value(pv->s[0] == 't');
-			} else {
-				tv->set_string_value(pv->s);
-			}
-		}
-
-		pool_free_strings(&keys);
-		pool_free_strings(&values);
+		outtile.layers.push_back(outlayer);
 	}
 
 	if (features_added == 0) {
 		return;
 	}
 
-	std::string s;
-	std::string compressed;
-
-	outtile.SerializeToString(&s);
-	compress(s, compressed);
+	std::string compressed = outtile.encode();
 
 	if (compressed.size() > 500000) {
 		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());

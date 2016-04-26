@@ -24,28 +24,25 @@ install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 man/tippecanoe.1: README.md
 	md2man-roff README.md > man/tippecanoe.1
 
-vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
-	protoc --cpp_out=. vector_tile.proto
-
 PG=
 
 H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
 C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
 
-INCLUDES = -I/usr/local/include
+INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
+tippecanoe: geojson.o jsonpull.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
 	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
-tippecanoe-decode: decode.o vector_tile.pb.o projection.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+tippecanoe-decode: decode.o projection.o mvt.o
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o
+	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	ar rc $@ $^
