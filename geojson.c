@@ -103,7 +103,7 @@ struct reader {
 	long long geompos;
 	long long indexpos;
 
-	long long *file_bbox;
+	long long file_bbox[4];
 
 	struct stat geomst;
 	struct stat metast;
@@ -1660,11 +1660,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		// Keep metadata file from being completely empty if no attributes
 		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
-		r->file_bbox = malloc(4 * sizeof(long long));
-		if (r->file_bbox == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
@@ -2842,6 +2837,10 @@ int main(int argc, char **argv) {
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
 		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < nsources; i++) {
+		free(sourcelist[i]);
 	}
 
 	return ret;
