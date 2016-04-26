@@ -1,5 +1,6 @@
 PREFIX ?= /usr/local
 MANDIR ?= $(PREFIX)/share/man/man1/
+BUILDTYPE ?= Release
 
 # inherit from env if set
 CC := $(CC)
@@ -7,6 +8,15 @@ CXX := $(CXX)
 CFLAGS := $(CFLAGS)
 CXXFLAGS := $(CXXFLAGS) -std=c++11
 LDFLAGS := $(LDFLAGS)
+WARNING_FLAGS := -Wall
+RELEASE_FLAGS := -O3 -DNDEBUG
+DEBUG_FLAGS := -O0 -DDEBUG -fno-inline-functions -fno-omit-frame-pointer
+
+ifeq ($(BUILDTYPE),Release)
+	FINAL_FLAGS := -g $(WARNING_FLAGS) $(RELEASE_FLAGS)
+else
+	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
+endif
 
 all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 
@@ -33,26 +43,26 @@ INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
-	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
+	$(CC) $(PG) $(LIBS) $(FINAL_FLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o projection.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 libjsonpull.a: jsonpull.o
 	$(AR) rc $@ $^
 	ranlib $@
 
 %.o: %.c $(H)
-	$(CC) $(PG) $(INCLUDES) -O3 -g -Wall $(CFLAGS) -c $<
+	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c $<
 
 %.o: %.cc $(H)
-	$(CXX) $(PG) $(INCLUDES) -O3 -g -Wall $(CXXFLAGS) -c $<
+	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
 
 clean:
 	rm -f tippecanoe *.o
