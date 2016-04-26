@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <cmath>
-#include <limits>
+#include <limits.h>
 #include "geometry.hh"
 #include "clipper/clipper.hpp"
 
