@@ -45,7 +45,7 @@ tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o
 	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 libjsonpull.a: jsonpull.o
-	ar rc $@ $^
+	$(AR) rc $@ $^
 	ranlib $@
 
 %.o: %.c $(H)
