@@ -267,22 +267,14 @@ If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
 .SH Development
 .PP
-Requires protoc and sqlite3. Rebuilding the manpage
+Requires sqlite3 (should already be installed on MacOS). Rebuilding the manpage
 uses md2man (\fB\fCgem install md2man\fR).
-.PP
-MacOS:
-.PP
-.RS
-.nf
-brew install protobuf
-.fi
-.RE
 .PP
 Linux:
 .PP
 .RS
 .nf
-sudo apt\-get install libprotobuf\-dev protobuf\-compiler libsqlite3\-dev
+sudo apt\-get install libsqlite3\-dev
 .fi
 .RE
 .PP

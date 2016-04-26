@@ -28,6 +28,8 @@ install:
        export CXXFLAGS="--coverage -g";
        export CFLAGS="--coverage -g";
        export LDFLAGS="--coverage";
+   elif [[ $(uname -s) == 'Linux' ]]; then
+       export CXX=clang++;
    fi;
  - make
 
