@@ -2843,5 +2843,8 @@ int main(int argc, char **argv) {
 		free(sourcelist[i]);
 	}
 
+	pool_free(&exclude);
+	pool_free(&include);
+
 	return ret;
 }
