@@ -1,3 +1,7 @@
+## 1.10.0
+
+* Upgrade Clipper to fix potential crashes and improve polygon topology
+
 ## 1.9.16
 
 * Switch to protozero as the library for reading and writing protocol buffers
