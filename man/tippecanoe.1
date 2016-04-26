@@ -134,7 +134,9 @@ compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber
 .SS Doing more
 .RS
 .IP \(bu 2
-\-ac or \-\-coalesce: Coalesce adjacent line and polygon features that have the same properties
+\-ac or \-\-coalesce: Coalesce adjacent line and polygon features that have the same properties.
+Note that when overlapping polygons are coalesced, the overlapping region is treated as a hole,
+which may not be what you want.
 .IP \(bu 2
 \-ar or \-\-reverse: Try reversing the directions of lines to make them coalesce and compress better
 .IP \(bu 2
@@ -160,6 +162,10 @@ compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber
 \-pi or \-\-preserve\-input\-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
 \-pp or \-\-no\-polygon\-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+.IP \(bu 2
+\-pc or \-\-no\-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
+.IP \(bu 2
+\-pD or \-\-no\-duplication: As with \-\-no\-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
 .IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
