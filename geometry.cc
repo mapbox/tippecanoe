@@ -4,15 +4,15 @@
 #include <stack>
 #include <vector>
 #include <algorithm>
-#include <stdio.h>
+#include <cstdio>
 #include <unistd.h>
-#include <math.h>
-#include <sqlite3.h>
+#include <cmath>
 #include <limits.h>
 #include "geometry.hh"
 #include "clipper/clipper.hpp"
 
 extern "C" {
+#include <sqlite3.h>
 #include "tile.h"
 #include "clip.h"
 #include "projection.h"
@@ -246,7 +246,7 @@ struct ring {
 	}
 
 	bool operator<(const ring &o) const {
-		if (fabs(this->area) < fabs(o.area)) {
+		if (std::fabs(this->area) < std::fabs(o.area)) {
 			return true;
 		} else {
 			return false;
@@ -811,7 +811,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				// inner rings must just have their area de-accumulated rather
 				// than being drawn since we don't really know where they are.
 
-				if (fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
+				if (std::fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
 					// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
 					*accum_area += area;
@@ -1012,7 +1012,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 		for (i = first + 1; i < second; i++) {
 			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y, geom[start + first].x, geom[start + first].y, geom[start + second].x, geom[start + second].y);
 
-			double distance = fabs(temp_dist);
+			double distance = std::fabs(temp_dist);
 
 			if (distance > e && distance > max_distance) {
 				farthest_element_index = i;

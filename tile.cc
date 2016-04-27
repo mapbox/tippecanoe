@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <math.h>
+#include <cmath>
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
@@ -502,7 +502,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 				return 1;  // Exact duplicate: can't fulfil the gap requirement
 			}
 
-			if (exp(log((index - *previndex) / scale) * gamma) >= *gap) {
+			if (std::exp(std::log((index - *previndex) / scale) * gamma) >= *gap) {
 				// Dot is further from the previous than the nth root of the gap,
 				// so produce it, and choose a new gap at the next point.
 				*gap = 0;
@@ -534,7 +534,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 	long long og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
-	int max_zoom_increment = log(child_shards) / log(4);
+	int max_zoom_increment = std::log(child_shards) / std::log(4);
 	if (child_shards < 4 || max_zoom_increment < 1) {
 		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
 		exit(EXIT_FAILURE);
@@ -564,7 +564,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		double interval = 0;
 		double seq = 0;
 		if (z < basezoom) {
-			interval = exp(log(droprate) * (basezoom - z));
+			interval = std::exp(std::log(droprate) * (basezoom - z));
 		}
 
 		double fraction_accum = 0;
@@ -1181,7 +1181,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			threads = useful_threads;
 		}
 		// Round down to a power of 2
-		threads = 1 << (int) (log(threads) / log(2));
+		threads = 1 << (int) (std::log(threads) / std::log(2));
 
 		// Assign temporary files to threads
 
