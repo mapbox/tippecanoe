@@ -10,10 +10,10 @@
 #include <zlib.h>
 #include <math.h>
 #include "mvt.hpp"
-#include "tile.hpp"
 #include "projection.hpp"
 #include "pool.hpp"
 #include "mbtiles.hpp"
+#include "geometry.hpp"
 
 std::string dequote(std::string s);
 

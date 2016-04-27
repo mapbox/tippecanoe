@@ -11,9 +11,9 @@
 #include <sqlite3.h>
 #include "geometry.hpp"
 #include "clipper/clipper.hpp"
-#include "tile.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
+#include "main.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);

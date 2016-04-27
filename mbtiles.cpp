@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sqlite3.h>
+#include <vector>
 #include "pool.hpp"
-#include "tile.hpp"
 #include "mbtiles.hpp"
+#include "geometry.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;

@@ -26,6 +26,8 @@
 #include "mbtiles.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
+#include "options.hpp"
+#include "main.hpp"
 
 #define CMD_BITS 3
 

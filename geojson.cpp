@@ -19,12 +19,12 @@
 #include <stdarg.h>
 #include <sys/resource.h>
 #include <pthread.h>
+#include <vector>
 
 extern "C" {
 #include "jsonpull.h"
 }
 
-#include "tile.hpp"
 #include "pool.hpp"
 #include "mbtiles.hpp"
 #include "projection.hpp"
@@ -33,6 +33,7 @@ extern "C" {
 #include "serial.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
+#include "geometry.hpp"
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */

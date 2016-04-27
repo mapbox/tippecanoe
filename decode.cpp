@@ -12,8 +12,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "mvt.hpp"
-#include "tile.hpp"
 #include "projection.hpp"
+#include "geometry.hpp"
 
 void printq(const char *s) {
 	putchar('"');
@@ -29,12 +29,12 @@ void printq(const char *s) {
 	putchar('"');
 }
 
-struct draw {
+struct lonlat {
 	int op;
 	double lon;
 	double lat;
 
-	draw(int op, double lon, double lat) {
+	lonlat(int op, double lon, double lat) {
 		this->op = op;
 		this->lon = lon;
 		this->lat = lat;
@@ -141,7 +141,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			printf(" }, \"geometry\": { ");
 
-			std::vector<draw> ops;
+			std::vector<lonlat> ops;
 
 			for (size_t g = 0; g < feat.geometry.size(); g++) {
 				int op = feat.geometry[g].op;
@@ -156,9 +156,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					double lat, lon;
 					tile2latlon(wx, wy, 32, &lat, &lon);
 
-					ops.push_back(draw(op, lon, lat));
+					ops.push_back(lonlat(op, lon, lat));
 				} else {
-					ops.push_back(draw(op, 0, 0));
+					ops.push_back(lonlat(op, 0, 0));
 				}
 			}
 
@@ -212,12 +212,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					printf(" ] ]");
 				}
 			} else if (feat.type == VT_POLYGON) {
-				std::vector<std::vector<draw> > rings;
+				std::vector<std::vector<lonlat> > rings;
 				std::vector<double> areas;
 
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
-						rings.push_back(std::vector<draw>());
+						rings.push_back(std::vector<lonlat>());
 						areas.push_back(0);
 					}
 
