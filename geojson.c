@@ -750,7 +750,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	 */
 	int feature_minzoom = 0;
 	if (mb_geometry[t] == VT_LINE) {
-		for (feature_minzoom = 0; feature_minzoom < 31; feature_minzoom++) {
+		// Skip z0 check because everything is always in the one z0 tile
+		for (feature_minzoom = 1; feature_minzoom < 31; feature_minzoom++) {
 			unsigned mask = 1 << (32 - (feature_minzoom + 1));
 
 			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
@@ -2774,6 +2775,21 @@ int main(int argc, char **argv) {
 	files_open_at_start = open("/dev/null", O_RDONLY);
 	close(files_open_at_start);
 
+	if (full_detail <= 0) {
+		full_detail = 12;
+	}
+
+	if (full_detail < min_detail || low_detail < min_detail) {
+		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	// Need two checks: one for geometry representation, the other for
+	// index traversal when guessing base zoom and drop rate
+	if (maxzoom > 32 - full_detail) {
+		maxzoom = 32 - full_detail;
+		fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+	}
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2786,15 +2802,6 @@ int main(int argc, char **argv) {
 
 	if (basezoom == -1) {
 		basezoom = maxzoom;
-	}
-
-	if (full_detail <= 0) {
-		full_detail = 12;
-	}
-
-	if (full_detail < min_detail || low_detail < min_detail) {
-		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
-		exit(EXIT_FAILURE);
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
