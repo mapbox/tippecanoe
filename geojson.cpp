@@ -30,6 +30,7 @@
 #include <sys/statfs.h>
 #endif
 
+extern "C" {
 #include "jsonpull.h"
 #include "tile.h"
 #include "pool.h"
@@ -37,6 +38,7 @@
 #include "projection.h"
 #include "version.h"
 #include "memfile.h"
+}
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -85,7 +87,7 @@ struct tofree {
 } *tofree = NULL;
 
 void mustfree(void *p) {
-	struct tofree *f = malloc(sizeof(struct tofree));
+	struct tofree *f = (struct tofree *) malloc(sizeof(struct tofree));
 	if (f == NULL) {
 		perror("malloc");
 		exit(EXIT_FAILURE);
@@ -530,7 +532,7 @@ static unsigned char swizzle[256] = {
 	0xF9, 0xFE, 0x0C, 0x99, 0x2D, 0x0F, 0x3A, 0x41, 0x45, 0xA8, 0x30, 0x2B, 0x73, 0xBD, 0x86, 0x81,
 };
 
-int swizzlecmp(char *a, char *b) {
+int swizzlecmp(const char *a, const char *b) {
 	while (*a || *b) {
 		int aa = swizzle[(unsigned char) *a];
 		int bb = swizzle[(unsigned char) *b];
@@ -547,7 +549,7 @@ int swizzlecmp(char *a, char *b) {
 	return 0;
 }
 
-long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, char type) {
+long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
 	long long *sp = &treefile->tree;
 
 	while (*sp != 0) {
@@ -579,7 +581,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, c
 		perror("memfile write");
 		exit(EXIT_FAILURE);
 	}
-	if (memfile_write(poolfile, s, strlen(s) + 1) < 0) {
+	if (memfile_write(poolfile, (void *) s, strlen(s) + 1) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
 	}
@@ -667,7 +669,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	long long metastart = *metapos;
 	char *metakey[nprop];
-	char *metaval[nprop];
+	const char *metaval[nprop];
 	int metatype[nprop];
 	int mustfree[nprop];
 	int m = 0;
@@ -714,7 +716,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
 
 		if (mustfree[i]) {
-			free(metaval[i]);
+			free((void *) metaval[i]);
 		}
 	}
 
@@ -947,7 +949,7 @@ struct parse_json_args {
 };
 
 void *run_parse_json(void *v) {
-	struct parse_json_args *pja = v;
+	struct parse_json_args *pja = (struct parse_json_args *) v;
 
 	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y, pja->readers);
 
@@ -961,7 +963,7 @@ struct jsonmap {
 };
 
 ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
-	struct jsonmap *jm = jp->source;
+	struct jsonmap *jm = (struct jsonmap *) jp->source;
 
 	if (jm->off + n >= jm->end) {
 		n = jm->end - jm->off;
@@ -974,7 +976,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 }
 
 struct json_pull *json_begin_map(char *map, long long len) {
-	struct jsonmap *jm = malloc(sizeof(struct jsonmap));
+	struct jsonmap *jm = (struct jsonmap *) malloc(sizeof(struct jsonmap));
 	if (jm == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -999,7 +1001,7 @@ struct sort_arg {
 };
 
 void *run_sort(void *v) {
-	struct sort_arg *a = v;
+	struct sort_arg *a = (struct sort_arg *) v;
 
 	long long start;
 	for (start = a->task * a->unit; start < a->indexpos; start += a->unit * a->cpus) {
@@ -1137,7 +1139,7 @@ struct read_parallel_arg {
 };
 
 void *run_read_parallel(void *v) {
-	struct read_parallel_arg *a = v;
+	struct read_parallel_arg *a = (struct read_parallel_arg *) v;
 
 	struct stat st;
 	if (fstat(a->fd, &st) != 0) {
@@ -1148,7 +1150,7 @@ void *run_read_parallel(void *v) {
 	}
 	a->len = st.st_size;
 
-	char *map = mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
+	char *map = (char *) mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
 	if (map == NULL || map == MAP_FAILED) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
@@ -1179,7 +1181,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 
 	*is_parsing = 1;
 
-	struct read_parallel_arg *rpa = malloc(sizeof(struct read_parallel_arg));
+	struct read_parallel_arg *rpa = (struct read_parallel_arg *) malloc(sizeof(struct read_parallel_arg));
 	if (rpa == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -1272,7 +1274,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size != 0) {
-			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
+			struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
 			if (indexmap == MAP_FAILED) {
 				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
 				perror("map index");
@@ -1280,7 +1282,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			}
 			madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
 			madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
+			char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
 			if (geommap == MAP_FAILED) {
 				perror("map geom");
 				exit(EXIT_FAILURE);
@@ -1410,7 +1412,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					}
 				}
 
-				struct indexmap *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				struct indexmap *indexmap = (struct indexmap *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
 					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
 					perror("map index");
@@ -1418,7 +1420,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				madvise(indexmap, indexst.st_size, MADV_RANDOM);  // sequential, but from several pointers at once
 				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
 				if (geommap == MAP_FAILED) {
 					perror("map geom");
 					exit(EXIT_FAILURE);
@@ -1439,7 +1441,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					exit(EXIT_FAILURE);
 				}
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
-				struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
 					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
 					perror("map index");
@@ -1447,7 +1449,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
 				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
 				if (geommap == MAP_FAILED) {
 					perror("map geom");
 					exit(EXIT_FAILURE);
@@ -1738,7 +1740,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
-					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					map = (char *) mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
 					// No error if MAP_FAILED because check is below
 					if (map != MAP_FAILED) {
 						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
@@ -1932,7 +1934,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				src = sourcelist[i]->file;
 			}
 
-			char *trunc = layernames[i] = malloc(strlen(src) + 1);
+			char *trunc = layernames[i] = (char *) malloc(strlen(src) + 1);
 			if (trunc == NULL) {
 				perror("Out of memory");
 				exit(EXIT_FAILURE);
@@ -2146,7 +2148,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (basezoom < 0 || droprate < 0) {
-		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+		struct index *map = (struct index *) mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
 			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
@@ -2360,7 +2362,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (poolpos > 0) {
-		madvise(pool, poolpos, MADV_DONTNEED);
+		madvise((void *) pool, poolpos, MADV_DONTNEED);
 		if (munmap(stringpool, poolpos) != 0) {
 			perror("munmap stringpool");
 		}
@@ -2585,7 +2587,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
 				exit(EXIT_FAILURE);
 			}
-			struct source *src = malloc(sizeof(struct source));
+			struct source *src = (struct source *) malloc(sizeof(struct source));
 			if (src == NULL) {
 				perror("Out of memory");
 				exit(EXIT_FAILURE);
@@ -2830,7 +2832,7 @@ int main(int argc, char **argv) {
 	int ret = EXIT_SUCCESS;
 
 	for (i = optind; i < argc; i++) {
-		struct source *src = malloc(sizeof(struct source));
+		struct source *src = (struct source *) malloc(sizeof(struct source));
 		if (src == NULL) {
 			perror("Out of memory");
 			exit(EXIT_FAILURE);

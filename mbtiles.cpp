@@ -9,7 +9,7 @@
 #include "tile.h"
 
 extern "C" {
-	#include "mbtiles.h"
+#include "mbtiles.h"
 };
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
