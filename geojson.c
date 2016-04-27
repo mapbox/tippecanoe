@@ -79,6 +79,22 @@ struct source {
 	struct source *next;
 };
 
+struct tofree {
+	void *p;
+	struct tofree *next;
+} *tofree = NULL;
+
+void mustfree(void *p) {
+	struct tofree *f = malloc(sizeof(struct tofree));
+	if (f == NULL) {
+		perror("malloc");
+		exit(EXIT_FAILURE);
+	}
+	f->p = p;
+	f->next = tofree;
+	tofree = f;
+}
+
 int CPUS;
 int TEMP_FILES;
 long long MAX_FILES;
@@ -2580,6 +2596,8 @@ int main(int argc, char **argv) {
 				perror("Out of memory");
 				exit(EXIT_FAILURE);
 			}
+			mustfree(src->layer);
+			mustfree(src->file);
 			src->layer[cp - optarg] = '\0';
 			src->next = sources;
 			sources = src;
@@ -2845,6 +2863,13 @@ int main(int argc, char **argv) {
 
 	pool_free(&exclude);
 	pool_free(&include);
+
+	struct tofree *tf, *next;
+	for (tf = tofree; tf != NULL; tf = next) {
+		next = tf->next;
+		free(tf->p);
+		free(tf);
+	}
 
 	return ret;
 }
