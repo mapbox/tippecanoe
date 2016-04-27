@@ -10,7 +10,7 @@
 static int hash(const char *s) {
 	unsigned h = 0;
 	for (; *s; s++) {
-		h = (h * 37 + *s) & ULONG_MAX;
+		h = (h * 37LL + (*s & 0xFF)) & ULONG_MAX;
 	}
 	return h & 0xFF;
 }
