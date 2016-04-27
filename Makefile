@@ -36,8 +36,8 @@ man/tippecanoe.1: README.md
 
 PG=
 
-H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
-C = $(shell find . '(' -name '*.c' -o -name '*.cpp' ')')
+H = $(wildcard *.h) $(wildcard *.hpp)
+C = $(wildcard *.c) $(wildcard *.cpp)
 
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
