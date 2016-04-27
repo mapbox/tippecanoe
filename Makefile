@@ -36,6 +36,7 @@ man/tippecanoe.1: README.md
 
 PG=
 
+ALL_H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
@@ -54,10 +55,10 @@ tippecanoe-decode: decode.o projection.o mvt.o
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-%.o: %.c $(H)
+%.o: %.c $(ALL_H)
 	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c -o $@ $<
 
-%.o: %.cpp $(H)
+%.o: %.cpp $(ALL_H)
 	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
