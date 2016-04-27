@@ -24,9 +24,9 @@ void pool_init(struct pool *p, int n);
 int is_pooled(struct pool *p, const char *s, int type);
 
 struct stringpool {
-        long long left;
-        long long right;
-        long long off;
+	long long left;
+	long long right;
+	long long off;
 };
 
 long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
