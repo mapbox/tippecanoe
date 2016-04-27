@@ -25,6 +25,7 @@
 #include "pool.hpp"
 #include "mbtiles.hpp"
 #include "projection.hpp"
+#include "serial.hpp"
 
 #define CMD_BITS 3
 

@@ -40,6 +40,7 @@ extern "C" {
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
+#include "serial.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -206,53 +207,6 @@ void init_cpus() {
 	}
 }
 
-size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
-	size_t w = fwrite(ptr, size, nitems, stream);
-	if (w != nitems) {
-		fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	return w;
-}
-
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
-	serialize_long_long(out, n, fpos, fname);
-}
-
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	unsigned long long zigzag = (n << 1) ^ (n >> 63);
-
-	while (1) {
-		unsigned char b = zigzag & 0x7F;
-		if ((zigzag >> 7) != 0) {
-			b |= 0x80;
-			if (putc(b, out) == EOF) {
-				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			*fpos += 1;
-			zigzag >>= 7;
-		} else {
-			if (putc(b, out) == EOF) {
-				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			*fpos += 1;
-			break;
-		}
-	}
-}
-
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(signed char), 1, out, fname);
-	*fpos += sizeof(signed char);
-}
-
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
-	*fpos += sizeof(unsigned);
-}
-
 void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
@@ -342,92 +296,6 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 
 		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
 	}
-}
-
-void deserialize_int(char **f, int *n) {
-	long long ll;
-	deserialize_long_long(f, &ll);
-	*n = ll;
-}
-
-void deserialize_long_long(char **f, long long *n) {
-	unsigned long long zigzag = 0;
-	int shift = 0;
-
-	while (1) {
-		if ((**f & 0x80) == 0) {
-			zigzag |= ((unsigned long long) **f) << shift;
-			*f += 1;
-			shift += 7;
-			break;
-		} else {
-			zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
-			*f += 1;
-			shift += 7;
-		}
-	}
-
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
-}
-
-void deserialize_uint(char **f, unsigned *n) {
-	memcpy(n, *f, sizeof(unsigned));
-	*f += sizeof(unsigned);
-}
-
-void deserialize_byte(char **f, signed char *n) {
-	memcpy(n, *f, sizeof(signed char));
-	*f += sizeof(signed char);
-}
-
-int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
-	unsigned long long zigzag = 0;
-	int shift = 0;
-
-	while (1) {
-		int c = getc(f);
-		if (c == EOF) {
-			return 0;
-		}
-		(*geompos)++;
-
-		if ((c & 0x80) == 0) {
-			zigzag |= ((unsigned long long) c) << shift;
-			shift += 7;
-			break;
-		} else {
-			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
-			shift += 7;
-		}
-	}
-
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
-	return 1;
-}
-
-int deserialize_int_io(FILE *f, int *n, long long *geompos) {
-	long long ll = 0;
-	int ret = deserialize_long_long_io(f, &ll, geompos);
-	*n = ll;
-	return ret;
-}
-
-int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
-	if (fread(n, sizeof(unsigned), 1, f) != 1) {
-		return 0;
-	}
-	*geompos += sizeof(unsigned);
-	return 1;
-}
-
-int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
-	int c = getc(f);
-	if (c == EOF) {
-		return 0;
-	}
-	*n = c;
-	(*geompos)++;
-	return 1;
 }
 
 struct index {
