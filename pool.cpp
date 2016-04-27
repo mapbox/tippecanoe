@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "memfile.hpp"
 #include "pool.hpp"
 
 #define POOL_WIDTH 256
 
 static int hash(const char *s) {
-	int h = 0;
+	unsigned h = 0;
 	for (; *s; s++) {
-		h = h * 37 + *s;
+		h = (h * 37LL + (*s & 0xFF)) & ULONG_MAX;
 	}
-	h = h & 0xFF;
-	return h;
+	return h & 0xFF;
 }
 
 struct pool_val *pool(struct pool *p, const char *s, int type) {

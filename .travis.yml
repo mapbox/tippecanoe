@@ -4,38 +4,62 @@ sudo: false
 
 matrix:
   include:
-    # coverage+debug build
+    # debug+integer-santizer build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="--coverage" CFLAGS="--coverage" LDFLAGS="--coverage"
+      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=integer" CFLAGS="-fsanitize=integer" LDFLAGS="-fsanitize=integer"
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
           packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
-    # release+linux+g++
-    - os: linux
-      compiler: gcc
-      env: BUILDTYPE=Release CC="gcc-4.9" CXX="g++-4.9"
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: [ 'g++-4.9' ]
-    # release+linux+clang++
+    # debug+address-santizer build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Release CC="clang-3.5" CXX="clang++-3.5"
+      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=0 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
-          packages: [ 'clang-3.5' ]
-    # release+osx
-    - os: osx
+          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # debug+leak-santizer build
+    - os: linux
       compiler: clang
-      env: BUILDTYPE=Release
-    # debug+osx
-    - os: osx
-      compiler: clang
-      env: BUILDTYPE=Debug
+      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # # coverage+debug build
+    # - os: linux
+    #   compiler: clang
+    #   env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="--coverage" CFLAGS="--coverage" LDFLAGS="--coverage"
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+    #       packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # # release+linux+g++
+    # - os: linux
+    #   compiler: gcc
+    #   env: BUILDTYPE=Release CC="gcc-4.9" CXX="g++-4.9"
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test']
+    #       packages: [ 'g++-4.9' ]
+    # # release+linux+clang++
+    # - os: linux
+    #   compiler: clang
+    #   env: BUILDTYPE=Release CC="clang-3.5" CXX="clang++-3.5"
+    #   addons:
+    #     apt:
+    #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+    #       packages: [ 'clang-3.5' ]
+    # # release+osx
+    # - os: osx
+    #   compiler: clang
+    #   env: BUILDTYPE=Release
+    # # debug+osx
+    # - os: osx
+    #   compiler: clang
+    #   env: BUILDTYPE=Debug
 
 
 install:

@@ -501,14 +501,14 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 				return 1;  // Exact duplicate: can't fulfil the gap requirement
 			}
 
-			if (std::exp(std::log((index - *previndex) / scale) * gamma) >= *gap) {
+			if (index < *previndex || std::exp(std::log((index - *previndex) / scale) * gamma) >= *gap) {
 				// Dot is further from the previous than the nth root of the gap,
 				// so produce it, and choose a new gap at the next point.
 				*gap = 0;
 			} else {
 				return 1;
 			}
-		} else {
+		} else if (index >= *previndex) {
 			*gap = (index - *previndex) / scale;
 
 			if (*gap == 0) {
@@ -1182,8 +1182,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		if (threads > useful_threads) {
 			threads = useful_threads;
 		}
+
 		// Round down to a power of 2
-		threads = 1 << (int) (std::log(threads) / std::log(2));
+		for (int e = 0; e < 30; e++) {
+			if (threads >= (1 << e) && threads < (1 << (e + 1))) {
+				threads = 1 << e;
+				break;
+			}
+		}
+		if (threads >= (1 << 30)) {
+			threads = 1 << 30;
+		}
 
 		// Assign temporary files to threads
 
