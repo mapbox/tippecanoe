@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "protozero/varint.hpp"
 #include "serial.hpp"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
@@ -18,7 +19,7 @@ void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
 }
 
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	unsigned long long zigzag = (n << 1) ^ (n >> 63);
+	unsigned long long zigzag = protozero::encode_zigzag32(n);
 
 	while (1) {
 		unsigned char b = zigzag & 0x7F;
@@ -74,7 +75,7 @@ void deserialize_long_long(char **f, long long *n) {
 		}
 	}
 
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
+	*n = protozero::decode_zigzag32(zigzag);
 }
 
 void deserialize_uint(char **f, unsigned *n) {
@@ -108,7 +109,7 @@ int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 		}
 	}
 
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
+	*n = protozero::decode_zigzag32(zigzag);
 	return 1;
 }
 
