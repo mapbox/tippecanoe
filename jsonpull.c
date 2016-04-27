@@ -180,6 +180,10 @@ static json_object *add_object(json_pull *j, json_type type) {
 			}
 		}
 	} else {
+		if (j->root != NULL) {
+			json_free(j->root);
+		}
+
 		j->root = o;
 	}
 
@@ -272,6 +276,10 @@ json_object *json_read_separators(json_pull *j, json_separator_callback cb, void
 
 	// In case there is an error at the top level
 	if (j->container == NULL) {
+		if (j->root != NULL) {
+			json_free(j->root);
+		}
+
 		j->root = NULL;
 	}
 
