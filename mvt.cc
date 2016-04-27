@@ -5,6 +5,7 @@
 #include <map>
 #include <zlib.h>
 #include "mvt.hh"
+#include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 
@@ -332,8 +333,8 @@ std::string mvt_tile::encode() {
 					int dx = wwx - px;
 					int dy = wwy - py;
 
-					geometry.push_back((dx << 1) ^ (dx >> 31));
-					geometry.push_back((dy << 1) ^ (dy >> 31));
+					geometry.push_back(protozero::encode_zigzag32(dx));
+					geometry.push_back(protozero::encode_zigzag32(dy));
 
 					px = wwx;
 					py = wwy;
