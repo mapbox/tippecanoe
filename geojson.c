@@ -119,8 +119,7 @@ struct reader {
 
 void checkdisk(struct reader *r, int nreader) {
 	long long used = 0;
-	int i;
-	for (i = 0; i < nreader; i++) {
+	for (int i = 0; i < nreader; i++) {
 		// Meta, pool, and tree are used once.
 		// Geometry and index will be duplicated during sorting and tiling.
 		used += r[i].metapos + 2 * r[i].geompos + 2 * r[i].indexpos + r[i].poolfile->len + r[i].treefile->len;
@@ -172,8 +171,7 @@ void init_cpus() {
 			break;
 		}
 	}
-	long long j;
-	for (j = 0; j < i; j++) {
+	for (long long j = 0; j < i; j++) {
 		if (close(fds[j]) < 0) {
 			perror("close");
 			exit(EXIT_FAILURE);
@@ -248,8 +246,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 
 	int within = geometry_within[t];
 	if (within >= 0) {
-		size_t i;
-		for (i = 0; i < j->length; i++) {
+		for (size_t i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
 				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
 					op = VT_MOVETO;
@@ -461,10 +458,9 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 }
 
 static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
-	int i;
 	struct merge *head = NULL;
 
-	for (i = 0; i < nmerges; i++) {
+	for (int i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
 			insert(&(merges[i]), &head, map);
 		}
@@ -662,8 +658,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	int mustfree[nprop];
 	int m = 0;
 
-	int i;
-	for (i = 0; i < nprop; i++) {
+	for (int i = 0; i < nprop; i++) {
 		if (properties->keys[i]->type == JSON_STRING) {
 			if (exclude_all) {
 				if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
@@ -699,7 +694,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 		}
 	}
 
-	for (i = 0; i < m; i++) {
+	for (int i = 0; i < m; i++) {
 		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
 		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
 
@@ -772,12 +767,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 	*indexpos += sizeof(struct index);
 
-	for (i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		if (bbox[i] < file_bbox[i]) {
 			file_bbox[i] = bbox[i];
 		}
 	}
-	for (i = 2; i < 4; i++) {
+	for (int i = 2; i < 4; i++) {
 		if (bbox[i] > file_bbox[i]) {
 			file_bbox[i] = bbox[i];
 		}
@@ -825,9 +820,8 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		}
 
 		if (found_features == 0) {
-			int i;
 			int is_geometry = 0;
-			for (i = 0; i < GEOM_TYPES; i++) {
+			for (int i = 0; i < GEOM_TYPES; i++) {
 				if (strcmp(type->string, geometry_names[i]) == 0) {
 					is_geometry = 1;
 					break;
@@ -1037,8 +1031,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	segs[0] = 0;
 	segs[CPUS] = len;
 
-	int i;
-	for (i = 1; i < CPUS; i++) {
+	for (int i = 1; i < CPUS; i++) {
 		segs[i] = len * i / CPUS;
 
 		while (segs[i] < len && map[segs[i]] != '\n') {
@@ -1047,7 +1040,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	volatile long long layer_seq[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
 		layer_seq[i] = segs[i] + initial_offset;
@@ -1056,7 +1049,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	struct parse_json_args pja[CPUS];
 	pthread_t pthreads[CPUS];
 
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].reading = reading;
 		pja[i].layer_seq = &layer_seq[i];
@@ -1089,7 +1082,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		}
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
@@ -1212,8 +1205,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	int indexfds[splits];
 	long long sub_geompos[splits];
 
-	int i;
-	for (i = 0; i < splits; i++) {
+	for (int i = 0; i < splits; i++) {
 		sub_geompos[i] = 0;
 
 		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
@@ -1249,7 +1241,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		unlink(indexname);
 	}
 
-	for (i = 0; i < inputs; i++) {
+	for (int i = 0; i < inputs; i++) {
 		struct stat geomst, indexst;
 		if (fstat(geomfds_in[i], &geomst) < 0) {
 			perror("stat geom");
@@ -1323,7 +1315,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		*availfiles += 2;
 	}
 
-	for (i = 0; i < splits; i++) {
+	for (int i = 0; i < splits; i++) {
 		if (fclose(geomfiles[i]) != 0) {
 			perror("fclose geom");
 			exit(EXIT_FAILURE);
@@ -1336,7 +1328,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		*availfiles += 2;
 	}
 
-	for (i = 0; i < splits; i++) {
+	for (int i = 0; i < splits; i++) {
 		int already_closed = 0;
 
 		struct stat geomst, indexst;
@@ -1554,8 +1546,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	long long geom_total = 0;
 	int geomfds[nreaders];
 	int indexfds[nreaders];
-	int i;
-	for (i = 0; i < nreaders; i++) {
+	for (int i = 0; i < nreaders; i++) {
 		geomfds[i] = reader[i].geomfd;
 		indexfds[i] = reader[i].indexfd;
 
@@ -1581,8 +1572,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
-	int i;
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
 		r->metaname = malloc(strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1);
@@ -1691,7 +1681,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	int initialized[CPUS];
 	unsigned initial_x[CPUS], initial_y[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
@@ -1881,7 +1871,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		if (fclose(reader[i].metafile) != 0) {
 			perror("fclose meta");
 			exit(EXIT_FAILURE);
@@ -1908,13 +1898,13 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	struct pool file_keys1[nlayers];
 	struct pool *file_keys[nlayers];
-	for (i = 0; i < nlayers; i++) {
+	for (int i = 0; i < nlayers; i++) {
 		pool_init(&file_keys1[i], 0);
 		file_keys[i] = &file_keys1[i];
 	}
 
 	char *layernames[nlayers];
-	for (i = 0; i < nlayers; i++) {
+	for (int i = 0; i < nlayers; i++) {
 		if (layername != NULL) {
 			layernames[i] = strdup(layername);
 			if (layernames[i] == NULL) {
@@ -2012,7 +2002,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	long long metapos = 0;
 	long long poolpos = 0;
 
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
@@ -2163,8 +2153,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
-			int i;
-			for (i = 0; i <= MAX_ZOOM; i++) {
+			for (int i = 0; i <= MAX_ZOOM; i++) {
 				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
 				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
 			}
@@ -2377,7 +2366,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	midlon = (maxlon + minlon) / 2;
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
-	for (i = 0; i < CPUS; i++) {
+	for (int i = 0; i < CPUS; i++) {
 		if (reader[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = reader[i].file_bbox[0];
 		}
@@ -2428,7 +2417,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
-	for (i = 0; i < nlayers; i++) {
+	for (int i = 0; i < nlayers; i++) {
 		pool_free_strings(&file_keys1[i]);
 		free(layernames[i]);
 	}
@@ -2437,9 +2426,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 }
 
 int int_in(int v, int *a, int len) {
-	int i;
-
-	for (i = 0; i < len; i++) {
+	for (int i = 0; i < len; i++) {
 		if (a[i] == v) {
 			return 1;
 		}
@@ -2457,7 +2444,6 @@ int main(int argc, char **argv) {
 
 	extern int optind;
 	extern char *optarg;
-	int i;
 
 	char *name = NULL;
 	char *layer = NULL;
@@ -2484,7 +2470,7 @@ int main(int argc, char **argv) {
 	int read_parallel = 0;
 	int files_open_at_start;
 
-	for (i = 0; i < 256; i++) {
+	for (int i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
 	}
@@ -2493,7 +2479,7 @@ int main(int argc, char **argv) {
 		char dup[256];
 
 		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
+		for (int i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
 			if (dup[additional_options[i]]) {
 				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
 				exit(EXIT_FAILURE);
@@ -2502,7 +2488,7 @@ int main(int argc, char **argv) {
 		}
 
 		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
+		for (int i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
 			if (dup[prevent_options[i]]) {
 				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
 				exit(EXIT_FAILURE);
@@ -2561,8 +2547,9 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
-		switch (i) {
+	int arg_type;
+	while ((arg_type = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
+		switch (arg_type) {
 		case 0:
 			break;
 
@@ -2743,8 +2730,7 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Usage: %s", argv[0]);
-			int i;
-			for (i = 0; long_options[i].name != NULL; i++) {
+			for (int i = 0; long_options[i].name != NULL; i++) {
 				if (width + strlen(long_options[i].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
@@ -2820,7 +2806,7 @@ int main(int argc, char **argv) {
 	sqlite3 *outdb = mbtiles_open(outdir, argv, forcetable);
 	int ret = EXIT_SUCCESS;
 
-	for (i = optind; i < argc; i++) {
+	for (int i = optind; i < argc; i++) {
 		struct source *src = malloc(sizeof(struct source));
 		if (src == NULL) {
 			perror("Out of memory");
@@ -2835,9 +2821,9 @@ int main(int argc, char **argv) {
 	}
 
 	struct source *sourcelist[nsources];
-	i = nsources - 1;
+	int idx = nsources - 1;
 	for (; sources != NULL; sources = sources->next) {
-		sourcelist[i--] = sources;
+		sourcelist[idx--] = sources;
 	}
 
 	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution);
@@ -2848,10 +2834,10 @@ int main(int argc, char **argv) {
 	muntrace();
 #endif
 
-	i = open("/dev/null", O_RDONLY);
+	int fd = open("/dev/null", O_RDONLY);
 	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
-	if (i > files_open_at_start) {
-		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
+	if (fd > files_open_at_start) {
+		fprintf(stderr, "Internal error: did not close all files: %d\n", fd);
 		exit(EXIT_FAILURE);
 	}
 
