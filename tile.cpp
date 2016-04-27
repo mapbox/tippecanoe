@@ -21,13 +21,10 @@
 #include <errno.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
-
-extern "C" {
-#include "tile.h"
-#include "pool.h"
-#include "mbtiles.h"
-#include "projection.h"
-}
+#include "tile.hpp"
+#include "pool.hpp"
+#include "mbtiles.hpp"
+#include "projection.hpp"
 
 #define CMD_BITS 3
 

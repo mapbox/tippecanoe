@@ -32,13 +32,14 @@
 
 extern "C" {
 #include "jsonpull.h"
-#include "tile.h"
-#include "pool.h"
-#include "mbtiles.h"
-#include "projection.h"
-#include "version.h"
-#include "memfile.h"
 }
+
+#include "tile.hpp"
+#include "pool.hpp"
+#include "mbtiles.hpp"
+#include "projection.hpp"
+#include "version.hpp"
+#include "memfile.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;

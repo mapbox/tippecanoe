@@ -8,14 +8,11 @@
 #include <unistd.h>
 #include <cmath>
 #include <limits.h>
+#include <sqlite3.h>
 #include "geometry.hpp"
 #include "clipper/clipper.hpp"
-
-extern "C" {
-#include <sqlite3.h>
-#include "tile.h"
-#include "projection.h"
-}
+#include "tile.hpp"
+#include "projection.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);

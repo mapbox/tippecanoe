@@ -2,10 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-
-extern "C" {
-#include "memfile.h"
-}
+#include "memfile.hpp"
 
 #define INCREMENT 131072
 

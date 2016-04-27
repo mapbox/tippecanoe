@@ -12,11 +12,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include "mvt.hpp"
-#include "tile.h"
-
-extern "C" {
-#include "projection.h"
-}
+#include "tile.hpp"
+#include "projection.hpp"
 
 void printq(const char *s) {
 	putchar('"');

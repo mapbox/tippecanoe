@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-extern "C" {
-#include "pool.h"
-}
+#include "pool.hpp"
 
 #define POOL_WIDTH 256
 
