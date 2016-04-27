@@ -44,8 +44,8 @@ drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsi
 			deserialize_long_long_io(meta, &dx, geompos);
 			deserialize_long_long_io(meta, &dy, geompos);
 
-			wx += dx << geometry_scale;
-			wy += dy << geometry_scale;
+			wx += dx * (1 << geometry_scale);
+			wy += dy * (1 << geometry_scale);
 
 			long long wwx = wx;
 			long long wwy = wy;

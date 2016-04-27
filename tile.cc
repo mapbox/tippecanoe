@@ -866,7 +866,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			std::vector<coalesce> out;
-			for (size_t x = 0; x < features[j].size(); x++) {
+			if (features[j].size() > 0) {
+				out.push_back(features[j][0]);
+			}
+			for (size_t x = 1; x < features[j].size(); x++) {
 				size_t y = out.size() - 1;
 
 #if 0

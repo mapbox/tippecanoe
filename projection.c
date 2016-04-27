@@ -38,11 +38,11 @@ void tile2latlon(long long x, long long y, int zoom, double *lat, double *lon) {
 }
 
 unsigned long long encode(unsigned int wx, unsigned int wy) {
-	long long out = 0;
+	unsigned long long out = 0;
 
 	int i;
 	for (i = 0; i < 32; i++) {
-		long long v = ((wx >> (32 - (i + 1))) & 1) << 1;
+		unsigned long long v = ((wx >> (32 - (i + 1))) & 1) << 1;
 		v |= (wy >> (32 - (i + 1))) & 1;
 		v = v << (64 - 2 * (i + 1));
 
