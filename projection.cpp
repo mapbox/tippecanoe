@@ -1,5 +1,8 @@
 #include <math.h>
-#include "projection.h"
+
+extern "C" {
+	#include "projection.h"
+}
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void latlon2tile(double lat, double lon, int zoom, long long *x, long long *y) {
