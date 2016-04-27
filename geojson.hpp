@@ -1,0 +1,31 @@
+struct parse_json_args {
+	json_pull *jp;
+	const char *reading;
+	volatile long long *layer_seq;
+	volatile long long *progress_seq;
+	long long *metapos;
+	long long *geompos;
+	long long *indexpos;
+	struct pool *exclude;
+	struct pool *include;
+	int exclude_all;
+	FILE *metafile;
+	FILE *geomfile;
+	FILE *indexfile;
+	struct memfile *poolfile;
+	struct memfile *treefile;
+	char *fname;
+	int basezoom;
+	int layer;
+	double droprate;
+	long long *file_bbox;
+	int segment;
+	int *initialized;
+	unsigned *initial_x;
+	unsigned *initial_y;
+	struct reader *readers;
+};
+
+struct json_pull *json_begin_map(char *map, long long len);
+void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers);
+void *run_parse_json(void *v);

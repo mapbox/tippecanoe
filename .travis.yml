@@ -39,7 +39,7 @@ matrix:
 
 
 install:
- - BUILDTYPE=${BUILDTYPE} make
+ - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
  - BUILDTYPE=${BUILDTYPE} make test

@@ -19,16 +19,15 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
-#include "mvt.hh"
-#include "geometry.hh"
-
-extern "C" {
-#include "tile.h"
-#include "pool.h"
-#include "clip.h"
-#include "mbtiles.h"
-#include "projection.h"
-}
+#include "mvt.hpp"
+#include "geometry.hpp"
+#include "tile.hpp"
+#include "pool.hpp"
+#include "mbtiles.hpp"
+#include "projection.hpp"
+#include "serial.hpp"
+#include "options.hpp"
+#include "main.hpp"
 
 #define CMD_BITS 3
 

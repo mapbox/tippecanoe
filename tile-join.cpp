@@ -9,14 +9,11 @@
 #include <map>
 #include <zlib.h>
 #include <math.h>
-#include "mvt.hh"
-#include "tile.h"
-
-extern "C" {
-#include "projection.h"
-#include "pool.h"
-#include "mbtiles.h"
-}
+#include "mvt.hpp"
+#include "projection.hpp"
+#include "pool.hpp"
+#include "mbtiles.hpp"
+#include "geometry.hpp"
 
 std::string dequote(std::string s);
 

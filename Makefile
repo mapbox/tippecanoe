@@ -36,13 +36,14 @@ man/tippecanoe.1: README.md
 
 PG=
 
-H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
-C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
+ALL_H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
+H = $(wildcard *.h) $(wildcard *.hpp)
+C = $(wildcard *.c) $(wildcard *.cpp)
 
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o
+tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o serial.o main.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
@@ -51,26 +52,20 @@ tippecanoe-enumerate: enumerate.o
 tippecanoe-decode: decode.o projection.o mvt.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o
+tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-libjsonpull.a: jsonpull.o
-	$(AR) rc $@ $^
-	ranlib $@
+%.o: %.c $(ALL_H)
+	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c -o $@ $<
 
-%.o: %.c $(H)
-	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c $<
-
-%.o: %.cc $(H)
-	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
+%.o: %.cpp $(ALL_H)
+	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	rm -f tippecanoe *.o
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $(C) $(H)
-
-geometry.o: clipper/clipper.hpp
 
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)

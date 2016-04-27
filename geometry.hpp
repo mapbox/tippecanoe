@@ -1,3 +1,16 @@
+#define VT_POINT 1
+#define VT_LINE 2
+#define VT_POLYGON 3
+
+#define VT_END 0
+#define VT_MOVETO 1
+#define VT_LINETO 2
+#define VT_CLOSEPATH 7
+
+#define VT_STRING 1
+#define VT_NUMBER 2
+#define VT_BOOLEAN 7
+
 struct draw {
 	signed char op;
 	long long x;

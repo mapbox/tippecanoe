@@ -1,13 +1,16 @@
 // for vasprintf() on Linux
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sqlite3.h>
-#include "pool.h"
-#include "tile.h"
-#include "mbtiles.h"
+#include <vector>
+#include "pool.hpp"
+#include "mbtiles.hpp"
+#include "geometry.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -98,7 +101,7 @@ static void quote(char **buf, const char *s) {
 	}
 
 	*out = '\0';
-	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	*buf = (char *) realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
 	if (*buf == NULL) {
 		perror("realloc");
 		exit(EXIT_FAILURE);
@@ -117,7 +120,7 @@ static void aprintf(char **buf, const char *format, ...) {
 	}
 	va_end(ap);
 
-	*buf = realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
+	*buf = (char *) realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
 	if (*buf == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -127,8 +130,8 @@ static void aprintf(char **buf, const char *format, ...) {
 }
 
 static int pvcmp(const void *v1, const void *v2) {
-	const struct pool_val *const *pv1 = v1;
-	const struct pool_val *const *pv2 = v2;
+	const struct pool_val *const *pv1 = (const struct pool_val *const *) v1;
+	const struct pool_val *const *pv2 = (const struct pool_val *const *) v2;
 
 	int n = strcmp((*pv1)->s, (*pv2)->s);
 	if (n != 0) {
