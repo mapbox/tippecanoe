@@ -86,6 +86,7 @@ json_pull *json_begin_string(char *s) {
 }
 
 void json_end(json_pull *p) {
+	json_free(p->root);
 	free(p->buffer);
 	free(p);
 }
@@ -102,7 +103,7 @@ static inline int read_wrap(json_pull *j) {
 
 #define SIZE_FOR(i, size) ((size_t)((((i) + 31) & ~31) * size))
 
-static json_object *fabricate_object(json_object *parent, json_type type) {
+static json_object *fabricate_object(json_pull *jp, json_object *parent, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
 	if (o == NULL) {
 		perror("Out of memory");
@@ -114,12 +115,13 @@ static json_object *fabricate_object(json_object *parent, json_type type) {
 	o->keys = NULL;
 	o->values = NULL;
 	o->length = 0;
+	o->parser = jp;
 	return o;
 }
 
 static json_object *add_object(json_pull *j, json_type type) {
 	json_object *c = j->container;
-	json_object *o = fabricate_object(c, type);
+	json_object *o = fabricate_object(j, c, type);
 
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
@@ -178,6 +180,10 @@ static json_object *add_object(json_pull *j, json_type type) {
 			}
 		}
 	} else {
+		if (j->root != NULL) {
+			json_free(j->root);
+		}
+
 		j->root = o;
 	}
 
@@ -270,6 +276,10 @@ json_object *json_read_separators(json_pull *j, json_separator_callback cb, void
 
 	// In case there is an error at the top level
 	if (j->container == NULL) {
+		if (j->root != NULL) {
+			json_free(j->root);
+		}
+
 		j->root = NULL;
 	}
 
@@ -662,11 +672,11 @@ void json_disconnect(json_object *o) {
 
 			for (i = 0; i < o->parent->length; i++) {
 				if (o->parent->keys[i] == o) {
-					o->parent->keys[i] = fabricate_object(o->parent, JSON_NULL);
+					o->parent->keys[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
 					break;
 				}
 				if (o->parent->values[i] == o) {
-					o->parent->values[i] = fabricate_object(o->parent, JSON_NULL);
+					o->parent->values[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
 					break;
 				}
 			}
@@ -684,6 +694,10 @@ void json_disconnect(json_object *o) {
 				}
 			}
 		}
+	}
+
+	if (o->parser != NULL && o->parser->root == o) {
+		o->parser->root = NULL;
 	}
 
 	o->parent = NULL;

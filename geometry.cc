@@ -44,8 +44,8 @@ drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsi
 			deserialize_long_long_io(meta, &dx, geompos);
 			deserialize_long_long_io(meta, &dy, geompos);
 
-			wx += dx << geometry_scale;
-			wy += dy << geometry_scale;
+			wx += dx * (1 << geometry_scale);
+			wy += dy * (1 << geometry_scale);
 
 			long long wwx = wx;
 			long long wwy = wy;
@@ -302,9 +302,6 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// guaranteed that at least one point in the polygon is strictly
 	// inside its parent (not on one of its boundary lines).
 
-	// Once we have that, we can run through the outer rings that have
-	// an even number of parents, 
-
 	std::vector<ring> rings;
 	decode_rings(t, rings);
 	std::sort(rings.begin(), rings.end());
@@ -319,9 +316,14 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 				}
 			}
 		}
-nextring:
+	nextring:
 		;
 	}
+
+	// Then reverse the winding order of any rings that turned out
+	// to actually be inner when they are outer, or vice versa.
+	// (A ring is outer if it has no parent or if its parent is
+	// an inner ring.)
 
 	for (size_t ii = rings.size(); ii > 0; ii--) {
 		size_t i = ii - 1;
@@ -338,6 +340,10 @@ nextring:
 			}
 		}
 	}
+
+	// Then run through the rings again, outputting each outer ring
+	// followed by its direct children, and checking to make sure
+	// there are no child rings whose parents weren't identified.
 
 	for (size_t ii = rings.size(); ii > 0; ii--) {
 		size_t i = ii - 1;
@@ -535,11 +541,11 @@ void check_polygon(drawvec &geom, drawvec &before) {
 
 				if (t > 0 && t < 1 && s > 0 && s < 1) {
 					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
-						geom[i + 0].x, geom[i + 0].y,
-						geom[i + 1].x, geom[i + 1].y,
-						geom[j + 0].x, geom[j + 0].y,
-						geom[j + 1].x, geom[j + 1].y);
-						dump(before);
+					       geom[i + 0].x, geom[i + 0].y,
+					       geom[i + 1].x, geom[i + 1].y,
+					       geom[j + 0].x, geom[j + 0].y,
+					       geom[j + 1].x, geom[j + 1].y);
+					dump(before);
 				}
 			}
 		}

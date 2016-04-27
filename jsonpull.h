@@ -21,6 +21,7 @@ typedef enum json_type {
 typedef struct json_object {
 	json_type type;
 	struct json_object *parent;
+	struct json_pull *parser;
 
 	char *string;
 	double number;

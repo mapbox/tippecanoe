@@ -79,6 +79,22 @@ struct source {
 	struct source *next;
 };
 
+struct tofree {
+	void *p;
+	struct tofree *next;
+} *tofree = NULL;
+
+void mustfree(void *p) {
+	struct tofree *f = malloc(sizeof(struct tofree));
+	if (f == NULL) {
+		perror("malloc");
+		exit(EXIT_FAILURE);
+	}
+	f->p = p;
+	f->next = tofree;
+	tofree = f;
+}
+
 int CPUS;
 int TEMP_FILES;
 long long MAX_FILES;
@@ -87,12 +103,6 @@ static long long diskfree;
 #define MAX_ZOOM 24
 
 struct reader {
-	char *metaname;
-	char *poolname;
-	char *treename;
-	char *geomname;
-	char *indexname;
-
 	int metafd;
 	int poolfd;
 	int treefd;
@@ -109,7 +119,7 @@ struct reader {
 	long long geompos;
 	long long indexpos;
 
-	long long *file_bbox;
+	long long file_bbox[4];
 
 	struct stat geomst;
 	struct stat metast;
@@ -740,7 +750,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	 */
 	int feature_minzoom = 0;
 	if (mb_geometry[t] == VT_LINE) {
-		for (feature_minzoom = 0; feature_minzoom < 31; feature_minzoom++) {
+		// Skip z0 check because everything is always in the one z0 tile
+		for (feature_minzoom = 1; feature_minzoom < 31; feature_minzoom++) {
 			unsigned mask = 1 << (32 - (feature_minzoom + 1));
 
 			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
@@ -1585,83 +1596,78 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
-		r->metaname = malloc(strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1);
-		r->poolname = malloc(strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1);
-		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
-		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
-		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
+		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+		char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+		char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
+		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
-		if (r->metaname == NULL || r->poolname == NULL || r->treename == NULL || r->geomname == NULL || r->indexname == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
+		sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+		sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+		sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
+		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-		sprintf(r->treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
-		sprintf(r->geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-		sprintf(r->indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
-
-		r->metafd = mkstemp(r->metaname);
+		r->metafd = mkstemp(metaname);
 		if (r->metafd < 0) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
-		r->poolfd = mkstemp(r->poolname);
+		r->poolfd = mkstemp(poolname);
 		if (r->poolfd < 0) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
-		r->treefd = mkstemp(r->treename);
+		r->treefd = mkstemp(treename);
 		if (r->treefd < 0) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfd = mkstemp(r->geomname);
+		r->geomfd = mkstemp(geomname);
 		if (r->geomfd < 0) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfd = mkstemp(r->indexname);
+		r->indexfd = mkstemp(indexname);
 		if (r->indexfd < 0) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 
-		r->metafile = fopen(r->metaname, "wb");
+		r->metafile = fopen(metaname, "wb");
 		if (r->metafile == NULL) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
 		r->poolfile = memfile_open(r->poolfd);
 		if (r->poolfile == NULL) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
 		r->treefile = memfile_open(r->treefd);
 		if (r->treefile == NULL) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfile = fopen(r->geomname, "wb");
+		r->geomfile = fopen(geomname, "wb");
 		if (r->geomfile == NULL) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfile = fopen(r->indexname, "wb");
+		r->indexfile = fopen(indexname, "wb");
 		if (r->indexfile == NULL) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 		r->metapos = 0;
 		r->geompos = 0;
 		r->indexpos = 0;
 
-		unlink(r->metaname);
-		unlink(r->poolname);
-		unlink(r->treename);
-		unlink(r->geomname);
-		unlink(r->indexname);
+		unlink(metaname);
+		unlink(poolname);
+		unlink(treename);
+		unlink(geomname);
+		unlink(indexname);
 
 		// To distinguish a null value
 		{
@@ -1671,11 +1677,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		// Keep metadata file from being completely empty if no attributes
 		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
-		r->file_bbox = malloc(4 * sizeof(long long));
-		if (r->file_bbox == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
@@ -2596,6 +2597,8 @@ int main(int argc, char **argv) {
 				perror("Out of memory");
 				exit(EXIT_FAILURE);
 			}
+			mustfree(src->layer);
+			mustfree(src->file);
 			src->layer[cp - optarg] = '\0';
 			src->next = sources;
 			sources = src;
@@ -2772,6 +2775,21 @@ int main(int argc, char **argv) {
 	files_open_at_start = open("/dev/null", O_RDONLY);
 	close(files_open_at_start);
 
+	if (full_detail <= 0) {
+		full_detail = 12;
+	}
+
+	if (full_detail < min_detail || low_detail < min_detail) {
+		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	// Need two checks: one for geometry representation, the other for
+	// index traversal when guessing base zoom and drop rate
+	if (maxzoom > 32 - full_detail) {
+		maxzoom = 32 - full_detail;
+		fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+	}
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2784,15 +2802,6 @@ int main(int argc, char **argv) {
 
 	if (basezoom == -1) {
 		basezoom = maxzoom;
-	}
-
-	if (full_detail <= 0) {
-		full_detail = 12;
-	}
-
-	if (full_detail < min_detail || low_detail < min_detail) {
-		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
-		exit(EXIT_FAILURE);
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
@@ -2853,6 +2862,20 @@ int main(int argc, char **argv) {
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
 		exit(EXIT_FAILURE);
+	}
+
+	for (i = 0; i < nsources; i++) {
+		free(sourcelist[i]);
+	}
+
+	pool_free(&exclude);
+	pool_free(&include);
+
+	struct tofree *tf, *next;
+	for (tf = tofree; tf != NULL; tf = next) {
+		next = tf->next;
+		free(tf->p);
+		free(tf);
 	}
 
 	return ret;

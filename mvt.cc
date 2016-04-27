@@ -5,6 +5,7 @@
 #include <map>
 #include <zlib.h>
 #include "mvt.hh"
+#include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 
@@ -76,10 +77,6 @@ int compress(std::string const &input, std::string &output) {
 	deflateEnd(&deflate_s);
 	output.resize(length);
 	return 0;
-}
-
-int dezig(unsigned n) {
-	return (n >> 1) ^ (-(n & 1));
 }
 
 bool mvt_tile::decode(std::string &message) {
@@ -213,8 +210,8 @@ bool mvt_tile::decode(std::string &message) {
 
 						if (op == mvt_moveto || op == mvt_lineto) {
 							for (size_t k = 0; k < count && g + 2 < geoms.size(); k++) {
-								px += dezig(geoms[g + 1]);
-								py += dezig(geoms[g + 2]);
+								px += protozero::decode_zigzag32(geoms[g + 1]);
+								py += protozero::decode_zigzag32(geoms[g + 2]);
 								g += 2;
 
 								feature.geometry.push_back(mvt_geometry(op, px, py));
@@ -332,8 +329,8 @@ std::string mvt_tile::encode() {
 					int dx = wwx - px;
 					int dy = wwy - py;
 
-					geometry.push_back((dx << 1) ^ (dx >> 31));
-					geometry.push_back((dy << 1) ^ (dy >> 31));
+					geometry.push_back(protozero::encode_zigzag32(dx));
+					geometry.push_back(protozero::encode_zigzag32(dy));
 
 					px = wwx;
 					py = wwy;
