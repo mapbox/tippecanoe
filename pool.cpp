@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pool.h"
+
+extern "C" {
+	#include "pool.h"
+}
 
 #define POOL_WIDTH 256
 
@@ -34,7 +37,7 @@ struct pool_val *pool(struct pool *p, const char *s, int type) {
 		}
 	}
 
-	struct pool_val *nv = malloc(sizeof(struct pool_val));
+	struct pool_val *nv = (struct pool_val *) malloc(sizeof(struct pool_val));
 	if (nv == NULL) {
 		fprintf(stderr, "out of memory making string pool\n");
 		exit(EXIT_FAILURE);
@@ -109,7 +112,7 @@ void pool_free_strings(struct pool *p) {
 
 void pool_init(struct pool *p, int n) {
 	p->n = n;
-	p->vals = calloc(POOL_WIDTH, sizeof(struct pool_val *));
+	p->vals = (struct pool_val **) calloc(POOL_WIDTH, sizeof(struct pool_val *));
 	if (p->vals == NULL) {
 		fprintf(stderr, "out of memory creating string pool\n");
 		exit(EXIT_FAILURE);
