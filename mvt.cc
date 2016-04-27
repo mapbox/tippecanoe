@@ -79,10 +79,6 @@ int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
-int dezig(unsigned n) {
-	return (n >> 1) ^ (-(n & 1));
-}
-
 bool mvt_tile::decode(std::string &message) {
 	layers.clear();
 	std::string src;
@@ -214,8 +210,8 @@ bool mvt_tile::decode(std::string &message) {
 
 						if (op == mvt_moveto || op == mvt_lineto) {
 							for (size_t k = 0; k < count && g + 2 < geoms.size(); k++) {
-								px += dezig(geoms[g + 1]);
-								py += dezig(geoms[g + 2]);
+								px += protozero::decode_zigzag32(geoms[g + 1]);
+								py += protozero::decode_zigzag32(geoms[g + 2]);
 								g += 2;
 
 								feature.geometry.push_back(mvt_geometry(op, px, py));
