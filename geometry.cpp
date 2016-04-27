@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <limits.h>
-#include "geometry.hh"
+#include "geometry.hpp"
 #include "clipper/clipper.hpp"
 
 extern "C" {

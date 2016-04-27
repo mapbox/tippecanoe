@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include <zlib.h>
-#include "mvt.hh"
+#include "mvt.hpp"
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"

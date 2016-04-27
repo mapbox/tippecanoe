@@ -19,8 +19,8 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
-#include "mvt.hh"
-#include "geometry.hh"
+#include "mvt.hpp"
+#include "geometry.hpp"
 
 extern "C" {
 #include "tile.h"

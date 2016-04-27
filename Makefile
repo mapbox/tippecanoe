@@ -36,8 +36,8 @@ man/tippecanoe.1: README.md
 
 PG=
 
-H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
-C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
+H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
+C = $(shell find . '(' -name '*.c' -o -name '*.cpp' ')')
 
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
@@ -61,7 +61,7 @@ libjsonpull.a: jsonpull.o
 %.o: %.c $(H)
 	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c $<
 
-%.o: %.cc $(H)
+%.o: %.cpp $(H)
 	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
 
 clean:

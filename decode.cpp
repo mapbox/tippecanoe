@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include "mvt.hh"
+#include "mvt.hpp"
 #include "tile.h"
 
 extern "C" {
