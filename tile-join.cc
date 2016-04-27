@@ -84,7 +84,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
 				char *value;
-				int type = -1;
+				int val_type = -1;
 
 				if (val.type == mvt_string) {
 					value = strdup(val.string_value.c_str());
@@ -92,47 +92,47 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						perror("Out of memory");
 						exit(EXIT_FAILURE);
 					}
-					type = VT_STRING;
+					val_type = VT_STRING;
 				} else if (val.type == mvt_int) {
 					if (asprintf(&value, "%lld", (long long) val.numeric_value.int_value) >= 0) {
-						type = VT_NUMBER;
+						val_type = VT_NUMBER;
 					}
 				} else if (val.type == mvt_double) {
 					if (asprintf(&value, "%g", val.numeric_value.double_value) >= 0) {
-						type = VT_NUMBER;
+						val_type = VT_NUMBER;
 					}
 				} else if (val.type == mvt_float) {
 					if (asprintf(&value, "%g", val.numeric_value.float_value) >= 0) {
-						type = VT_NUMBER;
+						val_type = VT_NUMBER;
 					}
 				} else if (val.type == mvt_bool) {
 					if (asprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false") >= 0) {
-						type = VT_BOOLEAN;
+						val_type = VT_BOOLEAN;
 					}
 				} else if (val.type == mvt_sint) {
 					if (asprintf(&value, "%lld", (long long) val.numeric_value.sint_value) >= 0) {
-						type = VT_NUMBER;
+						val_type = VT_NUMBER;
 					}
 				} else if (val.type == mvt_uint) {
 					if (asprintf(&value, "%llu", (long long) val.numeric_value.uint_value) >= 0) {
-						type = VT_NUMBER;
+						val_type = VT_NUMBER;
 					}
 				} else {
 					continue;
 				}
 
-				if (type < 0) {
+				if (val_type < 0) {
 					continue;
 				}
 
 				if (!is_pooled(exclude, key, VT_STRING)) {
-					if (!is_pooled(&((*file_keys)[ll]), key, type)) {
+					if (!is_pooled(&((*file_keys)[ll]), key, val_type)) {
 						char *copy = strdup(key);
 						if (copy == NULL) {
 							perror("Out of memory");
 							exit(EXIT_FAILURE);
 						}
-						pool(&((*file_keys)[ll]), copy, type);
+						pool(&((*file_keys)[ll]), copy, val_type);
 					}
 
 					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
@@ -148,30 +148,30 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
-							int type = VT_STRING;
+							int vt_type = VT_STRING;
 
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
 									joinval = dequote(joinval);
 								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
-									type = VT_NUMBER;
+									vt_type = VT_NUMBER;
 								}
 							}
 
 							const char *sjoinkey = joinkey.c_str();
 
 							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
-								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
+								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, vt_type)) {
 									char *copy = strdup(sjoinkey);
 									if (copy == NULL) {
 										perror("Out of memory");
 										exit(EXIT_FAILURE);
 									}
-									pool(&((*file_keys)[ll]), copy, type);
+									pool(&((*file_keys)[ll]), copy, vt_type);
 								}
 
 								mvt_value outval;
-								if (type == VT_STRING) {
+								if (vt_type == VT_STRING) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
 								} else {
