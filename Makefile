@@ -42,7 +42,7 @@ C = $(shell find . '(' -name '*.c' -o -name '*.cpp' ')')
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o
+tippecanoe: geojson.o jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper.o mvt.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
@@ -64,13 +64,14 @@ libjsonpull.a: jsonpull.o
 %.o: %.cpp $(H)
 	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
 
+clipper.o: clipper/clipper.cpp $(H)
+	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
+
 clean:
 	rm -f tippecanoe *.o
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false}" $(C) $(H)
-
-geometry.o: clipper/clipper.hpp
 
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
