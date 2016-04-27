@@ -42,7 +42,7 @@ C = $(wildcard *.c) $(wildcard *.cpp)
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper.o mvt.o serial.o main.o
+tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o serial.o main.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
@@ -54,18 +54,11 @@ tippecanoe-decode: decode.o projection.o mvt.o
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-libjsonpull.a: jsonpull.o
-	$(AR) rc $@ $^
-	ranlib $@
-
 %.o: %.c $(H)
-	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c $<
+	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c -o $@ $<
 
 %.o: %.cpp $(H)
-	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
-
-clipper.o: clipper/clipper.cpp $(H)
-	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c $<
+	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	rm -f tippecanoe *.o

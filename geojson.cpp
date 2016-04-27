@@ -22,7 +22,7 @@
 #include <vector>
 
 extern "C" {
-#include "jsonpull.h"
+#include "jsonpull/jsonpull.h"
 }
 
 #include "pool.hpp"

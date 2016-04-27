@@ -32,7 +32,7 @@
 #endif
 
 extern "C" {
-#include "jsonpull.h"
+#include "jsonpull/jsonpull.h"
 }
 
 #include "tile.hpp"
