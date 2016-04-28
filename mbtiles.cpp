@@ -102,7 +102,7 @@ static void quote(std::string *buf, const char *s) {
 	}
 
 	*out = '\0';
-	buf->append(std::string(tmp));
+	buf->append(tmp, strlen(tmp));
 }
 
 static void aprintf(std::string *buf, const char *format, ...) {
@@ -116,7 +116,7 @@ static void aprintf(std::string *buf, const char *format, ...) {
 	}
 	va_end(ap);
 
-	buf->append(std::string(tmp));
+	buf->append(tmp, strlen(tmp));
 	free(tmp);
 }
 
