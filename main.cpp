@@ -21,6 +21,8 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <vector>
+#include <string>
+#include <set>
 
 #ifdef __APPLE__
 #include <sys/types.h>
@@ -37,11 +39,11 @@ extern "C" {
 
 #include "tile.hpp"
 #include "pool.hpp"
-#include "mbtiles.hpp"
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
 #include "serial.hpp"
+#include "mbtiles.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
@@ -58,26 +60,9 @@ static int prevent[256];
 static int additional[256];
 
 struct source {
-	char *layer;
-	char *file;
-	struct source *next;
+	std::string layer;
+	std::string file;
 };
-
-struct tofree {
-	void *p;
-	struct tofree *next;
-} *tofree = NULL;
-
-void mustfree(void *p) {
-	struct tofree *f = (struct tofree *) malloc(sizeof(struct tofree));
-	if (f == NULL) {
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
-	f->p = p;
-	f->next = tofree;
-	tofree = f;
-}
 
 int CPUS;
 int TEMP_FILES;
@@ -313,7 +298,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -336,6 +321,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 
 	struct parse_json_args pja[CPUS];
 	pthread_t pthreads[CPUS];
+	std::vector<std::set<type_and_string> > file_subkeys;
+
+	for (i = 0; i < CPUS; i++) {
+		file_subkeys.push_back(std::set<type_and_string>());
+	}
 
 	for (i = 0; i < CPUS; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
@@ -363,6 +353,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].initial_x = &initial_x[i];
 		pja[i].initial_y = &initial_y[i];
 		pja[i].readers = reader;
+		pja[i].file_keys = &file_subkeys[i];
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -375,6 +366,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
 			perror("pthread_join");
+		}
+
+		std::set<type_and_string>::iterator j;
+		for (j = file_subkeys[i].begin(); j != file_subkeys[i].end(); ++j) {
+			file_keys->insert(*j);
 		}
 
 		free(pja[i].jp->source);
@@ -392,8 +388,8 @@ struct read_parallel_arg {
 	const char *reading;
 	struct reader *reader;
 	volatile long long *progress_seq;
-	struct pool *exclude;
-	struct pool *include;
+	std::set<std::string> *exclude;
+	std::set<std::string> *include;
 	int exclude_all;
 	char *fname;
 	int maxzoom;
@@ -404,6 +400,7 @@ struct read_parallel_arg {
 	int *initialized;
 	unsigned *initial_x;
 	unsigned *initial_y;
+	std::set<type_and_string> *file_keys;
 };
 
 void *run_read_parallel(void *v) {
@@ -425,7 +422,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
+	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y, a->file_keys);
 
 	madvise(map, a->len, MADV_DONTNEED);
 	if (munmap(map, a->len) != 0) {
@@ -442,7 +439,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -475,6 +472,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->initialized = initialized;
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
+	rpa->file_keys = file_keys;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -858,7 +856,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -970,32 +968,34 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 	if (layername != NULL) {
 		nlayers = 1;
 	} else {
-		nlayers = argc;
+		nlayers = sources.size();
 		if (nlayers == 0) {
 			nlayers = 1;
 		}
 	}
 
-	int nsources = argc;
+	int nsources = sources.size();
 	if (nsources == 0) {
 		nsources = 1;
 	}
 
+	std::vector<std::set<type_and_string> > file_keys;
 	long overall_offset = 0;
 
 	int source;
 	for (source = 0; source < nsources; source++) {
-		const char *reading;
+		file_keys.push_back(std::set<type_and_string>());
+		std::string reading;
 		int fd;
 
-		if (source >= argc) {
+		if (source >= sources.size()) {
 			reading = "standard input";
 			fd = 0;
 		} else {
-			reading = sourcelist[source]->file;
-			fd = open(sourcelist[source]->file, O_RDONLY);
+			reading = sources[source].file;
+			fd = open(sources[source].file.c_str(), O_RDONLY);
 			if (fd < 0) {
-				perror(sourcelist[source]->file);
+				perror(sources[source].file.c_str());
 				continue;
 			}
 		}
@@ -1018,7 +1018,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
@@ -1029,7 +1029,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
-				perror(sourcelist[source]->file);
+				perror(sources[source].file.c_str());
 				if (close(fd) != 0) {
 					perror("close source file");
 					exit(EXIT_FAILURE);
@@ -1067,7 +1067,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 				int n;
 
 				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
-					fwrite_check(buf, sizeof(char), n, readfp, reading);
+					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
@@ -1084,7 +1084,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1107,7 +1107,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 					}
 				}
 				if (n < 0) {
-					perror(reading);
+					perror(reading.c_str());
 				}
 
 				if (initial_offset != 0) {
@@ -1120,7 +1120,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 
 					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
@@ -1134,7 +1134,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, &file_keys[source < nlayers ? source : 0]);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
@@ -1177,13 +1177,6 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 		}
 	}
 
-	struct pool file_keys1[nlayers];
-	struct pool *file_keys[nlayers];
-	for (i = 0; i < nlayers; i++) {
-		pool_init(&file_keys1[i], 0);
-		file_keys[i] = &file_keys1[i];
-	}
-
 	char *layernames[nlayers];
 	for (i = 0; i < nlayers; i++) {
 		if (layername != NULL) {
@@ -1193,13 +1186,13 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			char *src;
-			if (argc < 1) {
+			const char *src;
+			if (sources.size() < 1) {
 				src = fname;
-			} else if (sourcelist[i]->layer != NULL) {
-				src = sourcelist[i]->layer;
+			} else if (sources[i].layer.size() != 0) {
+				src = sources[i].layer.c_str();
 			} else {
-				src = sourcelist[i]->file;
+				src = sources[i].file.c_str();
 			}
 
 			char *trunc = layernames[i] = (char *) malloc(strlen(src) + 1);
@@ -1613,7 +1606,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1630,7 +1623,7 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 	}
 
 	if (poolpos > 0) {
-		madvise((void *) pool, poolpos, MADV_DONTNEED);
+		madvise((void *) stringpool, poolpos, MADV_DONTNEED);
 		if (munmap(stringpool, poolpos) != 0) {
 			perror("munmap stringpool");
 		}
@@ -1700,7 +1693,6 @@ int read_input(int argc, struct source **sourcelist, char *fname, const char *la
 	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
 	for (i = 0; i < nlayers; i++) {
-		pool_free_strings(&file_keys1[i]);
 		free(layernames[i]);
 	}
 
@@ -1744,13 +1736,9 @@ int main(int argc, char **argv) {
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
 	const char *attribution = NULL;
+	std::vector<source> sources;
 
-	int nsources = 0;
-	struct source *sources = NULL;
-
-	struct pool exclude, include;
-	pool_init(&exclude, 0);
-	pool_init(&include, 0);
+	std::set<std::string> exclude, include;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -1855,24 +1843,10 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
 				exit(EXIT_FAILURE);
 			}
-			struct source *src = (struct source *) malloc(sizeof(struct source));
-			if (src == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-
-			src->layer = strdup(optarg);
-			src->file = strdup(cp + 1);
-			if (src->layer == NULL || src->file == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-			mustfree(src->layer);
-			mustfree(src->file);
-			src->layer[cp - optarg] = '\0';
-			src->next = sources;
-			sources = src;
-			nsources++;
+			struct source src;
+			src.layer = std::string(optarg).substr(0, cp - optarg);
+			src.file = std::string(cp + 1);
+			sources.push_back(src);
 		} break;
 
 		case 'z':
@@ -1923,12 +1897,12 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			pool(&exclude, optarg, VT_STRING);
+			exclude.insert(std::string(optarg));
 			break;
 
 		case 'y':
 			exclude_all = 1;
-			pool(&include, optarg, VT_STRING);
+			include.insert(std::string(optarg));
 			break;
 
 		case 'X':
@@ -2100,26 +2074,13 @@ int main(int argc, char **argv) {
 	int ret = EXIT_SUCCESS;
 
 	for (i = optind; i < argc; i++) {
-		struct source *src = (struct source *) malloc(sizeof(struct source));
-		if (src == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
-
-		src->layer = NULL;
-		src->file = argv[i];
-		src->next = sources;
-		sources = src;
-		nsources++;
+		struct source src;
+		src.layer = "";
+		src.file = std::string(argv[i]);
+		sources.push_back(src);
 	}
 
-	struct source *sourcelist[nsources];
-	i = nsources - 1;
-	for (; sources != NULL; sources = sources->next) {
-		sourcelist[i--] = sources;
-	}
-
-	ret = read_input(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 
@@ -2132,20 +2093,6 @@ int main(int argc, char **argv) {
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
 		exit(EXIT_FAILURE);
-	}
-
-	for (i = 0; i < nsources; i++) {
-		free(sourcelist[i]);
-	}
-
-	pool_free(&exclude);
-	pool_free(&include);
-
-	struct tofree *tf, *next;
-	for (tf = tofree; tf != NULL; tf = next) {
-		next = tf->next;
-		free(tf->p);
-		free(tf);
 	}
 
 	return ret;

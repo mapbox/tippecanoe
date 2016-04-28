@@ -8,6 +8,9 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <vector>
+#include <string>
+#include <set>
+#include "main.hpp"
 #include "pool.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
@@ -82,7 +85,7 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-static void quote(char **buf, const char *s) {
+static void quote(std::string *buf, const char *s) {
 	char tmp[strlen(s) * 8 + 1];
 	char *out = tmp;
 
@@ -101,15 +104,10 @@ static void quote(char **buf, const char *s) {
 	}
 
 	*out = '\0';
-	*buf = (char *) realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
-	if (*buf == NULL) {
-		perror("realloc");
-		exit(EXIT_FAILURE);
-	}
-	strcat(*buf, tmp);
+	buf->append(tmp, strlen(tmp));
 }
 
-static void aprintf(char **buf, const char *format, ...) {
+static void aprintf(std::string *buf, const char *format, ...) {
 	va_list ap;
 	char *tmp;
 
@@ -120,28 +118,21 @@ static void aprintf(char **buf, const char *format, ...) {
 	}
 	va_end(ap);
 
-	*buf = (char *) realloc(*buf, strlen(*buf) + strlen(tmp) + 1);
-	if (*buf == NULL) {
-		perror("Out of memory");
-		exit(EXIT_FAILURE);
-	}
-	strcat(*buf, tmp);
+	buf->append(tmp, strlen(tmp));
 	free(tmp);
 }
 
-static int pvcmp(const void *v1, const void *v2) {
-	const struct pool_val *const *pv1 = (const struct pool_val *const *) v1;
-	const struct pool_val *const *pv2 = (const struct pool_val *const *) v2;
-
-	int n = strcmp((*pv1)->s, (*pv2)->s);
-	if (n != 0) {
-		return n;
+bool type_and_string::operator<(const type_and_string &o) const {
+	if (string < o.string) {
+		return true;
 	}
-
-	return (*pv1)->type - (*pv2)->type;
+	if (string == o.string && type < o.type) {
+		return true;
+	}
+	return false;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, struct pool **file_keys, int nlayers, int forcetable, const char *attribution) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, std::vector<std::set<type_and_string> > &file_keys, int nlayers, int forcetable, const char *attribution) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -236,11 +227,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 	}
 	sqlite3_free(sql);
 
-	char *buf = strdup("{");
-	if (buf == NULL) {
-		perror("Out of memory");
-		exit(EXIT_FAILURE);
-	}
+	std::string buf("{");
 	aprintf(&buf, "\"vector_layers\": [ ");
 
 	int i;
@@ -253,36 +240,24 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 		quote(&buf, layername[i]);
 		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
 
-		int n = 0;
-		struct pool_val *pv;
-		for (pv = file_keys[i]->head; pv != NULL; pv = pv->next) {
-			n++;
-		}
+		std::set<type_and_string>::iterator j;
+		bool first = true;
+		for (j = file_keys[i].begin(); j != file_keys[i].end(); ++j) {
+			if (first) {
+				first = false;
+			} else {
+				aprintf(&buf, ", ");
+			}
 
-		struct pool_val *vals[n];
-		n = 0;
-		for (pv = file_keys[i]->head; pv != NULL; pv = pv->next) {
-			vals[n++] = pv;
-		}
-
-		qsort(vals, n, sizeof(struct pool_val *), pvcmp);
-
-		int j;
-		for (j = 0; j < n; j++) {
-			pv = vals[j];
 			aprintf(&buf, "\"");
-			quote(&buf, pv->s);
+			quote(&buf, j->string.c_str());
 
-			if (pv->type == VT_NUMBER) {
+			if (j->type == VT_NUMBER) {
 				aprintf(&buf, "\": \"Number\"");
-			} else if (pv->type == VT_BOOLEAN) {
+			} else if (j->type == VT_BOOLEAN) {
 				aprintf(&buf, "\": \"Boolean\"");
 			} else {
 				aprintf(&buf, "\": \"String\"");
-			}
-
-			if (j + 1 < n) {
-				aprintf(&buf, ", ");
 			}
 		}
 
@@ -291,7 +266,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 
 	aprintf(&buf, " ] }");
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set json: %s\n", err);
 		if (!forcetable) {
@@ -299,7 +274,6 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 		}
 	}
 	sqlite3_free(sql);
-	free(buf);
 }
 
 void mbtiles_close(sqlite3 *outdb, char **argv) {

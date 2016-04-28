@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <zlib.h>
 #include <math.h>
 #include "mvt.hpp"
@@ -24,7 +25,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
 	mvt_tile tile;
 	mvt_tile outtile;
 	int features_added = 0;
@@ -51,19 +52,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 			}
 		}
 		if (ll == *nlayers) {
-			*file_keys = (struct pool *) realloc(*file_keys, (ll + 1) * sizeof(struct pool));
+			file_keys.push_back(std::set<type_and_string>());
 			*layernames = (char **) realloc(*layernames, (ll + 1) * sizeof(char *));
 
-			if (*file_keys == NULL) {
-				perror("realloc file_keys");
-				exit(EXIT_FAILURE);
-			}
 			if (*layernames == NULL) {
 				perror("realloc layernames");
 				exit(EXIT_FAILURE);
 			}
 
-			pool_init(&((*file_keys)[ll]), 0);
 			(*layernames)[ll] = strdup(ln);
 			if ((*layernames)[ll] == NULL) {
 				perror("Out of memory");
@@ -122,16 +118,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 					continue;
 				}
 
-				if (!is_pooled(exclude, key, VT_STRING)) {
-					if (!is_pooled(&((*file_keys)[ll]), key, type)) {
-						char *copy = strdup(key);
-						if (copy == NULL) {
-							perror("Out of memory");
-							exit(EXIT_FAILURE);
-						}
-						pool(&((*file_keys)[ll]), copy, type);
-					}
-
+				if (exclude.count(std::string(key)) == 0) {
+					type_and_string tas;
+					tas.string = std::string(key);
+					tas.type = type;
+					file_keys[ll].insert(tas);
 					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
@@ -157,15 +148,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, struct pool **fi
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (!is_pooled(exclude, sjoinkey, VT_STRING)) {
-								if (!is_pooled(&((*file_keys)[ll]), sjoinkey, type)) {
-									char *copy = strdup(sjoinkey);
-									if (copy == NULL) {
-										perror("Out of memory");
-										exit(EXIT_FAILURE);
-									}
-									pool(&((*file_keys)[ll]), copy, type);
-								}
+							if (exclude.count(joinkey) == 0) {
+								type_and_string tas;
+								tas.string = std::string(sjoinkey);
+								tas.type = type;
+								file_keys[ll].insert(tas);
+								outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 
 								mvt_value outval;
 								if (type == VT_STRING) {
@@ -227,7 +215,7 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, struct pool **file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, struct pool *exclude, int ifmatched, char **attribution) {
+void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, char **attribution) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -392,8 +380,7 @@ int main(int argc, char **argv) {
 	std::vector<std::string> header;
 	std::map<std::string, std::vector<std::string> > mapping;
 
-	struct pool exclude;
-	pool_init(&exclude, 0);
+	std::set<std::string> exclude;
 
 	extern int optind;
 	extern char *optarg;
@@ -424,7 +411,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			pool(&exclude, optarg, VT_STRING);
+			exclude.insert(std::string(optarg));
 			break;
 
 		default:
@@ -446,21 +433,16 @@ int main(int argc, char **argv) {
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
-	struct pool *file_keys = NULL;
+	std::vector<std::set<type_and_string> > file_keys;
 	char **layernames = NULL;
 	int nlayers = 0;
 	char *attribution = NULL;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, &file_keys, &layernames, &nlayers, outdb, &st, header, mapping, &exclude, ifmatched, &attribution);
+		decode(argv[i], csv, file_keys, &layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, &attribution);
 	}
 
-	struct pool *fk[nlayers];
-	for (i = 0; i < nlayers; i++) {
-		fk[i] = &(file_keys[i]);
-	}
-
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, fk, nlayers, 0, attribution);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution);
 	mbtiles_close(outdb, argv);
 
 	return 0;
