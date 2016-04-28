@@ -23,11 +23,11 @@
 #include "geometry.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
-#include "mbtiles.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
 #include "options.hpp"
 #include "main.hpp"
+#include "mbtiles.hpp"
 
 #define CMD_BITS 3
 
@@ -160,7 +160,7 @@ mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
 	return tv;
 }
 
-void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_feature &feature, struct pool *file_keys) {
+void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	int i;
 	for (i = 0; i < m; i++) {
 		int otype;
@@ -168,26 +168,6 @@ void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_fea
 		mvt_value value = retrieve_string(meta, stringpool, &otype);
 
 		layer.tag(feature, key.string_value, value);
-
-		if (!is_pooled(file_keys, key.string_value.c_str(), otype)) {
-			if (pthread_mutex_lock(&var_lock) != 0) {
-				perror("pthread_mutex_lock");
-				exit(EXIT_FAILURE);
-			}
-
-			// Dup to retain after munmap
-			char *copy = strdup(key.string_value.c_str());
-			if (copy == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-			pool(file_keys, copy, otype);
-
-			if (pthread_mutex_unlock(&var_lock) != 0) {
-				perror("pthread_mutex_unlock");
-				exit(EXIT_FAILURE);
-			}
-		}
 	}
 }
 
@@ -526,7 +506,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, struct pool **file_keys, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, char **layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -936,7 +916,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.geometry = to_feature(features[j][x].geom);
 				count += features[j][x].geom.size();
 
-				decode_meta(features[j][x].m, &features[j][x].meta, features[j][x].stringpool, layer, feature, file_keys[j]);
+				decode_meta(features[j][x].m, &features[j][x].meta, features[j][x].stringpool, layer, feature);
 				layer.features.push_back(feature);
 			}
 
@@ -1014,7 +994,6 @@ struct write_tile_args {
 	char *stringpool;
 	int min_detail;
 	int basezoom;
-	struct pool **file_keys;
 	char **layernames;
 	sqlite3 *outdb;
 	double droprate;
@@ -1082,7 +1061,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->file_keys, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
 
 			if (len < 0) {
 				int *err = (int *) malloc(sizeof(int));
@@ -1137,7 +1116,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, struct pool **file_keys, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int *prevent, int *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, char **layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int *prevent, int *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1247,7 +1226,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
 			args[thread].basezoom = basezoom;
-			args[thread].file_keys = file_keys;  // locked with var_lock
 			args[thread].layernames = layernames;
 			args[thread].outdb = outdb;  // locked with db_lock
 			args[thread].droprate = droprate;
