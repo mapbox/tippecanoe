@@ -22,6 +22,7 @@
 #include <getopt.h>
 #include <vector>
 #include <string>
+#include <set>
 
 #ifdef __APPLE__
 #include <sys/types.h>
@@ -297,7 +298,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -376,8 +377,8 @@ struct read_parallel_arg {
 	const char *reading;
 	struct reader *reader;
 	volatile long long *progress_seq;
-	struct pool *exclude;
-	struct pool *include;
+	std::set<std::string> *exclude;
+	std::set<std::string> *include;
 	int exclude_all;
 	char *fname;
 	int maxzoom;
@@ -426,7 +427,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -842,7 +843,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1730,9 +1731,7 @@ int main(int argc, char **argv) {
 	const char *attribution = NULL;
 	std::vector<source> sources;
 
-	struct pool exclude, include;
-	pool_init(&exclude, 0);
-	pool_init(&include, 0);
+	std::set<std::string> exclude, include;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -1891,12 +1890,12 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			pool(&exclude, optarg, VT_STRING);
+			exclude.insert(std::string(optarg));
 			break;
 
 		case 'y':
 			exclude_all = 1;
-			pool(&include, optarg, VT_STRING);
+			include.insert(std::string(optarg));
 			break;
 
 		case 'X':
@@ -2088,9 +2087,6 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
 		exit(EXIT_FAILURE);
 	}
-
-	pool_free(&exclude);
-	pool_free(&include);
 
 	return ret;
 }
