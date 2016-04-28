@@ -979,7 +979,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		nsources = 1;
 	}
 
-	std::vector<std::set<type_and_string> >file_keys;
+	std::vector<std::set<type_and_string> > file_keys;
 	long overall_offset = 0;
 
 	int source;

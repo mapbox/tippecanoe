@@ -1,8 +1,8 @@
 struct type_and_string {
-        int type;
-        std::string string;
+	int type;
+	std::string string;
 
-        bool operator<(const type_and_string &o) const;
+	bool operator<(const type_and_string &o) const;
 };
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);

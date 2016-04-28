@@ -1,3 +1,7 @@
+## 1.11.1
+
+* Make better use of C++ standard libraries
+
 ## 1.11.0
 
 * Convert C source files to C++
