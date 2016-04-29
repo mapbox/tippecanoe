@@ -21,7 +21,25 @@ void checkdisk(reader*, int) {
 
 }
 
+bool same(drawvec &one, drawvec &two) {
+	if (one.size() != two.size()) {
+		fprintf(stderr, "%ld != %ld\n", one.size(), two.size());
+		return false;
+	}
+
+	for (size_t i = 0; i < one.size(); i++) {
+		if (one[i].x != two[i].x || one[i].y != two[i].y) {
+			fprintf(stderr, "%lld != %lld || %lld != %lld\n", one[i].x, two[i].x, one[i].y, two[i].y);
+			return false;
+		}
+	}
+
+	return true;
+}
+
 int main() {
+	const bool loop = false;
+
 	while (1) {
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
@@ -43,7 +61,23 @@ int main() {
 		}
 		dv.push_back(draw(VT_LINETO, dv[0].x, dv[0].y));
 
-		drawvec out = clean_or_clip_poly(dv, 0, 0, 0, false);
-		check_polygon(out, dv);
+		drawvec orig = dv;
+		drawvec out;
+
+		bool again = true;
+		while (again) {
+			again = false;
+			out = clean_or_clip_poly(dv, 0, 0, 0, false);
+
+			if (loop) {
+				if (!same(out, dv)) {
+					fprintf(stderr, "loop\n");
+					dv = out;
+					again = true;
+				}
+			}
+		}
+
+		check_polygon(out, orig);
 	}
 }
