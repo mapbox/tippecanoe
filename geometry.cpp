@@ -524,6 +524,23 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 	return c;
 }
 
+void draw_xing(drawvec &geom, int bad1, int bad2) {
+	printf("0 setlinewidth ");
+	for (size_t i = 0; i + 1 < geom.size(); i++) {
+		if (geom[i + 1].op == VT_LINETO) {
+			if (i == bad1 || i == bad2) {
+				printf(".2 setlinewidth 1 .5 0 setrgbcolor ");
+			}
+			printf("%lld %lld moveto %lld %lld lineto stroke ", geom[i].x, 19 - geom[i].y, geom[i + 1].x, 19 - geom[i + 1].y);
+			if (i == bad1 || i == bad2) {
+				printf("0 setlinewidth 0 setgray ");
+			}
+			printf("\n");
+		}
+	}
+	printf("\n");
+}
+
 void check_polygon(drawvec &geom, drawvec &before) {
 	for (size_t i = 0; i + 1 < geom.size(); i++) {
 		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
@@ -538,16 +555,20 @@ void check_polygon(drawvec &geom, drawvec &before) {
 				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 				if (t > 0 && t < 1 && s > 0 && s < 1) {
-					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+					fprintf(stderr, "Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
 					       geom[i + 0].x, geom[i + 0].y,
 					       geom[i + 1].x, geom[i + 1].y,
 					       geom[j + 0].x, geom[j + 0].y,
 					       geom[j + 1].x, geom[j + 1].y);
-					dump(before);
+
+					draw_xing(geom, i, j);
+					exit(EXIT_FAILURE);
 				}
 			}
 		}
 	}
+
+#if 0
 
 	size_t outer_start = -1;
 	size_t outer_len = 0;
@@ -597,6 +618,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 			}
 		}
 	}
+#endif
 }
 
 drawvec close_poly(drawvec &geom) {
