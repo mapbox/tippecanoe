@@ -4643,7 +4643,7 @@ bool Clipper::FindIntersectLoop(std::unordered_multimap<int, OutPtIntersect> & d
     range = dupeRec.equal_range(idx_search);
     visited.insert(idx_search);
     // Check for connection through chain of other intersections
-    for (auto it = range.first; it != range.second; ++it)
+    for (auto it = range.first; it != range.second && it != dupeRec.end() && it->first == idx_search; ++it)
     {
         OutRec * itRec = GetOutRec(it->second.op2->Idx);
         if (visited.count(itRec->Idx) > 0 || 
@@ -4741,7 +4741,7 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         std::set<int> visited;
         visited.insert(outRec_search->Idx);
         // Check for connection through chain of other intersections
-        for (auto it = range.first; it != range.second; ++it)
+        for (auto it = range.first; it != range.second && it != dupeRec.end() && it->first == outRec_search->Idx; ++it)
         {
             OutRec * itRec = GetOutRec(it->second.op2->Idx);
             if (itRec->Idx != outRec_search->Idx &&

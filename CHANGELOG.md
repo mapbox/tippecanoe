@@ -1,3 +1,7 @@
+## 1.11.2
+
+* Update Clipper to fix potential crash
+
 ## 1.11.1
 
 * Make better use of C++ standard libraries
