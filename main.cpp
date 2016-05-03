@@ -1689,16 +1689,14 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	return ret;
 }
 
-static int int_in(int v, int *a, int len) {
-	int i;
-
-	for (i = 0; i < len; i++) {
-		if (a[i] == v) {
-			return 1;
+static bool has_name(struct option *long_options, int *pl) {
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].flag == pl) {
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 int main(int argc, char **argv) {
@@ -1736,28 +1734,6 @@ int main(int argc, char **argv) {
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
-	}
-
-	{
-		char dup[256];
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
-			if (dup[additional_options[i]]) {
-				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[additional_options[i]] = 1;
-		}
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
-			if (dup[prevent_options[i]]) {
-				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[prevent_options[i]] = 1;
-		}
 	}
 
 	static struct option long_options[] = {
@@ -1809,6 +1785,24 @@ int main(int argc, char **argv) {
 
 		{0, 0, 0, 0},
 	};
+
+	{
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				if (*long_options[lo].flag != 0) {
+					fprintf(stderr, "Internal error: reused %s\n", long_options[lo].name);
+					exit(EXIT_FAILURE);
+				}
+				*long_options[lo].flag = 1;
+			}
+		}
+
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				*long_options[lo].flag = 0;
+			}
+		}
+	}
 
 	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
@@ -1948,7 +1942,7 @@ int main(int argc, char **argv) {
 		case 'p': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, prevent_options, sizeof(prevent_options) / sizeof(prevent_options[0]))) {
+				if (has_name(long_options, &prevent[*cp & 0xFF])) {
 					prevent[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -p%c\n", argv[0], *cp);
@@ -1960,7 +1954,7 @@ int main(int argc, char **argv) {
 		case 'a': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, additional_options, sizeof(additional_options) / sizeof(additional_options[0]))) {
+				if (has_name(long_options, &additional[*cp & 0xFF])) {
 					additional[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -a%c\n", argv[0], *cp);
@@ -1980,7 +1974,7 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Usage: %s", argv[0]);
-			for (int lo = 0; long_options[lo].name != NULL; lo++) {
+			for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
 				if (width + strlen(long_options[lo].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
