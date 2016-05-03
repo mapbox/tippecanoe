@@ -1177,14 +1177,10 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 	}
 
-	char *layernames[nlayers];
+	std::vector<std::string> layernames;
 	for (i = 0; i < nlayers; i++) {
 		if (layername != NULL) {
-			layernames[i] = strdup(layername);
-			if (layernames[i] == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
+			layernames.push_back(std::string(layername));
 		} else {
 			const char *src;
 			if (sources.size() < 1) {
@@ -1195,39 +1191,37 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				src = sources[i].file.c_str();
 			}
 
-			char *trunc = layernames[i] = (char *) malloc(strlen(src) + 1);
-			if (trunc == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-
+			// Find the last component of the pathname
 			const char *ocp, *use = src;
 			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {
 					use = ocp + 1;
 				}
 			}
-			strcpy(trunc, use);
+			std::string trunc = std::string(use);
 
-			char *cp = strstr(trunc, ".json");
-			if (cp != NULL) {
-				*cp = '\0';
+			// Trim .json or .mbtiles from the name
+			ssize_t cp;
+			cp = trunc.find(".json");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
-			cp = strstr(trunc, ".mbtiles");
-			if (cp != NULL) {
-				*cp = '\0';
+			cp = trunc.find(".mbtiles");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
 
-			char *out = trunc;
-			for (cp = trunc; *cp; cp++) {
-				if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
-					*out++ = *cp;
+			// Trim out characters that can't be part of selector
+			std::string out;
+			for (cp = 0; cp < trunc.size(); cp++) {
+				if (isalpha(trunc[cp]) || isdigit(trunc[cp]) || trunc[cp] == '_') {
+					out.append(trunc, cp, 1);
 				}
 			}
-			*out = '\0';
+			layernames.push_back(out);
 
 			if (!quiet) {
-				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, trunc);
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, out.c_str());
 			}
 		}
 	}
@@ -1691,10 +1685,6 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
-
-	for (i = 0; i < nlayers; i++) {
-		free(layernames[i]);
-	}
 
 	return ret;
 }

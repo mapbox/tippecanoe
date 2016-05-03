@@ -25,7 +25,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
 	mvt_tile tile;
 	mvt_tile outtile;
 	int features_added = 0;
@@ -47,24 +47,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 
 		int ll;
 		for (ll = 0; ll < *nlayers; ll++) {
-			if (strcmp((*layernames)[ll], ln) == 0) {
+			if (strcmp(layernames[ll].c_str(), ln) == 0) {
 				break;
 			}
 		}
 		if (ll == *nlayers) {
 			file_keys.push_back(std::set<type_and_string>());
-			*layernames = (char **) realloc(*layernames, (ll + 1) * sizeof(char *));
-
-			if (*layernames == NULL) {
-				perror("realloc layernames");
-				exit(EXIT_FAILURE);
-			}
-
-			(*layernames)[ll] = strdup(ln);
-			if ((*layernames)[ll] == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
+			layernames.push_back(std::string(ln));
 			*nlayers = ll + 1;
 		}
 
@@ -215,7 +204,7 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, char **attribution) {
+void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, char **attribution) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -434,12 +423,12 @@ int main(int argc, char **argv) {
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
 	std::vector<std::set<type_and_string> > file_keys;
-	char **layernames = NULL;
+	std::vector<std::string> layernames;
 	int nlayers = 0;
 	char *attribution = NULL;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, file_keys, &layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, &attribution);
+		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, &attribution);
 	}
 
 	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution);
