@@ -268,15 +268,15 @@ static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
 	// Supposedly inner rings
 
 	for (int n = 0; n < t->ChildCount(); n++) {
-		ClipperLib::Path p = t->Childs[n]->Contour;
-		drawvec dv;
-		for (size_t i = 0; i < p.size(); i++) {
-			dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		ClipperLib::Path cp = t->Childs[n]->Contour;
+		drawvec ring;
+		for (size_t i = 0; i < cp.size(); i++) {
+			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].X, cp[i].Y));
 		}
-		if (p.size() > 0) {
-			dv.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		if (cp.size() > 0) {
+			ring.push_back(draw(VT_LINETO, cp[0].X, cp[0].Y));
 		}
-		out.push_back(dv);
+		out.push_back(ring);
 	}
 
 	// Recurse to supposedly outer rings (children of the children)

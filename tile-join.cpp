@@ -115,13 +115,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
-							int type = VT_STRING;
+							int attr_type = VT_STRING;
 
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
 									joinval = dequote(joinval);
 								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
-									type = VT_NUMBER;
+									attr_type = VT_NUMBER;
 								}
 							}
 
@@ -130,12 +130,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 							if (exclude.count(joinkey) == 0) {
 								type_and_string tas;
 								tas.string = std::string(sjoinkey);
-								tas.type = type;
+								tas.type = attr_type;
 								file_keys[ll].insert(tas);
 								outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 
 								mvt_value outval;
-								if (type == VT_STRING) {
+								if (attr_type == VT_STRING) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
 								} else {

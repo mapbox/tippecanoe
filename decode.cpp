@@ -34,10 +34,10 @@ struct lonlat {
 	double lon;
 	double lat;
 
-	lonlat(int op, double lon, double lat) {
-		this->op = op;
-		this->lon = lon;
-		this->lat = lat;
+	lonlat(int nop, double nlon, double nlat) {
+		this->op = nop;
+		this->lon = nlon;
+		this->lat = nlat;
 	}
 };
 
@@ -387,13 +387,13 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			within = 1;
 
 			int len = sqlite3_column_bytes(stmt, 0);
-			int z = sqlite3_column_int(stmt, 1);
-			int x = sqlite3_column_int(stmt, 2);
-			int y = sqlite3_column_int(stmt, 3);
-			y = (1LL << z) - 1 - y;
+			int tz = sqlite3_column_int(stmt, 1);
+			int tx = sqlite3_column_int(stmt, 2);
+			int ty = sqlite3_column_int(stmt, 3);
+			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), z, x, y, 1);
+			handle(std::string(s, len), tz, tx, ty, 1);
 		}
 
 		printf("] }\n");

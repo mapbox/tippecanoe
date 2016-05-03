@@ -856,7 +856,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1421,22 +1421,22 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
-			int i;
-			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
-				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
+			int z;
+			for (z = 0; z <= MAX_ZOOM; z++) {
+				tile[z].x = tile[z].y = tile[z].count = tile[z].fullcount = tile[z].gap = tile[z].previndex = 0;
+				max[z].x = max[z].y = max[z].count = max[z].fullcount = 0;
 			}
 		}
 
 		long long progress = -1;
 
 		long long indices = indexpos / sizeof(struct index);
-		long long i;
-		for (i = 0; i < indices; i++) {
+		long long ip;
+		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
-			decode(map[i].index, &xx, &yy);
+			decode(map[ip].index, &xx, &yy);
 
-			long long nprogress = 100 * i / indices;
+			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
 				if (!quiet) {
@@ -1469,7 +1469,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 				tile[z].fullcount++;
 
-				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
+				if (manage_gap(map[ip].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
 					continue;
 				}
 
@@ -1980,20 +1980,19 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Usage: %s", argv[0]);
-			int i;
-			for (i = 0; long_options[i].name != NULL; i++) {
-				if (width + strlen(long_options[i].name) + 9 >= 80) {
+			for (int lo = 0; long_options[lo].name != NULL; lo++) {
+				if (width + strlen(long_options[lo].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
 				}
-				width += strlen(long_options[i].name) + 9;
-				if (strcmp(long_options[i].name, "output") == 0) {
-					fprintf(stderr, " --%s=output.mbtiles", long_options[i].name);
+				width += strlen(long_options[lo].name) + 9;
+				if (strcmp(long_options[lo].name, "output") == 0) {
+					fprintf(stderr, " --%s=output.mbtiles", long_options[lo].name);
 					width += 9;
-				} else if (long_options[i].has_arg) {
-					fprintf(stderr, " [--%s=...]", long_options[i].name);
+				} else if (long_options[lo].has_arg) {
+					fprintf(stderr, " [--%s=...]", long_options[lo].name);
 				} else {
-					fprintf(stderr, " [--%s]", long_options[i].name);
+					fprintf(stderr, " [--%s]", long_options[lo].name);
 				}
 			}
 			if (width + 16 >= 80) {
@@ -2070,7 +2069,7 @@ int main(int argc, char **argv) {
 		sources.push_back(src);
 	}
 
-	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 

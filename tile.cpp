@@ -259,9 +259,9 @@ struct sll {
 		}
 	}
 
-	sll(char *name, long long val) {
-		this->name = name;
-		this->val = val;
+	sll(char *nname, long long nval) {
+		this->name = nname;
+		this->val = nval;
 	}
 };
 
@@ -440,14 +440,14 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
-			for (size_t i = 0; i < geoms.size(); i++) {
+			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before;
 				if (additional[A_DEBUG_POLYGON]) {
-					before = geoms[i];
+					before = geoms[g];
 				}
-				geoms[i] = clean_or_clip_poly(geoms[i], 0, 0, 0, false);
+				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, 0, false);
 				if (additional[A_DEBUG_POLYGON]) {
-					check_polygon(geoms[i], before);
+					check_polygon(geoms[g], before);
 				}
 			}
 		}
@@ -804,7 +804,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
-			std::vector<drawvec> geoms = partials[i].geoms;
+			std::vector<drawvec> pgeoms = partials[i].geoms;
 			partials[i].geoms.clear();  // avoid keeping two copies in memory
 			long long layer = partials[i].layer;
 			signed char t = partials[i].t;
@@ -812,14 +812,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
-			for (size_t j = 0; j < geoms.size(); j++) {
-				if (t == VT_POINT || draws_something(geoms[j])) {
+			for (size_t j = 0; j < pgeoms.size(); j++) {
+				if (t == VT_POINT || draws_something(pgeoms[j])) {
 					struct coalesce c;
 
 					c.type = t;
 					c.index = partials[i].index;
 					c.index2 = partials[i].index2;
-					c.geom = geoms[j];
+					c.geom = pgeoms[j];
 					c.coalesced = false;
 					c.original_seq = original_seq;
 					c.m = partials[i].m;
@@ -858,8 +858,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 #endif
 
 				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
-					for (size_t z = 0; z < features[j][x].geom.size(); z++) {
-						out[y].geom.push_back(features[j][x].geom[z]);
+					for (size_t g = 0; g < features[j][x].geom.size(); g++) {
+						out[y].geom.push_back(features[j][x].geom[g]);
 					}
 					out[y].coalesced = true;
 				} else {
@@ -898,25 +898,25 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		mvt_tile tile;
 
-		for (size_t j = 0; j < features.size(); j++) {
+		for (size_t k = 0; k < features.size(); k++) {
 			mvt_layer layer;
 
-			layer.name = (*layernames)[j];
+			layer.name = (*layernames)[k];
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
 
-			for (size_t x = 0; x < features[j].size(); x++) {
+			for (size_t x = 0; x < features[k].size(); x++) {
 				mvt_feature feature;
 
-				if (features[j][x].type == VT_LINE || features[j][x].type == VT_POLYGON) {
-					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
+				if (features[k][x].type == VT_LINE || features[k][x].type == VT_POLYGON) {
+					features[k][x].geom = remove_noop(features[k][x].geom, features[k][x].type, 0);
 				}
 
-				feature.type = features[j][x].type;
-				feature.geometry = to_feature(features[j][x].geom);
-				count += features[j][x].geom.size();
+				feature.type = features[k][x].type;
+				feature.geometry = to_feature(features[k][x].geom);
+				count += features[k][x].geom.size();
 
-				decode_meta(features[j][x].m, &features[j][x].meta, features[j][x].stringpool, layer, feature);
+				decode_meta(features[k][x].m, &features[k][x].meta, features[k][x].stringpool, layer, feature);
 				layer.features.push_back(feature);
 			}
 
