@@ -204,9 +204,9 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 }
 #endif
 
-double get_area(drawvec &geom, int i, int j) {
+double get_area(drawvec &geom, size_t i, size_t j) {
 	double area = 0;
-	for (unsigned k = i; k < j; k++) {
+	for (size_t k = i; k < j; k++) {
 		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
 		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
 	}
@@ -214,10 +214,10 @@ double get_area(drawvec &geom, int i, int j) {
 	return area;
 }
 
-void reverse_ring(drawvec &geom, int start, int end) {
+void reverse_ring(drawvec &geom, size_t start, size_t end) {
 	drawvec tmp;
 
-	for (unsigned i = start; i < end; i++) {
+	for (size_t i = start; i < end; i++) {
 		tmp.push_back(geom[i]);
 	}
 
@@ -375,8 +375,6 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 static void dump(drawvec &geom) {
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
-	bool has_area = false;
-
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
@@ -384,11 +382,6 @@ static void dump(drawvec &geom) {
 				if (geom[j].op != VT_LINETO) {
 					break;
 				}
-			}
-
-			double area = get_area(geom, i, j);
-			if (area != 0) {
-				has_area = true;
 			}
 
 			ClipperLib::Path path;
@@ -515,7 +508,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
-	int i, j, c = 0;
+	size_t i, j;
+	bool c = false;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
 		if (((vert[i + start].y > testy) != (vert[j + start].y > testy)) &&
 		    (testx < (vert[j + start].x - vert[i + start].x) * (testy - vert[i + start].y) / (double) (vert[j + start].y - vert[i + start].y) + vert[i + start].x))

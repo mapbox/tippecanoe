@@ -557,7 +557,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		std::vector<struct partial> partials;
 		std::vector<std::vector<coalesce> > features;
-		for (size_t i = 0; i < nlayers; i++) {
+		for (int i = 0; i < nlayers; i++) {
 			features.push_back(std::vector<coalesce>());
 		}
 

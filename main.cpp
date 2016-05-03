@@ -191,14 +191,14 @@ int indexcmp(const void *v1, const void *v2) {
 	return 0;
 }
 
-struct merge {
+struct mergelist {
 	long long start;
 	long long end;
 
-	struct merge *next;
+	struct mergelist *next;
 };
 
-static void insert(struct merge *m, struct merge **head, unsigned char *map) {
+static void insert(struct mergelist *m, struct mergelist **head, unsigned char *map) {
 	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
 		head = &((*head)->next);
 	}
@@ -207,9 +207,9 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	*head = m;
 }
 
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
+static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
 	int i;
-	struct merge *head = NULL;
+	struct mergelist *head = NULL;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
@@ -232,7 +232,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
 		head->start += bytes;
 
-		struct merge *m = head;
+		struct mergelist *m = head;
 		head = m->next;
 		m->next = NULL;
 
@@ -246,7 +246,7 @@ struct sort_arg {
 	int task;
 	int cpus;
 	long long indexpos;
-	struct merge *merges;
+	struct mergelist *merges;
 	int indexfd;
 	int nmerges;
 	long long unit;
@@ -556,8 +556,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
 			madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-			long long a;
-			for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+			for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 				struct index ix = indexmap[a];
 				unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
 				long long pos = sub_geompos[which];
@@ -629,7 +628,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size > 0) {
-			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
+			if (indexst.st_size + geomst.st_size < mem) {
 				long long indexpos = indexst.st_size;
 				int bytes = sizeof(struct index);
 
@@ -644,7 +643,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				unit = ((unit + page - 1) / page) * page;
 
 				int nmerges = (indexpos + unit - 1) / unit;
-				struct merge merges[nmerges];
+				struct mergelist merges[nmerges];
 
 				int a;
 				for (a = 0; a < nmerges; a++) {
@@ -723,8 +722,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				madvise(geommap, geomst.st_size, MADV_RANDOM);
 				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-				long long a;
-				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+				for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
 					long long pos = *geompos_out;
 
@@ -964,7 +962,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
-	int nlayers;
+	size_t nlayers;
 	if (layername != NULL) {
 		nlayers = 1;
 	} else {
@@ -974,7 +972,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 	}
 
-	int nsources = sources.size();
+	size_t nsources = sources.size();
 	if (nsources == 0) {
 		nsources = 1;
 	}
@@ -982,8 +980,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	std::vector<std::set<type_and_string> > file_keys;
 	long overall_offset = 0;
 
-	int source;
-	for (source = 0; source < nsources; source++) {
+	for (size_t source = 0; source < nsources; source++) {
 		file_keys.push_back(std::set<type_and_string>());
 		std::string reading;
 		int fd;
@@ -1178,17 +1175,17 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	std::vector<std::string> layernames;
-	for (i = 0; i < nlayers; i++) {
+	for (size_t l = 0; l < nlayers; l++) {
 		if (layername != NULL) {
 			layernames.push_back(std::string(layername));
 		} else {
 			const char *src;
 			if (sources.size() < 1) {
 				src = fname;
-			} else if (sources[i].layer.size() != 0) {
-				src = sources[i].layer.c_str();
+			} else if (sources[l].layer.size() != 0) {
+				src = sources[l].layer.c_str();
 			} else {
-				src = sources[i].file.c_str();
+				src = sources[l].file.c_str();
 			}
 
 			// Find the last component of the pathname
@@ -1213,15 +1210,15 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 			// Trim out characters that can't be part of selector
 			std::string out;
-			for (cp = 0; cp < trunc.size(); cp++) {
-				if (isalpha(trunc[cp]) || isdigit(trunc[cp]) || trunc[cp] == '_') {
-					out.append(trunc, cp, 1);
+			for (size_t p = 0; p < trunc.size(); p++) {
+				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_') {
+					out.append(trunc, p, 1);
 				}
 			}
 			layernames.push_back(out);
 
 			if (!quiet) {
-				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, out.c_str());
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, out.c_str());
 			}
 		}
 	}
