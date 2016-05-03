@@ -1,3 +1,7 @@
+## 1.11.3
+
+* Internal code cleanup
+
 ## 1.11.2
 
 * Update Clipper to fix potential crash
