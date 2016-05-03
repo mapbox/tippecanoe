@@ -70,7 +70,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test join-test
 
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
 %.json.check:
@@ -101,6 +101,16 @@ pbf-test:
 	./tippecanoe-decode tests/pbf/11-328-791.vector.pbf 11 328 791 > tests/pbf/11-328-791.vector.pbf.out
 	cmp tests/pbf/11-328-791.json tests/pbf/11-328-791.vector.pbf.out
 	rm tests/pbf/11-328-791.vector.pbf.out
+
+join-test:
+	./tippecanoe -f -z9 -z12 -o tests/join-population/tabblock_06001420.mbtiles tests/join-population/tabblock_06001420.json
+	./tile-join -f -o tests/join-population/joined.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
+	./tile-join -f -i -o tests/join-population/joined-i.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
+	./tippecanoe-decode tests/join-population/joined.mbtiles > tests/join-population/joined.mbtiles.json.check
+	./tippecanoe-decode tests/join-population/joined-i.mbtiles > tests/join-population/joined-i.mbtiles.json.check
+	cmp tests/join-population/joined.mbtiles.json.check tests/join-population/joined.mbtiles.json
+	cmp tests/join-population/joined-i.mbtiles.json.check tests/join-population/joined-i.mbtiles.json
+	rm tests/join-population/tabblock_06001420.mbtiles tests/join-population/joined.mbtiles tests/join-population/joined-i.mbtiles tests/join-population/joined.mbtiles.json.check tests/join-population/joined-i.mbtiles.json.check
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
