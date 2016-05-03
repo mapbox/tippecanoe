@@ -192,7 +192,7 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, char **attribution) {
+void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -246,7 +246,7 @@ void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &fil
 	}
 	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'attribution'", -1, &stmt, NULL) == SQLITE_OK) {
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			*attribution = strdup((char *) sqlite3_column_text(stmt, 0));
+			attribution = std::string((char *) sqlite3_column_text(stmt, 0));
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -413,13 +413,13 @@ int main(int argc, char **argv) {
 	std::vector<std::set<type_and_string> > file_keys;
 	std::vector<std::string> layernames;
 	int nlayers = 0;
-	char *attribution = NULL;
+	std::string attribution;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, &attribution);
+		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution.size() != 0 ? attribution.c_str() : NULL);
 	mbtiles_close(outdb, argv);
 
 	return 0;
