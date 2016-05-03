@@ -65,40 +65,30 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			for (int t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
-				char *value;
+				std::string value;
 				int type = -1;
 
 				if (val.type == mvt_string) {
-					value = strdup(val.string_value.c_str());
-					if (value == NULL) {
-						perror("Out of memory");
-						exit(EXIT_FAILURE);
-					}
+					value = val.string_value;
 					type = VT_STRING;
 				} else if (val.type == mvt_int) {
-					if (asprintf(&value, "%lld", (long long) val.numeric_value.int_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_double) {
-					if (asprintf(&value, "%g", val.numeric_value.double_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%g", val.numeric_value.double_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_float) {
-					if (asprintf(&value, "%g", val.numeric_value.float_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%g", val.numeric_value.float_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_bool) {
-					if (asprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false") >= 0) {
-						type = VT_BOOLEAN;
-					}
+					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
+					type = VT_BOOLEAN;
 				} else if (val.type == mvt_sint) {
-					if (asprintf(&value, "%lld", (long long) val.numeric_value.sint_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_uint) {
-					if (asprintf(&value, "%llu", (long long) val.numeric_value.uint_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
+					type = VT_NUMBER;
 				} else {
 					continue;
 				}
@@ -116,7 +106,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
-					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(std::string(value));
+					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(value);
 
 					if (ii != mapping.end()) {
 						std::vector<std::string> fields = ii->second;
@@ -158,8 +148,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 						}
 					}
 				}
-
-				free(value);
 			}
 
 			if (matched || !ifmatched) {

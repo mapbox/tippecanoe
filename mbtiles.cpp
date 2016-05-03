@@ -107,7 +107,7 @@ static void quote(std::string *buf, const char *s) {
 	buf->append(tmp, strlen(tmp));
 }
 
-static void aprintf(std::string *buf, const char *format, ...) {
+void aprintf(std::string *buf, const char *format, ...) {
 	va_list ap;
 	char *tmp;
 
