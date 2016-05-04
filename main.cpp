@@ -191,14 +191,14 @@ int indexcmp(const void *v1, const void *v2) {
 	return 0;
 }
 
-struct merge {
+struct mergelist {
 	long long start;
 	long long end;
 
-	struct merge *next;
+	struct mergelist *next;
 };
 
-static void insert(struct merge *m, struct merge **head, unsigned char *map) {
+static void insert(struct mergelist *m, struct mergelist **head, unsigned char *map) {
 	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
 		head = &((*head)->next);
 	}
@@ -207,9 +207,9 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	*head = m;
 }
 
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
+static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
 	int i;
-	struct merge *head = NULL;
+	struct mergelist *head = NULL;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
@@ -232,7 +232,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
 		head->start += bytes;
 
-		struct merge *m = head;
+		struct mergelist *m = head;
 		head = m->next;
 		m->next = NULL;
 
@@ -246,7 +246,7 @@ struct sort_arg {
 	int task;
 	int cpus;
 	long long indexpos;
-	struct merge *merges;
+	struct mergelist *merges;
 	int indexfd;
 	int nmerges;
 	long long unit;
@@ -556,8 +556,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
 			madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-			long long a;
-			for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+			for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 				struct index ix = indexmap[a];
 				unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
 				long long pos = sub_geompos[which];
@@ -629,7 +628,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size > 0) {
-			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
+			if (indexst.st_size + geomst.st_size < mem) {
 				long long indexpos = indexst.st_size;
 				int bytes = sizeof(struct index);
 
@@ -644,7 +643,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				unit = ((unit + page - 1) / page) * page;
 
 				int nmerges = (indexpos + unit - 1) / unit;
-				struct merge merges[nmerges];
+				struct mergelist merges[nmerges];
 
 				int a;
 				for (a = 0; a < nmerges; a++) {
@@ -723,8 +722,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				madvise(geommap, geomst.st_size, MADV_RANDOM);
 				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-				long long a;
-				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+				for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
 					long long pos = *geompos_out;
 
@@ -856,7 +854,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -964,7 +962,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
-	int nlayers;
+	size_t nlayers;
 	if (layername != NULL) {
 		nlayers = 1;
 	} else {
@@ -974,7 +972,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 	}
 
-	int nsources = sources.size();
+	size_t nsources = sources.size();
 	if (nsources == 0) {
 		nsources = 1;
 	}
@@ -982,8 +980,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	std::vector<std::set<type_and_string> > file_keys;
 	long overall_offset = 0;
 
-	int source;
-	for (source = 0; source < nsources; source++) {
+	for (size_t source = 0; source < nsources; source++) {
 		file_keys.push_back(std::set<type_and_string>());
 		std::string reading;
 		int fd;
@@ -1177,57 +1174,51 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 	}
 
-	char *layernames[nlayers];
-	for (i = 0; i < nlayers; i++) {
+	std::vector<std::string> layernames;
+	for (size_t l = 0; l < nlayers; l++) {
 		if (layername != NULL) {
-			layernames[i] = strdup(layername);
-			if (layernames[i] == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
+			layernames.push_back(std::string(layername));
 		} else {
 			const char *src;
 			if (sources.size() < 1) {
 				src = fname;
-			} else if (sources[i].layer.size() != 0) {
-				src = sources[i].layer.c_str();
+			} else if (sources[l].layer.size() != 0) {
+				src = sources[l].layer.c_str();
 			} else {
-				src = sources[i].file.c_str();
+				src = sources[l].file.c_str();
 			}
 
-			char *trunc = layernames[i] = (char *) malloc(strlen(src) + 1);
-			if (trunc == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-
+			// Find the last component of the pathname
 			const char *ocp, *use = src;
 			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {
 					use = ocp + 1;
 				}
 			}
-			strcpy(trunc, use);
+			std::string trunc = std::string(use);
 
-			char *cp = strstr(trunc, ".json");
-			if (cp != NULL) {
-				*cp = '\0';
+			// Trim .json or .mbtiles from the name
+			ssize_t cp;
+			cp = trunc.find(".json");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
-			cp = strstr(trunc, ".mbtiles");
-			if (cp != NULL) {
-				*cp = '\0';
+			cp = trunc.find(".mbtiles");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
 
-			char *out = trunc;
-			for (cp = trunc; *cp; cp++) {
-				if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
-					*out++ = *cp;
+			// Trim out characters that can't be part of selector
+			std::string out;
+			for (size_t p = 0; p < trunc.size(); p++) {
+				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_') {
+					out.append(trunc, p, 1);
 				}
 			}
-			*out = '\0';
+			layernames.push_back(out);
 
 			if (!quiet) {
-				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, trunc);
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, out.c_str());
 			}
 		}
 	}
@@ -1427,22 +1418,22 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
-			int i;
-			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
-				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
+			int z;
+			for (z = 0; z <= MAX_ZOOM; z++) {
+				tile[z].x = tile[z].y = tile[z].count = tile[z].fullcount = tile[z].gap = tile[z].previndex = 0;
+				max[z].x = max[z].y = max[z].count = max[z].fullcount = 0;
 			}
 		}
 
 		long long progress = -1;
 
 		long long indices = indexpos / sizeof(struct index);
-		long long i;
-		for (i = 0; i < indices; i++) {
+		long long ip;
+		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
-			decode(map[i].index, &xx, &yy);
+			decode(map[ip].index, &xx, &yy);
 
-			long long nprogress = 100 * i / indices;
+			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
 				if (!quiet) {
@@ -1475,7 +1466,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 				tile[z].fullcount++;
 
-				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
+				if (manage_gap(map[ip].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
 					continue;
 				}
 
@@ -1692,23 +1683,17 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
-	for (i = 0; i < nlayers; i++) {
-		free(layernames[i]);
-	}
-
 	return ret;
 }
 
-static int int_in(int v, int *a, int len) {
-	int i;
-
-	for (i = 0; i < len; i++) {
-		if (a[i] == v) {
-			return 1;
+static bool has_name(struct option *long_options, int *pl) {
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].flag == pl) {
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 int main(int argc, char **argv) {
@@ -1746,28 +1731,6 @@ int main(int argc, char **argv) {
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
-	}
-
-	{
-		char dup[256];
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
-			if (dup[additional_options[i]]) {
-				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[additional_options[i]] = 1;
-		}
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
-			if (dup[prevent_options[i]]) {
-				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[prevent_options[i]] = 1;
-		}
 	}
 
 	static struct option long_options[] = {
@@ -1819,6 +1782,24 @@ int main(int argc, char **argv) {
 
 		{0, 0, 0, 0},
 	};
+
+	{
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				if (*long_options[lo].flag != 0) {
+					fprintf(stderr, "Internal error: reused %s\n", long_options[lo].name);
+					exit(EXIT_FAILURE);
+				}
+				*long_options[lo].flag = 1;
+			}
+		}
+
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				*long_options[lo].flag = 0;
+			}
+		}
+	}
 
 	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
@@ -1958,7 +1939,7 @@ int main(int argc, char **argv) {
 		case 'p': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, prevent_options, sizeof(prevent_options) / sizeof(prevent_options[0]))) {
+				if (has_name(long_options, &prevent[*cp & 0xFF])) {
 					prevent[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -p%c\n", argv[0], *cp);
@@ -1970,7 +1951,7 @@ int main(int argc, char **argv) {
 		case 'a': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, additional_options, sizeof(additional_options) / sizeof(additional_options[0]))) {
+				if (has_name(long_options, &additional[*cp & 0xFF])) {
 					additional[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -a%c\n", argv[0], *cp);
@@ -1990,20 +1971,19 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Usage: %s", argv[0]);
-			int i;
-			for (i = 0; long_options[i].name != NULL; i++) {
-				if (width + strlen(long_options[i].name) + 9 >= 80) {
+			for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+				if (width + strlen(long_options[lo].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
 				}
-				width += strlen(long_options[i].name) + 9;
-				if (strcmp(long_options[i].name, "output") == 0) {
-					fprintf(stderr, " --%s=output.mbtiles", long_options[i].name);
+				width += strlen(long_options[lo].name) + 9;
+				if (strcmp(long_options[lo].name, "output") == 0) {
+					fprintf(stderr, " --%s=output.mbtiles", long_options[lo].name);
 					width += 9;
-				} else if (long_options[i].has_arg) {
-					fprintf(stderr, " [--%s=...]", long_options[i].name);
+				} else if (long_options[lo].has_arg) {
+					fprintf(stderr, " [--%s=...]", long_options[lo].name);
 				} else {
-					fprintf(stderr, " [--%s]", long_options[i].name);
+					fprintf(stderr, " [--%s]", long_options[lo].name);
 				}
 			}
 			if (width + 16 >= 80) {
@@ -2080,7 +2060,7 @@ int main(int argc, char **argv) {
 		sources.push_back(src);
 	}
 
-	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 

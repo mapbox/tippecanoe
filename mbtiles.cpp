@@ -107,7 +107,7 @@ static void quote(std::string *buf, const char *s) {
 	buf->append(tmp, strlen(tmp));
 }
 
-static void aprintf(std::string *buf, const char *format, ...) {
+void aprintf(std::string *buf, const char *format, ...) {
 	va_list ap;
 	char *tmp;
 
@@ -132,7 +132,7 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, std::vector<std::set<type_and_string> > &file_keys, int nlayers, int forcetable, const char *attribution) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, std::vector<std::string> &layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, std::vector<std::set<type_and_string> > &file_keys, int nlayers, int forcetable, const char *attribution) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -237,7 +237,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, char **layername,
 		}
 
 		aprintf(&buf, "{ \"id\": \"");
-		quote(&buf, layername[i]);
+		quote(&buf, layername[i].c_str());
 		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
 
 		std::set<type_and_string>::iterator j;

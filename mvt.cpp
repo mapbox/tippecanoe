@@ -9,10 +9,10 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 
-mvt_geometry::mvt_geometry(int op, long long x, long long y) {
-	this->op = op;
-	this->x = x;
-	this->y = y;
+mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
+	this->op = nop;
+	this->x = nx;
+	this->y = ny;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp

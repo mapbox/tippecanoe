@@ -25,7 +25,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
 	mvt_tile tile;
 	mvt_tile outtile;
 	int features_added = 0;
@@ -47,24 +47,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 
 		int ll;
 		for (ll = 0; ll < *nlayers; ll++) {
-			if (strcmp((*layernames)[ll], ln) == 0) {
+			if (strcmp(layernames[ll].c_str(), ln) == 0) {
 				break;
 			}
 		}
 		if (ll == *nlayers) {
 			file_keys.push_back(std::set<type_and_string>());
-			*layernames = (char **) realloc(*layernames, (ll + 1) * sizeof(char *));
-
-			if (*layernames == NULL) {
-				perror("realloc layernames");
-				exit(EXIT_FAILURE);
-			}
-
-			(*layernames)[ll] = strdup(ln);
-			if ((*layernames)[ll] == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
+			layernames.push_back(std::string(ln));
 			*nlayers = ll + 1;
 		}
 
@@ -73,43 +62,33 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			mvt_feature outfeature;
 			int matched = 0;
 
-			for (int t = 0; t + 1 < feat.tags.size(); t += 2) {
+			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
-				char *value;
+				std::string value;
 				int type = -1;
 
 				if (val.type == mvt_string) {
-					value = strdup(val.string_value.c_str());
-					if (value == NULL) {
-						perror("Out of memory");
-						exit(EXIT_FAILURE);
-					}
+					value = val.string_value;
 					type = VT_STRING;
 				} else if (val.type == mvt_int) {
-					if (asprintf(&value, "%lld", (long long) val.numeric_value.int_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_double) {
-					if (asprintf(&value, "%g", val.numeric_value.double_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%g", val.numeric_value.double_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_float) {
-					if (asprintf(&value, "%g", val.numeric_value.float_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%g", val.numeric_value.float_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_bool) {
-					if (asprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false") >= 0) {
-						type = VT_BOOLEAN;
-					}
+					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
+					type = VT_BOOLEAN;
 				} else if (val.type == mvt_sint) {
-					if (asprintf(&value, "%lld", (long long) val.numeric_value.sint_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
+					type = VT_NUMBER;
 				} else if (val.type == mvt_uint) {
-					if (asprintf(&value, "%llu", (long long) val.numeric_value.uint_value) >= 0) {
-						type = VT_NUMBER;
-					}
+					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
+					type = VT_NUMBER;
 				} else {
 					continue;
 				}
@@ -127,7 +106,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
-					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(std::string(value));
+					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(value);
 
 					if (ii != mapping.end()) {
 						std::vector<std::string> fields = ii->second;
@@ -136,13 +115,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
-							int type = VT_STRING;
+							int attr_type = VT_STRING;
 
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
 									joinval = dequote(joinval);
 								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
-									type = VT_NUMBER;
+									attr_type = VT_NUMBER;
 								}
 							}
 
@@ -151,12 +130,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 							if (exclude.count(joinkey) == 0) {
 								type_and_string tas;
 								tas.string = std::string(sjoinkey);
-								tas.type = type;
+								tas.type = attr_type;
 								file_keys[ll].insert(tas);
 								outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 
 								mvt_value outval;
-								if (type == VT_STRING) {
+								if (attr_type == VT_STRING) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
 								} else {
@@ -169,8 +148,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 						}
 					}
 				}
-
-				free(value);
 			}
 
 			if (matched || !ifmatched) {
@@ -215,7 +192,7 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, char ***layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, char **attribution) {
+void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -269,7 +246,7 @@ void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &fil
 	}
 	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'attribution'", -1, &stmt, NULL) == SQLITE_OK) {
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			*attribution = strdup((char *) sqlite3_column_text(stmt, 0));
+			attribution = std::string((char *) sqlite3_column_text(stmt, 0));
 		}
 		sqlite3_finalize(stmt);
 	}
@@ -434,15 +411,15 @@ int main(int argc, char **argv) {
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
 	std::vector<std::set<type_and_string> > file_keys;
-	char **layernames = NULL;
+	std::vector<std::string> layernames;
 	int nlayers = 0;
-	char *attribution = NULL;
+	std::string attribution;
 
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, file_keys, &layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, &attribution);
+		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution.size() != 0 ? attribution.c_str() : NULL);
 	mbtiles_close(outdb, argv);
 
 	return 0;

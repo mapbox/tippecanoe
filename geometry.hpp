@@ -17,10 +17,10 @@ struct draw {
 	long long y;
 	int necessary;
 
-	draw(int op, long long x, long long y) {
-		this->op = op;
-		this->x = x;
-		this->y = y;
+	draw(int nop, long long nx, long long ny) {
+		this->op = nop;
+		this->x = nx;
+		this->y = ny;
 	}
 
 	draw() {
