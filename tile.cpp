@@ -506,6 +506,167 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
+struct meta_arg {
+	std::vector<coalesce> *features;
+	size_t start;
+	size_t end;
+	mvt_layer layer;
+	long long count;
+};
+
+void *meta_worker(void *varg) {
+	meta_arg *ma = (meta_arg *) varg;
+
+	for (size_t x = ma->start; x < ma->end && x < ma->features->size(); x++) {
+		mvt_feature feature;
+
+		if ((*ma->features)[x].type == VT_LINE || (*ma->features)[x].type == VT_POLYGON) {
+			(*ma->features)[x].geom = remove_noop((*ma->features)[x].geom, (*ma->features)[x].type, 0);
+		}
+
+		feature.type = (*ma->features)[x].type;
+		feature.geometry = to_feature((*ma->features)[x].geom);
+		ma->count += (*ma->features)[x].geom.size();
+
+		decode_meta((*ma->features)[x].m, &((*ma->features)[x].meta), (*ma->features)[x].stringpool, ma->layer, feature);
+		ma->layer.features.push_back(feature);
+	}
+
+	return NULL;
+}
+
+struct meta_uniq {
+	mvt_value value;
+	size_t layer;
+	size_t index;
+
+	bool operator<(const meta_uniq &o) const {
+		return value < o.value;
+	}
+
+	bool operator!=(const meta_uniq &o) const {
+		return value != o.value;
+	}
+};
+
+struct meta_map {
+	size_t layer;
+	size_t index;
+
+	bool operator<(const meta_map &o) const {
+		if (layer < o.layer) {
+			return true;
+		}
+		if (layer == o.layer) {
+			if (index < o.index) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	meta_map(size_t nlayer, size_t nindex) {
+		layer = nlayer;
+		index = nindex;
+	}
+};
+
+void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
+	std::vector<meta_uniq> keys;
+	std::vector<meta_uniq> values;
+
+	std::map<meta_map, size_t> key_map;
+	std::map<meta_map, size_t> value_map;
+
+	// Collect all the unique keys and values from from the sub-layers
+	for (size_t i = 0; i < sub.size(); i++) {
+		for (size_t j = 0; j < sub[i].layer.keys.size(); j++) {
+			mvt_value key;
+			key.type = mvt_string;
+			key.string_value = sub[i].layer.keys[j];
+
+			meta_uniq muk;
+			muk.value = key;
+			muk.layer = i;
+			muk.index = j;
+			keys.push_back(muk);
+		}
+
+		for (size_t j = 0; j < sub[i].layer.values.size(); j++) {
+			meta_uniq muv;
+			muv.value = sub[i].layer.values[j];
+			muv.layer = i;
+			muv.index = j;
+			values.push_back(muv);
+		}
+	}
+
+	// Sort them so identical ones are adjacent
+	std::sort(keys.begin(), keys.end());
+	std::sort(values.begin(), values.end());
+
+	// Build new tables of layerly-unique keys and values
+	for (size_t i = 0; i < keys.size(); i++) {
+		size_t j;
+		for (j = i + 1; j < keys.size(); j++) {
+			if (keys[i] != keys[j]) {
+				break;
+			}
+		}
+
+		for (size_t k = i; k < j; k++) {
+			key_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[j].index), out.keys.size()));
+		}
+		out.keys.push_back(keys[i].value.string_value);
+
+		i = j - 1;
+	}
+	for (size_t i = 0; i < values.size(); i++) {
+		size_t j;
+		for (j = i + 1; j < values.size(); j++) {
+			if (values[i] != values[j]) {
+				break;
+			}
+		}
+
+		for (size_t k = i; k < j; k++) {
+			value_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[k].index), out.values.size()));
+		}
+		out.values.push_back(keys[i].value);
+
+		i = j - 1;
+	}
+
+	// Now copy the features into the new layer with mapped keys and values
+	for (size_t i = 0; i < sub.size(); i++) {
+		for (size_t j = 0; j < sub[i].layer.features.size(); j++) {
+			mvt_feature f;
+
+			f.type = sub[i].layer.features[j].type;
+			f.geometry = sub[i].layer.features[j].geometry;
+
+			for (size_t k = 0; k + 1 < sub[i].layer.features[j].tags.size(); k += 2) {
+				std::map<meta_map, size_t>::iterator ki = key_map.find(meta_map(i, sub[i].layer.features[j].tags[k]));
+				if (ki == key_map.end()) {
+					fprintf(stderr, "Internal error in recombining keys\n");
+					exit(EXIT_FAILURE);
+				}
+				f.tags.push_back(ki->second);
+
+				std::map<meta_map, size_t>::iterator vi = value_map.find(meta_map(i, sub[i].layer.features[j].tags[k + 1]));
+				if (vi == value_map.end()) {
+					fprintf(stderr, "Internal error in recombining values\n");
+					exit(EXIT_FAILURE);
+				}
+				f.tags.push_back(vi->second);
+			}
+
+			out.features.push_back(f);
+		}
+	}
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
@@ -556,9 +717,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		long long unclipped_features = 0;
 
 		std::vector<struct partial> partials;
-		std::vector<std::vector<coalesce> > features;
+		std::vector<std::vector<coalesce> > layers;
 		for (int i = 0; i < nlayers; i++) {
-			features.push_back(std::vector<coalesce>());
+			layers.push_back(std::vector<coalesce>());
 		}
 
 		int within[child_shards];
@@ -826,7 +987,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.meta = partials[i].meta;
 					c.stringpool = stringpool + pool_off[partials[i].segment];
 
-					features[layer].push_back(c);
+					layers[layer].push_back(c);
 				}
 			}
 		}
@@ -841,84 +1002,99 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		for (j = 0; j < nlayers; j++) {
 			if (additional[A_REORDER]) {
-				std::sort(features[j].begin(), features[j].end());
+				std::sort(layers[j].begin(), layers[j].end());
 			}
 
 			std::vector<coalesce> out;
-			if (features[j].size() > 0) {
-				out.push_back(features[j][0]);
+			if (layers[j].size() > 0) {
+				out.push_back(layers[j][0]);
 			}
-			for (size_t x = 1; x < features[j].size(); x++) {
+			for (size_t x = 1; x < layers[j].size(); x++) {
 				size_t y = out.size() - 1;
 
 #if 0
-				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
+				if (out.size() > 0 && coalcmp(&layers[j][x], &out[y]) < 0) {
 					fprintf(stderr, "\nfeature out of order\n");
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
-					for (size_t g = 0; g < features[j][x].geom.size(); g++) {
-						out[y].geom.push_back(features[j][x].geom[g]);
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + layers[j][x].geom.size() < 700 && coalcmp(&layers[j][x], &out[y]) == 0 && layers[j][x].type != VT_POINT) {
+					for (size_t g = 0; g < layers[j][x].geom.size(); g++) {
+						out[y].geom.push_back(layers[j][x].geom[g]);
 					}
 					out[y].coalesced = true;
 				} else {
-					out.push_back(features[j][x]);
+					out.push_back(layers[j][x]);
 				}
 			}
 
-			features[j] = out;
+			layers[j] = out;
 
 			out.clear();
-			for (size_t x = 0; x < features[j].size(); x++) {
-				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
-					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
-					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0,
-									     !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
+			for (size_t x = 0; x < layers[j].size(); x++) {
+				if (layers[j][x].coalesced && layers[j][x].type == VT_LINE) {
+					layers[j][x].geom = remove_noop(layers[j][x].geom, layers[j][x].type, 0);
+					layers[j][x].geom = simplify_lines(layers[j][x].geom, 32, 0,
+									   !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
 				}
 
-				if (features[j][x].type == VT_POLYGON) {
-					if (features[j][x].coalesced) {
-						features[j][x].geom = clean_or_clip_poly(features[j][x].geom, 0, 0, 0, false);
+				if (layers[j][x].type == VT_POLYGON) {
+					if (layers[j][x].coalesced) {
+						layers[j][x].geom = clean_or_clip_poly(layers[j][x].geom, 0, 0, 0, false);
 					}
 
-					features[j][x].geom = close_poly(features[j][x].geom);
+					layers[j][x].geom = close_poly(layers[j][x].geom);
 				}
 
-				if (features[j][x].geom.size() > 0) {
-					out.push_back(features[j][x]);
+				if (layers[j][x].geom.size() > 0) {
+					out.push_back(layers[j][x]);
 				}
 			}
-			features[j] = out;
+			layers[j] = out;
 
 			if (prevent[P_INPUT_ORDER]) {
-				std::sort(features[j].begin(), features[j].end(), preservecmp);
+				std::sort(layers[j].begin(), layers[j].end(), preservecmp);
 			}
 		}
 
 		mvt_tile tile;
 
-		for (size_t k = 0; k < features.size(); k++) {
+		for (size_t k = 0; k < layers.size(); k++) {
 			mvt_layer layer;
 
 			layer.name = (*layernames)[k];
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
 
-			for (size_t x = 0; x < features[k].size(); x++) {
-				mvt_feature feature;
+			int tasks = CPUS;
+			std::vector<meta_arg> meta_args;
+			pthread_t pt[tasks];
+			for (size_t x = 0; x < tasks; x++) {
+				meta_args.push_back(meta_arg());
+			}
 
-				if (features[k][x].type == VT_LINE || features[k][x].type == VT_POLYGON) {
-					features[k][x].geom = remove_noop(features[k][x].geom, features[k][x].type, 0);
+			for (size_t x = 0; x < tasks; x++) {
+				meta_args[x].features = &layers[k];
+				meta_args[x].start = x * layers[k].size() / tasks;
+				meta_args[x].end = (x + 1) * layers[k].size() / tasks;
+
+				if (pthread_create(&pt[x], NULL, meta_worker, &(meta_args[x])) != 0) {
+					perror("pthread_create");
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			for (size_t x = 0; x < tasks; x++) {
+				void *retval;
+
+				if (pthread_join(pt[x], &retval) != 0) {
+					perror("pthread_join");
 				}
 
-				feature.type = features[k][x].type;
-				feature.geometry = to_feature(features[k][x].geom);
-				count += features[k][x].geom.size();
-
-				decode_meta(features[k][x].m, &features[k][x].meta, features[k][x].stringpool, layer, feature);
-				layer.features.push_back(feature);
+				count += meta_args[x].count;
 			}
+
+			merge_meta(meta_args, layer);
 
 			if (layer.features.size() > 0) {
 				tile.layers.push_back(layer);
@@ -932,7 +1108,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		long long totalsize = 0;
 		for (j = 0; j < nlayers; j++) {
-			totalsize += features[j].size();
+			totalsize += layers[j].size();
 		}
 
 		if (totalsize > 0) {

@@ -379,6 +379,10 @@ bool mvt_value::operator<(const mvt_value &o) const {
 	return false;
 }
 
+bool mvt_value::operator!=(const mvt_value &o) const {
+	return *this < o || o < *this;
+}
+
 void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	size_t ko, vo;
 

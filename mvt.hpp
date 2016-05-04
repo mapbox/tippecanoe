@@ -50,6 +50,7 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
+	bool operator!=(const mvt_value &o) const;
 };
 
 struct mvt_layer {
