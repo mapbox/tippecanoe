@@ -616,7 +616,7 @@ void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 		}
 
 		for (size_t k = i; k < j; k++) {
-			key_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[j].index), out.keys.size()));
+			key_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[k].index), out.keys.size()));
 		}
 		out.keys.push_back(keys[i].value.string_value);
 
@@ -631,9 +631,9 @@ void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 		}
 
 		for (size_t k = i; k < j; k++) {
-			value_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[k].index), out.values.size()));
+			value_map.insert(std::pair<meta_map, size_t>(meta_map(values[k].layer, values[k].index), out.values.size()));
 		}
-		out.values.push_back(keys[i].value);
+		out.values.push_back(values[i].value);
 
 		i = j - 1;
 	}
