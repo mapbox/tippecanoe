@@ -549,38 +549,20 @@ struct meta_uniq {
 	}
 };
 
-struct meta_map {
-	size_t layer;
-	size_t index;
-
-	bool operator<(const meta_map &o) const {
-		if (layer < o.layer) {
-			return true;
-		}
-		if (layer == o.layer) {
-			if (index < o.index) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	meta_map(size_t nlayer, size_t nindex) {
-		layer = nlayer;
-		index = nindex;
-	}
-};
-
 void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 	std::vector<meta_uniq> keys;
 	std::vector<meta_uniq> values;
 
-	std::map<meta_map, size_t> key_map;
-	std::map<meta_map, size_t> value_map;
+	std::vector<std::vector<size_t>> key_map;
+	std::vector<std::vector<size_t>> value_map;
+	key_map.resize(sub.size());
+	value_map.resize(sub.size());
 
 	// Collect all the unique keys and values from from the sub-layers
 	for (size_t i = 0; i < sub.size(); i++) {
+		key_map[i].resize(sub[i].layer.keys.size());
+		value_map[i].resize(sub[i].layer.values.size());
+
 		for (size_t j = 0; j < sub[i].layer.keys.size(); j++) {
 			mvt_value key;
 			key.type = mvt_string;
@@ -610,13 +592,13 @@ void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 	for (size_t i = 0; i < keys.size(); i++) {
 		size_t j;
 		for (j = i + 1; j < keys.size(); j++) {
-			if (keys[i] != keys[j]) {
+			if (keys[i] < keys[j]) {
 				break;
 			}
 		}
 
 		for (size_t k = i; k < j; k++) {
-			key_map.insert(std::pair<meta_map, size_t>(meta_map(keys[k].layer, keys[k].index), out.keys.size()));
+			key_map[keys[k].layer][keys[k].index] = out.keys.size();
 		}
 		out.keys.push_back(keys[i].value.string_value);
 
@@ -625,13 +607,13 @@ void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 	for (size_t i = 0; i < values.size(); i++) {
 		size_t j;
 		for (j = i + 1; j < values.size(); j++) {
-			if (values[i] != values[j]) {
+			if (values[i] < values[j]) {
 				break;
 			}
 		}
 
 		for (size_t k = i; k < j; k++) {
-			value_map.insert(std::pair<meta_map, size_t>(meta_map(values[k].layer, values[k].index), out.values.size()));
+			value_map[values[k].layer][values[k].index] = out.values.size();
 		}
 		out.values.push_back(values[i].value);
 
@@ -647,19 +629,8 @@ void merge_meta(std::vector<meta_arg> &sub, mvt_layer &out) {
 			f.geometry = sub[i].layer.features[j].geometry;
 
 			for (size_t k = 0; k + 1 < sub[i].layer.features[j].tags.size(); k += 2) {
-				std::map<meta_map, size_t>::iterator ki = key_map.find(meta_map(i, sub[i].layer.features[j].tags[k]));
-				if (ki == key_map.end()) {
-					fprintf(stderr, "Internal error in recombining keys\n");
-					exit(EXIT_FAILURE);
-				}
-				f.tags.push_back(ki->second);
-
-				std::map<meta_map, size_t>::iterator vi = value_map.find(meta_map(i, sub[i].layer.features[j].tags[k + 1]));
-				if (vi == value_map.end()) {
-					fprintf(stderr, "Internal error in recombining values\n");
-					exit(EXIT_FAILURE);
-				}
-				f.tags.push_back(vi->second);
+				f.tags.push_back(key_map[i][sub[i].layer.features[j].tags[k]]);
+				f.tags.push_back(value_map[i][sub[i].layer.features[j].tags[k + 1]]);
 			}
 
 			out.features.push_back(f);
@@ -1066,17 +1037,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
 
-			int tasks = CPUS;
+			int meta_tasks = CPUS;
 			std::vector<meta_arg> meta_args;
-			pthread_t pt[tasks];
-			for (size_t x = 0; x < tasks; x++) {
+			pthread_t pt[meta_tasks];
+			for (size_t x = 0; x < meta_tasks; x++) {
 				meta_args.push_back(meta_arg());
 			}
 
-			for (size_t x = 0; x < tasks; x++) {
+			for (size_t x = 0; x < meta_tasks; x++) {
 				meta_args[x].features = &layers[k];
-				meta_args[x].start = x * layers[k].size() / tasks;
-				meta_args[x].end = (x + 1) * layers[k].size() / tasks;
+				meta_args[x].start = x * layers[k].size() / meta_tasks;
+				meta_args[x].end = (x + 1) * layers[k].size() / meta_tasks;
 
 				if (pthread_create(&pt[x], NULL, meta_worker, &(meta_args[x])) != 0) {
 					perror("pthread_create");
@@ -1084,7 +1055,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			for (size_t x = 0; x < tasks; x++) {
+			for (size_t x = 0; x < meta_tasks; x++) {
 				void *retval;
 
 				if (pthread_join(pt[x], &retval) != 0) {
