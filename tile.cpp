@@ -394,6 +394,47 @@ struct partial_arg {
 	int tasks;
 };
 
+drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
+	// From area in world coordinates to area in tile coordinates
+	long long divisor = 1LL << (32 - detail - z);
+	area /= divisor * divisor;
+
+	if (area == 0) {
+		return drawvec();
+	}
+
+	int height = ceil(sqrt(area));
+	int width = round(area / height);
+	if (width == 0) {
+		width = 1;
+	}
+
+	long long sx = 0, sy = 0, n = 0;
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
+			sx += geom[i].x;
+			sy += geom[i].y;
+			n++;
+		}
+	}
+
+	if (n > 0) {
+		sx /= n;
+		sy /= n;
+
+		drawvec out;
+		out.push_back(draw(VT_MOVETO, sx - (width / 2), sy - (height / 2)));
+		out.push_back(draw(VT_LINETO, sx - (width / 2) + width, sy - (height / 2)));
+		out.push_back(draw(VT_LINETO, sx - (width / 2) + width, sy - (height / 2) + height));
+		out.push_back(draw(VT_LINETO, sx - (width / 2), sy - (height / 2) + height));
+		out.push_back(draw(VT_LINETO, sx - (width / 2), sy - (height / 2)));
+
+		return out;
+	} else {
+		return drawvec();
+	}
+}
+
 void *partial_feature_worker(void *v) {
 	struct partial_arg *a = (struct partial_arg *) v;
 	std::vector<struct partial> *partials = a->partials;
@@ -408,13 +449,22 @@ void *partial_feature_worker(void *v) {
 		int *additional = (*partials)[i].additional;
 		int maxzoom = (*partials)[i].maxzoom;
 
+		double area = 0;
+		if (t == VT_POLYGON) {
+			area = get_area(geom, 0, geom.size());
+		}
+
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
 			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				geom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
+				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
+
+				if (t != VT_POLYGON || ngeom.size() >= 3) {
+					geom = ngeom;
+				}
 			}
 		}
 
@@ -441,13 +491,14 @@ void *partial_feature_worker(void *v) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
 			for (size_t g = 0; g < geoms.size(); g++) {
-				drawvec before;
-				if (additional[A_DEBUG_POLYGON]) {
-					before = geoms[g];
-				}
+				drawvec before = geoms[g];
 				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, 0, false);
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g], before);
+				}
+
+				if (geoms[g].size() < 3) {
+					geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
 				}
 			}
 		}

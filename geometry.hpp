@@ -45,3 +45,4 @@ drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom, drawvec &before);
+double get_area(drawvec &geom, size_t i, size_t j);

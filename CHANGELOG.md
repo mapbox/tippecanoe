@@ -1,3 +1,7 @@
+## 1.11.4
+
+* Don't let polygons with nonzero area disappear during cleaning
+
 ## 1.11.3
 
 * Internal code cleanup
