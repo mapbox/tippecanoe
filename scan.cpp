@@ -8,12 +8,9 @@
 #include <map>
 #include <algorithm>
 #include <sqlite3.h>
-#include "geometry.hh"
-#include "scan.hh"
-
-extern "C" {
-#include "tile.h"
-};
+#include "geometry.hpp"
+#include "scan.hpp"
+#include "tile.hpp"
 
 struct loc {
 	long long x;

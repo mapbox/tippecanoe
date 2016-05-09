@@ -1,13 +1,26 @@
+#define VT_POINT 1
+#define VT_LINE 2
+#define VT_POLYGON 3
+
+#define VT_END 0
+#define VT_MOVETO 1
+#define VT_LINETO 2
+#define VT_CLOSEPATH 7
+
+#define VT_STRING 1
+#define VT_NUMBER 2
+#define VT_BOOLEAN 7
+
 struct draw {
 	signed char op;
 	long long x;
 	long long y;
 	int necessary;
 
-	draw(int op, long long x, long long y) {
-		this->op = op;
-		this->x = x;
-		this->y = y;
+	draw(int nop, long long nx, long long ny) {
+		this->op = nop;
+		this->x = nx;
+		this->y = ny;
 	}
 
 	draw() {
@@ -32,3 +45,4 @@ drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom, drawvec &before);
+double get_area(drawvec &geom, size_t i, size_t j);

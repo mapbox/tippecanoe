@@ -1,61 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sqlite3.h>
 #include <string>
+#include <vector>
+#include <map>
 #include <zlib.h>
 #include <math.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
-#include <google/protobuf/io/coded_stream.h>
-#include "vector_tile.pb.h"
-#include "tile.h"
-
-extern "C" {
-#include "projection.h"
-}
-
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline bool is_compressed(std::string const &data) {
-	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
-}
-
-// https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-inline int decompress(std::string const &input, std::string &output) {
-	z_stream inflate_s;
-	inflate_s.zalloc = Z_NULL;
-	inflate_s.zfree = Z_NULL;
-	inflate_s.opaque = Z_NULL;
-	inflate_s.avail_in = 0;
-	inflate_s.next_in = Z_NULL;
-	if (inflateInit2(&inflate_s, 32 + 15) != Z_OK) {
-		fprintf(stderr, "error: %s\n", inflate_s.msg);
-	}
-	inflate_s.next_in = (Bytef *) input.data();
-	inflate_s.avail_in = input.size();
-	size_t length = 0;
-	do {
-		output.resize(length + 2 * input.size());
-		inflate_s.avail_out = 2 * input.size();
-		inflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = inflate(&inflate_s, Z_FINISH);
-		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			fprintf(stderr, "error: %s\n", inflate_s.msg);
-			return 0;
-		}
-
-		length += (2 * input.size() - inflate_s.avail_out);
-	} while (inflate_s.avail_out == 0);
-	inflateEnd(&inflate_s);
-	output.resize(length);
-	return 1;
-}
-
-int dezig(unsigned n) {
-	return (n >> 1) ^ (-(n & 1));
-}
+#include "mvt.hpp"
+#include "projection.hpp"
+#include "geometry.hpp"
 
 void printq(const char *s) {
 	putchar('"');
@@ -71,36 +29,23 @@ void printq(const char *s) {
 	putchar('"');
 }
 
-struct draw {
+struct lonlat {
 	int op;
 	double lon;
 	double lat;
 
-	draw(int op, double lon, double lat) {
-		this->op = op;
-		this->lon = lon;
-		this->lat = lat;
+	lonlat(int nop, double nlon, double nlat) {
+		this->op = nop;
+		this->lon = nlon;
+		this->lat = nlat;
 	}
 };
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
-	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	int within = 0;
+	mvt_tile tile;
 
-	// https://github.com/mapbox/mapnik-vector-tile/blob/master/examples/c%2B%2B/tileinfo.cpp
-	mapnik::vector::tile tile;
-
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		decompress(message, uncompressed);
-		google::protobuf::io::ArrayInputStream stream(uncompressed.c_str(), uncompressed.length());
-		google::protobuf::io::CodedInputStream codedstream(&stream);
-		codedstream.SetTotalBytesLimit(10 * 67108864, 5 * 67108864);
-		if (!tile.ParseFromCodedStream(&codedstream)) {
-			fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
-			exit(EXIT_FAILURE);
-		}
-	} else if (!tile.ParseFromString(message)) {
+	if (!tile.decode(message)) {
 		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -113,9 +58,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	printf(", \"features\": [\n");
 
-	for (int l = 0; l < tile.layers_size(); l++) {
-		mapnik::vector::tile_layer layer = tile.layers(l);
-		int extent = layer.extent();
+	for (size_t l = 0; l < tile.layers.size(); l++) {
+		mvt_layer &layer = tile.layers[l];
+		int extent = layer.extent;
 
 		if (describe) {
 			if (l != 0) {
@@ -124,16 +69,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 			printf("{ \"type\": \"FeatureCollection\"");
 			printf(", \"properties\": { \"layer\": ");
-			printq(layer.name().c_str());
+			printq(layer.name.c_str());
 			printf(" }");
 			printf(", \"features\": [\n");
 
 			within = 0;
 		}
 
-		for (int f = 0; f < layer.features_size(); f++) {
-			mapnik::vector::tile_feature feat = layer.features(f);
-			int px = 0, py = 0;
+		for (size_t f = 0; f < layer.features.size(); f++) {
+			mvt_feature &feat = layer.features[f];
 
 			if (within) {
 				printf(",\n");
@@ -143,84 +87,87 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf("{ \"type\": \"Feature\"");
 			printf(", \"properties\": { ");
 
-			for (int t = 0; t + 1 < feat.tags_size(); t += 2) {
+			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				if (t != 0) {
 					printf(", ");
 				}
 
-				const char *key = layer.keys(feat.tags(t)).c_str();
-				mapnik::vector::tile_value const &val = layer.values(feat.tags(t + 1));
+				if (feat.tags[t] >= layer.keys.size()) {
+					fprintf(stderr, "Error: out of bounds feature key\n");
+					exit(EXIT_FAILURE);
+				}
+				if (feat.tags[t + 1] >= layer.values.size()) {
+					fprintf(stderr, "Error: out of bounds feature value\n");
+					exit(EXIT_FAILURE);
+				}
 
-				if (val.has_string_value()) {
+				const char *key = layer.keys[feat.tags[t]].c_str();
+				mvt_value const &val = layer.values[feat.tags[t + 1]];
+
+				if (val.type == mvt_string) {
 					printq(key);
 					printf(": ");
-					printq(val.string_value().c_str());
-				} else if (val.has_int_value()) {
+					printq(val.string_value.c_str());
+				} else if (val.type == mvt_int) {
 					printq(key);
-					printf(": %lld", (long long) val.int_value());
-				} else if (val.has_double_value()) {
+					printf(": %lld", (long long) val.numeric_value.int_value);
+				} else if (val.type == mvt_double) {
 					printq(key);
-					double v = val.double_value();
+					double v = val.numeric_value.double_value;
 					if (v == (long long) v) {
 						printf(": %lld", (long long) v);
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.has_float_value()) {
+				} else if (val.type == mvt_float) {
 					printq(key);
-					double v = val.float_value();
+					double v = val.numeric_value.float_value;
 					if (v == (long long) v) {
 						printf(": %lld", (long long) v);
 					} else {
 						printf(": %g", v);
 					}
-				} else if (val.has_sint_value()) {
+				} else if (val.type == mvt_sint) {
 					printq(key);
-					printf(": %lld", (long long) val.sint_value());
-				} else if (val.has_uint_value()) {
+					printf(": %lld", (long long) val.numeric_value.sint_value);
+				} else if (val.type == mvt_uint) {
 					printq(key);
-					printf(": %lld", (long long) val.uint_value());
-				} else if (val.has_bool_value()) {
+					printf(": %lld", (long long) val.numeric_value.uint_value);
+				} else if (val.type == mvt_bool) {
 					printq(key);
-					printf(": %s", val.bool_value() ? "true" : "false");
+					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
 				}
 			}
 
 			printf(" }, \"geometry\": { ");
 
-			std::vector<draw> ops;
+			std::vector<lonlat> ops;
 
-			if (feat.geometry_size() == 0) {
+			if (feat.geometry.size() == 0) {
 				fprintf(stderr, "empty geometry\n");
 				exit(EXIT_FAILURE);
 			}
 
-			for (int g = 0; g < feat.geometry_size(); g++) {
-				uint32_t geom = feat.geometry(g);
-				uint32_t op = geom & 7;
-				uint32_t count = geom >> 3;
+			for (size_t g = 0; g < feat.geometry.size(); g++) {
+				int op = feat.geometry[g].op;
+				long long px = feat.geometry[g].x;
+				long long py = feat.geometry[g].y;
 
 				if (op == VT_MOVETO || op == VT_LINETO) {
-					for (size_t k = 0; k < count; k++) {
-						px += dezig(feat.geometry(g + 1));
-						py += dezig(feat.geometry(g + 2));
-						g += 2;
+					long long scale = 1LL << (32 - z);
+					long long wx = scale * x + (scale / extent) * px;
+					long long wy = scale * y + (scale / extent) * py;
 
-						long long scale = 1LL << (32 - z);
-						long long wx = scale * x + (scale / extent) * px;
-						long long wy = scale * y + (scale / extent) * py;
+					double lat, lon;
+					tile2latlon(wx, wy, 32, &lat, &lon);
 
-						double lat, lon;
-						tile2latlon(wx, wy, 32, &lat, &lon);
-
-						ops.push_back(draw(op, lon, lat));
-					}
+					ops.push_back(lonlat(op, lon, lat));
 				} else {
-					ops.push_back(draw(op, 0, 0));
+					ops.push_back(lonlat(op, 0, 0));
 				}
 			}
 
-			if (feat.type() == VT_POINT) {
+			if (feat.type == VT_POINT) {
 				if (ops.size() == 1) {
 					printf("\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
 				} else {
@@ -233,7 +180,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 					printf(" ]");
 				}
-			} else if (feat.type() == VT_LINE) {
+			} else if (feat.type == VT_LINE) {
 				int movetos = 0;
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
@@ -269,13 +216,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					}
 					printf(" ] ]");
 				}
-			} else if (feat.type() == VT_POLYGON) {
-				std::vector<std::vector<draw> > rings;
+			} else if (feat.type == VT_POLYGON) {
+				std::vector<std::vector<lonlat> > rings;
 				std::vector<double> areas;
 
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
-						rings.push_back(std::vector<draw>());
+						rings.push_back(std::vector<lonlat>());
 						areas.push_back(0);
 					}
 
@@ -445,13 +392,13 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			within = 1;
 
 			int len = sqlite3_column_bytes(stmt, 0);
-			int z = sqlite3_column_int(stmt, 1);
-			int x = sqlite3_column_int(stmt, 2);
-			int y = sqlite3_column_int(stmt, 3);
-			y = (1LL << z) - 1 - y;
+			int tz = sqlite3_column_int(stmt, 1);
+			int tx = sqlite3_column_int(stmt, 2);
+			int ty = sqlite3_column_int(stmt, 3);
+			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), z, x, y, 1);
+			handle(std::string(s, len), tz, tx, ty, 1);
 		}
 
 		printf("] }\n");

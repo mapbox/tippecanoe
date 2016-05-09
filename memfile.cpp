@@ -2,7 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#include "memfile.h"
+#include "memfile.hpp"
 
 #define INCREMENT 131072
 
@@ -11,12 +11,12 @@ struct memfile *memfile_open(int fd) {
 		return NULL;
 	}
 
-	char *map = mmap(NULL, INCREMENT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	char *map = (char *) mmap(NULL, INCREMENT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (map == MAP_FAILED) {
 		return NULL;
 	}
 
-	struct memfile *mf = malloc(sizeof(struct memfile));
+	struct memfile *mf = (struct memfile *) malloc(sizeof(struct memfile));
 	if (mf == NULL) {
 		munmap(map, INCREMENT);
 		return NULL;
@@ -58,7 +58,7 @@ int memfile_write(struct memfile *file, void *s, long long len) {
 			return -1;
 		}
 
-		file->map = mmap(NULL, file->len, PROT_READ | PROT_WRITE, MAP_SHARED, file->fd, 0);
+		file->map = (char *) mmap(NULL, file->len, PROT_READ | PROT_WRITE, MAP_SHARED, file->fd, 0);
 		if (file->map == MAP_FAILED) {
 			return -1;
 		}

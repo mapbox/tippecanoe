@@ -1,3 +1,31 @@
+## 1.11.4
+
+* Don't let polygons with nonzero area disappear during cleaning
+
+## 1.11.3
+
+* Internal code cleanup
+
+## 1.11.2
+
+* Update Clipper to fix potential crash
+
+## 1.11.1
+
+* Make better use of C++ standard libraries
+
+## 1.11.0
+
+* Convert C source files to C++
+
+## 1.10.0
+
+* Upgrade Clipper to fix potential crashes and improve polygon topology
+
+## 1.9.16
+
+* Switch to protozero as the library for reading and writing protocol buffers
+
 ## 1.9.15
 
 * Add option not to clip features

@@ -20,6 +20,9 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <vector>
+#include <string>
+#include <set>
 
 #ifdef __APPLE__
 #include <sys/types.h>
@@ -30,13 +33,21 @@
 #include <sys/statfs.h>
 #endif
 
-#include "jsonpull.h"
-#include "tile.h"
-#include "pool.h"
-#include "mbtiles.h"
-#include "projection.h"
-#include "version.h"
-#include "memfile.h"
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
+
+#include "tile.hpp"
+#include "pool.hpp"
+#include "projection.hpp"
+#include "version.hpp"
+#include "memfile.hpp"
+#include "serial.hpp"
+#include "mbtiles.hpp"
+#include "main.hpp"
+#include "geojson.hpp"
+#include "geometry.hpp"
+#include "options.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -48,35 +59,9 @@ int geometry_scale = 0;
 static int prevent[256];
 static int additional[256];
 
-#define GEOM_POINT 0	   /* array of positions */
-#define GEOM_MULTIPOINT 1      /* array of arrays of positions */
-#define GEOM_LINESTRING 2      /* array of arrays of positions */
-#define GEOM_MULTILINESTRING 3 /* array of arrays of arrays of positions */
-#define GEOM_POLYGON 4	 /* array of arrays of arrays of positions */
-#define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
-#define GEOM_TYPES 6
-
-static const char *geometry_names[GEOM_TYPES] = {
-	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
-};
-
-static int geometry_within[GEOM_TYPES] = {
-	-1,		 /* point */
-	GEOM_POINT,      /* multipoint */
-	GEOM_POINT,      /* linestring */
-	GEOM_LINESTRING, /* multilinestring */
-	GEOM_LINESTRING, /* polygon */
-	GEOM_POLYGON,    /* multipolygon */
-};
-
-static int mb_geometry[GEOM_TYPES] = {
-	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
-};
-
 struct source {
-	char *layer;
-	char *file;
-	struct source *next;
+	std::string layer;
+	std::string file;
 };
 
 int CPUS;
@@ -87,12 +72,6 @@ static long long diskfree;
 #define MAX_ZOOM 24
 
 struct reader {
-	char *metaname;
-	char *poolname;
-	char *treename;
-	char *geomname;
-	char *indexname;
-
 	int metafd;
 	int poolfd;
 	int treefd;
@@ -109,7 +88,7 @@ struct reader {
 	long long geompos;
 	long long indexpos;
 
-	long long *file_bbox;
+	long long file_bbox[4];
 
 	struct stat geomst;
 	struct stat metast;
@@ -193,238 +172,6 @@ void init_cpus() {
 	}
 }
 
-size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
-	size_t w = fwrite(ptr, size, nitems, stream);
-	if (w != nitems) {
-		fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	return w;
-}
-
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
-	serialize_long_long(out, n, fpos, fname);
-}
-
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	unsigned long long zigzag = (n << 1) ^ (n >> 63);
-
-	while (1) {
-		unsigned char b = zigzag & 0x7F;
-		if ((zigzag >> 7) != 0) {
-			b |= 0x80;
-			if (putc(b, out) == EOF) {
-				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			*fpos += 1;
-			zigzag >>= 7;
-		} else {
-			if (putc(b, out) == EOF) {
-				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			*fpos += 1;
-			break;
-		}
-	}
-}
-
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(signed char), 1, out, fname);
-	*fpos += sizeof(signed char);
-}
-
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname) {
-	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
-	*fpos += sizeof(unsigned);
-}
-
-void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
-	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
-		return;
-	}
-
-	int within = geometry_within[t];
-	if (within >= 0) {
-		size_t i;
-		for (i = 0; i < j->length; i++) {
-			if (within == GEOM_POINT) {
-				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
-					op = VT_MOVETO;
-				} else {
-					op = VT_LINETO;
-				}
-			}
-
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
-		}
-	} else {
-		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			long long x, y;
-			double lon = j->array[0]->number;
-			double lat = j->array[1]->number;
-			latlon2tile(lat, lon, 32, &x, &y);
-
-			if (j->length > 2) {
-				static int warned = 0;
-
-				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
-					warned = 1;
-				}
-			}
-
-			if (bbox != NULL) {
-				if (x < bbox[0]) {
-					bbox[0] = x;
-				}
-				if (y < bbox[1]) {
-					bbox[1] = y;
-				}
-				if (x > bbox[2]) {
-					bbox[2] = x;
-				}
-				if (y > bbox[3]) {
-					bbox[3] = y;
-				}
-			}
-
-			if (!*initialized) {
-				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
-					*initial_x = 1LL << 31;
-					*initial_y = 1LL << 31;
-					*wx = 1LL << 31;
-					*wy = 1LL << 31;
-				} else {
-					*initial_x = (x >> geometry_scale) << geometry_scale;
-					*initial_y = (y >> geometry_scale) << geometry_scale;
-					*wx = x;
-					*wy = y;
-				}
-
-				*initialized = 1;
-			}
-
-			serialize_byte(out, op, fpos, fname);
-			serialize_long_long(out, (x >> geometry_scale) - (*wx >> geometry_scale), fpos, fname);
-			serialize_long_long(out, (y >> geometry_scale) - (*wy >> geometry_scale), fpos, fname);
-			*wx = x;
-			*wy = y;
-		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
-		}
-	}
-
-	if (t == GEOM_POLYGON) {
-		// Note that this is not using the correct meaning of closepath.
-		//
-		// We are using it here to close an entire Polygon, to distinguish
-		// the Polygons within a MultiPolygon from each other.
-		//
-		// This will be undone in fix_polygon(), which needs to know which
-		// rings come from which Polygons so that it can make the winding order
-		// of the outer ring be the opposite of the order of the inner rings.
-
-		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
-	}
-}
-
-void deserialize_int(char **f, int *n) {
-	long long ll;
-	deserialize_long_long(f, &ll);
-	*n = ll;
-}
-
-void deserialize_long_long(char **f, long long *n) {
-	unsigned long long zigzag = 0;
-	int shift = 0;
-
-	while (1) {
-		if ((**f & 0x80) == 0) {
-			zigzag |= ((unsigned long long) **f) << shift;
-			*f += 1;
-			shift += 7;
-			break;
-		} else {
-			zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
-			*f += 1;
-			shift += 7;
-		}
-	}
-
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
-}
-
-void deserialize_uint(char **f, unsigned *n) {
-	memcpy(n, *f, sizeof(unsigned));
-	*f += sizeof(unsigned);
-}
-
-void deserialize_byte(char **f, signed char *n) {
-	memcpy(n, *f, sizeof(signed char));
-	*f += sizeof(signed char);
-}
-
-int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
-	unsigned long long zigzag = 0;
-	int shift = 0;
-
-	while (1) {
-		int c = getc(f);
-		if (c == EOF) {
-			return 0;
-		}
-		(*geompos)++;
-
-		if ((c & 0x80) == 0) {
-			zigzag |= ((unsigned long long) c) << shift;
-			shift += 7;
-			break;
-		} else {
-			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
-			shift += 7;
-		}
-	}
-
-	*n = (zigzag >> 1) ^ (-(zigzag & 1));
-	return 1;
-}
-
-int deserialize_int_io(FILE *f, int *n, long long *geompos) {
-	long long ll = 0;
-	int ret = deserialize_long_long_io(f, &ll, geompos);
-	*n = ll;
-	return ret;
-}
-
-int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
-	if (fread(n, sizeof(unsigned), 1, f) != 1) {
-		return 0;
-	}
-	*geompos += sizeof(unsigned);
-	return 1;
-}
-
-int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
-	int c = getc(f);
-	if (c == EOF) {
-		return 0;
-	}
-	*n = c;
-	(*geompos)++;
-	return 1;
-}
-
-struct index {
-	long long start;
-	long long end;
-	unsigned long long index;
-	short segment;
-	unsigned long long seq : (64 - 16);  // pack with segment to stay in 32 bytes
-};
-
 int indexcmp(const void *v1, const void *v2) {
 	const struct index *i1 = (const struct index *) v1;
 	const struct index *i2 = (const struct index *) v2;
@@ -444,14 +191,14 @@ int indexcmp(const void *v1, const void *v2) {
 	return 0;
 }
 
-struct merge {
+struct mergelist {
 	long long start;
 	long long end;
 
-	struct merge *next;
+	struct mergelist *next;
 };
 
-static void insert(struct merge *m, struct merge **head, unsigned char *map) {
+static void insert(struct mergelist *m, struct mergelist **head, unsigned char *map) {
 	while (*head != NULL && indexcmp(map + m->start, map + (*head)->start) > 0) {
 		head = &((*head)->next);
 	}
@@ -460,9 +207,9 @@ static void insert(struct merge *m, struct merge **head, unsigned char *map) {
 	*head = m;
 }
 
-static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
+static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
 	int i;
-	struct merge *head = NULL;
+	struct mergelist *head = NULL;
 
 	for (i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
@@ -485,7 +232,7 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
 		head->start += bytes;
 
-		struct merge *m = head;
+		struct mergelist *m = head;
 		head = m->next;
 		m->next = NULL;
 
@@ -495,492 +242,11 @@ static void merge(struct merge *merges, int nmerges, unsigned char *map, FILE *f
 	}
 }
 
-struct stringpool {
-	long long left;
-	long long right;
-	long long off;
-};
-
-static unsigned char swizzle[256] = {
-	0x00, 0xBF, 0x18, 0xDE, 0x93, 0xC9, 0xB1, 0x5E, 0xDF, 0xBE, 0x72, 0x5A, 0xBB, 0x42, 0x64, 0xC6,
-	0xD8, 0xB7, 0x15, 0x74, 0x1C, 0x8B, 0x91, 0xF5, 0x29, 0x46, 0xEC, 0x6F, 0xCA, 0x20, 0xF0, 0x06,
-	0x27, 0x61, 0x87, 0xE0, 0x6E, 0x43, 0x50, 0xC5, 0x1B, 0xB4, 0x37, 0xC3, 0x69, 0xA6, 0xEE, 0x80,
-	0xAF, 0x9B, 0xA1, 0x76, 0x23, 0x24, 0x53, 0xF3, 0x5B, 0x65, 0x19, 0xF4, 0xFC, 0xDD, 0x26, 0xE8,
-	0x10, 0xF7, 0xCE, 0x92, 0x48, 0xF6, 0x94, 0x60, 0x07, 0xC4, 0xB9, 0x97, 0x6D, 0xA4, 0x11, 0x0D,
-	0x1F, 0x4D, 0x13, 0xB0, 0x5D, 0xBA, 0x31, 0xD5, 0x8D, 0x51, 0x36, 0x96, 0x7A, 0x03, 0x7F, 0xDA,
-	0x17, 0xDB, 0xD4, 0x83, 0xE2, 0x79, 0x6A, 0xE1, 0x95, 0x38, 0xFF, 0x28, 0xB2, 0xB3, 0xA7, 0xAE,
-	0xF8, 0x54, 0xCC, 0xDC, 0x9A, 0x6B, 0xFB, 0x3F, 0xD7, 0xBC, 0x21, 0xC8, 0x71, 0x09, 0x16, 0xAC,
-	0x3C, 0x8A, 0x62, 0x05, 0xC2, 0x8C, 0x32, 0x4E, 0x35, 0x9C, 0x5F, 0x75, 0xCD, 0x2E, 0xA2, 0x3E,
-	0x1A, 0xC1, 0x8E, 0x14, 0xA0, 0xD3, 0x7D, 0xD9, 0xEB, 0x5C, 0x70, 0xE6, 0x9E, 0x12, 0x3B, 0xEF,
-	0x1E, 0x49, 0xD2, 0x98, 0x39, 0x7E, 0x44, 0x4B, 0x6C, 0x88, 0x02, 0x2C, 0xAD, 0xE5, 0x9F, 0x40,
-	0x7B, 0x4A, 0x3D, 0xA9, 0xAB, 0x0B, 0xD6, 0x2F, 0x90, 0x2A, 0xB6, 0x1D, 0xC7, 0x22, 0x55, 0x34,
-	0x0A, 0xD0, 0xB5, 0x68, 0xE3, 0x59, 0xFD, 0xFA, 0x57, 0x77, 0x25, 0xA3, 0x04, 0xB8, 0x33, 0x89,
-	0x78, 0x82, 0xE4, 0xC0, 0x0E, 0x8F, 0x85, 0xD1, 0x84, 0x08, 0x67, 0x47, 0x9D, 0xCB, 0x58, 0x4C,
-	0xAA, 0xED, 0x52, 0xF2, 0x4F, 0xF1, 0x66, 0xCF, 0xA5, 0x56, 0xEA, 0x7C, 0xE9, 0x63, 0xE7, 0x01,
-	0xF9, 0xFE, 0x0C, 0x99, 0x2D, 0x0F, 0x3A, 0x41, 0x45, 0xA8, 0x30, 0x2B, 0x73, 0xBD, 0x86, 0x81,
-};
-
-int swizzlecmp(char *a, char *b) {
-	while (*a || *b) {
-		int aa = swizzle[(unsigned char) *a];
-		int bb = swizzle[(unsigned char) *b];
-
-		int cmp = aa - bb;
-		if (cmp != 0) {
-			return cmp;
-		}
-
-		a++;
-		b++;
-	}
-
-	return 0;
-}
-
-long long addpool(struct memfile *poolfile, struct memfile *treefile, char *s, char type) {
-	long long *sp = &treefile->tree;
-
-	while (*sp != 0) {
-		int cmp = swizzlecmp(s, poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off + 1);
-
-		if (cmp == 0) {
-			cmp = type - (poolfile->map + ((struct stringpool *) (treefile->map + *sp))->off)[0];
-		}
-
-		if (cmp < 0) {
-			sp = &(((struct stringpool *) (treefile->map + *sp))->left);
-		} else if (cmp > 0) {
-			sp = &(((struct stringpool *) (treefile->map + *sp))->right);
-		} else {
-			return ((struct stringpool *) (treefile->map + *sp))->off;
-		}
-	}
-
-	// *sp is probably in the memory-mapped file, and will move if the file grows.
-	long long ssp;
-	if (sp == &treefile->tree) {
-		ssp = -1;
-	} else {
-		ssp = ((char *) sp) - treefile->map;
-	}
-
-	long long off = poolfile->off;
-	if (memfile_write(poolfile, &type, 1) < 0) {
-		perror("memfile write");
-		exit(EXIT_FAILURE);
-	}
-	if (memfile_write(poolfile, s, strlen(s) + 1) < 0) {
-		perror("memfile write");
-		exit(EXIT_FAILURE);
-	}
-
-	struct stringpool tsp;
-	tsp.left = 0;
-	tsp.right = 0;
-	tsp.off = off;
-
-	long long p = treefile->off;
-	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
-		perror("memfile write");
-		exit(EXIT_FAILURE);
-	}
-
-	if (ssp == -1) {
-		treefile->tree = p;
-	} else {
-		*((long long *) (treefile->map + ssp)) = p;
-	}
-	return off;
-}
-
-int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers) {
-	json_object *geometry_type = json_hash_get(geometry, "type");
-	if (geometry_type == NULL) {
-		static int warned = 0;
-		if (!warned) {
-			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, line);
-			warned = 1;
-		}
-
-		return 0;
-	}
-
-	if (geometry_type->type != JSON_STRING) {
-		fprintf(stderr, "%s:%d: geometry without type\n", reading, line);
-		return 0;
-	}
-
-	json_object *coordinates = json_hash_get(geometry, "coordinates");
-	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, line);
-		return 0;
-	}
-
-	int t;
-	for (t = 0; t < GEOM_TYPES; t++) {
-		if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
-			break;
-		}
-	}
-	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, line, geometry_type->string);
-		return 0;
-	}
-
-	int tippecanoe_minzoom = -1;
-	int tippecanoe_maxzoom = -1;
-
-	if (tippecanoe != NULL) {
-		json_object *min = json_hash_get(tippecanoe, "minzoom");
-		if (min != NULL && min->type == JSON_NUMBER) {
-			tippecanoe_minzoom = min->number;
-		}
-		if (min != NULL && min->type == JSON_STRING) {
-			tippecanoe_minzoom = atoi(min->string);
-		}
-
-		json_object *max = json_hash_get(tippecanoe, "maxzoom");
-		if (max != NULL && max->type == JSON_NUMBER) {
-			tippecanoe_maxzoom = max->number;
-		}
-		if (max != NULL && max->type == JSON_STRING) {
-			tippecanoe_maxzoom = atoi(max->string);
-		}
-	}
-
-	long long bbox[] = {UINT_MAX, UINT_MAX, 0, 0};
-
-	int nprop = 0;
-	if (properties != NULL && properties->type == JSON_HASH) {
-		nprop = properties->length;
-	}
-
-	long long metastart = *metapos;
-	char *metakey[nprop];
-	char *metaval[nprop];
-	int metatype[nprop];
-	int mustfree[nprop];
-	int m = 0;
-
-	int i;
-	for (i = 0; i < nprop; i++) {
-		if (properties->keys[i]->type == JSON_STRING) {
-			if (exclude_all) {
-				if (!is_pooled(include, properties->keys[i]->string, VT_STRING)) {
-					continue;
-				}
-			} else if (is_pooled(exclude, properties->keys[i]->string, VT_STRING)) {
-				continue;
-			}
-
-			metakey[m] = properties->keys[i]->string;
-			mustfree[m] = 0;
-
-			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-				metatype[m] = VT_STRING;
-				metaval[m] = properties->values[i]->string;
-				m++;
-			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-				metatype[m] = VT_NUMBER;
-				metaval[m] = properties->values[i]->string;
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-				metatype[m] = VT_BOOLEAN;
-				metaval[m] = properties->values[i]->type == JSON_TRUE ? "true" : "false";
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
-				;
-			} else {
-				metatype[m] = VT_STRING;
-				metaval[m] = json_stringify(properties->values[i]);
-				mustfree[m] = 1;
-				m++;
-			}
-		}
-	}
-
-	for (i = 0; i < m; i++) {
-		serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
-		serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
-
-		if (mustfree[i]) {
-			free(metaval[i]);
-		}
-	}
-
-	long long geomstart = *geompos;
-
-	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
-	serialize_long_long(geomfile, *layer_seq, geompos, fname);
-
-	serialize_long_long(geomfile, (layer << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
-	if (tippecanoe_minzoom != -1) {
-		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
-	}
-	if (tippecanoe_maxzoom != -1) {
-		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
-	}
-
-	serialize_int(geomfile, segment, geompos, fname);
-	serialize_long_long(geomfile, metastart, geompos, fname);
-	serialize_int(geomfile, m, geompos, fname);
-	long long wx = *initial_x, wy = *initial_y;
-	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
-	serialize_byte(geomfile, VT_END, geompos, fname);
-
-	/*
-	 * Note that feature_minzoom for lines is the dimension
-	 * of the geometry in world coordinates, but
-	 * for points is the lowest zoom level (in tiles,
-	 * not in pixels) at which it should be drawn.
-	 *
-	 * So a line that is too small for, say, z8
-	 * will have feature_minzoom of 18 (if tile detail is 10),
-	 * not 8.
-	 */
-	int feature_minzoom = 0;
-	if (mb_geometry[t] == VT_LINE) {
-		for (feature_minzoom = 0; feature_minzoom < 31; feature_minzoom++) {
-			unsigned mask = 1 << (32 - (feature_minzoom + 1));
-
-			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
-				break;
-			}
-		}
-	} else if (mb_geometry[t] == VT_POINT) {
-		double r = ((double) rand()) / RAND_MAX;
-		if (r == 0) {
-			r = .00000001;
-		}
-		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
-	}
-
-	serialize_byte(geomfile, feature_minzoom, geompos, fname);
-
-	struct index index;
-	index.start = geomstart;
-	index.end = *geompos;
-	index.segment = segment;
-	index.seq = *layer_seq;
-
-	// Calculate the center even if off the edge of the plane,
-	// and then mask to bring it back into the addressable area
-	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
-	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
-	index.index = encode(midx, midy);
-
-	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
-	*indexpos += sizeof(struct index);
-
-	for (i = 0; i < 2; i++) {
-		if (bbox[i] < file_bbox[i]) {
-			file_bbox[i] = bbox[i];
-		}
-	}
-	for (i = 2; i < 4; i++) {
-		if (bbox[i] > file_bbox[i]) {
-			file_bbox[i] = bbox[i];
-		}
-	}
-
-	if (*progress_seq % 10000 == 0) {
-		checkdisk(readers, CPUS);
-		if (!quiet) {
-			fprintf(stderr, "Read %.2f million features\r", *progress_seq / 1000000.0);
-		}
-	}
-	(*progress_seq)++;
-	(*layer_seq)++;
-
-	return 1;
-}
-
-void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, struct pool *exclude, struct pool *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers) {
-	long long found_hashes = 0;
-	long long found_features = 0;
-	long long found_geometries = 0;
-
-	while (1) {
-		json_object *j = json_read(jp);
-		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", reading, jp->line, jp->error);
-			}
-
-			json_free(jp->root);
-			break;
-		}
-
-		if (j->type == JSON_HASH) {
-			found_hashes++;
-
-			if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
-				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", reading, jp->line);
-			}
-		}
-
-		json_object *type = json_hash_get(j, "type");
-		if (type == NULL || type->type != JSON_STRING) {
-			continue;
-		}
-
-		if (found_features == 0) {
-			int i;
-			int is_geometry = 0;
-			for (i = 0; i < GEOM_TYPES; i++) {
-				if (strcmp(type->string, geometry_names[i]) == 0) {
-					is_geometry = 1;
-					break;
-				}
-			}
-
-			if (is_geometry) {
-				if (j->parent != NULL) {
-					if (j->parent->type == JSON_ARRAY) {
-						if (j->parent->parent->type == JSON_HASH) {
-							json_object *geometries = json_hash_get(j->parent->parent, "geometries");
-							if (geometries != NULL) {
-								// Parent of Parent must be a GeometryCollection
-								is_geometry = 0;
-							}
-						}
-					} else if (j->parent->type == JSON_HASH) {
-						json_object *geometry = json_hash_get(j->parent, "geometry");
-						if (geometry != NULL) {
-							// Parent must be a Feature
-							is_geometry = 0;
-						}
-					}
-				}
-			}
-
-			if (is_geometry) {
-				if (found_features != 0 && found_geometries == 0) {
-					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
-				}
-				found_geometries++;
-
-				serialize_geometry(j, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y, readers);
-				json_free(j);
-				continue;
-			}
-		}
-
-		if (strcmp(type->string, "Feature") != 0) {
-			continue;
-		}
-
-		if (found_features == 0 && found_geometries != 0) {
-			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
-		}
-		found_features++;
-
-		json_object *geometry = json_hash_get(j, "geometry");
-		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", reading, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		json_object *properties = json_hash_get(j, "properties");
-		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", reading, jp->line);
-			json_free(j);
-			continue;
-		}
-
-		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
-
-		json_object *geometries = json_hash_get(geometry, "geometries");
-		if (geometries != NULL) {
-			size_t g;
-			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers);
-			}
-		} else {
-			serialize_geometry(geometry, properties, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers);
-		}
-
-		json_free(j);
-
-		/* XXX check for any non-features in the outer object */
-	}
-}
-
-struct parse_json_args {
-	json_pull *jp;
-	const char *reading;
-	volatile long long *layer_seq;
-	volatile long long *progress_seq;
-	long long *metapos;
-	long long *geompos;
-	long long *indexpos;
-	struct pool *exclude;
-	struct pool *include;
-	int exclude_all;
-	FILE *metafile;
-	FILE *geomfile;
-	FILE *indexfile;
-	struct memfile *poolfile;
-	struct memfile *treefile;
-	char *fname;
-	int basezoom;
-	int layer;
-	double droprate;
-	long long *file_bbox;
-	int segment;
-	int *initialized;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	struct reader *readers;
-};
-
-void *run_parse_json(void *v) {
-	struct parse_json_args *pja = v;
-
-	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y, pja->readers);
-
-	return NULL;
-}
-
-struct jsonmap {
-	char *map;
-	unsigned long long off;
-	unsigned long long end;
-};
-
-ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
-	struct jsonmap *jm = jp->source;
-
-	if (jm->off + n >= jm->end) {
-		n = jm->end - jm->off;
-	}
-
-	memcpy(buffer, jm->map + jm->off, n);
-	jm->off += n;
-
-	return n;
-}
-
-struct json_pull *json_begin_map(char *map, long long len) {
-	struct jsonmap *jm = malloc(sizeof(struct jsonmap));
-	if (jm == NULL) {
-		perror("Out of memory");
-		exit(EXIT_FAILURE);
-	}
-
-	jm->map = map;
-	jm->off = 0;
-	jm->end = len;
-
-	return json_begin(json_map_read, jm);
-}
-
 struct sort_arg {
 	int task;
 	int cpus;
 	long long indexpos;
-	struct merge *merges;
+	struct mergelist *merges;
 	int indexfd;
 	int nmerges;
 	long long unit;
@@ -988,7 +254,7 @@ struct sort_arg {
 };
 
 void *run_sort(void *v) {
-	struct sort_arg *a = v;
+	struct sort_arg *a = (struct sort_arg *) v;
 
 	long long start;
 	for (start = a->task * a->unit; start < a->indexpos; start += a->unit * a->cpus) {
@@ -1032,7 +298,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -1055,6 +321,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 
 	struct parse_json_args pja[CPUS];
 	pthread_t pthreads[CPUS];
+	std::vector<std::set<type_and_string> > file_subkeys;
+
+	for (i = 0; i < CPUS; i++) {
+		file_subkeys.push_back(std::set<type_and_string>());
+	}
 
 	for (i = 0; i < CPUS; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
@@ -1082,6 +353,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].initial_x = &initial_x[i];
 		pja[i].initial_y = &initial_y[i];
 		pja[i].readers = reader;
+		pja[i].file_keys = &file_subkeys[i];
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -1094,6 +366,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
 			perror("pthread_join");
+		}
+
+		std::set<type_and_string>::iterator j;
+		for (j = file_subkeys[i].begin(); j != file_subkeys[i].end(); ++j) {
+			file_keys->insert(*j);
 		}
 
 		free(pja[i].jp->source);
@@ -1111,8 +388,8 @@ struct read_parallel_arg {
 	const char *reading;
 	struct reader *reader;
 	volatile long long *progress_seq;
-	struct pool *exclude;
-	struct pool *include;
+	std::set<std::string> *exclude;
+	std::set<std::string> *include;
 	int exclude_all;
 	char *fname;
 	int maxzoom;
@@ -1123,10 +400,11 @@ struct read_parallel_arg {
 	int *initialized;
 	unsigned *initial_x;
 	unsigned *initial_y;
+	std::set<type_and_string> *file_keys;
 };
 
 void *run_read_parallel(void *v) {
-	struct read_parallel_arg *a = v;
+	struct read_parallel_arg *a = (struct read_parallel_arg *) v;
 
 	struct stat st;
 	if (fstat(a->fd, &st) != 0) {
@@ -1137,14 +415,14 @@ void *run_read_parallel(void *v) {
 	}
 	a->len = st.st_size;
 
-	char *map = mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
+	char *map = (char *) mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
 	if (map == NULL || map == MAP_FAILED) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
 	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y);
+	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y, a->file_keys);
 
 	madvise(map, a->len, MADV_DONTNEED);
 	if (munmap(map, a->len) != 0) {
@@ -1161,14 +439,14 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, struct pool *exclude, struct pool *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
 
 	*is_parsing = 1;
 
-	struct read_parallel_arg *rpa = malloc(sizeof(struct read_parallel_arg));
+	struct read_parallel_arg *rpa = (struct read_parallel_arg *) malloc(sizeof(struct read_parallel_arg));
 	if (rpa == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -1194,6 +472,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->initialized = initialized;
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
+	rpa->file_keys = file_keys;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -1261,7 +540,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size != 0) {
-			struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
+			struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
 			if (indexmap == MAP_FAILED) {
 				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
 				perror("map index");
@@ -1269,7 +548,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			}
 			madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
 			madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-			char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
+			char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds_in[i], 0);
 			if (geommap == MAP_FAILED) {
 				perror("map geom");
 				exit(EXIT_FAILURE);
@@ -1277,8 +556,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			madvise(geommap, geomst.st_size, MADV_SEQUENTIAL);
 			madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-			long long a;
-			for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+			for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 				struct index ix = indexmap[a];
 				unsigned long long which = (ix.index << prefix) >> (64 - splitbits);
 				long long pos = sub_geompos[which];
@@ -1350,7 +628,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		}
 
 		if (indexst.st_size > 0) {
-			if (indexst.st_size > sizeof(struct index) && indexst.st_size + geomst.st_size < mem) {
+			if (indexst.st_size + geomst.st_size < mem) {
 				long long indexpos = indexst.st_size;
 				int bytes = sizeof(struct index);
 
@@ -1365,7 +643,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				unit = ((unit + page - 1) / page) * page;
 
 				int nmerges = (indexpos + unit - 1) / unit;
-				struct merge merges[nmerges];
+				struct mergelist merges[nmerges];
 
 				int a;
 				for (a = 0; a < nmerges; a++) {
@@ -1399,7 +677,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					}
 				}
 
-				struct indexmap *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				struct indexmap *indexmap = (struct indexmap *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
 					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
 					perror("map index");
@@ -1407,7 +685,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				madvise(indexmap, indexst.st_size, MADV_RANDOM);  // sequential, but from several pointers at once
 				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
 				if (geommap == MAP_FAILED) {
 					perror("map geom");
 					exit(EXIT_FAILURE);
@@ -1428,7 +706,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					exit(EXIT_FAILURE);
 				}
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
-				struct index *indexmap = mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
+				struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
 					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
 					perror("map index");
@@ -1436,7 +714,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				madvise(indexmap, indexst.st_size, MADV_SEQUENTIAL);
 				madvise(indexmap, indexst.st_size, MADV_WILLNEED);
-				char *geommap = mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
+				char *geommap = (char *) mmap(NULL, geomst.st_size, PROT_READ, MAP_PRIVATE, geomfds[i], 0);
 				if (geommap == MAP_FAILED) {
 					perror("map geom");
 					exit(EXIT_FAILURE);
@@ -1444,8 +722,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				madvise(geommap, geomst.st_size, MADV_RANDOM);
 				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-				long long a;
-				for (a = 0; a < indexst.st_size / sizeof(struct index); a++) {
+				for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
 					long long pos = *geompos_out;
 
@@ -1577,7 +854,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_json(int argc, struct source **sourcelist, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, struct pool *exclude, struct pool *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int *prevent, int *additional, int read_parallel, int forcetable, const char *attribution) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1585,83 +862,78 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	for (i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
-		r->metaname = malloc(strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1);
-		r->poolname = malloc(strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1);
-		r->treename = malloc(strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1);
-		r->geomname = malloc(strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1);
-		r->indexname = malloc(strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1);
+		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
+		char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
+		char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
+		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
+		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
-		if (r->metaname == NULL || r->poolname == NULL || r->treename == NULL || r->geomname == NULL || r->indexname == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
+		sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
+		sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
+		sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
+		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
+		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		sprintf(r->metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-		sprintf(r->poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
-		sprintf(r->treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
-		sprintf(r->geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
-		sprintf(r->indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
-
-		r->metafd = mkstemp(r->metaname);
+		r->metafd = mkstemp(metaname);
 		if (r->metafd < 0) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
-		r->poolfd = mkstemp(r->poolname);
+		r->poolfd = mkstemp(poolname);
 		if (r->poolfd < 0) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
-		r->treefd = mkstemp(r->treename);
+		r->treefd = mkstemp(treename);
 		if (r->treefd < 0) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfd = mkstemp(r->geomname);
+		r->geomfd = mkstemp(geomname);
 		if (r->geomfd < 0) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfd = mkstemp(r->indexname);
+		r->indexfd = mkstemp(indexname);
 		if (r->indexfd < 0) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 
-		r->metafile = fopen(r->metaname, "wb");
+		r->metafile = fopen(metaname, "wb");
 		if (r->metafile == NULL) {
-			perror(r->metaname);
+			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
 		r->poolfile = memfile_open(r->poolfd);
 		if (r->poolfile == NULL) {
-			perror(r->poolname);
+			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
 		r->treefile = memfile_open(r->treefd);
 		if (r->treefile == NULL) {
-			perror(r->treename);
+			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfile = fopen(r->geomname, "wb");
+		r->geomfile = fopen(geomname, "wb");
 		if (r->geomfile == NULL) {
-			perror(r->geomname);
+			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfile = fopen(r->indexname, "wb");
+		r->indexfile = fopen(indexname, "wb");
 		if (r->indexfile == NULL) {
-			perror(r->indexname);
+			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 		r->metapos = 0;
 		r->geompos = 0;
 		r->indexpos = 0;
 
-		unlink(r->metaname);
-		unlink(r->poolname);
-		unlink(r->treename);
-		unlink(r->geomname);
-		unlink(r->indexname);
+		unlink(metaname);
+		unlink(poolname);
+		unlink(treename);
+		unlink(geomname);
+		unlink(indexname);
 
 		// To distinguish a null value
 		{
@@ -1671,11 +943,6 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		// Keep metadata file from being completely empty if no attributes
 		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
-		r->file_bbox = malloc(4 * sizeof(long long));
-		if (r->file_bbox == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
 	}
@@ -1695,36 +962,37 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
-	int nlayers;
+	size_t nlayers;
 	if (layername != NULL) {
 		nlayers = 1;
 	} else {
-		nlayers = argc;
+		nlayers = sources.size();
 		if (nlayers == 0) {
 			nlayers = 1;
 		}
 	}
 
-	int nsources = argc;
+	size_t nsources = sources.size();
 	if (nsources == 0) {
 		nsources = 1;
 	}
 
+	std::vector<std::set<type_and_string> > file_keys;
 	long overall_offset = 0;
 
-	int source;
-	for (source = 0; source < nsources; source++) {
-		const char *reading;
+	for (size_t source = 0; source < nsources; source++) {
+		file_keys.push_back(std::set<type_and_string>());
+		std::string reading;
 		int fd;
 
-		if (source >= argc) {
+		if (source >= sources.size()) {
 			reading = "standard input";
 			fd = 0;
 		} else {
-			reading = sourcelist[source]->file;
-			fd = open(sourcelist[source]->file, O_RDONLY);
+			reading = sources[source].file;
+			fd = open(sources[source].file.c_str(), O_RDONLY);
 			if (fd < 0) {
-				perror(sourcelist[source]->file);
+				perror(sources[source].file.c_str());
 				continue;
 			}
 		}
@@ -1737,7 +1005,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
-					map = mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					map = (char *) mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
 					// No error if MAP_FAILED because check is below
 					if (map != MAP_FAILED) {
 						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
@@ -1747,7 +1015,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
@@ -1758,7 +1026,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
-				perror(sourcelist[source]->file);
+				perror(sources[source].file.c_str());
 				if (close(fd) != 0) {
 					perror("close source file");
 					exit(EXIT_FAILURE);
@@ -1796,7 +1064,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				int n;
 
 				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
-					fwrite_check(buf, sizeof(char), n, readfp, reading);
+					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
 					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
@@ -1813,7 +1081,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1836,7 +1104,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 					}
 				}
 				if (n < 0) {
-					perror(reading);
+					perror(reading.c_str());
 				}
 
 				if (initial_offset != 0) {
@@ -1849,7 +1117,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading, reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
 
 					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
@@ -1863,7 +1131,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading, &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, &file_keys[source < nlayers ? source : 0]);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
@@ -1906,64 +1174,51 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		}
 	}
 
-	struct pool file_keys1[nlayers];
-	struct pool *file_keys[nlayers];
-	for (i = 0; i < nlayers; i++) {
-		pool_init(&file_keys1[i], 0);
-		file_keys[i] = &file_keys1[i];
-	}
-
-	char *layernames[nlayers];
-	for (i = 0; i < nlayers; i++) {
+	std::vector<std::string> layernames;
+	for (size_t l = 0; l < nlayers; l++) {
 		if (layername != NULL) {
-			layernames[i] = strdup(layername);
-			if (layernames[i] == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
+			layernames.push_back(std::string(layername));
 		} else {
-			char *src;
-			if (argc < 1) {
+			const char *src;
+			if (sources.size() < 1) {
 				src = fname;
-			} else if (sourcelist[i]->layer != NULL) {
-				src = sourcelist[i]->layer;
+			} else if (sources[l].layer.size() != 0) {
+				src = sources[l].layer.c_str();
 			} else {
-				src = sourcelist[i]->file;
+				src = sources[l].file.c_str();
 			}
 
-			char *trunc = layernames[i] = malloc(strlen(src) + 1);
-			if (trunc == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-
+			// Find the last component of the pathname
 			const char *ocp, *use = src;
 			for (ocp = src; *ocp; ocp++) {
 				if (*ocp == '/' && ocp[1] != '\0') {
 					use = ocp + 1;
 				}
 			}
-			strcpy(trunc, use);
+			std::string trunc = std::string(use);
 
-			char *cp = strstr(trunc, ".json");
-			if (cp != NULL) {
-				*cp = '\0';
+			// Trim .json or .mbtiles from the name
+			ssize_t cp;
+			cp = trunc.find(".json");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
-			cp = strstr(trunc, ".mbtiles");
-			if (cp != NULL) {
-				*cp = '\0';
+			cp = trunc.find(".mbtiles");
+			if (cp >= 0) {
+				trunc = trunc.substr(0, cp);
 			}
 
-			char *out = trunc;
-			for (cp = trunc; *cp; cp++) {
-				if (isalpha(*cp) || isdigit(*cp) || *cp == '_') {
-					*out++ = *cp;
+			// Trim out characters that can't be part of selector
+			std::string out;
+			for (size_t p = 0; p < trunc.size(); p++) {
+				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_') {
+					out.append(trunc, p, 1);
 				}
 			}
-			*out = '\0';
+			layernames.push_back(out);
 
 			if (!quiet) {
-				fprintf(stderr, "For layer %d, using name \"%s\"\n", i, trunc);
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, out.c_str());
 			}
 		}
 	}
@@ -2145,7 +1400,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (basezoom < 0 || droprate < 0) {
-		struct index *map = mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+		struct index *map = (struct index *) mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
 		if (map == MAP_FAILED) {
 			perror("mmap index for basezoom");
 			exit(EXIT_FAILURE);
@@ -2163,22 +1418,22 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
-			int i;
-			for (i = 0; i <= MAX_ZOOM; i++) {
-				tile[i].x = tile[i].y = tile[i].count = tile[i].fullcount = tile[i].gap = tile[i].previndex = 0;
-				max[i].x = max[i].y = max[i].count = max[i].fullcount = 0;
+			int z;
+			for (z = 0; z <= MAX_ZOOM; z++) {
+				tile[z].x = tile[z].y = tile[z].count = tile[z].fullcount = tile[z].gap = tile[z].previndex = 0;
+				max[z].x = max[z].y = max[z].count = max[z].fullcount = 0;
 			}
 		}
 
 		long long progress = -1;
 
 		long long indices = indexpos / sizeof(struct index);
-		long long i;
-		for (i = 0; i < indices; i++) {
+		long long ip;
+		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
-			decode(map[i].index, &xx, &yy);
+			decode(map[ip].index, &xx, &yy);
 
-			long long nprogress = 100 * i / indices;
+			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
 				if (!quiet) {
@@ -2211,7 +1466,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 				tile[z].fullcount++;
 
-				if (manage_gap(map[i].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
+				if (manage_gap(map[ip].index, &tile[z].previndex, scale, gamma, &tile[z].gap)) {
 					continue;
 				}
 
@@ -2342,7 +1597,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, file_keys, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, prevent, additional, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -2359,7 +1614,7 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 	}
 
 	if (poolpos > 0) {
-		madvise(pool, poolpos, MADV_DONTNEED);
+		madvise((void *) stringpool, poolpos, MADV_DONTNEED);
 		if (munmap(stringpool, poolpos) != 0) {
 			perror("munmap stringpool");
 		}
@@ -2428,24 +1683,17 @@ int read_json(int argc, struct source **sourcelist, char *fname, const char *lay
 
 	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
 
-	for (i = 0; i < nlayers; i++) {
-		pool_free_strings(&file_keys1[i]);
-		free(layernames[i]);
-	}
-
 	return ret;
 }
 
-int int_in(int v, int *a, int len) {
-	int i;
-
-	for (i = 0; i < len; i++) {
-		if (a[i] == v) {
-			return 1;
+static bool has_name(struct option *long_options, int *pl) {
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].flag == pl) {
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 int main(int argc, char **argv) {
@@ -2473,13 +1721,9 @@ int main(int argc, char **argv) {
 	int buffer = 5;
 	const char *tmpdir = "/tmp";
 	const char *attribution = NULL;
+	std::vector<source> sources;
 
-	int nsources = 0;
-	struct source *sources = NULL;
-
-	struct pool exclude, include;
-	pool_init(&exclude, 0);
-	pool_init(&include, 0);
+	std::set<std::string> exclude, include;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -2487,28 +1731,6 @@ int main(int argc, char **argv) {
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
 		additional[i] = 0;
-	}
-
-	{
-		char dup[256];
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(additional_options) / sizeof(additional_options[0]); i++) {
-			if (dup[additional_options[i]]) {
-				fprintf(stderr, "Internal error: reused -a%c\n", additional_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[additional_options[i]] = 1;
-		}
-
-		memset(dup, 0, sizeof(dup));
-		for (i = 0; i < sizeof(prevent_options) / sizeof(prevent_options[0]); i++) {
-			if (dup[prevent_options[i]]) {
-				fprintf(stderr, "Internal error: reused -p%c\n", prevent_options[i]);
-				exit(EXIT_FAILURE);
-			}
-			dup[prevent_options[i]] = 1;
-		}
 	}
 
 	static struct option long_options[] = {
@@ -2561,6 +1783,24 @@ int main(int argc, char **argv) {
 		{0, 0, 0, 0},
 	};
 
+	{
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				if (*long_options[lo].flag != 0) {
+					fprintf(stderr, "Internal error: reused %s\n", long_options[lo].name);
+					exit(EXIT_FAILURE);
+				}
+				*long_options[lo].flag = 1;
+			}
+		}
+
+		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+			if (long_options[lo].flag != NULL) {
+				*long_options[lo].flag = 0;
+			}
+		}
+	}
+
 	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
@@ -2584,22 +1824,10 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
 				exit(EXIT_FAILURE);
 			}
-			struct source *src = malloc(sizeof(struct source));
-			if (src == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-
-			src->layer = strdup(optarg);
-			src->file = strdup(cp + 1);
-			if (src->layer == NULL || src->file == NULL) {
-				perror("Out of memory");
-				exit(EXIT_FAILURE);
-			}
-			src->layer[cp - optarg] = '\0';
-			src->next = sources;
-			sources = src;
-			nsources++;
+			struct source src;
+			src.layer = std::string(optarg).substr(0, cp - optarg);
+			src.file = std::string(cp + 1);
+			sources.push_back(src);
 		} break;
 
 		case 'z':
@@ -2650,12 +1878,12 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'x':
-			pool(&exclude, optarg, VT_STRING);
+			exclude.insert(std::string(optarg));
 			break;
 
 		case 'y':
 			exclude_all = 1;
-			pool(&include, optarg, VT_STRING);
+			include.insert(std::string(optarg));
 			break;
 
 		case 'X':
@@ -2711,7 +1939,7 @@ int main(int argc, char **argv) {
 		case 'p': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, prevent_options, sizeof(prevent_options) / sizeof(prevent_options[0]))) {
+				if (has_name(long_options, &prevent[*cp & 0xFF])) {
 					prevent[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -p%c\n", argv[0], *cp);
@@ -2723,7 +1951,7 @@ int main(int argc, char **argv) {
 		case 'a': {
 			char *cp;
 			for (cp = optarg; *cp != '\0'; cp++) {
-				if (int_in(*cp, additional_options, sizeof(additional_options) / sizeof(additional_options[0]))) {
+				if (has_name(long_options, &additional[*cp & 0xFF])) {
 					additional[*cp & 0xFF] = 1;
 				} else {
 					fprintf(stderr, "%s: Unknown option -a%c\n", argv[0], *cp);
@@ -2743,20 +1971,19 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Usage: %s", argv[0]);
-			int i;
-			for (i = 0; long_options[i].name != NULL; i++) {
-				if (width + strlen(long_options[i].name) + 9 >= 80) {
+			for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+				if (width + strlen(long_options[lo].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
 				}
-				width += strlen(long_options[i].name) + 9;
-				if (strcmp(long_options[i].name, "output") == 0) {
-					fprintf(stderr, " --%s=output.mbtiles", long_options[i].name);
+				width += strlen(long_options[lo].name) + 9;
+				if (strcmp(long_options[lo].name, "output") == 0) {
+					fprintf(stderr, " --%s=output.mbtiles", long_options[lo].name);
 					width += 9;
-				} else if (long_options[i].has_arg) {
-					fprintf(stderr, " [--%s=...]", long_options[i].name);
+				} else if (long_options[lo].has_arg) {
+					fprintf(stderr, " [--%s=...]", long_options[lo].name);
 				} else {
-					fprintf(stderr, " [--%s]", long_options[i].name);
+					fprintf(stderr, " [--%s]", long_options[lo].name);
 				}
 			}
 			if (width + 16 >= 80) {
@@ -2772,6 +1999,21 @@ int main(int argc, char **argv) {
 	files_open_at_start = open("/dev/null", O_RDONLY);
 	close(files_open_at_start);
 
+	if (full_detail <= 0) {
+		full_detail = 12;
+	}
+
+	if (full_detail < min_detail || low_detail < min_detail) {
+		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	// Need two checks: one for geometry representation, the other for
+	// index traversal when guessing base zoom and drop rate
+	if (maxzoom > 32 - full_detail) {
+		maxzoom = 32 - full_detail;
+		fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+	}
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
 		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
@@ -2784,15 +2026,6 @@ int main(int argc, char **argv) {
 
 	if (basezoom == -1) {
 		basezoom = maxzoom;
-	}
-
-	if (full_detail <= 0) {
-		full_detail = 12;
-	}
-
-	if (full_detail < min_detail || low_detail < min_detail) {
-		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
-		exit(EXIT_FAILURE);
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
@@ -2821,26 +2054,13 @@ int main(int argc, char **argv) {
 	int ret = EXIT_SUCCESS;
 
 	for (i = optind; i < argc; i++) {
-		struct source *src = malloc(sizeof(struct source));
-		if (src == NULL) {
-			perror("Out of memory");
-			exit(EXIT_FAILURE);
-		}
-
-		src->layer = NULL;
-		src->file = argv[i];
-		src->next = sources;
-		sources = src;
-		nsources++;
+		struct source src;
+		src.layer = "";
+		src.file = std::string(argv[i]);
+		sources.push_back(src);
 	}
 
-	struct source *sourcelist[nsources];
-	i = nsources - 1;
-	for (; sources != NULL; sources = sources->next) {
-		sourcelist[i--] = sources;
-	}
-
-	ret = read_json(nsources, sourcelist, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, prevent, additional, read_parallel, forcetable, attribution);
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution);
 
 	mbtiles_close(outdb, argv);
 

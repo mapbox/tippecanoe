@@ -1,12 +1,22 @@
 PREFIX ?= /usr/local
 MANDIR ?= $(PREFIX)/share/man/man1/
+BUILDTYPE ?= Release
 
 # inherit from env if set
 CC := $(CC)
 CXX := $(CXX)
 CFLAGS := $(CFLAGS)
-CXXFLAGS := $(CXXFLAGS)
+CXXFLAGS := $(CXXFLAGS) -std=c++11
 LDFLAGS := $(LDFLAGS)
+WARNING_FLAGS := -Wall -Wshadow
+RELEASE_FLAGS := -O3 -DNDEBUG
+DEBUG_FLAGS := -O0 -DDEBUG -fno-inline-functions -fno-omit-frame-pointer
+
+ifeq ($(BUILDTYPE),Release)
+	FINAL_FLAGS := -g $(WARNING_FLAGS) $(RELEASE_FLAGS)
+else
+	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
+endif
 
 all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 
@@ -24,41 +34,32 @@ install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 man/tippecanoe.1: README.md
 	md2man-roff README.md > man/tippecanoe.1
 
-vector_tile.pb.cc vector_tile.pb.h: vector_tile.proto
-	protoc --cpp_out=. vector_tile.proto
-
 PG=
 
-H = $(shell find . '(' -name '*.h' -o -name '*.hh' ')')
-C = $(shell find . '(' -name '*.c' -o -name '*.cc' ')')
+ALL_H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
+H = $(wildcard *.h) $(wildcard *.hpp)
+C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include
+INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull.o vector_tile.pb.o tile.o clip.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o scan.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
-
-abuse: abuse.o clip.o geometry.o projection.o scan.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3 -lpthread
+tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o serial.o main.o scan.o
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
-	$(CC) $(PG) $(LIBS) -O3 -g -Wall $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
+	$(CC) $(PG) $(LIBS) $(FINAL_FLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
-tippecanoe-decode: decode.o vector_tile.pb.o projection.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+tippecanoe-decode: decode.o projection.o mvt.o
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-tile-join: tile-join.o vector_tile.pb.o projection.o pool.o mbtiles.o
-	$(CXX) $(PG) $(LIBS) -O3 -g -Wall $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lprotobuf-lite -lsqlite3
+tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-libjsonpull.a: jsonpull.o
-	ar rc $@ $^
-	ranlib $@
+%.o: %.c $(ALL_H)
+	$(CC) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CFLAGS) -c -o $@ $<
 
-%.o: %.c $(H)
-	$(CC) $(PG) $(INCLUDES) -O3 -g -Wall $(CFLAGS) -c $<
-
-%.o: %.cc $(H)
-	$(CXX) $(PG) $(INCLUDES) -O3 -g -Wall $(CXXFLAGS) -c $<
+%.o: %.cpp $(ALL_H)
+	$(CXX) $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	rm -f tippecanoe *.o
@@ -69,7 +70,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test join-test
 
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
 %.json.check:
@@ -80,7 +81,7 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pb
 
 parallel-test:
 	mkdir -p tests/parallel
-	perl -e 'for ($$i = 0; $$i < 20; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in1.json
+	perl -e 'for ($$i = 0; $$i < 20; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { \"yes\": \"no\", \"who\": 1 }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in1.json
 	perl -e 'for ($$i = 0; $$i < 300000; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in2.json
 	perl -e 'for ($$i = 0; $$i < 20; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in3.json
 	./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-file.mbtiles tests/parallel/in[123].json
@@ -100,6 +101,16 @@ pbf-test:
 	./tippecanoe-decode tests/pbf/11-328-791.vector.pbf 11 328 791 > tests/pbf/11-328-791.vector.pbf.out
 	cmp tests/pbf/11-328-791.json tests/pbf/11-328-791.vector.pbf.out
 	rm tests/pbf/11-328-791.vector.pbf.out
+
+join-test:
+	./tippecanoe -f -z9 -z12 -o tests/join-population/tabblock_06001420.mbtiles tests/join-population/tabblock_06001420.json
+	./tile-join -f -o tests/join-population/joined.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
+	./tile-join -f -i -o tests/join-population/joined-i.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
+	./tippecanoe-decode tests/join-population/joined.mbtiles > tests/join-population/joined.mbtiles.json.check
+	./tippecanoe-decode tests/join-population/joined-i.mbtiles > tests/join-population/joined-i.mbtiles.json.check
+	cmp tests/join-population/joined.mbtiles.json.check tests/join-population/joined.mbtiles.json
+	cmp tests/join-population/joined-i.mbtiles.json.check tests/join-population/joined-i.mbtiles.json
+	rm tests/join-population/tabblock_06001420.mbtiles tests/join-population/joined.mbtiles tests/join-population/joined-i.mbtiles tests/join-population/joined.mbtiles.json.check tests/join-population/joined-i.mbtiles.json.check
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output

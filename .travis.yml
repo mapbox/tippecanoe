@@ -1,41 +1,66 @@
-language: c
+language: generic
 
 sudo: false
 
 matrix:
   include:
+    # debug+integer-santizer build
+    - os: linux
+      compiler: clang
+      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=integer" CFLAGS="-fsanitize=integer" LDFLAGS="-fsanitize=integer"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # debug+leak+address-sanitizer build
+    - os: linux
+      compiler: clang
+      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # coverage+debug build
+    - os: linux
+      compiler: clang
+      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="--coverage" CFLAGS="--coverage" LDFLAGS="--coverage"
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+    # release+linux+g++
     - os: linux
       compiler: gcc
-      env: COVERAGE=gcov-4.9
+      env: BUILDTYPE=Release CC="gcc-4.9" CXX="g++-4.9"
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: [ 'g++-4.9', 'protobuf-compiler', 'libprotobuf-dev' ]
+          packages: [ 'g++-4.9' ]
+    # release+linux+clang++
     - os: linux
       compiler: clang
+      env: BUILDTYPE=Release CC="clang-3.5" CXX="clang++-3.5"
       addons:
         apt:
-          packages: [ 'protobuf-compiler', 'libprotobuf-dev' ]
+          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
+          packages: [ 'clang-3.5' ]
+    # release+osx
     - os: osx
       compiler: clang
+      env: BUILDTYPE=Release
+    # debug+osx
+    - os: osx
+      compiler: clang
+      env: BUILDTYPE=Debug
 
 
 install:
- - if [[ $(uname -s) == 'Darwin' ]]; then brew install protobuf; fi;
- - if [ -n "${COVERAGE}" ]; then
-       export CXX=g++-4.9;
-       export CC=gcc-4.9;
-       export CXXFLAGS="--coverage -g";
-       export CFLAGS="--coverage -g";
-       export LDFLAGS="--coverage";
-   fi;
- - make
+ - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
- - make test
+ - BUILDTYPE=${BUILDTYPE} make test
  - if [ -n "${COVERAGE}" ]; then
-       rm vector_tile.pb.o;
-       ${COVERAGE} -lp *.o;
+       /usr/bin/llvm-cov-3.5 -lp *.o;
        pip install --user cpp-coveralls;
-       ~/.local/bin/coveralls --no-gcov -i ./ --exclude clipper --exclude vector_tile.pb.cc --exclude vector_tile.pb.h;
+       ~/.local/bin/coveralls --no-gcov -i ./ --exclude clipper;
    fi
