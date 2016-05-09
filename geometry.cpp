@@ -450,10 +450,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	}
 
 	if (clip) {
-		long long area = 0xFFFFFFFF;
-		if (z != 0) {
-			area = 1LL << (32 - z);
-		}
+		long long area = 1LL << (32 - z);
 		long long clip_buffer = buffer * area / 256;
 
 		ClipperLib::Path edge;
@@ -770,11 +767,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 }
 
 drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-	}
-
+	long long area = area = 1LL << (32 - z);
 	long long clip_buffer = buffer * area / 256;
 
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
@@ -863,13 +856,10 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 
 	long long min = 0;
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
+	long long area = 1LL << (32 - z);
 
-		min -= buffer * area / 256;
-		area += buffer * area / 256;
-	}
+	min -= buffer * area / 256;
+	area += buffer * area / 256;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].x >= min && geom[i].y >= min && geom[i].x <= area && geom[i].y <= area) {
@@ -882,13 +872,10 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 
 int quick_check(long long *bbox, int z, int detail, long long buffer) {
 	long long min = 0;
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
+	long long area = 1LL << (32 - z);
 
-		min -= buffer * area / 256;
-		area += buffer * area / 256;
-	}
+	min -= buffer * area / 256;
+	area += buffer * area / 256;
 
 	// bbox entirely outside the tile
 	if (bbox[0] > area || bbox[1] > area) {
@@ -920,13 +907,9 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	drawvec out;
 
 	long long min = 0;
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-
-		min -= buffer * area / 256;
-		area += buffer * area / 256;
-	}
+	long long area = 1LL << (32 - z);
+	min -= buffer * area / 256;
+	area += buffer * area / 256;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
@@ -1070,10 +1053,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 
 drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) {
 	int res = 1 << (32 - detail - z);
-	long long area = 0xFFFFFFFF;
-	if (z != 0) {
-		area = 1LL << (32 - z);
-	}
+	long long area = 1LL << (32 - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
