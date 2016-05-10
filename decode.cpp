@@ -33,11 +33,15 @@ struct lonlat {
 	int op;
 	double lon;
 	double lat;
+	int x;
+	int y;
 
-	lonlat(int nop, double nlon, double nlat) {
+	lonlat(int nop, double nlon, double nlat, int nx, int ny) {
 		this->op = nop;
 		this->lon = nlon;
 		this->lat = nlat;
+		this->x = nx;
+		this->y = ny;
 	}
 };
 
@@ -156,9 +160,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					double lat, lon;
 					tile2latlon(wx, wy, 32, &lat, &lon);
 
-					ops.push_back(lonlat(op, lon, lat));
+					ops.push_back(lonlat(op, lon, lat, px, py));
 				} else {
-					ops.push_back(lonlat(op, 0, 0));
+					ops.push_back(lonlat(op, 0, 0, 0, 0));
 				}
 			}
 
@@ -223,23 +227,27 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 					int n = rings.size() - 1;
 					if (n >= 0) {
-						rings[n].push_back(ops[i]);
+						if (ops[i].op == VT_CLOSEPATH) {
+							rings[n].push_back(rings[n][0]);
+						} else {
+							rings[n].push_back(ops[i]);
+						}
 					}
 				}
 
 				int outer = 0;
 
 				for (size_t i = 0; i < rings.size(); i++) {
-					double area = 0;
+					long double area = 0;
 					for (size_t k = 0; k < rings[i].size(); k++) {
 						if (rings[i][k].op != VT_CLOSEPATH) {
-							area += rings[i][k].lon * rings[i][(k + 1) % rings[i].size()].lat;
-							area -= rings[i][k].lat * rings[i][(k + 1) % rings[i].size()].lon;
+							area += rings[i][k].x * rings[i][(k + 1) % rings[i].size()].y;
+							area -= rings[i][k].y * rings[i][(k + 1) % rings[i].size()].x;
 						}
 					}
 
 					areas[i] = area;
-					if (areas[i] <= 0 || i == 0) {
+					if (areas[i] >= 0 || i == 0) {
 						outer++;
 					}
 
@@ -254,7 +262,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				int state = 0;
 				for (size_t i = 0; i < rings.size(); i++) {
-					if (areas[i] <= 0) {
+					if (areas[i] >= 0) {
 						if (state != 0) {
 							// new multipolygon
 							printf(" ] ], [ [ ");
