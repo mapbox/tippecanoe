@@ -1,6 +1,7 @@
 ## 1.11.5
 
 * Let zoom level 0 have just as much extent and buffer as any other zoom
+* Fix tippecanoe-decode bug that would sometimes show outer rings as inner
 
 ## 1.11.4
 
