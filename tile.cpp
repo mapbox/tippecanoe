@@ -62,15 +62,15 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 static int is_integer(const char *s, long long *v);
 
 struct coalesce {
-	int type;
-	drawvec geom;
-	int m;
 	char *meta;
 	char *stringpool;
+	drawvec geom;
 	unsigned long long index;
 	unsigned long long index2;
-	bool coalesced;
 	long long original_seq;
+	int type;
+	int m;
+	bool coalesced;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -372,20 +372,20 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 struct partial {
 	std::vector<drawvec> geoms;
-	long long layer;
-	int m;
 	char *meta;
-	signed char t;
-	int segment;
-	long long original_seq;
-	bool reduced;
-	unsigned long long index;
-	unsigned long long index2;
-	int z;
-	int line_detail;
 	int *prevent;
 	int *additional;
+	long long layer;
+	long long original_seq;
+	unsigned long long index;
+	unsigned long long index2;
+	int m;
+	int segment;
+	bool reduced;
+	int z;
+	int line_detail;
 	int maxzoom;
+	signed char t;
 };
 
 struct partial_arg {
