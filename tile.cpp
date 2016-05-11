@@ -855,8 +855,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
-			std::vector<drawvec> pgeoms = partials[i].geoms;
-			partials[i].geoms.clear();  // avoid keeping two copies in memory
+			std::vector<drawvec> &pgeoms = partials[i].geoms;
 			long long layer = partials[i].layer;
 			signed char t = partials[i].t;
 			long long original_seq = partials[i].original_seq;
@@ -871,6 +870,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.index = partials[i].index;
 					c.index2 = partials[i].index2;
 					c.geom = pgeoms[j];
+					pgeoms[j].clear();
 					c.coalesced = false;
 					c.original_seq = original_seq;
 					c.m = partials[i].m;
@@ -881,6 +881,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 		}
+
+		partials.clear();
 
 		int j;
 		for (j = 0; j < child_shards; j++) {
@@ -966,6 +968,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.type = features[k][x].type;
 				feature.geometry = to_feature(features[k][x].geom);
 				count += features[k][x].geom.size();
+				features[k][x].geom.clear();
 
 				decode_meta(features[k][x].m, &features[k][x].meta, features[k][x].stringpool, layer, feature);
 				layer.features.push_back(feature);

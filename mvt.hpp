@@ -8,9 +8,9 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
+	int x;
+	int y;
 	int /* mvt_operation */ op;
-	long long x;
-	long long y;
 
 	mvt_geometry(int op, long long x, long long y);
 };
@@ -23,8 +23,8 @@ enum mvt_geometry_type {
 
 struct mvt_feature {
 	std::vector<unsigned> tags;
-	int /* mvt_geometry_type */ type;
 	std::vector<mvt_geometry> geometry;
+	int /* mvt_geometry_type */ type;
 };
 
 enum mvt_value_type {

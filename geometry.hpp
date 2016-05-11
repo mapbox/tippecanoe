@@ -12,10 +12,10 @@
 #define VT_BOOLEAN 7
 
 struct draw {
-	signed char op;
 	long long x;
 	long long y;
-	int necessary;
+	signed char op;
+	signed char necessary;
 
 	draw(int nop, long long nx, long long ny) {
 		this->op = nop;
