@@ -1,3 +1,7 @@
+## 1.11.6
+
+* Reduce the size of critical data structures to reduce dynamic memory use
+
 ## 1.11.5
 
 * Let zoom level 0 have just as much extent and buffer as any other zoom
