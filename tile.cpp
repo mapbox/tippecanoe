@@ -62,15 +62,15 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 static int is_integer(const char *s, long long *v);
 
 struct coalesce {
-	int type;
-	drawvec geom;
-	int m;
 	char *meta;
 	char *stringpool;
+	drawvec geom;
 	unsigned long long index;
 	unsigned long long index2;
-	bool coalesced;
 	long long original_seq;
+	int type;
+	int m;
+	bool coalesced;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -372,20 +372,20 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 struct partial {
 	std::vector<drawvec> geoms;
-	long long layer;
-	int m;
 	char *meta;
-	signed char t;
-	int segment;
-	long long original_seq;
-	bool reduced;
-	unsigned long long index;
-	unsigned long long index2;
-	int z;
-	int line_detail;
 	int *prevent;
 	int *additional;
+	long long layer;
+	long long original_seq;
+	unsigned long long index;
+	unsigned long long index2;
+	int m;
+	int segment;
+	bool reduced;
+	int z;
+	int line_detail;
 	int maxzoom;
+	signed char t;
 };
 
 struct partial_arg {
@@ -855,8 +855,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
-			std::vector<drawvec> pgeoms = partials[i].geoms;
-			partials[i].geoms.clear();  // avoid keeping two copies in memory
+			std::vector<drawvec> &pgeoms = partials[i].geoms;
 			long long layer = partials[i].layer;
 			signed char t = partials[i].t;
 			long long original_seq = partials[i].original_seq;
@@ -871,6 +870,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.index = partials[i].index;
 					c.index2 = partials[i].index2;
 					c.geom = pgeoms[j];
+					pgeoms[j].clear();
 					c.coalesced = false;
 					c.original_seq = original_seq;
 					c.m = partials[i].m;
@@ -881,6 +881,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 		}
+
+		partials.clear();
 
 		int j;
 		for (j = 0; j < child_shards; j++) {
@@ -966,6 +968,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.type = features[k][x].type;
 				feature.geometry = to_feature(features[k][x].geom);
 				count += features[k][x].geom.size();
+				features[k][x].geom.clear();
 
 				decode_meta(features[k][x].m, &features[k][x].meta, features[k][x].stringpool, layer, feature);
 				layer.features.push_back(feature);

@@ -767,7 +767,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 }
 
 drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	long long area = area = 1LL << (32 - z);
+	long long area = 1LL << (32 - z);
 	long long clip_buffer = buffer * area / 256;
 
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);

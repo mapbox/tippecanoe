@@ -11,11 +11,14 @@
 #define VT_NUMBER 2
 #define VT_BOOLEAN 7
 
+// The bitfield is to make sizeof(draw) be 16 instead of 24
+// at the cost, apparently, of a 0.7% increase in running time
+// for packing and unpacking.
 struct draw {
+	long long x : 40;
 	signed char op;
-	long long x;
-	long long y;
-	int necessary;
+	long long y : 40;
+	signed char necessary;
 
 	draw(int nop, long long nx, long long ny) {
 		this->op = nop;
