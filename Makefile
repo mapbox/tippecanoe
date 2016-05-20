@@ -40,7 +40,7 @@ ALL_H = $(shell find . '(' -name '*.h' -o -name '*.hpp' ')')
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
+INCLUDES = -I/usr/local/include -I. -I../geometry.hpp/include -I../variant/include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o serial.o main.o

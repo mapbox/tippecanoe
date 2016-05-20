@@ -45,6 +45,68 @@ struct lonlat {
 	}
 };
 
+struct print_visitor {
+	const char *key;
+
+	print_visitor(const char *k) {
+		key = k;
+	}
+
+	void operator()(std::string const &val) const {
+		printq(key);
+		printf(": ");
+		printq(val.c_str());
+	}
+
+	void operator()(int64_t val) const {
+		printq(key);
+		printf(": %lld", (long long) val);
+	}
+
+	void operator()(double val) const {
+		printq(key);
+		double v = val;
+		if (v == (long long) v) {
+			printf(": %lld", (long long) v);
+		} else {
+			printf(": %g", v);
+		}
+	}
+
+	void operator()(float val) const {
+		printq(key);
+		double v = val;
+		if (v == (long long) v) {
+			printf(": %lld", (long long) v);
+		} else {
+			printf(": %g", v);
+		}
+	}
+
+	void operator()(uint64_t val) const {
+		printq(key);
+		printf(": %llu", (unsigned long long) val);
+	}
+
+	void operator()(bool val) const {
+		printq(key);
+		printf(": %s", val ? "true" : "false");
+	}
+
+	void operator()(std::nullptr_t val) const {
+		printq(key);
+		printf(": null");
+	}
+
+	void operator()(std::vector<mvt_value> const &val) const {
+
+	}
+
+	void operator()(std::unordered_map<std::string, mvt_value> const &val) const {
+
+	}
+};
+
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
 	mvt_tile tile;
@@ -107,40 +169,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value const &val = layer.values[feat.tags[t + 1]];
-
-				if (val.type == mvt_string) {
-					printq(key);
-					printf(": ");
-					printq(val.string_value.c_str());
-				} else if (val.type == mvt_int) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.int_value);
-				} else if (val.type == mvt_double) {
-					printq(key);
-					double v = val.numeric_value.double_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_float) {
-					printq(key);
-					double v = val.numeric_value.float_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_sint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.sint_value);
-				} else if (val.type == mvt_uint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.uint_value);
-				} else if (val.type == mvt_bool) {
-					printq(key);
-					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
-				}
+				mapbox::util::apply_visitor(print_visitor(key), val);
 			}
 
 			printf(" }, \"geometry\": { ");

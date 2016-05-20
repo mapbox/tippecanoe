@@ -118,38 +118,31 @@ bool mvt_tile::decode(std::string &message) {
 					while (value_reader.next()) {
 						switch (value_reader.tag()) {
 						case 1: /* string */
-							value.type = mvt_string;
-							value.string_value = value_reader.get_string();
+							value = value_reader.get_string();
 							break;
 
 						case 2: /* float */
-							value.type = mvt_float;
-							value.numeric_value.float_value = value_reader.get_float();
+							value = value_reader.get_float();
 							break;
 
 						case 3: /* double */
-							value.type = mvt_double;
-							value.numeric_value.double_value = value_reader.get_double();
+							value= value_reader.get_double();
 							break;
 
 						case 4: /* int */
-							value.type = mvt_int;
-							value.numeric_value.int_value = value_reader.get_int64();
+							value = value_reader.get_int64();
 							break;
 
 						case 5: /* uint */
-							value.type = mvt_uint;
-							value.numeric_value.uint_value = value_reader.get_uint64();
+							value = value_reader.get_uint64();
 							break;
 
 						case 6: /* sint */
-							value.type = mvt_sint;
-							value.numeric_value.sint_value = value_reader.get_sint64();
+							value = value_reader.get_sint64();
 							break;
 
 						case 7: /* bool */
-							value.type = mvt_bool;
-							value.numeric_value.bool_value = value_reader.get_bool();
+							value = value_reader.get_bool();
 							break;
 
 						default:
@@ -251,7 +244,61 @@ bool mvt_tile::decode(std::string &message) {
 	return true;
 }
 
+struct write_visitor {
+	protozero::pbf_writer *writer;
+
+	write_visitor(protozero::pbf_writer *w) {
+		writer = w;
+	}
+
+	void operator()(std::string &val) const {
+		writer->add_string(1, val);
+	}
+
+	void operator()(float val) const {
+		writer->add_float(2, val);
+	}
+
+	void operator()(double val) const {
+		writer->add_double(3, val);
+	}
+
+	void operator()(int64_t val) const {
+		writer->add_int64(4, val);
+	}
+
+	void operator()(uint64_t val) const {
+		writer->add_uint64(5, val);
+	}
+
+#if 0 // not defined in the variant
+	void operator()(sint64_t val) {
+		writer->add_sint64(6, val);
+	}
+#endif
+
+	void operator()(bool val) const {
+		writer->add_bool(6, val);
+	}
+
+	void operator()(std::nullptr_t val) const {
+		fprintf(stderr, "Can't happen: Null value in tile\n");
+		exit(EXIT_FAILURE);
+	}
+
+	void operator()(std::vector<mvt_value> &val) const {
+		fprintf(stderr, "Can't happen: Vector value in tile\n");
+		exit(EXIT_FAILURE);
+	}
+
+	void operator()(std::unordered_map<std::string, mvt_value> &val) const {
+		fprintf(stderr, "Can't happen: Hash table value in tile\n");
+		exit(EXIT_FAILURE);
+	}
+};
+
 std::string mvt_tile::encode() {
+	mapbox::geometry::value va;
 	std::string data;
 
 	protozero::pbf_writer writer(data);
@@ -271,23 +318,9 @@ std::string mvt_tile::encode() {
 		for (size_t v = 0; v < layers[i].values.size(); v++) {
 			std::string value_string;
 			protozero::pbf_writer value_writer(value_string);
-			mvt_value &pbv = layers[i].values[v];
 
-			if (pbv.type == mvt_string) {
-				value_writer.add_string(1, pbv.string_value);
-			} else if (pbv.type == mvt_float) {
-				value_writer.add_float(2, pbv.numeric_value.float_value);
-			} else if (pbv.type == mvt_double) {
-				value_writer.add_double(3, pbv.numeric_value.double_value);
-			} else if (pbv.type == mvt_int) {
-				value_writer.add_int64(4, pbv.numeric_value.int_value);
-			} else if (pbv.type == mvt_uint) {
-				value_writer.add_uint64(5, pbv.numeric_value.uint_value);
-			} else if (pbv.type == mvt_sint) {
-				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
-			} else if (pbv.type == mvt_bool) {
-				value_writer.add_bool(7, pbv.numeric_value.bool_value);
-			}
+			mvt_value &pbv = layers[i].values[v];
+			mapbox::util::apply_visitor(write_visitor(&value_writer), pbv);
 
 			layer_writer.add_message(4, value_string);
 		}
@@ -358,25 +391,6 @@ std::string mvt_tile::encode() {
 	compress(data, compressed);
 
 	return compressed;
-}
-
-bool mvt_value::operator<(const mvt_value &o) const {
-	if (type < o.type) {
-		return true;
-	}
-	if (type == o.type) {
-		if ((type == mvt_string && string_value < o.string_value) ||
-		    (type == mvt_float && numeric_value.float_value < o.numeric_value.float_value) ||
-		    (type == mvt_double && numeric_value.double_value < o.numeric_value.double_value) ||
-		    (type == mvt_int && numeric_value.int_value < o.numeric_value.int_value) ||
-		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
-		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
-		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value)) {
-			return true;
-		}
-	}
-
-	return false;
 }
 
 void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {

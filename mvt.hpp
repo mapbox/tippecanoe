@@ -1,4 +1,6 @@
-struct mvt_value;
+#include <mapbox/geometry/feature.hpp>
+
+typedef mapbox::geometry::value mvt_value;
 struct mvt_layer;
 
 enum mvt_operation {
@@ -35,21 +37,6 @@ enum mvt_value_type {
 	mvt_uint,
 	mvt_sint,
 	mvt_bool
-};
-
-struct mvt_value {
-	mvt_value_type type;
-	std::string string_value;
-	union {
-		float float_value;
-		double double_value;
-		long long int_value;
-		unsigned long long uint_value;
-		long long sint_value;
-		bool bool_value;
-	} numeric_value;
-
-	bool operator<(const mvt_value &o) const;
 };
 
 struct mvt_layer {
