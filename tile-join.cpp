@@ -25,6 +25,50 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
+struct to_string_visitor {
+	std::string value;
+	int type = -1;
+
+	void operator()(std::string const &val) {
+		value = val;
+		type = VT_STRING;
+	}
+
+	void operator()(float val) {
+		aprintf(&value, "%g", val);
+		type = VT_NUMBER;
+	}
+
+	void operator()(double val) {
+		aprintf(&value, "%g", val);
+		type = VT_NUMBER;
+	}
+
+	void operator()(int64_t val) {
+		aprintf(&value, "%lld", (long long) val);
+		type = VT_NUMBER;
+	}
+
+	void operator()(uint64_t val) {
+		aprintf(&value, "%llu", (unsigned long long) val);
+		type = VT_NUMBER;
+	}
+
+	void operator()(bool val) {
+		aprintf(&value, "%s", val ? "true" : "false");
+		type = VT_BOOLEAN;
+	}
+
+	void operator()(std::nullptr_t val) {
+	}
+
+	void operator()(std::vector<mvt_value> const &val) {
+	}
+
+	void operator()(std::unordered_map<std::string, mvt_value> const &val) {
+	}
+};
+
 void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
 	mvt_tile tile;
 	mvt_tile outtile;
@@ -65,48 +109,24 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
-				std::string value;
-				int type = -1;
 
-				if (val.type == mvt_string) {
-					value = val.string_value;
-					type = VT_STRING;
-				} else if (val.type == mvt_int) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
-					type = VT_NUMBER;
-				} else if (val.type == mvt_double) {
-					aprintf(&value, "%g", val.numeric_value.double_value);
-					type = VT_NUMBER;
-				} else if (val.type == mvt_float) {
-					aprintf(&value, "%g", val.numeric_value.float_value);
-					type = VT_NUMBER;
-				} else if (val.type == mvt_bool) {
-					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
-					type = VT_BOOLEAN;
-				} else if (val.type == mvt_sint) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
-					type = VT_NUMBER;
-				} else if (val.type == mvt_uint) {
-					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
-					type = VT_NUMBER;
-				} else {
-					continue;
-				}
+				to_string_visitor v;
+				mapbox::util::apply_visitor(v, val);
 
-				if (type < 0) {
+				if (v.type < 0) {
 					continue;
 				}
 
 				if (exclude.count(std::string(key)) == 0) {
 					type_and_string tas;
 					tas.string = std::string(key);
-					tas.type = type;
+					tas.type = v.type;
 					file_keys[ll].insert(tas);
 					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
-					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(value);
+					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(v.value);
 
 					if (ii != mapping.end()) {
 						std::vector<std::string> fields = ii->second;
@@ -136,11 +156,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 
 								mvt_value outval;
 								if (attr_type == VT_STRING) {
-									outval.type = mvt_string;
-									outval.string_value = joinval;
+									outval = joinval;
 								} else {
-									outval.type = mvt_double;
-									outval.numeric_value.double_value = atof(joinval.c_str());
+									outval = atof(joinval.c_str());
 								}
 
 								outlayer.tag(outfeature, joinkey, outval);
