@@ -33,16 +33,6 @@ struct mvt_value_cmp {
 	bool operator()(const mvt_value &a, const mvt_value &b) const;
 };
 
-enum mvt_value_type {
-	mvt_string,
-	mvt_float,
-	mvt_double,
-	mvt_int,
-	mvt_uint,
-	mvt_sint,
-	mvt_bool
-};
-
 struct mvt_layer {
 	int version;
 	std::string name;
