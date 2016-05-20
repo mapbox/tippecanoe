@@ -139,22 +139,17 @@ mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
 		long long v;
 		if (is_integer(s, &v)) {
 			if (v >= 0) {
-				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
+				tv = (unsigned long long) v;
 			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
+				tv = v;
 			}
 		} else {
-			tv.type = mvt_double;
-			tv.numeric_value.double_value = atof(s);
+			tv = atof(s);
 		}
 	} else if (type == VT_BOOLEAN) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = (s[0] == 't');
+		tv = (s[0] == 't');
 	} else {
-		tv.type = mvt_string;
-		tv.string_value = s;
+		tv = s;
 	}
 
 	return tv;
@@ -167,7 +162,7 @@ void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_fea
 		mvt_value key = retrieve_string(meta, stringpool, NULL);
 		mvt_value value = retrieve_string(meta, stringpool, &otype);
 
-		layer.tag(feature, key.string_value, value);
+		layer.tag(feature, key.get<std::string>(), value);
 	}
 }
 
@@ -182,9 +177,9 @@ int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char 
 		mvt_value key1 = retrieve_string(meta1, stringpool1, NULL);
 		mvt_value key2 = retrieve_string(meta2, stringpool2, NULL);
 
-		if (key1.string_value < key2.string_value) {
+		if (key1.get<std::string>() < key2.get<std::string>()) {
 			return -1;
-		} else if (key1.string_value > key2.string_value) {
+		} else if (key1.get<std::string>() > key2.get<std::string>()) {
 			return 1;
 		}
 
