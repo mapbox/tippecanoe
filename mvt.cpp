@@ -126,7 +126,7 @@ bool mvt_tile::decode(std::string &message) {
 							break;
 
 						case 3: /* double */
-							value= value_reader.get_double();
+							value = value_reader.get_double();
 							break;
 
 						case 4: /* int */
@@ -142,7 +142,7 @@ bool mvt_tile::decode(std::string &message) {
 							break;
 
 						case 7: /* bool */
-							value = value_reader.get_bool();
+							value = (bool) value_reader.get_bool();
 							break;
 
 						default:
@@ -271,7 +271,7 @@ struct write_visitor {
 		writer->add_uint64(5, val);
 	}
 
-#if 0 // not defined in the variant
+#if 0  // not defined in the variant
 	void operator()(sint64_t val) {
 		writer->add_sint64(6, val);
 	}
@@ -417,4 +417,65 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 
 	feature.tags.push_back(ko);
 	feature.tags.push_back(vo);
+}
+
+struct stringify_visitor {
+	std::string operator()(std::string const &val) const {
+		return std::string("s") + std::string(val);
+	}
+
+	std::string operator()(float val) const {
+		char *s;
+		asprintf(&s, "f%f", val);
+		std::string ret(s);
+		free(s);
+		return ret;
+	}
+
+	std::string operator()(double val) const {
+		char *s;
+		asprintf(&s, "d%lf", val);
+		std::string ret(s);
+		free(s);
+		return ret;
+	}
+
+	std::string operator()(int64_t val) const {
+		char *s;
+		asprintf(&s, "i%lld", (long long) val);
+		std::string ret(s);
+		free(s);
+		return ret;
+	}
+
+	std::string operator()(uint64_t val) const {
+		char *s;
+		asprintf(&s, "u%llu", (unsigned long long) val);
+		std::string ret(s);
+		free(s);
+		return ret;
+	}
+
+	std::string operator()(bool val) const {
+		return std::string("b") + (val ? std::string("true") : std::string("false"));
+	}
+
+	std::string operator()(std::nullptr_t val) const {
+		return std::string("n");
+	}
+
+	std::string operator()(std::vector<mvt_value> const &val) const {
+		return std::string("v");
+	}
+
+	std::string operator()(std::unordered_map<std::string, mvt_value> const &val) const {
+		return std::string("m");
+	}
+};
+
+bool mvt_value_cmp::operator()(const mvt_value &a, const mvt_value &b) const {
+	std::string as = mapbox::util::apply_visitor(stringify_visitor(), a);
+	std::string bs = mapbox::util::apply_visitor(stringify_visitor(), b);
+
+	return as < bs;
 }

@@ -29,6 +29,10 @@ struct mvt_feature {
 	int /* mvt_geometry_type */ type;
 };
 
+struct mvt_value_cmp {
+	bool operator()(const mvt_value &a, const mvt_value &b) const;
+};
+
 enum mvt_value_type {
 	mvt_string,
 	mvt_float,
@@ -52,7 +56,7 @@ struct mvt_layer {
 
 	// For tracking the key-value constants already used in this layer
 	std::map<std::string, size_t> key_map;
-	std::map<mvt_value, size_t> value_map;
+	std::map<mvt_value, size_t, mvt_value_cmp> value_map;
 };
 
 struct mvt_tile {

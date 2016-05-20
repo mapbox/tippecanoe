@@ -147,9 +147,9 @@ mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
 			tv = atof(s);
 		}
 	} else if (type == VT_BOOLEAN) {
-		tv = (s[0] == 't');
+		tv = (mvt_value) (bool) (s[0] == 't');
 	} else {
-		tv = s;
+		tv = std::string(s);
 	}
 
 	return tv;

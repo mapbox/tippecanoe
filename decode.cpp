@@ -99,11 +99,9 @@ struct print_visitor {
 	}
 
 	void operator()(std::vector<mvt_value> const &val) const {
-
 	}
 
 	void operator()(std::unordered_map<std::string, mvt_value> const &val) const {
-
 	}
 };
 
