@@ -142,7 +142,7 @@ bool mvt_tile::decode(std::string &message) {
 							break;
 
 						case 7: /* bool */
-							value = (bool) value_reader.get_bool();
+							value = value_reader.get_bool();
 							break;
 
 						default:
@@ -278,7 +278,7 @@ struct write_visitor {
 #endif
 
 	void operator()(bool val) const {
-		writer->add_bool(6, val);
+		writer->add_bool(7, val);
 	}
 
 	void operator()(std::nullptr_t val) const {
