@@ -36,6 +36,7 @@ extern "C" {
 #include "mbtiles.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
+#include "options.hpp"
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -44,6 +45,9 @@ extern "C" {
 #define GEOM_POLYGON 4	 /* array of arrays of arrays of positions */
 #define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
+
+extern int prevent[256];
+extern int additional[256];
 
 static const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
@@ -62,10 +66,12 @@ static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
-void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+	long long g = 0;
+
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
-		return;
+		return g;
 	}
 
 	int within = geometry_within[t];
@@ -80,7 +86,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 				}
 			}
 
-			parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
+			g += parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -98,19 +104,17 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 				}
 			}
 
-			if (bbox != NULL) {
-				if (x < bbox[0]) {
-					bbox[0] = x;
-				}
-				if (y < bbox[1]) {
-					bbox[1] = y;
-				}
-				if (x > bbox[2]) {
-					bbox[2] = x;
-				}
-				if (y > bbox[3]) {
-					bbox[3] = y;
-				}
+			if (x < bbox[0]) {
+				bbox[0] = x;
+			}
+			if (y < bbox[1]) {
+				bbox[1] = y;
+			}
+			if (x > bbox[2]) {
+				bbox[2] = x;
+			}
+			if (y > bbox[3]) {
+				bbox[3] = y;
 			}
 
 			if (!*initialized) {
@@ -134,6 +138,7 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 			serialize_long_long(out, (y >> geometry_scale) - (*wy >> geometry_scale), fpos, fname);
 			*wx = x;
 			*wy = y;
+			g++;
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 		}
@@ -151,6 +156,8 @@ void parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FIL
 
 		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
 	}
+
+	return g;
 }
 
 int serialize_geometry(json_object *geometry, json_object *properties, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, std::set<type_and_string> *file_keys, int maxzoom) {
@@ -284,13 +291,30 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 	serialize_int(geomfile, segment, geompos, fname);
 	long long wx = *initial_x, wy = *initial_y;
-	parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
+	long long g = parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	bool inline_meta = true;
 	// Don't inline metadata for features that will span several tiles at maxzoom
+	if (g > 0 && (bbox[2] < bbox[0] || bbox[3] < bbox[1])) {
+		fprintf(stderr, "Malformed bbox %llx,%llx,%llx,%llx\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+	}
 	if (bbox[2] - bbox[0] > (2LL << (32 - maxzoom)) || bbox[3] - bbox[1] > (2LL << (32 - maxzoom))) {
 		inline_meta = false;
+
+		if (prevent[P_CLIPPING]) {
+			static volatile long long warned = 0;
+			long long extent = ((bbox[2] - bbox[0]) / (1LL << (32 - maxzoom))) * ((bbox[3] - bbox[1]) / (1LL << (32 - maxzoom)));
+			if (extent > warned) {
+				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature will be duplicated across %lld tiles\n", fname, line, extent);
+				warned = extent;
+
+				if (extent > 10000) {
+					fprintf(stderr, "Exiting because this can't be right.\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
 	}
 
 	serialize_int(geomfile, m, geompos, fname);

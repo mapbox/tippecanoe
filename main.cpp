@@ -56,8 +56,8 @@ static int min_detail = 7;
 int quiet = 0;
 int geometry_scale = 0;
 
-static int prevent[256];
-static int additional[256];
+int prevent[256];
+int additional[256];
 
 struct source {
 	std::string layer;
