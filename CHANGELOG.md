@@ -1,3 +1,12 @@
+## 1.11.6
+
+* Reduce the size of critical data structures to reduce dynamic memory use
+
+## 1.11.5
+
+* Let zoom level 0 have just as much extent and buffer as any other zoom
+* Fix tippecanoe-decode bug that would sometimes show outer rings as inner
+
 ## 1.11.4
 
 * Don't let polygons with nonzero area disappear during cleaning
