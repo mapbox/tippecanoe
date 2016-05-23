@@ -440,7 +440,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys, int maxzoom) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -474,6 +474,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
 	rpa->file_keys = file_keys;
+	rpa->maxzoom = maxzoom;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -1082,7 +1083,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1118,7 +1119,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0]);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
 
 					if (pthread_join(parallel_parser, NULL) != 0) {
 						perror("pthread_join");
