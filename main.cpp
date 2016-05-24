@@ -1393,7 +1393,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	progress_seq = indexpos / sizeof(struct index);
 
 	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
 
 	if (indexpos == 0) {

@@ -297,7 +297,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	bool inline_meta = true;
 	// Don't inline metadata for features that will span several tiles at maxzoom
 	if (g > 0 && (bbox[2] < bbox[0] || bbox[3] < bbox[1])) {
-		fprintf(stderr, "Malformed bbox %llx,%llx,%llx,%llx\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", bbox[0], bbox[1], bbox[2], bbox[3]);
 	}
 	if (bbox[2] - bbox[0] > (2LL << (32 - maxzoom)) || bbox[3] - bbox[1] > (2LL << (32 - maxzoom))) {
 		inline_meta = false;

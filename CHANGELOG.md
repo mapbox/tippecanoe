@@ -1,3 +1,8 @@
+## 1.11.7
+
+* Keep metadata together with geometry for features that don't span many tiles,
+  to avoid extra memory load from indexing into a separate metadata file
+
 ## 1.11.6
 
 * Reduce the size of critical data structures to reduce dynamic memory use
