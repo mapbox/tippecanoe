@@ -46,9 +46,6 @@ extern "C" {
 #define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
 #define GEOM_TYPES 6
 
-extern int prevent[256];
-extern int additional[256];
-
 static const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
 };
