@@ -304,9 +304,9 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 
 		if (prevent[P_CLIPPING]) {
 			static volatile long long warned = 0;
-			long long extent = ((bbox[2] - bbox[0]) / (1LL << (32 - maxzoom))) * ((bbox[3] - bbox[1]) / (1LL << (32 - maxzoom)));
+			long long extent = ((bbox[2] - bbox[0]) / ((1LL << (32 - maxzoom)) + 1)) * ((bbox[3] - bbox[1]) / ((1LL << (32 - maxzoom)) + 1));
 			if (extent > warned) {
-				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature will be duplicated across %lld tiles\n", fname, line, extent);
+				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", fname, line, extent);
 				warned = extent;
 
 				if (extent > 10000) {
