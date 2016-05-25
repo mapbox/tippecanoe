@@ -15,3 +15,6 @@
 #define P_POLYGON_SPLIT ((int) 'p')
 #define P_CLIPPING ((int) 'c')
 #define P_DUPLICATION ((int) 'D')
+
+extern int prevent[256];
+extern int additional[256];
