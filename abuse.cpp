@@ -4,13 +4,9 @@
 #include <time.h>
 #include <vector>
 
-extern "C" {
-	#include "tile.h"
-}
-
-#include "geometry.hh"
-
-extern "C" {
+#include "tile.hpp"
+#include "geometry.hpp"
+#include "options.hpp"
 
 int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 	return 0;
@@ -29,8 +25,6 @@ int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
 }
 
 int geometry_scale = 0;
-
-};
 
 int main() {
 	srand(time(NULL));
