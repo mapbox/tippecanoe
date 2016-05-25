@@ -57,13 +57,15 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2);
+int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 static int is_integer(const char *s, long long *v);
 
 struct coalesce {
 	char *meta;
 	char *stringpool;
+	std::vector<long long> keys;
+	std::vector<long long> values;
 	drawvec geom;
 	unsigned long long index;
 	unsigned long long index2;
@@ -97,10 +99,7 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
-	char *m1 = c1->meta;
-	char *m2 = c2->meta;
-
-	return metacmp(c1->m, &m1, c1->stringpool, c2->m, &m2, c2->stringpool);
+	return metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
@@ -123,10 +122,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
-	long long off;
-	deserialize_long_long(f, &off);
-
+mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	int type = stringpool[off];
 	char *s = stringpool + off + 1;
 
@@ -160,18 +156,18 @@ mvt_value retrieve_string(char **f, char *stringpool, int *otype) {
 	return tv;
 }
 
-void decode_meta(int m, char **meta, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	int i;
 	for (i = 0; i < m; i++) {
 		int otype;
-		mvt_value key = retrieve_string(meta, stringpool, NULL);
-		mvt_value value = retrieve_string(meta, stringpool, &otype);
+		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
+		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
 		layer.tag(feature, key.string_value, value);
 	}
 }
 
-int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char *stringpool2) {
+int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
 	// XXX
 	// Ideally this would make identical features compare the same lexically
 	// even if their attributes were declared in different orders in different instances.
@@ -179,8 +175,8 @@ int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char 
 
 	int i;
 	for (i = 0; i < m1 && i < m2; i++) {
-		mvt_value key1 = retrieve_string(meta1, stringpool1, NULL);
-		mvt_value key2 = retrieve_string(meta2, stringpool2, NULL);
+		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
+		mvt_value key2 = retrieve_string(keys2[i], stringpool2, NULL);
 
 		if (key1.string_value < key2.string_value) {
 			return -1;
@@ -188,13 +184,11 @@ int metacmp(int m1, char **meta1, char *stringpool1, int m2, char **meta2, char 
 			return 1;
 		}
 
-		long long off1;
-		deserialize_long_long(meta1, &off1);
+		long long off1 = values1[i];
 		int type1 = stringpool1[off1];
 		char *s1 = stringpool1 + off1 + 1;
 
-		long long off2;
-		deserialize_long_long(meta2, &off2);
+		long long off2 = values2[i];
 		int type2 = stringpool2[off2];
 		char *s2 = stringpool2 + off2 + 1;
 
@@ -265,7 +259,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector <long long> &metavals) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -347,8 +341,6 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
 					}
 					serialize_int(geomfile[j], segment, &geompos[j], fname);
-					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
-					serialize_int(geomfile[j], m, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
 
 					for (size_t u = 0; u < geom.size(); u++) {
@@ -363,6 +355,16 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					}
 
 					serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
+
+					serialize_int(geomfile[j], m, &geompos[j], fname);
+					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
+					if (metastart < 0) {
+						for (int i = 0; i < m; i++) {
+							serialize_long_long(geomfile[j], metakeys[i], &geompos[j], fname);
+							serialize_long_long(geomfile[j], metavals[i], &geompos[j], fname);
+						}
+					}
+
 					serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
 				}
 			}
@@ -372,9 +374,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 struct partial {
 	std::vector<drawvec> geoms;
+	std::vector<long long> keys;
+	std::vector<long long> values;
 	char *meta;
-	int *prevent;
-	int *additional;
 	long long layer;
 	long long original_seq;
 	unsigned long long index;
@@ -445,8 +447,6 @@ void *partial_feature_worker(void *v) {
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
-		int *prevent = (*partials)[i].prevent;
-		int *additional = (*partials)[i].additional;
 		int maxzoom = (*partials)[i].maxzoom;
 
 		double area = 0;
@@ -557,7 +557,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int *prevent, int *additional, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
 	int line_detail;
 	double fraction = 1;
 
@@ -649,14 +649,36 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);
 
-			long long metastart;
-			int m;
-			deserialize_long_long_io(geoms, &metastart, geompos_in);
-			deserialize_int_io(geoms, &m, geompos_in);
-			char *meta = metabase + metastart + meta_off[segment];
 			long long bbox[4];
 
 			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
+
+			long long metastart;
+			int m;
+			deserialize_int_io(geoms, &m, geompos_in);
+			deserialize_long_long_io(geoms, &metastart, geompos_in);
+			char *meta = NULL;
+			std::vector<long long> metakeys, metavals;
+
+			if (metastart >= 0) {
+				meta = metabase + metastart + meta_off[segment];
+
+				for (int i = 0; i < m; i++) {
+					long long k, v;
+					deserialize_long_long(&meta, &k);
+					deserialize_long_long(&meta, &v);
+					metakeys.push_back(k);
+					metavals.push_back(v);
+				}
+			} else {
+				for (int i = 0; i < m; i++) {
+					long long k, v;
+					deserialize_long_long_io(geoms, &k, geompos_in);
+					deserialize_long_long_io(geoms, &v, geompos_in);
+					metakeys.push_back(k);
+					metavals.push_back(v);
+				}
+			}
 
 			signed char feature_minzoom;
 			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
@@ -752,7 +774,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals);
 			}
 
 			if (z < minzoom) {
@@ -815,9 +837,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.reduced = reduced;
 				p.z = z;
 				p.line_detail = line_detail;
-				p.prevent = prevent;
-				p.additional = additional;
 				p.maxzoom = maxzoom;
+				p.keys = metakeys;
+				p.values = metavals;
 				partials.push_back(p);
 			}
 		}
@@ -876,6 +898,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.m = partials[i].m;
 					c.meta = partials[i].meta;
 					c.stringpool = stringpool + pool_off[partials[i].segment];
+					c.keys = partials[i].keys;
+					c.values = partials[i].values;
 
 					features[layer].push_back(c);
 				}
@@ -970,7 +994,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				count += features[k][x].geom.size();
 				features[k][x].geom.clear();
 
-				decode_meta(features[k][x].m, &features[k][x].meta, features[k][x].stringpool, layer, feature);
+				decode_meta(features[k][x].m, features[k][x].keys, features[k][x].values, features[k][x].stringpool, layer, feature);
 				layer.features.push_back(feature);
 			}
 
@@ -1058,8 +1082,6 @@ struct write_tile_args {
 	volatile long long *along;
 	double gamma;
 	int nlayers;
-	int *prevent;
-	int *additional;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1116,7 +1138,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->prevent, arg->additional, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -1167,7 +1189,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int *prevent, int *additional, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1287,8 +1309,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
 			args[thread].nlayers = nlayers;
-			args[thread].prevent = prevent;
-			args[thread].additional = additional;
 			args[thread].child_shards = TEMP_FILES / threads;
 
 			args[thread].geomfd = geomfd;
