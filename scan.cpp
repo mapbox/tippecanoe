@@ -319,8 +319,10 @@ struct s_edgecmp {
 
 typedef drawvec *dvp;
 
-bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
+bool partition(std::vector<drawvec *> segs, int direction) {
 	std::vector<long long> points;
+
+	// List of X or Y midpoints of edges, so we can find the median
 
 	if (direction == 0) {
 		for (size_t i = 0; i < segs.size(); i++) {
@@ -334,6 +336,9 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 
 	std::sort(points.begin(), points.end());
 	long long median = points[points.size() / 2];
+
+	// Partition into sets that are above or below, or to the left or to the right of, the median.
+	// Segments that cross the median appear in both.
 
 	std::vector<drawvec *> one;
 	std::vector<drawvec *> two;
@@ -360,6 +365,9 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 
 	bool again = false;
 
+	// If partitioning didn't make one or both sets smaller (because all segments cross the median),
+	// there is no choice but to check it by brute force
+
 	if (one.size() >= segs.size() || two.size() >= segs.size()) {
 		for (size_t i = 0; i + 1 < segs.size(); i++) {
 			for (size_t j = i + 1; j < segs.size(); j++) {
@@ -372,8 +380,11 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 		return again;
 	}
 
+	// In a more reasonable case, continue partitioning the first half if it is still large,
+	// or check all the intersections if it is small.
+
 	if (one.size() > 20) {
-		if (partition(one, !direction, cost)) {
+		if (partition(one, !direction)) {
 			again = true;
 		}
 	} else {
@@ -386,8 +397,10 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 		}
 	}
 
+	// Do the same for the second half
+
 	if (two.size() > 20) {
-		if (partition(two, !direction, cost)) {
+		if (partition(two, !direction)) {
 			again = true;
 		}
 	} else {
@@ -400,7 +413,6 @@ bool partition(std::vector<drawvec *> segs, int direction, long long cost) {
 		}
 	}
 
-	cost += segs.size();
 	return again;
 }
 
@@ -423,10 +435,9 @@ drawvec scan(drawvec &geom) {
 	}
 
 	// Split the segments by bounding box into smaller subsets
-	// until the cost of further splitting exceeds the benefit
-	// of fewer comparisons.
+	// until they are reasonably sized or can't be split further.
 
-	while (partition(segs, 0, 0)) {
+	while (partition(segs, 0)) {
 		// Repeat until no additional changes
 	}
 
