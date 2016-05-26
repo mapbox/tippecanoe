@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <protozero/pbf_reader.hpp>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
@@ -109,8 +110,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
 	mvt_tile tile;
 
-	if (!tile.decode(message)) {
-		fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
+	try {
+		if (!tile.decode(message)) {
+			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
+			exit(EXIT_FAILURE);
+		}
+	} catch (protozero::unknown_pbf_wire_type_exception e) {
+		fprintf(stderr, "PBF decoding error in tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
 
