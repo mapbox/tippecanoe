@@ -14,6 +14,108 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
+#include <mapbox/geometry/feature.hpp>
+
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
+	if (type == VT_POINT) {
+		if (dv.size() == 1) {
+			return mapbox::geometry::point<long long>(dv[0].x, dv[0].y);
+		} else {
+			mapbox::geometry::multi_point<long long> mp;
+			for (size_t i = 0; i < dv.size(); i++) {
+				mp.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+			}
+			return mp;
+		}
+	} else if (type == VT_LINE) {
+		int movetos = 0;
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (dv[i].op == VT_MOVETO) {
+				movetos++;
+			}
+		}
+		if (movetos == 1) {
+			mapbox::geometry::line_string<long long> ls;
+			for (size_t i = 0; i < dv.size(); i++) {
+				ls.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+			}
+			return ls;
+		} else {
+			mapbox::geometry::multi_line_string<long long> mls;
+			for (size_t i = 0; i < dv.size(); i++) {
+				if (dv[i].op == VT_MOVETO) {
+					size_t j;
+					for (j = i + 1; j < dv.size(); j++) {
+						if (dv[j].op != VT_LINETO) {
+							break;
+						}
+					}
+					mapbox::geometry::line_string<long long> ls;
+					for (size_t k = i; k < j; k++) {
+						ls.push_back(mapbox::geometry::point<long long>(dv[k].x, dv[k].y));
+					}
+					mls.push_back(ls);
+					i = j - 1;
+				}
+			}
+			return mls;
+		}
+	} else if (type == VT_POLYGON) {
+		std::vector<drawvec> rings;
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (dv[i].op == VT_MOVETO) {
+				size_t j;
+				for (j = i + 1; j < dv.size(); j++) {
+					if (dv[j].op != VT_LINETO) {
+						break;
+					}
+				}
+				drawvec ring;
+				for (size_t k = i; k < j; k++) {
+					ring.push_back(dv[k]);
+				}
+				rings.push_back(ring);
+				i = j - 1;
+			}
+		}
+		std::vector<long double> areas;
+		int outers = 0;
+		for (size_t i = 0; i < rings.size(); i++){
+			long long area = get_area(rings[i], 0, rings[i].size());
+			if (area >= 0 || i == 0) {
+				outers++;
+			}
+			areas.push_back(area);
+		}
+		if (outers == 1) {
+			mapbox::geometry::polygon<long long> p;
+			for (size_t i = 0; i < rings.size(); i++) {
+				mapbox::geometry::linear_ring<long long> lr;
+				for (size_t j = 0; j < rings[i].size(); j++) {
+					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+				}
+				p.push_back(lr);
+			}
+			return p;
+		} else {
+			mapbox::geometry::multi_polygon<long long> mp;
+			for (size_t i = 0; i < rings.size(); i++) {
+				if (areas[i] >= 0 || i == 0) {
+					mp.push_back(mapbox::geometry::polygon<long long>());
+				}
+				mapbox::geometry::linear_ring<long long> lr;
+				for (size_t j = 0; j < rings[i].size(); j++) {
+					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+				}
+				mp[mp.size() - 1].push_back(lr);
+			}
+			return mp;
+		}
+	} else {
+		fprintf(stderr, "Bogus geometry type %d\n", type);
+		exit(EXIT_FAILURE);
+	}
+}
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
