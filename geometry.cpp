@@ -16,6 +16,92 @@
 #include "main.hpp"
 #include <mapbox/geometry/feature.hpp>
 
+struct convert_visitor {
+	drawvec *dv;
+	int *type;
+
+	convert_visitor(drawvec *ndv, int *ntype) {
+		dv = ndv;
+		type = ntype;
+	}
+
+	void operator()(mapbox::geometry::point<long long> &val) const {
+		*type = VT_POINT;
+		dv->push_back(draw(VT_MOVETO, val.x, val.y));
+	}
+
+	void operator()(mapbox::geometry::multi_point<long long> &val) const {
+		*type = VT_POINT;
+		for (size_t i = 0; i < val.size(); i++) {
+			dv->push_back(draw(VT_MOVETO, val[i].x, val[i].y));
+		}
+	}
+
+	void operator()(mapbox::geometry::line_string<long long> &val) const {
+		*type = VT_LINE;
+		for (size_t i = 0; i < val.size(); i++) {
+			if (i == 0) {
+				dv->push_back(draw(VT_MOVETO, val[i].x, val[i].y));
+			} else {
+				dv->push_back(draw(VT_LINETO, val[i].x, val[i].y));
+			}
+		}
+	}
+
+	void operator()(mapbox::geometry::multi_line_string<long long> &val) const {
+		*type = VT_LINE;
+		for (size_t i = 0; i < val.size(); i++) {
+			for (size_t j = 0; j < val[i].size(); j++) {
+				if (j == 0) {
+					dv->push_back(draw(VT_MOVETO, val[i][j].x, val[i][j].y));
+				} else {
+					dv->push_back(draw(VT_LINETO, val[i][j].x, val[i][j].y));
+				}
+			}
+		}
+	}
+
+	void operator()(mapbox::geometry::polygon<long long> &val) const {
+		*type = VT_POLYGON;
+		for (size_t i = 0; i < val.size(); i++) {
+			for (size_t j = 0; j < val[i].size(); j++) {
+				if (j == 0) {
+					dv->push_back(draw(VT_MOVETO, val[i][j].x, val[i][j].y));
+				} else {
+					dv->push_back(draw(VT_LINETO, val[i][j].x, val[i][j].y));
+				}
+			}
+		}
+	}
+
+	void operator()(mapbox::geometry::multi_polygon<long long> &val) const {
+		*type = VT_POLYGON;
+		for (size_t i = 0; i < val.size(); i++) {
+			for (size_t j = 0; j < val[i].size(); j++) {
+				for (size_t k = 0; k < val[i][j].size(); k++) {
+					if (k == 0) {
+						dv->push_back(draw(VT_MOVETO, val[i][j][k].x, val[i][j][k].y));
+					} else {
+						dv->push_back(draw(VT_LINETO, val[i][j][k].x, val[i][j][k].y));
+					}
+				}
+			}
+		}
+	}
+
+	void operator()(mapbox::geometry::geometry_collection<long long> &val) const {
+		fprintf(stderr, "Geometry collections not supported\n");
+		exit(EXIT_FAILURE);
+	}
+};
+
+drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type) {
+	drawvec dv;
+	mapbox::util::apply_visitor(convert_visitor(&dv, &type), g);
+
+	return dv;
+}
+
 mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 	if (type == VT_POINT) {
 		if (dv.size() == 1) {
