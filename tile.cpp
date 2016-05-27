@@ -814,7 +814,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					continue;
 				}
 
-				if (gamma > 0 || additional[A_CALCULATE_FEATURE_DENSITY]) {
+				if (gamma > 0) {
 					if (manage_gap(index, &previndex, scale, gamma, &gap)) {
 						continue;
 					}
