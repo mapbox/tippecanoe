@@ -49,3 +49,8 @@ drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom, drawvec &before);
 double get_area(drawvec &geom, size_t i, size_t j);
+
+#include <mapbox/geometry/feature.hpp>
+
+drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type);
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv);

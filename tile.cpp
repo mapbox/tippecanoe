@@ -954,6 +954,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						features[j][x].geom = clean_or_clip_poly(features[j][x].geom, 0, 0, 0, false);
 					}
 
+					mapbox::geometry::geometry<long long> g = from_drawvec(features[j][x].type, features[j][x].geom);
+					features[j][x].geom = to_drawvec(g, features[j][x].type);
+
 					features[j][x].geom = close_poly(features[j][x].geom);
 				}
 
