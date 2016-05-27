@@ -987,6 +987,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		std::string reading;
 		int fd;
 
+		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+			type_and_string tas;
+			tas.type = VT_NUMBER;
+			tas.string = "tippecanoe_feature_density";
+			file_keys[source].insert(tas);
+		}
+
 		if (source >= sources.size()) {
 			reading = "standard input";
 			fd = 0;
@@ -1771,6 +1778,7 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
+		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
