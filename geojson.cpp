@@ -90,7 +90,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos
 			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
-			projection(lon, lat, 32, &x, &y);
+			projection->project(lon, lat, 32, &x, &y);
 
 			if (j->length > 2) {
 				static int warned = 0;
@@ -405,6 +405,21 @@ int serialize_geometry(json_object *geometry, json_object *properties, const cha
 	return 1;
 }
 
+void check_crs(json_object *j, const char *reading) {
+	json_object *crs = json_hash_get(j, "crs");
+	if (crs != NULL) {
+		json_object *properties = json_hash_get(crs, "properties");
+		if (properties != NULL) {
+			json_object *name = json_hash_get(properties, "name");
+			if (name->type == JSON_STRING) {
+				if (strcmp(name->string, projection->alias) != 0) {
+					fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not \"%s\".\n", reading, name->string, projection->alias);
+				}
+			}
+		}
+	}
+}
+
 void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, std::set<type_and_string> *file_keys, int maxzoom) {
 	long long found_hashes = 0;
 	long long found_features = 0;
@@ -474,6 +489,10 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 				json_free(j);
 				continue;
 			}
+		}
+
+		if (strcmp(type->string, "FeatureCollection") == 0) {
+			check_crs(j, reading);
 		}
 
 		if (strcmp(type->string, "Feature") != 0) {

@@ -58,7 +58,6 @@ int geometry_scale = 0;
 
 int prevent[256];
 int additional[256];
-void (*projection)(double ix, double iy, int zoom, long long *ox, long long *oy) = lonlat2tile;
 
 struct source {
 	std::string layer;
@@ -1706,16 +1705,13 @@ static bool has_name(struct option *long_options, int *pl) {
 	return false;
 }
 
-struct projection {
-	const char *name;
-	void (*project)(double ix, double iy, int zoom, long long *ox, long long *oy);
-};
-
 struct projection projections[] = {
-	{"EPSG:4326", lonlat2tile},
-	{"EPSG:3857", epsg3857totile},
+	{"EPSG:4326", lonlat2tile, "urn:ogc:def:crs:OGC:1.3:CRS84"},
+	{"EPSG:3857", epsg3857totile, "urn:ogc:def:crs:EPSG::3857"},
 	{NULL, NULL},
 };
+
+struct projection *projection = &projections[0];
 
 int main(int argc, char **argv) {
 #ifdef MTRACE
@@ -1995,7 +1991,11 @@ int main(int argc, char **argv) {
 			struct projection *p;
 			for (p = projections; p->name != NULL; p++) {
 				if (strcmp(p->name, optarg) == 0) {
-					projection = p->project;
+					projection = p;
+					break;
+				}
+				if (strcmp(p->alias, optarg) == 0) {
+					projection = p;
 					break;
 				}
 			}

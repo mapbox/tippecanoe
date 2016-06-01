@@ -13,5 +13,3 @@ extern int quiet;
 
 extern int CPUS;
 extern int TEMP_FILES;
-
-extern void (*projection)(double ix, double iy, int zoom, long long *ox, long long *oy);
