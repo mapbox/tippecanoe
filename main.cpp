@@ -1999,7 +1999,7 @@ int main(int argc, char **argv) {
 					break;
 				}
 			}
-			if (p == NULL) {
+			if (p->name == NULL) {
 				fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
