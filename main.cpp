@@ -58,6 +58,7 @@ int geometry_scale = 0;
 
 int prevent[256];
 int additional[256];
+void (*projection)(double ix, double iy, int zoom, long long *ox, long long *oy) = lonlat2tile;
 
 struct source {
 	std::string layer;
@@ -1634,8 +1635,8 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
-	tile2latlon(midx, midy, maxzoom, &maxlat, &minlon);
-	tile2latlon(midx + 1, midy + 1, maxzoom, &minlat, &maxlon);
+	tile2lonlat(midx, midy, maxzoom, &maxlon, &minlat);
+	tile2lonlat(midx + 1, midy + 1, maxzoom, &minlon, &maxlat);
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
@@ -1674,8 +1675,8 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		file_bbox[3] = (1LL << 32) - 1;
 	}
 
-	tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
-	tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
+	tile2lonlat(file_bbox[0], file_bbox[1], 32, &minlon, &maxlat);
+	tile2lonlat(file_bbox[2], file_bbox[3], 32, &maxlon, &minlat);
 
 	if (midlat < minlat) {
 		midlat = minlat;
@@ -1704,6 +1705,17 @@ static bool has_name(struct option *long_options, int *pl) {
 
 	return false;
 }
+
+struct projection {
+	const char *name;
+	void (*project)(double ix, double iy, int zoom, long long *ox, long long *oy);
+};
+
+struct projection projections[] = {
+	{"EPSG:4326", lonlat2tile},
+	{"EPSG:3857", epsg3857totile},
+	{NULL, NULL},
+};
 
 int main(int argc, char **argv) {
 #ifdef MTRACE
@@ -1763,6 +1775,7 @@ int main(int argc, char **argv) {
 		{"gamma", required_argument, 0, 'g'},
 		{"prevent", required_argument, 0, 'p'},
 		{"additional", required_argument, 0, 'a'},
+		{"projection", required_argument, 0, 's'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1811,7 +1824,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -1977,6 +1990,20 @@ int main(int argc, char **argv) {
 		case 'P':
 			read_parallel = 1;
 			break;
+
+		case 's': {
+			struct projection *p;
+			for (p = projections; p->name != NULL; p++) {
+				if (strcmp(p->name, optarg) == 0) {
+					projection = p->project;
+					break;
+				}
+			}
+			if (p == NULL) {
+				fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
+		} break;
 
 		default: {
 			int width = 7 + strlen(argv[0]);

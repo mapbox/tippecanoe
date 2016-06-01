@@ -90,7 +90,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos
 			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
-			latlon2tile(lat, lon, 32, &x, &y);
+			projection(lon, lat, 32, &x, &y);
 
 			if (j->length > 2) {
 				static int warned = 0;
