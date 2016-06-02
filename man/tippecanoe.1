@@ -107,6 +107,8 @@ compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber
 \-m \fIdetail\fP or \-\-minimum\-detail=\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 .IP \(bu 2
 \-b \fIpixels\fP or \-\-buffer=\fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
+.IP \(bu 2
+\-s \fIprojection\fP or \-\-projection=\fIprojection\fP: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,

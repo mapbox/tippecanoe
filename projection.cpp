@@ -1,8 +1,9 @@
+#include <stdio.h>
 #include <math.h>
 #include "projection.hpp"
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-void latlon2tile(double lat, double lon, int zoom, long long *x, long long *y) {
+void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
 	// Must limit latitude somewhere to prevent overflow.
 	// 89.9 degrees latitude is 0.621 worlds beyond the edge of the flat earth,
 	// hopefully far enough out that there are few expectations about the shape.
@@ -31,10 +32,20 @@ void latlon2tile(double lat, double lon, int zoom, long long *x, long long *y) {
 }
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
-void tile2latlon(long long x, long long y, int zoom, double *lat, double *lon) {
+void tile2lonlat(long long x, long long y, int zoom, double *lon, double *lat) {
 	unsigned long long n = 1LL << zoom;
 	*lon = 360.0 * x / n - 180.0;
 	*lat = atan(sinh(M_PI * (1 - 2.0 * y / n))) * 180.0 / M_PI;
+}
+
+void epsg3857totile(double ix, double iy, int zoom, long long *x, long long *y) {
+	*x = ix * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31);
+	*y = ((1LL << 32) - 1) - (iy * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31));
+
+	if (zoom != 0) {
+		*x >>= (32 - zoom);
+		*y >>= (32 - zoom);
+	}
 }
 
 unsigned long long encode(unsigned int wx, unsigned int wy) {
