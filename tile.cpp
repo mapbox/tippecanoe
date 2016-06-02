@@ -254,7 +254,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector <long long> &metavals) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -621,8 +621,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		while (1) {
-			signed char t;
-			deserialize_byte_io(geoms, &t, geompos_in);
+			signed char bt;
+			deserialize_byte_io(geoms, &bt, geompos_in);
+			int t = bt;
 			if (t < 0) {
 				break;
 			}
@@ -732,15 +733,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				// so that we can know whether the feature itself, or only the feature's
 				// bounding box, touches the tile.
 
-				if (t == VT_LINE) {
-					clipped = clip_lines(geom, z, line_detail, buffer);
-				}
-				if (t == VT_POLYGON) {
-					clipped = simple_clip_poly(geom, z, line_detail, buffer);
-				}
-				if (t == VT_POINT) {
-					clipped = clip_point(geom, z, line_detail, buffer);
-				}
+				mapbox::geometry::geometry<long long> g = from_drawvec(t, geom);
+				g = clip(g, z, line_detail, buffer);
+				clipped = to_drawvec(g, t);
 
 				clipped = remove_noop(clipped, t, 0);
 

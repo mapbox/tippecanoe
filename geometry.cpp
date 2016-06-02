@@ -166,7 +166,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 		}
 		std::vector<long double> areas;
 		int outers = 0;
-		for (size_t i = 0; i < rings.size(); i++){
+		for (size_t i = 0; i < rings.size(); i++) {
 			long long area = get_area(rings[i], 0, rings[i].size());
 			if (area >= 0 || i == 0) {
 				outers++;
@@ -808,6 +808,130 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
+static bool inside(mapbox::geometry::point<long long> d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	switch (edge) {
+	case 0:  // top
+		return d.y > miny;
+
+	case 1:  // right
+		return d.x < maxx;
+
+	case 2:  // bottom
+		return d.y < maxy;
+
+	case 3:  // left
+		return d.x > minx;
+	}
+
+	fprintf(stderr, "internal error inside\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+static mapbox::geometry::point<long long> get_line_intersection(mapbox::geometry::point<long long> p0, mapbox::geometry::point<long long> p1, mapbox::geometry::point<long long> p2, mapbox::geometry::point<long long> p3) {
+	double s1_x = p1.x - p0.x;
+	double s1_y = p1.y - p0.y;
+	double s2_x = p3.x - p2.x;
+	double s2_y = p3.y - p2.y;
+
+	double t;
+	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	return mapbox::geometry::point<long long>(p0.x + (t * s1_x), p0.y + (t * s1_y));
+}
+
+static mapbox::geometry::point<long long> intersect(mapbox::geometry::point<long long> a, mapbox::geometry::point<long long> b, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	switch (edge) {
+	case 0:  // top
+		return get_line_intersection(a, b, mapbox::geometry::point<long long>(minx, miny), mapbox::geometry::point<long long>(maxx, miny));
+		break;
+
+	case 1:  // right
+		return get_line_intersection(a, b, mapbox::geometry::point<long long>(maxx, miny), mapbox::geometry::point<long long>(maxx, maxy));
+		break;
+
+	case 2:  // bottom
+		return get_line_intersection(a, b, mapbox::geometry::point<long long>(maxx, maxy), mapbox::geometry::point<long long>(minx, maxy));
+		break;
+
+	case 3:  // left
+		return get_line_intersection(a, b, mapbox::geometry::point<long long>(minx, maxy), mapbox::geometry::point<long long>(minx, miny));
+		break;
+	}
+
+	fprintf(stderr, "internal error intersecting\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
+static mapbox::geometry::linear_ring<long long> clip_poly1(mapbox::geometry::linear_ring<long long> &geom, long long minx, long long miny, long long maxx, long long maxy) {
+	mapbox::geometry::linear_ring<long long> out = geom;
+
+	for (int edge = 0; edge < 4; edge++) {
+		if (out.size() > 0) {
+			mapbox::geometry::linear_ring<long long> in = out;
+			out.resize(0);
+
+			mapbox::geometry::point<long long> S = in[in.size() - 1];
+
+			for (size_t e = 0; e < in.size(); e++) {
+				mapbox::geometry::point<long long> E = in[e];
+
+				if (inside(E, edge, minx, miny, maxx, maxy)) {
+					if (!inside(S, edge, minx, miny, maxx, maxy)) {
+						out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
+					}
+					out.push_back(E);
+				} else if (inside(S, edge, minx, miny, maxx, maxy)) {
+					out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
+				}
+
+				S = E;
+			}
+		}
+	}
+
+	if (out.size() > 0) {
+		// If the polygon begins and ends outside the edge,
+		// the starting and ending points will be left as the
+		// places where it intersects the edge. Need to add
+		// another point to close the loop.
+
+		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+			out.push_back(out[0]);
+		}
+
+		if (out.size() < 3) {
+			// fprintf(stderr, "Polygon degenerated to a line segment\n");
+			out.clear();
+			return out;
+		}
+	}
+
+	return out;
+}
+
+mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> &geom, long long minx, long long miny, long long maxx, long long maxy) {
+	mapbox::geometry::multi_polygon<long long> out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		out.push_back(mapbox::geometry::polygon<long long>());
+		for (size_t j = 0; j < geom[i].size(); j++) {
+			out[out.size() - 1].push_back(clip_poly1(geom[i][j], minx, miny, maxx, maxy));
+		}
+	}
+
+	return out;
+}
+
+mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> &geom, int z, int detail, int buffer) {
+	long long area = 1LL << (32 - z);
+	long long clip_buffer = buffer * area / 256;
+
+	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
+}
+
 static bool inside(draw d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
 	switch (edge) {
 	case 0:  // top
@@ -954,13 +1078,6 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
-	long long area = 1LL << (32 - z);
-	long long clip_buffer = buffer * area / 256;
-
-	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
-}
-
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
 	long long pixel = (1 << (32 - detail - z)) * 2;
@@ -1040,8 +1157,8 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
-drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
-	drawvec out;
+mapbox::geometry::multi_point<long long> clip_points(mapbox::geometry::multi_point<long long> &geom, int z, int detail, long long buffer) {
+	mapbox::geometry::multi_point<long long> out;
 
 	long long min = 0;
 	long long area = 1LL << (32 - z);
@@ -1091,8 +1208,8 @@ bool point_within_tile(long long x, long long y, int z, int detail, long long bu
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
-	drawvec out;
+mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::multi_line_string<long long> &geom, int z, int detail, long long buffer) {
+	mapbox::geometry::multi_line_string<long long> out;
 
 	long long min = 0;
 	long long area = 1LL << (32 - z);
@@ -1100,26 +1217,33 @@ drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
 	area += buffer * area / 256;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
-			double x1 = geom[i - 1].x;
-			double y1 = geom[i - 1].y;
+		out.push_back(mapbox::geometry::line_string<long long>());
+		if (geom[i].size() > 0) {
+			out[out.size() - 1].push_back(geom[i][0]);
+		}
 
-			double x2 = geom[i - 0].x;
-			double y2 = geom[i - 0].y;
+		for (size_t j = 0; j + 1 < geom[i].size(); j++) {
+			double x1 = geom[i][j].x;
+			double y1 = geom[i][j].y;
+
+			double x2 = geom[i][j + 1].x;
+			double y2 = geom[i][j + 1].y;
 
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) {  // clipped
-				out.push_back(draw(VT_MOVETO, x1, y1));
-				out.push_back(draw(VT_LINETO, x2, y2));
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				out.push_back(mapbox::geometry::line_string<long long>());
+				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x1, y1));
+				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x2, y2));
+
+				out.push_back(mapbox::geometry::line_string<long long>());
+				out[out.size() - 1].push_back(geom[i][j + 1]);
 			} else if (c == 1) {  // unchanged
-				out.push_back(geom[i]);
+				out[out.size() - 1].push_back(geom[i][j + 1]);
 			} else {  // clipped away entirely
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				out.push_back(mapbox::geometry::line_string<long long>());
+				out[out.size() - 1].push_back(geom[i][j + 1]);
 			}
-		} else {
-			out.push_back(geom[i]);
 		}
 	}
 
@@ -1552,4 +1676,56 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 	} else {
 		return changed + 1;
 	}
+}
+
+struct clip_visitor {
+	int z;
+	int line_detail;
+	int buffer;
+
+	clip_visitor(int iz, int iline_detail, int ibuffer) {
+		z = iz;
+		line_detail = iline_detail;
+		buffer = ibuffer;
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::point<long long> &val) const {
+		mapbox::geometry::multi_point<long long> mp;
+		mp.push_back(val);
+		return clip_points(mp, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_point<long long> &val) const {
+		return clip_points(val, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::line_string<long long> &val) const {
+		mapbox::geometry::multi_line_string<long long> mls;
+		mls.push_back(val);
+		return clip_lines(mls, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_line_string<long long> &val) const {
+		return clip_lines(val, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::polygon<long long> &val) const {
+		mapbox::geometry::multi_polygon<long long> mp;
+		mp.push_back(val);
+		return simple_clip_poly(mp, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_polygon<long long> &val) const {
+		return simple_clip_poly(val, z, line_detail, buffer);
+	}
+
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::geometry_collection<long long> &val) const {
+		fprintf(stderr, "Geometry collections not supported\n");
+		exit(EXIT_FAILURE);
+	}
+};
+
+mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> g, int z, int line_detail, int buffer) {
+	clip_visitor cv = clip_visitor(z, line_detail, buffer);
+	return mapbox::util::apply_visitor(cv, g);
 }
