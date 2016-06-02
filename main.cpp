@@ -1634,8 +1634,8 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
-	tile2lonlat(midx, midy, maxzoom, &maxlon, &minlat);
-	tile2lonlat(midx + 1, midy + 1, maxzoom, &minlon, &maxlat);
+	tile2lonlat(midx, midy, maxzoom, &minlon, &maxlat);
+	tile2lonlat(midx + 1, midy + 1, maxzoom, &maxlon, &minlat);
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;

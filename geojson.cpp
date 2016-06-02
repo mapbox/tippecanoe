@@ -491,11 +491,11 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 			}
 		}
 
-		if (strcmp(type->string, "FeatureCollection") == 0) {
-			check_crs(j, reading);
-		}
-
 		if (strcmp(type->string, "Feature") != 0) {
+			if (strcmp(type->string, "FeatureCollection") == 0) {
+				check_crs(j, reading);
+			}
+
 			continue;
 		}
 
