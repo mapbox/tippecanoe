@@ -51,4 +51,4 @@ double get_area(drawvec &geom, size_t i, size_t j);
 
 drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type);
 mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv);
-mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> g, int z, int line_detail, int buffer);
+mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> const &g, int z, int line_detail, int buffer);

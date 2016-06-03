@@ -808,7 +808,7 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
-static bool inside(mapbox::geometry::point<long long> d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+static bool inside(mapbox::geometry::point<long long> const &d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
 	switch (edge) {
 	case 0:  // top
 		return d.y > miny;
@@ -865,7 +865,7 @@ static mapbox::geometry::point<long long> intersect(mapbox::geometry::point<long
 }
 
 // http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
-static mapbox::geometry::linear_ring<long long> clip_poly1(mapbox::geometry::linear_ring<long long> &geom, long long minx, long long miny, long long maxx, long long maxy) {
+static mapbox::geometry::linear_ring<long long> clip_poly1(mapbox::geometry::linear_ring<long long> const &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	mapbox::geometry::linear_ring<long long> out = geom;
 
 	for (int edge = 0; edge < 4; edge++) {
@@ -912,7 +912,7 @@ static mapbox::geometry::linear_ring<long long> clip_poly1(mapbox::geometry::lin
 	return out;
 }
 
-mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> &geom, long long minx, long long miny, long long maxx, long long maxy) {
+mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> const &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	mapbox::geometry::multi_polygon<long long> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -925,14 +925,14 @@ mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::mu
 	return out;
 }
 
-mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> &geom, int z, int detail, int buffer) {
+mapbox::geometry::multi_polygon<long long> simple_clip_poly(mapbox::geometry::multi_polygon<long long> const &geom, int z, int detail, int buffer) {
 	long long area = 1LL << (32 - z);
 	long long clip_buffer = buffer * area / 256;
 
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
 }
 
-static bool inside(draw d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+static bool inside(draw const &d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
 	switch (edge) {
 	case 0:  // top
 		return d.y > miny;
@@ -1157,7 +1157,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
-mapbox::geometry::multi_point<long long> clip_points(mapbox::geometry::multi_point<long long> &geom, int z, int detail, long long buffer) {
+mapbox::geometry::multi_point<long long> clip_points(mapbox::geometry::multi_point<long long> const &geom, int z, int detail, long long buffer) {
 	mapbox::geometry::multi_point<long long> out;
 
 	long long min = 0;
@@ -1208,7 +1208,7 @@ bool point_within_tile(long long x, long long y, int z, int detail, long long bu
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::multi_line_string<long long> &geom, int z, int detail, long long buffer) {
+mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::multi_line_string<long long> const &geom, int z, int detail, long long buffer) {
 	mapbox::geometry::multi_line_string<long long> out;
 
 	long long min = 0;
@@ -1217,7 +1217,7 @@ mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::mult
 	area += buffer * area / 256;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mapbox::geometry::line_string<long long>());
+		out.emplace_back();
 		if (geom[i].size() > 0) {
 			out[out.size() - 1].push_back(geom[i][0]);
 		}
@@ -1232,16 +1232,16 @@ mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::mult
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) {  // clipped
-				out.push_back(mapbox::geometry::line_string<long long>());
+				out.emplace_back();
 				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x1, y1));
 				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x2, y2));
 
-				out.push_back(mapbox::geometry::line_string<long long>());
+				out.emplace_back();
 				out[out.size() - 1].push_back(geom[i][j + 1]);
 			} else if (c == 1) {  // unchanged
 				out[out.size() - 1].push_back(geom[i][j + 1]);
 			} else {  // clipped away entirely
-				out.push_back(mapbox::geometry::line_string<long long>());
+				out.emplace_back();
 				out[out.size() - 1].push_back(geom[i][j + 1]);
 			}
 		}
@@ -1689,43 +1689,43 @@ struct clip_visitor {
 		buffer = ibuffer;
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::point<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::point<long long> const &val) const {
 		mapbox::geometry::multi_point<long long> mp;
 		mp.push_back(val);
 		return clip_points(mp, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_point<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_point<long long> const &val) const {
 		return clip_points(val, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::line_string<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::line_string<long long> const &val) const {
 		mapbox::geometry::multi_line_string<long long> mls;
 		mls.push_back(val);
 		return clip_lines(mls, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_line_string<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_line_string<long long> const &val) const {
 		return clip_lines(val, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::polygon<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::polygon<long long> const &val) const {
 		mapbox::geometry::multi_polygon<long long> mp;
 		mp.push_back(val);
 		return simple_clip_poly(mp, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_polygon<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::multi_polygon<long long> const &val) const {
 		return simple_clip_poly(val, z, line_detail, buffer);
 	}
 
-	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::geometry_collection<long long> &val) const {
+	mapbox::geometry::geometry<long long> operator()(mapbox::geometry::geometry_collection<long long> const &val) const {
 		fprintf(stderr, "Geometry collections not supported\n");
 		exit(EXIT_FAILURE);
 	}
 };
 
-mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> g, int z, int line_detail, int buffer) {
+mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> const &g, int z, int line_detail, int buffer) {
 	clip_visitor cv = clip_visitor(z, line_detail, buffer);
 	return mapbox::util::apply_visitor(cv, g);
 }
