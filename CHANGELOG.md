@@ -1,3 +1,11 @@
+## 1.11.9
+
+* Add minimal support for alternate input projections (EPSG:3857).
+
+## 1.11.8
+
+* Add an option to calculate the density of features as a feature attribute
+
 ## 1.11.7
 
 * Keep metadata together with geometry for features that don't span many tiles,

@@ -987,6 +987,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		std::string reading;
 		int fd;
 
+		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+			type_and_string tas;
+			tas.type = VT_NUMBER;
+			tas.string = "tippecanoe_feature_density";
+			file_keys[source].insert(tas);
+		}
+
 		if (source >= sources.size()) {
 			reading = "standard input";
 			fd = 0;
@@ -1627,8 +1634,8 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	double minlat = 0, minlon = 0, maxlat = 0, maxlon = 0, midlat = 0, midlon = 0;
 
-	tile2latlon(midx, midy, maxzoom, &maxlat, &minlon);
-	tile2latlon(midx + 1, midy + 1, maxzoom, &minlat, &maxlon);
+	tile2lonlat(midx, midy, maxzoom, &minlon, &maxlat);
+	tile2lonlat(midx + 1, midy + 1, maxzoom, &maxlon, &minlat);
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
@@ -1667,8 +1674,8 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		file_bbox[3] = (1LL << 32) - 1;
 	}
 
-	tile2latlon(file_bbox[0], file_bbox[1], 32, &maxlat, &minlon);
-	tile2latlon(file_bbox[2], file_bbox[3], 32, &minlat, &maxlon);
+	tile2lonlat(file_bbox[0], file_bbox[1], 32, &minlon, &maxlat);
+	tile2lonlat(file_bbox[2], file_bbox[3], 32, &maxlon, &minlat);
 
 	if (midlat < minlat) {
 		midlat = minlat;
@@ -1697,6 +1704,14 @@ static bool has_name(struct option *long_options, int *pl) {
 
 	return false;
 }
+
+struct projection projections[] = {
+	{"EPSG:4326", lonlat2tile, "urn:ogc:def:crs:OGC:1.3:CRS84"},
+	{"EPSG:3857", epsg3857totile, "urn:ogc:def:crs:EPSG::3857"},
+	{NULL, NULL},
+};
+
+struct projection *projection = &projections[0];
 
 int main(int argc, char **argv) {
 #ifdef MTRACE
@@ -1756,6 +1771,7 @@ int main(int argc, char **argv) {
 		{"gamma", required_argument, 0, 'g'},
 		{"prevent", required_argument, 0, 'p'},
 		{"additional", required_argument, 0, 'a'},
+		{"projection", required_argument, 0, 's'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1771,6 +1787,7 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
+		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
@@ -1803,7 +1820,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -1969,6 +1986,24 @@ int main(int argc, char **argv) {
 		case 'P':
 			read_parallel = 1;
 			break;
+
+		case 's': {
+			struct projection *p;
+			for (p = projections; p->name != NULL; p++) {
+				if (strcmp(p->name, optarg) == 0) {
+					projection = p;
+					break;
+				}
+				if (strcmp(p->alias, optarg) == 0) {
+					projection = p;
+					break;
+				}
+			}
+			if (p->name == NULL) {
+				fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
+		} break;
 
 		default: {
 			int width = 7 + strlen(argv[0]);

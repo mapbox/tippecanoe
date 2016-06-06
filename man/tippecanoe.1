@@ -107,6 +107,8 @@ compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber
 \-m \fIdetail\fP or \-\-minimum\-detail=\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 .IP \(bu 2
 \-b \fIpixels\fP or \-\-buffer=\fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
+.IP \(bu 2
+\-s \fIprojection\fP or \-\-projection=\fIprojection\fP: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
@@ -145,6 +147,8 @@ which may not be what you want.
 \-al or \-\-drop\-lines: Let "dot" dropping at lower zooms apply to lines too
 .IP \(bu 2
 \-ap or \-\-drop\-polygons: Let "dot" dropping at lower zooms apply to polygons too
+.IP \(bu 2
+\-ag or \-\-calculate\-feature\-density: Add a new attribute, \fB\fCtippecanoe_feature_density\fR, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
 .RE
 .SS Doing less
 .RS
