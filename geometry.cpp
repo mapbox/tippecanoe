@@ -14,7 +14,6 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
-#include <mapbox/geometry/feature.hpp>
 
 struct convert_visitor {
 	drawvec *dv;
