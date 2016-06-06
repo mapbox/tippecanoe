@@ -24,19 +24,19 @@ struct convert_visitor {
 		type = ntype;
 	}
 
-	void operator()(mapbox::geometry::point<long long> &val) const {
+	void operator()(mapbox::geometry::point<long long> const& val) const {
 		*type = VT_POINT;
 		dv->push_back(draw(VT_MOVETO, val.x, val.y));
 	}
 
-	void operator()(mapbox::geometry::multi_point<long long> &val) const {
+	void operator()(mapbox::geometry::multi_point<long long> const& val) const {
 		*type = VT_POINT;
 		for (size_t i = 0; i < val.size(); i++) {
 			dv->push_back(draw(VT_MOVETO, val[i].x, val[i].y));
 		}
 	}
 
-	void operator()(mapbox::geometry::line_string<long long> &val) const {
+	void operator()(mapbox::geometry::line_string<long long> const& val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			if (i == 0) {
@@ -47,7 +47,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_line_string<long long> &val) const {
+	void operator()(mapbox::geometry::multi_line_string<long long> const& val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -60,7 +60,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::polygon<long long> &val) const {
+	void operator()(mapbox::geometry::polygon<long long> const& val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -73,7 +73,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_polygon<long long> &val) const {
+	void operator()(mapbox::geometry::multi_polygon<long long> const& val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -88,20 +88,20 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::geometry_collection<long long> &val) const {
+	void operator()(mapbox::geometry::geometry_collection<long long> const& val) const {
 		fprintf(stderr, "Geometry collections not supported\n");
 		exit(EXIT_FAILURE);
 	}
 };
 
-drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type) {
+drawvec to_drawvec(mapbox::geometry::geometry<long long> const& g, int &type) {
 	drawvec dv;
 	mapbox::util::apply_visitor(convert_visitor(&dv, &type), g);
 
 	return dv;
 }
 
-mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) {
 	if (type == VT_POINT) {
 		if (dv.size() == 1) {
 			return mapbox::geometry::point<long long>(dv[0].x, dv[0].y);
@@ -1232,8 +1232,8 @@ mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::mult
 
 			if (c > 1) {  // clipped
 				out.emplace_back();
-				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x1, y1));
-				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x2, y2));
+				out[out.size() - 1].emplace_back(x1, y1);
+				out[out.size() - 1].emplace_back(x2, y2);
 
 				out.emplace_back();
 				out[out.size() - 1].push_back(geom[i][j + 1]);
