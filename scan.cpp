@@ -319,129 +319,7 @@ struct s_edgecmp {
 
 typedef drawvec *dvp;
 
-bool partition(std::vector<drawvec *> const &segs, int direction, std::vector<drawvec *> &all_segs);
-
-bool split_or_partition(std::vector<drawvec *> segs, long long median, int direction, size_t was, std::vector<drawvec *> &all_segs) {
-	// If it got small enough, just do the comparison
-
-	if (segs.size() < 20) {
-		bool again = false;
-
-		for (size_t i = 0; i + 1 < segs.size(); i++) {
-			for (size_t j = i + 1; j < segs.size(); j++) {
-				if (check_intersections(segs[i], segs[j])) {
-					again = true;
-				}
-			}
-		}
-
-		return again;
-	}
-
-	// If it is getting smaller, but is not small enough, partition the other way
-
-	if (segs.size() < was) {
-		if (partition(segs, !direction, all_segs)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	// If partitioning didn't make one or both sets smaller (because all segments cross the median),
-	// chop up the long segments and try again.
-
-	bool did_something = false;
-	if (direction == 0) {
-		for (size_t i = 0; i < segs.size(); i++) {
-			if ((*segs[i])[0].x <= median && (*segs[i])[segs[i]->size() - 1].x <= median) {
-			} else if ((*segs[i])[0].x >= median && (*segs[i])[segs[i]->size() - 1].x >= median) {
-			} else {
-				drawvec dv = *segs[i];
-				std::vector<drawvec> split;
-
-				for (size_t j = 0; j < dv.size() - 1; j++) {
-					if ((dv[j].x <= median && dv[j + 1].x <= median) || (dv[j].x >= median && dv[j + 1].x >= median)) {
-						drawvec n;
-						n.push_back(dv[j]);
-						n.push_back(dv[j + 1]);
-						split.push_back(n);
-					} else {
-						drawvec n;
-						n.push_back(dv[j]);
-						n.push_back(draw(VT_LINE, median, dv[j].y + (median - dv[j].x) * (dv[j + 1].y - dv[j].y) / (dv[j + 1].x - dv[j].x)));
-						n.push_back(dv[j + 1]);
-						split.push_back(n);
-					}
-				}
-
-				for (size_t j = 0; j < split.size(); j++) {
-					if (j == 0) {
-						*segs[i] = split[j];
-					} else {
-						drawvec *dp = new drawvec;
-						*dp = split[j];
-						all_segs.push_back(dp);
-						did_something = true;
-					}
-				}
-			}
-		}
-	} else {
-		for (size_t i = 0; i < segs.size(); i++) {
-			if ((*segs[i])[0].y <= median && (*segs[i])[segs[i]->size() - 1].y <= median) {
-			} else if ((*segs[i])[0].y >= median && (*segs[i])[segs[i]->size() - 1].y >= median) {
-			} else {
-				drawvec dv = *segs[i];
-				std::vector<drawvec> split;
-
-				for (size_t j = 0; j < dv.size() - 1; j++) {
-					if ((dv[j].y <= median && dv[j + 1].y <= median) || (dv[j].y >= median && dv[j + 1].y >= median)) {
-						drawvec n;
-						n.push_back(dv[j]);
-						n.push_back(dv[j + 1]);
-						split.push_back(n);
-					} else {
-						drawvec n;
-						n.push_back(dv[j]);
-						n.push_back(draw(VT_LINE, dv[j].x + (median - dv[j].y) * (dv[j + 1].x - dv[j].x) / (dv[j + 1].y - dv[j].y), median));
-						n.push_back(dv[j + 1]);
-						split.push_back(n);
-					}
-				}
-
-				for (size_t j = 0; j < split.size(); j++) {
-					if (j == 0) {
-						*segs[i] = split[j];
-					} else {
-						drawvec *dp = new drawvec;
-						*dp = split[j];
-						all_segs.push_back(dp);
-						did_something = true;
-					}
-				}
-			}
-		}
-	}
-
-	if (did_something) {
-		return true;
-	}
-
-	bool again = false;
-
-	for (size_t i = 0; i + 1 < segs.size(); i++) {
-		for (size_t j = i + 1; j < segs.size(); j++) {
-			if (check_intersections(segs[i], segs[j])) {
-				again = true;
-			}
-		}
-	}
-
-	return again;
-}
-
-bool partition(std::vector<drawvec *> const &segs, int direction, std::vector<drawvec *> &all_segs) {
+bool partition(std::vector<drawvec *> segs, int direction) {
 	std::vector<long long> points;
 
 	// List of X or Y midpoints of edges, so we can find the median
@@ -486,16 +364,57 @@ bool partition(std::vector<drawvec *> const &segs, int direction, std::vector<dr
 	}
 
 	bool again = false;
-	if (split_or_partition(one, median, direction, segs.size(), all_segs)) {
-		again = true;
+
+	// If partitioning didn't make one or both sets smaller (because all segments cross the median),
+	// there is no choice but to check it by brute force
+
+	if (one.size() >= segs.size() || two.size() >= segs.size()) {
+		for (size_t i = 0; i + 1 < segs.size(); i++) {
+			for (size_t j = i + 1; j < segs.size(); j++) {
+				if (check_intersections(segs[i], segs[j])) {
+					again = true;
+				}
+			}
+		}
+
+		return again;
 	}
-	if (split_or_partition(two, median, direction, segs.size(), all_segs)) {
-		again = true;
+
+	// In a more reasonable case, continue partitioning the first half if it is still large,
+	// or check all the intersections if it is small.
+
+	if (one.size() > 20) {
+		if (partition(one, !direction)) {
+			again = true;
+		}
+	} else {
+		for (size_t i = 0; i + 1 < one.size(); i++) {
+			for (size_t j = i + 1; j < one.size(); j++) {
+				if (check_intersections(one[i], one[j])) {
+					again = true;
+				}
+			}
+		}
+	}
+
+	// Do the same for the second half
+
+	if (two.size() > 20) {
+		if (partition(two, !direction)) {
+			again = true;
+		}
+	} else {
+		for (size_t i = 0; i + 1 < two.size(); i++) {
+			for (size_t j = i + 1; j < two.size(); j++) {
+				if (check_intersections(two[i], two[j])) {
+					again = true;
+				}
+			}
+		}
 	}
 
 	return again;
 }
-
 
 drawvec scan(drawvec &geom) {
 	// Decompose the polygon into segments.
@@ -518,7 +437,7 @@ drawvec scan(drawvec &geom) {
 	// Split the segments by bounding box into smaller subsets
 	// until they are reasonably sized or can't be split further.
 
-	while (partition(segs, 0, segs)) {
+	while (partition(segs, 0)) {
 		// Repeat until no additional changes
 	}
 
