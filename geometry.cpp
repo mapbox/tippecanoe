@@ -187,7 +187,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 			mapbox::geometry::multi_polygon<long long> mp;
 			for (size_t i = 0; i < rings.size(); i++) {
 				if (areas[i] >= 0 || i == 0) {
-					mp.push_back(mapbox::geometry::polygon<long long>());
+					mp.emplace_back();
 				}
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {

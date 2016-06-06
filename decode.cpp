@@ -193,9 +193,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					double lat, lon;
 					tile2latlon(wx, wy, 32, &lat, &lon);
 
-					ops.push_back(lonlat(op, lon, lat, px, py));
+					ops.emplace_back(op, lon, lat, px, py);
 				} else {
-					ops.push_back(lonlat(op, 0, 0, 0, 0));
+					ops.emplace_back(op, 0, 0, 0, 0);
 				}
 			}
 
@@ -254,8 +254,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
-						rings.push_back(std::vector<lonlat>());
-						areas.push_back(0);
+						rings.emplace_back();
+						areas.emplace_back(0);
 					}
 
 					int n = rings.size() - 1;
