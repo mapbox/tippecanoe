@@ -7,27 +7,27 @@ matrix:
     # debug+integer-santizer build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=integer" CFLAGS="-fsanitize=integer" LDFLAGS="-fsanitize=integer"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=integer" CFLAGS="-fsanitize=integer" LDFLAGS="-fsanitize=integer"
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
-          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+          sources: ['ubuntu-toolchain-r-test' ]
+          packages: [ ]
     # debug+leak+address-sanitizer build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
-          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+          sources: ['ubuntu-toolchain-r-test' ]
+          packages: [ ]
     # coverage+debug build
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Debug CC="clang-3.5" CXX="clang++-3.5" CXXFLAGS="--coverage" CFLAGS="--coverage" LDFLAGS="--coverage"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="--coverage" CFLAGS="--coverage" LDFLAGS="--coverage"
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
-          packages: [ 'clang-3.5', 'llvm-3.5-dev' ]
+          sources: ['ubuntu-toolchain-r-test' ]
+          packages: [ ]
     # release+linux+g++
     - os: linux
       compiler: gcc
@@ -39,11 +39,11 @@ matrix:
     # release+linux+clang++
     - os: linux
       compiler: clang
-      env: BUILDTYPE=Release CC="clang-3.5" CXX="clang++-3.5"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Release CC="clang-3.8" CXX="clang++-3.8"
       addons:
         apt:
-          sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5' ]
-          packages: [ 'clang-3.5' ]
+          sources: ['ubuntu-toolchain-r-test' ]
+          packages: [ 'clang-3.8' ]
     # release+osx
     - os: osx
       compiler: clang
@@ -53,6 +53,16 @@ matrix:
       compiler: clang
       env: BUILDTYPE=Debug
 
+before_install:
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - export PATH=${DEPS_DIR}/bin:${PATH} && mkdir -p ${DEPS_DIR}
+  - |
+    if [[ ${CLANG_VERSION:-false} != false ]]; then
+      export CCOMPILER='clang'
+      export CXXCOMPILER='clang++'
+      CLANG_URL="https://mason-binaries.s3.amazonaws.com/${TRAVIS_OS_NAME}-x86_64/clang/${CLANG_VERSION}.tar.gz"
+      travis_retry wget --quiet -O - ${CLANG_URL} | tar --strip-components=1 -xz -C ${DEPS_DIR}
+    fi
 
 install:
  - BUILDTYPE=${BUILDTYPE} make -j
