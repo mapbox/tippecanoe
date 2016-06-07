@@ -41,7 +41,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
+		out.emplace_back(geom[i].op, (long long)geom[i].x, (long long)geom[i].y);
 	}
 
 	return out;
@@ -603,9 +603,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		std::vector<struct partial> partials;
 		std::vector<std::vector<coalesce> > features;
-		for (int i = 0; i < nlayers; i++) {
-			features.push_back(std::vector<coalesce>());
-		}
+		features.resize(nlayers);
 
 		int within[child_shards];
 		long long geompos[child_shards];

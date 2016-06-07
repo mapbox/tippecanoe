@@ -108,7 +108,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 		} else {
 			mapbox::geometry::multi_point<long long> mp;
 			for (size_t i = 0; i < dv.size(); i++) {
-				mp.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+				mp.emplace_back((long long)dv[i].x, (long long)dv[i].y);
 			}
 			return mp;
 		}
@@ -122,7 +122,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 		if (movetos == 1) {
 			mapbox::geometry::line_string<long long> ls;
 			for (size_t i = 0; i < dv.size(); i++) {
-				ls.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+				ls.emplace_back((long long)dv[i].x, (long long)dv[i].y);
 			}
 			return ls;
 		} else {
@@ -137,7 +137,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 					}
 					mapbox::geometry::line_string<long long> ls;
 					for (size_t k = i; k < j; k++) {
-						ls.push_back(mapbox::geometry::point<long long>(dv[k].x, dv[k].y));
+						ls.emplace_back((long long)dv[k].x, (long long)dv[k].y);
 					}
 					mls.push_back(ls);
 					i = j - 1;
@@ -177,7 +177,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 			for (size_t i = 0; i < rings.size(); i++) {
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
 				}
 				p.push_back(lr);
 			}
@@ -190,7 +190,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 				}
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
 				}
 				mp[mp.size() - 1].push_back(lr);
 			}
