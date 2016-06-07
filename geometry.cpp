@@ -14,7 +14,6 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
-#include <mapbox/geometry/feature.hpp>
 
 struct convert_visitor {
 	drawvec *dv;
@@ -25,19 +24,19 @@ struct convert_visitor {
 		type = ntype;
 	}
 
-	void operator()(mapbox::geometry::point<long long> &val) const {
+	void operator()(mapbox::geometry::point<long long> const& val) const {
 		*type = VT_POINT;
 		dv->push_back(draw(VT_MOVETO, val.x, val.y));
 	}
 
-	void operator()(mapbox::geometry::multi_point<long long> &val) const {
+	void operator()(mapbox::geometry::multi_point<long long> const& val) const {
 		*type = VT_POINT;
 		for (size_t i = 0; i < val.size(); i++) {
 			dv->push_back(draw(VT_MOVETO, val[i].x, val[i].y));
 		}
 	}
 
-	void operator()(mapbox::geometry::line_string<long long> &val) const {
+	void operator()(mapbox::geometry::line_string<long long> const& val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			if (i == 0) {
@@ -48,7 +47,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_line_string<long long> &val) const {
+	void operator()(mapbox::geometry::multi_line_string<long long> const& val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -61,7 +60,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::polygon<long long> &val) const {
+	void operator()(mapbox::geometry::polygon<long long> const& val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -74,7 +73,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_polygon<long long> &val) const {
+	void operator()(mapbox::geometry::multi_polygon<long long> const& val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -89,27 +88,27 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::geometry_collection<long long> &val) const {
+	void operator()(mapbox::geometry::geometry_collection<long long> const& val) const {
 		fprintf(stderr, "Geometry collections not supported\n");
 		exit(EXIT_FAILURE);
 	}
 };
 
-drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type) {
+drawvec to_drawvec(mapbox::geometry::geometry<long long> const& g, int &type) {
 	drawvec dv;
 	mapbox::util::apply_visitor(convert_visitor(&dv, &type), g);
 
 	return dv;
 }
 
-mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) {
 	if (type == VT_POINT) {
 		if (dv.size() == 1) {
 			return mapbox::geometry::point<long long>(dv[0].x, dv[0].y);
 		} else {
 			mapbox::geometry::multi_point<long long> mp;
 			for (size_t i = 0; i < dv.size(); i++) {
-				mp.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+				mp.emplace_back((long long)dv[i].x, (long long)dv[i].y);
 			}
 			return mp;
 		}
@@ -123,7 +122,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 		if (movetos == 1) {
 			mapbox::geometry::line_string<long long> ls;
 			for (size_t i = 0; i < dv.size(); i++) {
-				ls.push_back(mapbox::geometry::point<long long>(dv[i].x, dv[i].y));
+				ls.emplace_back((long long)dv[i].x, (long long)dv[i].y);
 			}
 			return ls;
 		} else {
@@ -138,7 +137,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 					}
 					mapbox::geometry::line_string<long long> ls;
 					for (size_t k = i; k < j; k++) {
-						ls.push_back(mapbox::geometry::point<long long>(dv[k].x, dv[k].y));
+						ls.emplace_back((long long)dv[k].x, (long long)dv[k].y);
 					}
 					mls.push_back(ls);
 					i = j - 1;
@@ -178,7 +177,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 			for (size_t i = 0; i < rings.size(); i++) {
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
 				}
 				p.push_back(lr);
 			}
@@ -187,11 +186,11 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv) {
 			mapbox::geometry::multi_polygon<long long> mp;
 			for (size_t i = 0; i < rings.size(); i++) {
 				if (areas[i] >= 0 || i == 0) {
-					mp.push_back(mapbox::geometry::polygon<long long>());
+					mp.emplace_back();
 				}
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.push_back(mapbox::geometry::point<long long>(rings[i][j].x, rings[i][j].y));
+					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
 				}
 				mp[mp.size() - 1].push_back(lr);
 			}
@@ -1233,8 +1232,8 @@ mapbox::geometry::multi_line_string<long long> clip_lines(mapbox::geometry::mult
 
 			if (c > 1) {  // clipped
 				out.emplace_back();
-				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x1, y1));
-				out[out.size() - 1].push_back(mapbox::geometry::point<long long>(x2, y2));
+				out[out.size() - 1].emplace_back(x1, y1);
+				out[out.size() - 1].emplace_back(x2, y2);
 
 				out.emplace_back();
 				out[out.size() - 1].push_back(geom[i][j + 1]);

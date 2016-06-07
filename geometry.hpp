@@ -1,3 +1,6 @@
+#include <mapbox/geometry/geometry.hpp>
+#include <cstdint>
+
 #define VT_POINT 1
 #define VT_LINE 2
 #define VT_POLYGON 3
@@ -47,8 +50,6 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom, drawvec &before);
 double get_area(drawvec &geom, size_t i, size_t j);
 
-#include <mapbox/geometry/feature.hpp>
-
-drawvec to_drawvec(mapbox::geometry::geometry<long long> g, int &type);
-mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec dv);
+drawvec to_drawvec(mapbox::geometry::geometry<long long> const& g, int &type);
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv);
 mapbox::geometry::geometry<long long> clip(mapbox::geometry::geometry<long long> const &g, int z, int line_detail, int buffer);
