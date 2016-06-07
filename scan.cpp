@@ -451,13 +451,8 @@ drawvec scan(drawvec &geom) {
 			if ((*segs[i])[j].x != (*segs[i])[j + 1].x || (*segs[i])[j].y != (*segs[i])[j + 1].y) {
 				drawvec dv;
 
-				if ((*segs[i])[j].x < (*segs[i])[j + 1].x || ((*segs[i])[j].x == (*segs[i])[j + 1].x && (*segs[i])[j].y < (*segs[i])[j + 1].y)) {
-					dv.push_back((*segs[i])[j]);
-					dv.push_back((*segs[i])[j + 1]);
-				} else {
-					dv.push_back((*segs[i])[j + 1]);
-					dv.push_back((*segs[i])[j]);
-				}
+				dv.push_back((*segs[i])[j]);
+				dv.push_back((*segs[i])[j + 1]);
 
 				edges.push_back(dv);
 			}
@@ -473,38 +468,46 @@ drawvec scan(drawvec &geom) {
 		segs[i] = NULL;
 	}
 
-	// First, remove all pairs of exact duplicates, since those are places where an inner ring
-	// exactly matches up to the edge of an outer ring, and they need to be cut down
-	// to just one ring.
-
-	std::vector<drawvec> edges2;
-
-	for (size_t i = 0; i < edges.size(); i++) {
-		if (i + 1 < edges.size() && edgecmp(edges[i], edges[i + 1]) == 0) {
-			i++;
-		} else {
-			edges2.push_back(edges[i]);
-		}
-	}
-
-#if 0
-	printf("0 setlinewidth .5 .setopacityalpha\n");
-
-	for (size_t i = 0; i < edges2.size(); i++) {
-		printf("%lld %lld moveto %lld %lld lineto stroke\n", edges2[i][0].x, edges2[i][0].y, edges2[i][1].x, edges2[i][1].y);
-	}
-#endif
-
-	// Then index each remaining segment by its start and endpoint.
+	// Index each segment by its starting point
 
 	std::multimap<loc, drawvec *> origins;
 
-	for (size_t i = 0; i < edges2.size(); i++) {
-		loc l1 = loc(edges2[i][0], 1);
-		origins.insert(std::pair<struct loc, drawvec *>(l1, &edges2[i]));
+	for (size_t i = 0; i < edges.size(); i++) {
+		loc l1 = loc(edges[i][0], 1);
+		origins.insert(std::pair<struct loc, drawvec *>(l1, &edges[i]));
+	}
 
-		loc l2 = loc(edges2[i][1], 0);
-		origins.insert(std::pair<struct loc, drawvec *>(l2, &edges2[i]));
+	// Remove all pairs of edges that are exact opposites, because these are
+	// places where two rings with the same polarity are directly adjacent
+	// and should be merged, or where an inner ring shares an edge with an
+	// outer ring and should be cut away.
+
+	for (size_t i = 0; i < edges.size(); i++) {
+		if (edges[i].size() > 0) {
+			loc here = loc(edges[i][1], 1);
+			std::pair<std::multimap<loc, drawvec *>::iterator, std::multimap<loc, drawvec *>::iterator> options;
+			options = origins.equal_range(here);
+
+			for (std::multimap<loc, drawvec *>::iterator it = options.first; it != options.second; ++it) {
+				drawvec *option = it->second;
+
+				if (option->size() != 0) {
+					if ((*option)[0].x == edges[i][1].x &&
+					    (*option)[0].y == edges[i][1].y &&
+					    (*option)[1].x == edges[i][0].x &&
+					    (*option)[1].y == edges[i][0].y) {
+						fprintf(stderr, "removed %lld,%lld %lld,%lld for %lld,%lld %lld,%lld\n",
+							(*option)[0].x, (*option)[0].y,
+							(*option)[1].x, (*option)[1].y,
+							edges[i][0].x, edges[i][0].y,
+							edges[i][1].x, edges[i][1].y);
+						(*option).clear();
+						edges[i].clear();
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	// Use that to reconstruct rings:
@@ -514,13 +517,13 @@ drawvec scan(drawvec &geom) {
 
 	drawvec ret;
 
-	for (size_t i = 0; i < edges2.size(); i++) {
-		if (edges2[i].size() > 0) {
+	for (size_t i = 0; i < edges.size(); i++) {
+		if (edges[i].size() > 0) {
 			drawvec out;
 
-			out.push_back(edges2[i][0]);
-			out.push_back(edges2[i][1]);
-			edges2[i].clear();
+			out.push_back(edges[i][0]);
+			out.push_back(edges[i][1]);
+			edges[i].clear();
 
 			while (1) {
 				struct loc here = loc(out[out.size() - 1], -1);
