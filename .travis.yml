@@ -11,7 +11,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
-          packages: [ ]
+          packages: [ 'libstdc++6','libstdc++-5-dev' ]
     # debug+leak+address-sanitizer build
     - os: linux
       compiler: clang
@@ -19,7 +19,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
-          packages: [ ]
+          packages: [ 'libstdc++6','libstdc++-5-dev' ]
     # coverage+debug build
     - os: linux
       compiler: clang
@@ -27,7 +27,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
-          packages: [ ]
+          packages: [ 'libstdc++6','libstdc++-5-dev' ]
     # release+linux+g++
     - os: linux
       compiler: gcc
@@ -43,7 +43,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
-          packages: [ 'clang-3.8' ]
+          packages: [ 'libstdc++6','libstdc++-5-dev' ]
     # release+osx
     - os: osx
       compiler: clang
