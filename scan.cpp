@@ -69,10 +69,10 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	double s2_y = p3.y - p2.y;
 
 	if (max(p0.y, p1.y) < min(p2.y, p3.y)) {
-		return draw(-1, -1, -1);
+		return draw(0, -1, -1);
 	}
 	if (min(p0.y, p1.y) > max(p2.y, p3.y)) {
-		return draw(-1, -1, -1);
+		return draw(0, -1, -1);
 	}
 
 	if (-s2_x * s1_y + s1_x * s2_y == 0) {
@@ -84,20 +84,20 @@ static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
 	s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	if (s < 0 || s > 1) {
-		return draw(-1, -1, -1);
+		return draw(0, -1, -1);
 	}
 
 	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	// Include it if the intersection is at the endpoint of either line but not both
 	if ((s == 0 || s == 1) && (t > 0 && t < 1)) {
-		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
+		return draw(1, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else if ((t == 0 || t == 1) && (s > 0 && s < 1)) {
-		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
+		return draw(1, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else if (s > 0 && s < 1 && t > 0 && t < 1) {
-		return draw(VT_LINETO, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
+		return draw(1, round(p0.x + (t * s1_x)), round(p0.y + (t * s1_y)));
 	} else {
-		return draw(-1, -1, -1);
+		return draw(0, -1, -1);
 	}
 }
 
@@ -163,41 +163,41 @@ static bool check_intersections(drawvec *dv1, drawvec *dv2) {
 							if (dv1ymin > dv2ymin && dv1ymin < dv2ymax) {
 								// all of 1 is within 2
 								if ((*dv2)[i2 - 1].y < (*dv2)[i2].y) {
-									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
-									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
+									dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymin));
+									dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymax));
 								} else {
-									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
-									dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
+									dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymax));
+									dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymin));
 								}
 								again = true;
 							} else {
 								// right side of 1 is within 2
-								dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymax));
+								dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymax));
 								again = true;
 							}
 						} else if (dv1ymin > dv2ymin && dv1ymin < dv2ymax) {
 							// left side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, (*dv2)[i2].x, dv1ymin));
+							dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, (*dv2)[i2].x, dv1ymin));
 							again = true;
 						} else if (dv2ymax > dv1ymin && dv2ymax < dv1ymax) {
 							if (dv2ymin > dv1ymin && dv2ymin < dv1ymax) {
 								// all of 2 is within 1
 								if ((*dv1)[i1 - 1].y < (*dv1)[i1].y) {
-									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
-									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
+									dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymin));
+									dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymax));
 								} else {
-									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
-									dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
+									dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymax));
+									dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymin));
 								}
 								again = true;
 							} else {
 								// right side of 2 is within 1
-								dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymax));
+								dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymax));
 								again = true;
 							}
 						} else if (dv2ymin > dv1ymin && dv2ymin < dv1ymax) {
 							// left side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, (*dv1)[i1].x, dv2ymin));
+							dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, (*dv1)[i1].x, dv2ymin));
 							again = true;
 						} else {
 							// Can't happen?
@@ -232,19 +232,19 @@ static bool check_intersections(drawvec *dv1, drawvec *dv2) {
 							// No overlap
 						} else if (dv1xmax > dv2xmin && dv1xmax < dv2xmax) {
 							// right side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmax, round((*dv2)[i2 - 1].y + (dv1xmax - (*dv2)[i2 - 1].x) * slope)));
+							dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, dv1xmax, round((*dv2)[i2 - 1].y + (dv1xmax - (*dv2)[i2 - 1].x) * slope)));
 							again = true;
 						} else if (dv1xmin > dv2xmin && dv1xmin < dv2xmax) {
 							// left side of 1 is within 2
-							dv2->insert(dv2->begin() + i2, draw(VT_LINETO, dv1xmin, round((*dv2)[i2 - 1].y + (dv1xmin - (*dv2)[i2 - 1].x) * slope)));
+							dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, dv1xmin, round((*dv2)[i2 - 1].y + (dv1xmin - (*dv2)[i2 - 1].x) * slope)));
 							again = true;
 						} else if (dv2xmax > dv1xmin && dv2xmax < dv1xmax) {
 							// right side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmax, round((*dv1)[i1 - 1].y + (dv2xmax - (*dv1)[i1 - 1].x) * slope)));
+							dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, dv2xmax, round((*dv1)[i1 - 1].y + (dv2xmax - (*dv1)[i1 - 1].x) * slope)));
 							again = true;
 						} else if (dv2xmin > dv1xmin && dv2xmin < dv1xmax) {
 							// left side of 2 is within 1
-							dv1->insert(dv1->begin() + i1, draw(VT_LINETO, dv2xmin, round((*dv1)[i1 - 1].y + (dv2xmin - (*dv1)[i1 - 1].x) * slope)));
+							dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, dv2xmin, round((*dv1)[i1 - 1].y + (dv2xmin - (*dv1)[i1 - 1].x) * slope)));
 							again = true;
 						} else {
 							// Can't happen?
@@ -253,15 +253,15 @@ static bool check_intersections(drawvec *dv1, drawvec *dv2) {
 					}
 				} else {
 					draw intersection = get_line_intersection((*dv1)[i1 - 1], (*dv1)[i1], (*dv2)[i2 - 1], (*dv2)[i2]);
-					if (intersection.op != -1) {
+					if (intersection.op != 0) {
 						if ((intersection.x != (*dv1)[i1 - 1].x || intersection.y != (*dv1)[i1 - 1].y) &&
 						    (intersection.x != (*dv1)[i1].x || intersection.y != (*dv1)[i1].y)) {
-							dv1->insert(dv1->begin() + i1, intersection);
+							dv1->insert(dv1->begin() + i1, draw((*dv1)[0].op, intersection.x, intersection.y));
 							again = true;
 						}
 						if ((intersection.x != (*dv2)[i2 - 1].x || intersection.y != (*dv2)[i2 - 1].y) &&
 						    (intersection.x != (*dv2)[i2].x || intersection.y != (*dv2)[i2].y)) {
-							dv2->insert(dv2->begin() + i2, intersection);
+							dv2->insert(dv2->begin() + i2, draw((*dv2)[0].op, intersection.x, intersection.y));
 							again = true;
 						}
 					}
@@ -284,14 +284,14 @@ int edgecmp(const drawvec &a, const drawvec &b) {
 	size_t i;
 
 	for (i = 0; i < a.size() && i < b.size(); i++) {
-		if (a[i].x < b[i].x) {
+		if (a[i].y < b[i].y) {
 			return -1;
-		} else if (a[i].x > b[i].x) {
+		} else if (a[i].y > b[i].y) {
 			return 1;
 		} else {
-			if (a[i].y < b[i].y) {
+			if (a[i].x < b[i].x) {
 				return -1;
-			} else if (a[i].y > b[i].y) {
+			} else if (a[i].x > b[i].x) {
 				return 1;
 			}
 		}
@@ -321,6 +321,10 @@ typedef drawvec *dvp;
 
 bool partition(std::vector<drawvec *> segs, int direction) {
 	std::vector<long long> points;
+
+	if (segs.size() < 1) {
+		return false;
+	}
 
 	// List of X or Y midpoints of edges, so we can find the median
 
@@ -418,19 +422,70 @@ bool partition(std::vector<drawvec *> segs, int direction) {
 
 drawvec scan(drawvec &geom) {
 	// Decompose the polygon into segments.
+	//
+	// The "op" of the segment represents whether a ray passing
+	// from left to right through the segment adds or subtracts
+	// area by passing through.
+	//
+	// All segments are reoriented to point downward.
+	// For horizontal segments, right is considered to be down,
+	// as if the ray actually had a very slight upward slope.
 
 	std::vector<drawvec *> segs;
 
 	size_t n = 0;
 	for (size_t i = 0; i < geom.size() - 1; i++) {
-		if (geom[i + 1].op == VT_LINETO) {
-			if (geom[i].x != geom[i + 1].x || geom[i].y != geom[i + 1].y) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			long double area = get_area(geom, i, j);
+			signed char op = -1;
+			if (area >= 0) {
+				op = 1;
+			}
+
+			for (size_t k = i; k + 1 < j; k++) {
 				drawvec *dv = new drawvec;
-				dv->push_back(geom[i]);
-				dv->push_back(geom[i + 1]);
+
+				if (geom[k].y < geom[k + 1].y ||
+				    (geom[k].y == geom[k + 1].y && geom[k].x < geom[k + 1].x)) {
+					// Already points downward
+
+					if (op > 0) {
+						dv->push_back(geom[k]);
+						dv->push_back(geom[k + 1]);
+					} else {
+						dv->push_back(geom[k + 1]);
+						dv->push_back(geom[k]);
+					}
+
+					(*dv)[0].op = op;
+					(*dv)[1].op = op;
+				} else {
+					// Previously pointed upward
+
+					if (op > 0) {
+						dv->push_back(geom[k + 1]);
+						dv->push_back(geom[k]);
+					} else {
+						dv->push_back(geom[k]);
+						dv->push_back(geom[k + 1]);
+					}
+
+					(*dv)[0].op = -op;
+					(*dv)[1].op = -op;
+				}
+
 				segs.push_back(dv);
 				n++;
 			}
+
+			i = j - 1;
 		}
 	}
 
@@ -441,8 +496,7 @@ drawvec scan(drawvec &geom) {
 		// Repeat until no additional changes
 	}
 
-	// At this point we have a whole lot of polygon edges and need to reconstruct
-	// polygons from them.
+	// Edges may have been split, so make a new set of sub-edges
 
 	std::vector<drawvec> edges;
 
@@ -454,12 +508,22 @@ drawvec scan(drawvec &geom) {
 				dv.push_back((*segs[i])[j]);
 				dv.push_back((*segs[i])[j + 1]);
 
+				// Check if integer rounding got it pointing the wrong direction.
+				// If so, reverse the direction and reverse the polarity.
+
+				if (dv[0].y > dv[1].y ||
+				    (dv[0].y == dv[1].y && dv[0].x > dv[1].x)) {
+					draw dv0 = dv[0];
+					dv[0] = dv[1];
+					dv[1] = dv0;
+					dv[0].op = -dv[0].op;
+					dv[1].op = -dv[1].op;
+				}
+
 				edges.push_back(dv);
 			}
 		}
 	}
-
-	std::stable_sort(edges.begin(), edges.end(), s_edgecmp);
 
 	// Original segments are no longer needed
 
@@ -467,6 +531,105 @@ drawvec scan(drawvec &geom) {
 		delete segs[i];
 		segs[i] = NULL;
 	}
+
+	std::stable_sort(edges.begin(), edges.end(), s_edgecmp);
+
+	// Remove spikes (duplicates with opposite polarity)
+
+	for (size_t i = 0; i < edges.size(); i++) {
+		size_t j;
+
+		for (j = i + 1; j < edges.size(); j++) {
+			if (edges[i][0].x != edges[j][0].x || edges[i][0].y != edges[j][0].y ||
+			    edges[i][1].x != edges[j][1].x || edges[i][1].y != edges[j][1].y) {
+				break;
+			}
+		}
+
+		for (size_t k = i; k < j; k++) {
+			if (edges[k].size() > 0) {
+				for (size_t l = k + 1; l < j; l++) {
+					if (edges[l].size() > 0 && edges[k][0].op == -edges[l][0].op) {
+						edges[k].clear();
+						edges[l].clear();
+						break;
+					}
+				}
+			}
+		}
+
+		i = j - 1;
+	}
+
+	// Chain edges together as much as possible
+
+	std::multimap<loc, drawvec> chains;
+
+	for (size_t i = 0; i < edges.size(); i++) {
+		if (edges[i].size() > 0) {
+			loc here = loc(edges[i][0], 1);
+			std::pair<std::multimap<loc, drawvec>::iterator, std::multimap<loc, drawvec>::iterator> options;
+			options = chains.equal_range(here);
+
+			bool handled = false;
+
+			for (std::multimap<loc, drawvec>::iterator it = options.first; it != options.second; ++it) {
+				drawvec option = it->second;
+
+				if (option[0].op == edges[i][0].op) {
+					option.push_back(edges[i][1]);
+					chains.erase(it);
+					chains.insert(std::pair<loc, drawvec>(loc(edges[i][1], 1), option));
+
+					handled = true;
+					break;
+				}
+			}
+
+			if (!handled) {
+				chains.insert(std::pair<loc, drawvec>(loc(edges[i][1], 1), edges[i]));
+			}
+		}
+	}
+
+	for (std::multimap<loc, drawvec>::iterator it = chains.begin(); it != chains.end(); ++it) {
+		drawvec edge = it->second;
+
+		if (edge[0].op < 0) {
+			printf("1 0 0 setrgbcolor ");
+		} else {
+			printf("0 0 1 setrgbcolor ");
+		}
+
+		for (size_t i = 0; i < edge.size(); i++) {
+			if (i == 0) {
+				printf("%lld %lld moveto ", edge[i].x, 4095 - edge[i].y);
+			} else {
+				printf("%lld %lld lineto ", edge[i].x, 4095 - edge[i].y);
+			}
+		}
+
+		printf("stroke\n");
+	}
+
+#if 0
+	printf("0 setlinewidth\n");
+	for (size_t i = 0; i < edges.size(); i++) {
+		if (edges[i].size() > 0) {
+			if (edges[i][0].op < 0) {
+				printf("1 0 0 setrgbcolor ");
+			} else {
+				printf("0 0 1 setrgbcolor ");
+			}
+
+			printf("%lld %lld moveto %lld %lld lineto stroke\n", edges[i][0].x, 4095 - edges[i][0].y, edges[i][1].x, 4095 - edges[i][1].y);
+		}
+	}
+#endif
+
+	return drawvec();
+
+#if 0
 
 	// Index each segment by its starting point
 
@@ -496,11 +659,13 @@ drawvec scan(drawvec &geom) {
 					    (*option)[0].y == edges[i][1].y &&
 					    (*option)[1].x == edges[i][0].x &&
 					    (*option)[1].y == edges[i][0].y) {
+#if 0
 						fprintf(stderr, "removed %lld,%lld %lld,%lld for %lld,%lld %lld,%lld\n",
 							(*option)[0].x, (*option)[0].y,
 							(*option)[1].x, (*option)[1].y,
 							edges[i][0].x, edges[i][0].y,
 							edges[i][1].x, edges[i][1].y);
+#endif
 						(*option).clear();
 						edges[i].clear();
 						break;
@@ -536,7 +701,7 @@ drawvec scan(drawvec &geom) {
 				options = origins.equal_range(here);
 
 				drawvec *best = NULL;
-				double bestangle = 2 * M_PI;
+				double bestangle = -2 * M_PI;
 				loc next;
 
 				for (std::multimap<loc, drawvec *>::iterator it = options.first; it != options.second; ++it) {
@@ -558,7 +723,7 @@ drawvec scan(drawvec &geom) {
 							diff -= 2 * M_PI;
 						}
 
-						if (diff < bestangle) {
+						if (diff > bestangle) {
 							bestangle = diff;
 							best = option;
 							next = other;
@@ -600,4 +765,5 @@ drawvec scan(drawvec &geom) {
 	// which other rings.
 
 	return ret;
+#endif
 }

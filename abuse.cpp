@@ -83,4 +83,3 @@ int main() {
 		printf("%d sides took %lld\n", len, (long long) (after - before));
 	}
 }
-
