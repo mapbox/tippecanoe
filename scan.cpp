@@ -533,6 +533,7 @@ drawvec scan(drawvec &geom) {
 	}
 
 	std::stable_sort(edges.begin(), edges.end(), s_edgecmp);
+	std::vector<drawvec> edges2;
 
 	// Remove spikes (duplicates with opposite polarity)
 
@@ -558,28 +559,79 @@ drawvec scan(drawvec &geom) {
 			}
 		}
 
+		// Retain anything that wasn't a spike
+
+		for (size_t k = i; k < j; k++) {
+			if (edges[k].size() > 0) {
+				edges2.push_back(edges[k]);
+			}
+		}
+
 		i = j - 1;
 	}
 
-	// Chain edges together as much as possible
+	edges.clear();
 
+	// At each moment we have a list of the active chains.
 	std::multimap<loc, drawvec> chains;
 
-	for (size_t i = 0; i < edges.size(); i++) {
-		if (edges[i].size() > 0) {
-			loc here = loc(edges[i][0], 1);
+	// Go through the edges in vertical order.
+
+	for (size_t i = 0; i < edges2.size(); i++) {
+		size_t j;
+
+		// Find all the edges that begin at the same vertical and horizontal position
+
+		for (j = i + 1; j < edges2.size(); j++) {
+			if (edges2[i][0].y != edges2[j][0].y || edges2[i][0].x != edges2[j][0].x) {
+				break;
+			}
+		}
+
+		// Attach as many as possible of them to existing chains
+
+		for (size_t k = i; k < j; k++) {
+			loc here = loc(edges2[k][0], 1);
 			std::pair<std::multimap<loc, drawvec>::iterator, std::multimap<loc, drawvec>::iterator> options;
 			options = chains.equal_range(here);
 
 			bool handled = false;
 
+			// This is messy because we need to preserve the horizontal order of segments.
+			//
+			// If multiple new edges begin at the same point, they need to be attached to the
+			// existing chains that meet there (and have the correct sidedness) so that
+			// the one that has come from the furthest left
+			// gets attached to the one that is going to the furthest left, and so on.
+			//
+			// If more chains lead out from a point than into it, the new left-hand side
+			// (that isn't connected to any previous chain) needs to be the one that goes
+			// as far right as possible, and the new right-hand side needs to go
+			// as far left as possible, so that the do-nothing ring that doesn't connect to
+			// anything above is inside the ring that is going to matter.
+			//
+			// Similarly, if fewer chains lead out from a point than lead in, the
+			// rightmost left-hand side needs to be the one that doesn't get to continue,
+			// and the leftmost right-hand side.
+			//
+			// For this purpose, a horizontal segment is always the farthest right.
+			// A horizontal segment that is the start of a new chain needs to introduce
+			// a 0-length complementary segment so that there is something to chain the
+			// next left-hand side to. Otherwise the polarities won't balance in the
+			// depth calculation below.
+			//
+			// I don't *think* we need a 0-length segment when closing the chain, since
+			// the depth calculation always happens after chaining and shouldn't affect
+			// things that are already in the chain.
+
+			// XXX code is wrong
 			for (std::multimap<loc, drawvec>::iterator it = options.first; it != options.second; ++it) {
 				drawvec option = it->second;
 
-				if (option[0].op == edges[i][0].op) {
-					option.push_back(edges[i][1]);
+				if (option[0].op == edges2[k][0].op) {
+					option.push_back(edges2[k][1]);
 					chains.erase(it);
-					chains.insert(std::pair<loc, drawvec>(loc(edges[i][1], 1), option));
+					chains.insert(std::pair<loc, drawvec>(loc(edges2[k][1], 1), option));
 
 					handled = true;
 					break;
@@ -587,10 +639,38 @@ drawvec scan(drawvec &geom) {
 			}
 
 			if (!handled) {
-				chains.insert(std::pair<loc, drawvec>(loc(edges[i][1], 1), edges[i]));
+				chains.insert(std::pair<loc, drawvec>(loc(edges2[k][1], 1), edges2[k]));
 			}
 		}
+
+		// Are we done with this row? (Or with all the rows?)
+		if (j + 1 >= edges2.size() || edges2[j + 1][0].y > edges2[j][0].y) {
+			// Done with this row, so move all of the chains that have terminated
+			// above here to cold storage.
+
+			// Then, for a hypothetical point half a pixel below the current location,
+			// we can figure out the depth on each side of each chain by walking from
+			// left to right. This *should* keep each chain at a constant depth from one
+			// check to the next. If it doesn't, I got the algorithm wrong.
+		}
+
+		i = j - 1;
 	}
+
+	// Once we have all these chains, we can walk around the rings from any arbitrary starting point,
+	// following the paths that keep a depth of 1 on the right and a depth of 0 on the left.
+	//
+	// Any path that has some other pair of depths will just get left out as irrelevant,
+	// since it is either a hole cutting further into negative space or an overlapping ring
+	// that is doubling interior space.
+	//
+	// The following will still need to turn right as sharply as possible (or as far left when
+	// following a hole) because there will still be points where two exterior rings intersect
+	// and it needs to do them separately rather than making a figure-8 around the intersection.
+	//
+	// XXX Do we even need to walk the rings, or can each right-hand side be linked to a left-hand side
+	// immediately when it falls out of sweepline scope? Probably not because a concave polygon might
+	// have uncertain relationships for quite a while.
 
 	for (std::multimap<loc, drawvec>::iterator it = chains.begin(); it != chains.end(); ++it) {
 		drawvec edge = it->second;
