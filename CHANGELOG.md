@@ -1,3 +1,7 @@
+## 1.12.0
+
+* Fix a tile-join bug that would retain fields that were supposed to be excluded
+
 ## 1.11.9
 
 * Add minimal support for alternate input projections (EPSG:3857).
