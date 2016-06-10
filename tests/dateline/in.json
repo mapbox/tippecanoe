@@ -48,6 +48,30 @@
       ]
     ]
   }
+},
+
+{
+  "type": "Feature",
+  "properties": {},
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      -177.85,
+      51.79
+    ]
+  }
+},
+{
+  "type": "Feature",
+  "properties": {},
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      179.59,
+      51.98
+    ]
+  }
 }
+
 
 ]}

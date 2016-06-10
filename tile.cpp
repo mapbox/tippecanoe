@@ -706,19 +706,20 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (z == 0) {
-				if (bbox[0] < 0 || bbox[2] > 1LL << 32) {
+				// 24 because buffer is specified in detail=8 pixels at z0
+				if (bbox[0] < (buffer << 24) || bbox[2] > (1LL << 32) - (buffer << 24)) {
 					// If the geometry extends off the edge of the world, concatenate on another copy
 					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
 					size_t n = geom.size();
 
-					if (bbox[0] < 0) {
+					if (bbox[0] < (buffer << 24)) {
 						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
 						}
 					}
 
-					if (bbox[2] > 1LL << 32) {
+					if (bbox[2] > (1LL << 32) - (buffer << 24)) {
 						for (size_t i = 0; i < n; i++) {
 							geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
 						}
