@@ -573,7 +573,7 @@ drawvec scan(drawvec &geom) {
 	edges.clear();
 
 	// At each moment we have a list of the active chains.
-	std::multimap<loc, drawvec> chains;
+	std::multimap<loc, drawvec *> chains;
 
 	// Go through the edges in vertical order.
 
@@ -592,7 +592,7 @@ drawvec scan(drawvec &geom) {
 
 		for (size_t k = i; k < j; k++) {
 			loc here = loc(edges2[k][0], 1);
-			std::pair<std::multimap<loc, drawvec>::iterator, std::multimap<loc, drawvec>::iterator> options;
+			std::pair<std::multimap<loc, drawvec *>::iterator, std::multimap<loc, drawvec *>::iterator> options;
 			options = chains.equal_range(here);
 
 			bool handled = false;
@@ -625,13 +625,13 @@ drawvec scan(drawvec &geom) {
 			// things that are already in the chain.
 
 			// XXX code is wrong
-			for (std::multimap<loc, drawvec>::iterator it = options.first; it != options.second; ++it) {
-				drawvec option = it->second;
+			for (std::multimap<loc, drawvec *>::iterator it = options.first; it != options.second; ++it) {
+				drawvec *option = it->second;
 
-				if (option[0].op == edges2[k][0].op) {
-					option.push_back(edges2[k][1]);
+				if ((*option)[0].op == edges2[k][0].op) {
+					(*option).push_back(edges2[k][1]);
 					chains.erase(it);
-					chains.insert(std::pair<loc, drawvec>(loc(edges2[k][1], 1), option));
+					chains.insert(std::pair<loc, drawvec *>(loc(edges2[k][1], 1), option));
 
 					handled = true;
 					break;
@@ -639,7 +639,9 @@ drawvec scan(drawvec &geom) {
 			}
 
 			if (!handled) {
-				chains.insert(std::pair<loc, drawvec>(loc(edges2[k][1], 1), edges2[k]));
+				drawvec *dv = new drawvec;
+				*dv = edges2[k];
+				chains.insert(std::pair<loc, drawvec *>(loc(edges2[k][1], 1), dv));
 			}
 		}
 
@@ -672,24 +674,26 @@ drawvec scan(drawvec &geom) {
 	// immediately when it falls out of sweepline scope? Probably not because a concave polygon might
 	// have uncertain relationships for quite a while.
 
-	for (std::multimap<loc, drawvec>::iterator it = chains.begin(); it != chains.end(); ++it) {
-		drawvec edge = it->second;
+	for (std::multimap<loc, drawvec *>::iterator it = chains.begin(); it != chains.end(); ++it) {
+		drawvec *edge = it->second;
 
-		if (edge[0].op < 0) {
+		if ((*edge)[0].op < 0) {
 			printf("1 0 0 setrgbcolor ");
 		} else {
 			printf("0 0 1 setrgbcolor ");
 		}
 
-		for (size_t i = 0; i < edge.size(); i++) {
+		for (size_t i = 0; i < (*edge).size(); i++) {
 			if (i == 0) {
-				printf("%lld %lld moveto ", edge[i].x, 4095 - edge[i].y);
+				printf("%lld %lld moveto ", (*edge)[i].x, 4095 - (*edge)[i].y);
 			} else {
-				printf("%lld %lld lineto ", edge[i].x, 4095 - edge[i].y);
+				printf("%lld %lld lineto ", (*edge)[i].x, 4095 - (*edge)[i].y);
 			}
 		}
 
 		printf("stroke\n");
+
+		delete edge;
 	}
 
 #if 0
