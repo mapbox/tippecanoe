@@ -1,15 +1,10 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets
-\[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large collections of GeoJSON
-\[la]http://geojson.org/\[ra]
-features. This is a tool for making maps from huge datasets
-\[la]MADE_WITH.md\[ra]\&.
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large collections of GeoJSON \[la]http://geojson.org/\[ra]
+features. This is a tool for making maps from huge datasets \[la]MADE_WITH.md\[ra]\&.
 .PP
-[Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg)
-\[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
-[Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)
-\[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
+[Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
+[Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github) \[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
 .SH Intent
 .PP
 The goal of Tippecanoe is to enable making a scale\-independent view of your data,
@@ -18,8 +13,7 @@ the density and texture of the data rather than a simplification from dropping
 supposedly unimportant features or clustering or aggregating them.
 .PP
 If you give it all of OpenStreetMap and zoom out, it should give you back
-something that looks like "All Streets
-\[la]http://benfry.com/allstreets/map5.html\[ra]"
+something that looks like "All Streets \[la]http://benfry.com/allstreets/map5.html\[ra]"
 rather than something that looks like an Interstate road atlas.
 .PP
 If you give it all the building footprints in Los Angeles and zoom out
@@ -32,8 +26,7 @@ see the shape and relative popularity of every point of interest and every
 significant travel corridor.
 .SH Installation
 .PP
-The easiest way to install tippecanoe on OSX is with Homebrew
-\[la]http://brew.sh/\[ra]:
+The easiest way to install tippecanoe on OSX is with Homebrew \[la]http://brew.sh/\[ra]:
 .PP
 .RS
 .nf
@@ -225,6 +218,7 @@ awk 'BEGIN {
     dotsize = 2;    # up to you to decide
     basezoom = 14;  # tippecanoe \-z 14
     rate = 2.5;     # tippecanoe \-r 2.5
+
     print "  marker\-line\-width: 0;";
     print "  marker\-ignore\-placement: true;";
     print "  marker\-allow\-overlap: true;";
@@ -232,6 +226,7 @@ awk 'BEGIN {
     for (i = basezoom + 1; i <= 22; i++) {
         print "  [zoom >= " i "] { marker\-width: " (dotsize * exp(log(sqrt(rate)) * (i \- basezoom))) "; }";
     }
+
     exit(0);
 }'
 .fi
@@ -299,12 +294,10 @@ make install
 .RE
 .SH Examples
 .PP
-Check out some examples of maps made with tippecanoe
-\[la]MADE_WITH.md\[ra]
+Check out some examples of maps made with tippecanoe \[la]MADE_WITH.md\[ra]
 .SH Name
 .PP
-The name is a joking reference
-\[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.
+The name is a joking reference \[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.
 .SH tile\-join
 .PP
 Tile\-join is a tool for joining new attributes from a CSV file to features that
