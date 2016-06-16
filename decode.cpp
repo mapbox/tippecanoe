@@ -80,6 +80,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf("{ \"type\": \"FeatureCollection\"");
 			printf(", \"properties\": { \"layer\": ");
 			printq(layer.name.c_str());
+			printf(", \"version\": %d, \"extent\": %d", layer.version, layer.extent);
 			printf(" }");
 			printf(", \"features\": [\n");
 

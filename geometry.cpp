@@ -314,8 +314,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 				}
 			}
 		}
-	nextring:
-		;
+	nextring:;
 	}
 
 	// Then reverse the winding order of any rings that turned out

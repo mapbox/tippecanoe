@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 326, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni" }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MITCHELL RD/Visitor's Center", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.536268, 37.831785 ] } }
@@ -43,7 +43,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 792 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni" }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.499919, 37.718760 ] } }
@@ -1103,7 +1103,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni" }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.515411, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.514982, 37.831819 ] } }
@@ -9715,7 +9715,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 954, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni" }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
