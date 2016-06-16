@@ -1,3 +1,7 @@
+## 1.12.1
+
+* Fix incorrect tile layer version numbers in tile-join output
+
 ## 1.12.0
 
 * Fix a tile-join bug that would retain fields that were supposed to be excluded
