@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 328, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "macarthur" }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 1, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "LINEARID": "1104485645649", "FULLNAME": "W Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.279677, 37.828599 ], [ -122.280321, 37.828531 ], [ -122.282510, 37.828023 ], [ -122.283368, 37.827921 ], [ -122.284484, 37.827684 ], [ -122.284656, 37.827819 ] ] } }
 ,
 { "type": "Feature", "properties": { "LINEARID": "1104485605278", "FULLNAME": "W Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.279463, 37.828294 ], [ -122.279506, 37.828362 ], [ -122.280450, 37.828294 ], [ -122.281823, 37.827955 ], [ -122.283025, 37.827582 ] ] } }
