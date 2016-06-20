@@ -2027,7 +2027,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "\n        ");
 				width = 8;
 			}
-			fprintf(stderr, " [file.json ...]");
+			fprintf(stderr, " [file.json ...]\n");
 		}
 			exit(EXIT_FAILURE);
 		}
