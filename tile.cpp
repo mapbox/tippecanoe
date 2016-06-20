@@ -73,6 +73,7 @@ struct coalesce {
 	int type;
 	int m;
 	bool coalesced;
+	double spacing;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -382,6 +383,7 @@ struct partial {
 	int z;
 	int line_detail;
 	int maxzoom;
+	double spacing;
 	signed char t;
 };
 
@@ -594,9 +596,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		double fraction_accum = 0;
 
-		unsigned long long previndex = 0;
+		unsigned long long previndex = 0, density_previndex = 0;
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
-		double gap = 0;
+		double gap = 0, density_gap = 0;
+		double spacing = 0;
 
 		long long original_features = 0;
 		long long unclipped_features = 0;
@@ -784,6 +787,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				continue;
 			}
 
+			unsigned long long index = 0;
+			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0) {
+				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
+			}
+
 			if (gamma >= 0 && (t == VT_POINT ||
 					   (additional[A_LINE_DROP] && t == VT_LINE) ||
 					   (additional[A_POLYGON_DROP] && t == VT_POLYGON))) {
@@ -795,10 +803,21 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 
 				if (gamma > 0) {
-					unsigned long long index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 					if (manage_gap(index, &previndex, scale, gamma, &gap)) {
 						continue;
 					}
+				}
+			}
+
+			if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+				// Gamma is always 1 for this calculation so there is a reasonable
+				// interpretation when no features are being dropped.
+				// The spacing is only calculated if a feature would be retained by
+				// that standard, so that duplicates aren't reported as infinitely dense.
+
+				double o_density_previndex = density_previndex;
+				if (!manage_gap(index, &density_previndex, scale, 1, &density_gap)) {
+					spacing = (index - o_density_previndex) / scale;
 				}
 			}
 
@@ -828,6 +847,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.maxzoom = maxzoom;
 				p.keys = metakeys;
 				p.values = metavals;
+				p.spacing = spacing;
 				partials.push_back(p);
 			}
 		}
@@ -888,6 +908,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.stringpool = stringpool + pool_off[partials[i].segment];
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;
+					c.spacing = partials[i].spacing;
 
 					features[layer].push_back(c);
 				}
@@ -986,6 +1007,21 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				features[k][x].geom.clear();
 
 				decode_meta(features[k][x].m, features[k][x].keys, features[k][x].values, features[k][x].stringpool, layer, feature);
+
+				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+					int glow = 255;
+					if (features[k][x].spacing > 0) {
+						glow = (1 / features[k][x].spacing);
+						if (glow > 255) {
+							glow = 255;
+						}
+					}
+					mvt_value v;
+					v.type = mvt_sint;
+					v.numeric_value.sint_value = glow;
+					layer.tag(feature, "tippecanoe_feature_density", v);
+				}
+
 				layer.features.push_back(feature);
 			}
 

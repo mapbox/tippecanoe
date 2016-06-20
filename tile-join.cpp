@@ -152,7 +152,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 								tas.string = std::string(sjoinkey);
 								tas.type = attr_type;
 								file_keys[ll].insert(tas);
-								outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 
 								mvt_value outval;
 								if (attr_type == VT_STRING) {

@@ -159,6 +159,10 @@ bool mvt_tile::decode(std::string &message) {
 					layer.extent = layer_reader.get_uint32();
 					break;
 
+				case 15: /* version */
+					layer.version = layer_reader.get_uint32();
+					break;
+
 				case 2: /* feature */
 				{
 					protozero::pbf_reader feature_reader(layer_reader.get_message());

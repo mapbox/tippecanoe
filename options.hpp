@@ -5,6 +5,7 @@
 #define A_DEBUG_POLYGON ((int) 'd')
 #define A_POLYGON_DROP ((int) 'p')
 #define A_PREFER_RADIX_SORT ((int) 'R')
+#define A_CALCULATE_FEATURE_DENSITY ((int) 'g')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')

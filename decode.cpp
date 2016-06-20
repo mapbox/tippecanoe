@@ -140,6 +140,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf("{ \"type\": \"FeatureCollection\"");
 			printf(", \"properties\": { \"layer\": ");
 			printq(layer.name.c_str());
+			printf(", \"version\": %d, \"extent\": %d", layer.version, layer.extent);
 			printf(" }");
 			printf(", \"features\": [\n");
 
@@ -191,7 +192,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					long long wy = scale * y + (scale / extent) * py;
 
 					double lat, lon;
-					tile2latlon(wx, wy, 32, &lat, &lon);
+					tile2lonlat(wx, wy, 32, &lon, &lat);
 
 					ops.emplace_back(op, lon, lat, px, py);
 				} else {

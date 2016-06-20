@@ -1,3 +1,19 @@
+## 1.12.1
+
+* Fix incorrect tile layer version numbers in tile-join output
+
+## 1.12.0
+
+* Fix a tile-join bug that would retain fields that were supposed to be excluded
+
+## 1.11.9
+
+* Add minimal support for alternate input projections (EPSG:3857).
+
+## 1.11.8
+
+* Add an option to calculate the density of features as a feature attribute
+
 ## 1.11.7
 
 * Keep metadata together with geometry for features that don't span many tiles,
