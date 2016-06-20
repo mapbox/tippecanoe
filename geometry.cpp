@@ -14,6 +14,8 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
+#include <mapbox/geometry/polygon.hpp>
+#include <mapbox/geometry/wagyu/wagyu.hpp>
 
 struct convert_visitor {
 	drawvec *dv;
@@ -24,19 +26,19 @@ struct convert_visitor {
 		type = ntype;
 	}
 
-	void operator()(mapbox::geometry::point<long long> const& val) const {
+	void operator()(mapbox::geometry::point<long long> const &val) const {
 		*type = VT_POINT;
 		dv->push_back(draw(VT_MOVETO, val.x, val.y));
 	}
 
-	void operator()(mapbox::geometry::multi_point<long long> const& val) const {
+	void operator()(mapbox::geometry::multi_point<long long> const &val) const {
 		*type = VT_POINT;
 		for (size_t i = 0; i < val.size(); i++) {
 			dv->push_back(draw(VT_MOVETO, val[i].x, val[i].y));
 		}
 	}
 
-	void operator()(mapbox::geometry::line_string<long long> const& val) const {
+	void operator()(mapbox::geometry::line_string<long long> const &val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			if (i == 0) {
@@ -47,7 +49,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_line_string<long long> const& val) const {
+	void operator()(mapbox::geometry::multi_line_string<long long> const &val) const {
 		*type = VT_LINE;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -60,7 +62,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::polygon<long long> const& val) const {
+	void operator()(mapbox::geometry::polygon<long long> const &val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -73,7 +75,7 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::multi_polygon<long long> const& val) const {
+	void operator()(mapbox::geometry::multi_polygon<long long> const &val) const {
 		*type = VT_POLYGON;
 		for (size_t i = 0; i < val.size(); i++) {
 			for (size_t j = 0; j < val[i].size(); j++) {
@@ -88,27 +90,27 @@ struct convert_visitor {
 		}
 	}
 
-	void operator()(mapbox::geometry::geometry_collection<long long> const& val) const {
+	void operator()(mapbox::geometry::geometry_collection<long long> const &val) const {
 		fprintf(stderr, "Geometry collections not supported\n");
 		exit(EXIT_FAILURE);
 	}
 };
 
-drawvec to_drawvec(mapbox::geometry::geometry<long long> const& g, int &type) {
+drawvec to_drawvec(mapbox::geometry::geometry<long long> const &g, int &type) {
 	drawvec dv;
 	mapbox::util::apply_visitor(convert_visitor(&dv, &type), g);
 
 	return dv;
 }
 
-mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) {
+mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const &dv) {
 	if (type == VT_POINT) {
 		if (dv.size() == 1) {
 			return mapbox::geometry::point<long long>(dv[0].x, dv[0].y);
 		} else {
 			mapbox::geometry::multi_point<long long> mp;
 			for (size_t i = 0; i < dv.size(); i++) {
-				mp.emplace_back((long long)dv[i].x, (long long)dv[i].y);
+				mp.emplace_back((long long) dv[i].x, (long long) dv[i].y);
 			}
 			return mp;
 		}
@@ -122,7 +124,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 		if (movetos == 1) {
 			mapbox::geometry::line_string<long long> ls;
 			for (size_t i = 0; i < dv.size(); i++) {
-				ls.emplace_back((long long)dv[i].x, (long long)dv[i].y);
+				ls.emplace_back((long long) dv[i].x, (long long) dv[i].y);
 			}
 			return ls;
 		} else {
@@ -137,7 +139,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 					}
 					mapbox::geometry::line_string<long long> ls;
 					for (size_t k = i; k < j; k++) {
-						ls.emplace_back((long long)dv[k].x, (long long)dv[k].y);
+						ls.emplace_back((long long) dv[k].x, (long long) dv[k].y);
 					}
 					mls.push_back(ls);
 					i = j - 1;
@@ -177,7 +179,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 			for (size_t i = 0; i < rings.size(); i++) {
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
+					lr.emplace_back((long long) rings[i][j].x, (long long) rings[i][j].y);
 				}
 				p.push_back(lr);
 			}
@@ -190,7 +192,7 @@ mapbox::geometry::geometry<long long> from_drawvec(int type, drawvec const& dv) 
 				}
 				mapbox::geometry::linear_ring<long long> lr;
 				for (size_t j = 0; j < rings[i].size(); j++) {
-					lr.emplace_back((long long)rings[i][j].x, (long long)rings[i][j].y);
+					lr.emplace_back((long long) rings[i][j].x, (long long) rings[i][j].y);
 				}
 				mp[mp.size() - 1].push_back(lr);
 			}
@@ -501,8 +503,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 				}
 			}
 		}
-	nextring:
-		;
+	nextring:;
 	}
 
 	// Then reverse the winding order of any rings that turned out
@@ -595,6 +596,42 @@ static void dump(drawvec &geom) {
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+
+	mapbox::geometry::geometry<long long> g = from_drawvec(VT_POLYGON, geom);
+	mapbox::geometry::wagyu::clipper<long long> wagyu;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			mapbox::geometry::linear_ring<long long> lr;
+
+			printf("adding %lu to %lu\n", i, j);
+			for (size_t k = i; k < j; k++) {
+				printf("%lu: %d %lld %lld\n", k, geom[k].op, geom[k].x, geom[k].y);
+				lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+			}
+
+			if (lr.size() >= 3) {
+				wagyu.add_ring(lr);
+			} else {
+				printf("(not adding)\n");
+			}
+
+			i = j - 1;
+		}
+	}
+
+	printf("\n");
+
+	//wagyu.add_polygon(g.get<mapbox::geometry::polygon<long long>>());
+	mapbox::geometry::polygon<long long> result;
+	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
 
 	bool has_area = false;
 
