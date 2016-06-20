@@ -1016,9 +1016,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 							glow = 255;
 						}
 					}
-					mvt_value v;
-					v.type = mvt_sint;
-					v.numeric_value.sint_value = glow;
+					mvt_value v = glow;
 					layer.tag(feature, "tippecanoe_feature_density", v);
 				}
 
