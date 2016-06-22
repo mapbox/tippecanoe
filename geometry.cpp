@@ -630,7 +630,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	printf("\n");
 
 	//wagyu.add_polygon(g.get<mapbox::geometry::polygon<long long>>());
-	mapbox::geometry::polygon<long long> result;
+	std::vector<mapbox::geometry::polygon<long long>> result;
 	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
 
 	bool has_area = false;
