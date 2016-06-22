@@ -252,10 +252,10 @@ struct ring {
 	}
 };
 
-static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
+static void decode_rings(clipper_lib::polygon_node *t, std::vector<ring> &out) {
 	// Supposedly outer ring
 
-	ClipperLib::Path p = t->Contour;
+	clipper_lib::path_t p = t->contour;
 	drawvec dv;
 	for (size_t i = 0; i < p.size(); i++) {
 		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
@@ -267,8 +267,8 @@ static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
 
 	// Supposedly inner rings
 
-	for (int n = 0; n < t->ChildCount(); n++) {
-		ClipperLib::Path cp = t->Childs[n]->Contour;
+	for (int n = 0; n < t->child_count(); n++) {
+		clipper_lib::path_t cp = t->childs[n]->contour;
 		drawvec ring;
 		for (size_t i = 0; i < cp.size(); i++) {
 			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].X, cp[i].Y));
@@ -281,14 +281,14 @@ static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
 
 	// Recurse to supposedly outer rings (children of the children)
 
-	for (int n = 0; n < t->ChildCount(); n++) {
-		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
-			decode_rings(t->Childs[n]->Childs[m], out);
+	for (int n = 0; n < t->child_count(); n++) {
+		for (int m = 0; m < t->childs[n]->child_count(); m++) {
+			decode_rings(t->childs[n]->childs[m], out);
 		}
 	}
 }
 
-static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
+static void decode_clipped(clipper_lib::polygon_node *t, drawvec &out) {
 	// The output of Clipper supposedly produces the outer rings
 	// as top level objects, with links to any inner-ring children
 	// they may have, each of which then has links to any outer rings
@@ -372,7 +372,7 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 }
 
 static void dump(drawvec &geom) {
-	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+	clipper_lib::clipper clipper(clipper_lib::iostrictly_simple);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -383,18 +383,18 @@ static void dump(drawvec &geom) {
 				}
 			}
 
-			ClipperLib::Path path;
-			printf("{ ClipperLib::Path path; ");
+			clipper_lib::path_t path;
+			printf("{ clipper_lib::path_t path; ");
 
 			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
-				printf("path.push_back(IntPoint(%lld,%lld)); ", geom[k].x, geom[k].y);
-				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
+				printf("path.push_back(point(%lld,%lld)); ", geom[k].x, geom[k].y);
+				path.push_back(clipper_lib::point(geom[k].x, geom[k].y));
 			}
 
-			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+			if (!clipper.add_path(path, clipper_lib::ptsubject, true)) {
 			}
-			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); }\n");
+			printf("clipper.add_path(path, clipper_lib::ptsubject, true); }\n");
 
 			i = j - 1;
 		} else {
@@ -402,11 +402,11 @@ static void dump(drawvec &geom) {
 			exit(EXIT_FAILURE);
 		}
 	}
-	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
+	printf("clipper.Execute(clipper_lib::ctunion, clipped));\n");
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
-	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+	clipper_lib::clipper clipper(clipper_lib::iostrictly_simple);
 
 	bool has_area = false;
 
@@ -424,14 +424,14 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				has_area = true;
 			}
 
-			ClipperLib::Path path;
+			clipper_lib::path_t path;
 
 			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
-				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
+				path.push_back(clipper_lib::point(geom[k].x, geom[k].y));
 			}
 
-			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
+			if (!clipper.add_path(path, clipper_lib::ptsubject, true)) {
 #if 0
 				fprintf(stderr, "Couldn't add polygon for clipping:");
 				for (size_t k = i; k < j; k++) {
@@ -452,19 +452,19 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		long long area = 1LL << (32 - z);
 		long long clip_buffer = buffer * area / 256;
 
-		ClipperLib::Path edge;
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+		clipper_lib::path_t edge;
+		edge.push_back(clipper_lib::point(-clip_buffer, -clip_buffer));
+		edge.push_back(clipper_lib::point(area + clip_buffer, -clip_buffer));
+		edge.push_back(clipper_lib::point(area + clip_buffer, area + clip_buffer));
+		edge.push_back(clipper_lib::point(-clip_buffer, area + clip_buffer));
+		edge.push_back(clipper_lib::point(-clip_buffer, -clip_buffer));
 
-		clipper.AddPath(edge, ClipperLib::ptClip, true);
+		clipper.add_path(edge, clipper_lib::ptclip, true);
 	}
 
-	ClipperLib::PolyTree clipped;
+	clipper_lib::polygon_tree clipped;
 	if (clip) {
-		if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
+		if (!clipper.execute(clipper_lib::ctintersection, clipped)) {
 			fprintf(stderr, "Polygon clip failed\n");
 		}
 	} else {
@@ -473,7 +473,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 			return out;
 		}
 
-		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
+		if (!clipper.execute(clipper_lib::ctunion, clipped)) {
 			static bool complained = false;
 
 			if (!complained) {
@@ -485,8 +485,8 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 	drawvec out;
 
-	for (int i = 0; i < clipped.ChildCount(); i++) {
-		decode_clipped(clipped.Childs[i], out);
+	for (int i = 0; i < clipped.child_count(); i++) {
+		decode_clipped(clipped.childs[i], out);
 	}
 
 	return out;
