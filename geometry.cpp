@@ -258,10 +258,10 @@ static void decode_rings(clipper_lib::polygon_node *t, std::vector<ring> &out) {
 	clipper_lib::path_t p = t->contour;
 	drawvec dv;
 	for (size_t i = 0; i < p.size(); i++) {
-		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
+		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].x, p[i].y));
 	}
 	if (p.size() > 0) {
-		dv.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
+		dv.push_back(draw(VT_LINETO, p[0].x, p[0].y));
 	}
 	out.push_back(dv);
 
@@ -271,10 +271,10 @@ static void decode_rings(clipper_lib::polygon_node *t, std::vector<ring> &out) {
 		clipper_lib::path_t cp = t->childs[n]->contour;
 		drawvec ring;
 		for (size_t i = 0; i < cp.size(); i++) {
-			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].X, cp[i].Y));
+			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].x, cp[i].y));
 		}
 		if (cp.size() > 0) {
-			ring.push_back(draw(VT_LINETO, cp[0].X, cp[0].Y));
+			ring.push_back(draw(VT_LINETO, cp[0].x, cp[0].y));
 		}
 		out.push_back(ring);
 	}
@@ -389,7 +389,7 @@ static void dump(drawvec &geom) {
 			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
 				printf("path.push_back(point(%lld,%lld)); ", geom[k].x, geom[k].y);
-				path.push_back(clipper_lib::point(geom[k].x, geom[k].y));
+				path.push_back(clipper_lib::mapbox_geometry_point(geom[k].x, geom[k].y));
 			}
 
 			if (!clipper.add_path(path, clipper_lib::ptsubject, true)) {
@@ -428,7 +428,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
-				path.push_back(clipper_lib::point(geom[k].x, geom[k].y));
+				path.push_back(clipper_lib::mapbox_geometry_point(geom[k].x, geom[k].y));
 			}
 
 			if (!clipper.add_path(path, clipper_lib::ptsubject, true)) {
@@ -453,11 +453,11 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		long long clip_buffer = buffer * area / 256;
 
 		clipper_lib::path_t edge;
-		edge.push_back(clipper_lib::point(-clip_buffer, -clip_buffer));
-		edge.push_back(clipper_lib::point(area + clip_buffer, -clip_buffer));
-		edge.push_back(clipper_lib::point(area + clip_buffer, area + clip_buffer));
-		edge.push_back(clipper_lib::point(-clip_buffer, area + clip_buffer));
-		edge.push_back(clipper_lib::point(-clip_buffer, -clip_buffer));
+		edge.push_back(clipper_lib::mapbox_geometry_point(-clip_buffer, -clip_buffer));
+		edge.push_back(clipper_lib::mapbox_geometry_point(area + clip_buffer, -clip_buffer));
+		edge.push_back(clipper_lib::mapbox_geometry_point(area + clip_buffer, area + clip_buffer));
+		edge.push_back(clipper_lib::mapbox_geometry_point(-clip_buffer, area + clip_buffer));
+		edge.push_back(clipper_lib::mapbox_geometry_point(-clip_buffer, -clip_buffer));
 
 		clipper.add_path(edge, clipper_lib::ptclip, true);
 	}
