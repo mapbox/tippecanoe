@@ -10,7 +10,7 @@
 #include <limits.h>
 #include <sqlite3.h>
 #include "geometry.hpp"
-#include "clipper/clipper.hpp"
+#include "../wagyu/clipper/clipper.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
