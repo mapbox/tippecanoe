@@ -611,27 +611,48 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 			mapbox::geometry::linear_ring<long long> lr;
 
-			printf("adding %lu to %lu\n", i, j);
 			for (size_t k = i; k < j; k++) {
-				printf("%lu: %d %lld %lld\n", k, geom[k].op, geom[k].x, geom[k].y);
 				lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
 			}
 
 			if (lr.size() >= 3) {
 				wagyu.add_ring(lr);
-			} else {
-				printf("(not adding)\n");
 			}
 
 			i = j - 1;
 		}
 	}
 
-	printf("\n");
-
-	//wagyu.add_polygon(g.get<mapbox::geometry::polygon<long long>>());
 	std::vector<mapbox::geometry::polygon<long long>> result;
 	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
+
+    drawvec ret;
+
+    for (size_t i = 0; i < result.size(); i++) {
+        for (size_t j = 0; j < result[i].size(); j++) {
+            drawvec dv;
+
+            for (size_t k = 0; k < result[i][j].size(); k++) {
+                dv.push_back(draw(k == 0 ? VT_MOVETO : VT_LINETO, result[i][j][k].x, result[i][j][k].y));
+            }
+
+            if (dv.size() > 0 && (dv[0].x != dv[dv.size() - 1].x || dv[0].y != dv[dv.size() - 1].y)) {
+                dv.push_back(draw(VT_LINETO, dv[0].x, dv[0].y));
+            }
+
+            long double area = get_area(dv, 0, dv.size());
+
+            if ((j == 0 && area < 0) || (j != 0 && area > 0)) {
+                reverse_ring(dv, 0, dv.size());
+            }
+
+            for (size_t k = 0; k < dv.size(); k++) {
+                ret.push_back(dv[k]);
+            }
+        }
+    }
+
+    // return ret;
 
 	bool has_area = false;
 
