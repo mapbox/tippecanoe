@@ -477,6 +477,40 @@ static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
 	}
 }
 
+static void decode_rings(mapbox::geometry::polygon<long long> &t, std::vector<ring> &out) {
+	if (t.size() < 1) {
+		return;
+	}
+
+	// Supposedly outer ring
+
+	mapbox::geometry::linear_ring<long long> &p = t[0];
+	drawvec dv;
+	for (size_t i = 0; i < p.size(); i++) {
+		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].x, p[i].y));
+	}
+	if (p.size() > 0) {
+		dv.push_back(draw(VT_LINETO, p[0].x, p[0].y));
+	}
+	out.push_back(dv);
+
+	// Supposedly inner rings
+
+	for (int n = 1; n < t.size(); n++) {
+		mapbox::geometry::linear_ring<long long> &cp = t[n];
+		drawvec ring;
+		for (size_t i = 0; i < cp.size(); i++) {
+			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].x, cp[i].y));
+		}
+		if (cp.size() > 0) {
+			ring.push_back(draw(VT_LINETO, cp[0].x, cp[0].y));
+		}
+		out.push_back(ring);
+	}
+}
+
+static void decode_clipped(std::vector<ring> rings, drawvec &out);
+
 static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 	// The output of Clipper supposedly produces the outer rings
 	// as top level objects, with links to any inner-ring children
@@ -491,6 +525,29 @@ static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
 
 	std::vector<ring> rings;
 	decode_rings(t, rings);
+	decode_clipped(rings, out);
+}
+
+static void decode_clipped(std::vector<mapbox::geometry::polygon<long long>> &t, drawvec &out) {
+	// The output of Clipper supposedly produces the outer rings
+	// as top level objects, with links to any inner-ring children
+	// they may have, each of which then has links to any outer rings
+	// that it has, and so on. This doesn't actually work.
+
+	// So instead, we pull out all the rings, sort them by absolute area,
+	// and go through them, looking for the
+	// smallest parent that contains a point from it, since we are
+	// guaranteed that at least one point in the polygon is strictly
+	// inside its parent (not on one of its boundary lines).
+
+	std::vector<ring> rings;
+	for (size_t i = 0; i < t.size(); i++) {
+		decode_rings(t[i], rings);
+	}
+	decode_clipped(rings, out);
+}
+
+static void decode_clipped(std::vector<ring> rings, drawvec &out) {
 	std::sort(rings.begin(), rings.end());
 
 	for (size_t i = 0; i < rings.size(); i++) {
@@ -600,7 +657,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	mapbox::geometry::geometry<long long> g = from_drawvec(VT_POLYGON, geom);
 	mapbox::geometry::wagyu::clipper<long long> wagyu;
 
-	printf("[");
+	// printf("[");
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -614,19 +671,19 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 			mapbox::geometry::linear_ring<long long> lr;
 
 			if (i != 0) {
-				printf(",");
+				// printf(",");
 			}
-			printf("[");
+			// printf("[");
 
 			for (size_t k = i; k < j; k++) {
 				lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
 				if (k != i) {
-					printf(",");
+					// printf(",");
 				}
-				printf("[%lld,%lld]", geom[k].x, geom[k].y);
+				// printf("[%lld,%lld]", geom[k].x, geom[k].y);
 			}
 
-			printf("]");
+			// printf("]");
 
 			if (lr.size() >= 3) {
 				wagyu.add_ring(lr);
@@ -636,15 +693,17 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 	}
 
-	printf("]");
-
-	printf("\n\n\n\n\n");
-	fflush(stdout);
+	// printf("]");
+	// printf("\n\n\n\n\n");
+	// fflush(stdout);
 
 	std::vector<mapbox::geometry::polygon<long long>> result;
 	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
 
 	drawvec ret;
+
+	decode_clipped(result, ret);
+	return ret;
 
 	for (size_t i = 0; i < result.size(); i++) {
 		for (size_t j = 0; j < result[i].size(); j++) {
