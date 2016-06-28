@@ -1,6 +1,16 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <math.h>
 #include "projection.hpp"
+
+struct projection projections[] = {
+	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84"},
+	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857"},
+	{NULL, NULL},
+};
+
+struct projection *projection = &projections[0];
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
@@ -48,6 +58,16 @@ void epsg3857totile(double ix, double iy, int zoom, long long *x, long long *y) 
 	}
 }
 
+void tiletoepsg3857(long long ix, long long iy, int zoom, double *ox, double *oy) {
+	if (zoom != 0) {
+		ix <<= (32 - zoom);
+		iy <<= (32 - zoom);
+	}
+
+	*ox = (ix - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
+	*oy = ((1LL << 32) - 1 - iy - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
+}
+
 unsigned long long encode(unsigned int wx, unsigned int wy) {
 	unsigned long long out = 0;
 
@@ -70,5 +90,23 @@ void decode(unsigned long long index, unsigned *wx, unsigned *wy) {
 	for (i = 0; i < 32; i++) {
 		*wx |= ((index >> (64 - 2 * (i + 1) + 1)) & 1) << (32 - (i + 1));
 		*wy |= ((index >> (64 - 2 * (i + 1) + 0)) & 1) << (32 - (i + 1));
+	}
+}
+
+void set_projection_or_exit(const char *optarg) {
+	struct projection *p;
+	for (p = projections; p->name != NULL; p++) {
+		if (strcmp(p->name, optarg) == 0) {
+			projection = p;
+			break;
+		}
+		if (strcmp(p->alias, optarg) == 0) {
+			projection = p;
+			break;
+		}
+	}
+	if (p->name == NULL) {
+		fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
+		exit(EXIT_FAILURE);
 	}
 }
