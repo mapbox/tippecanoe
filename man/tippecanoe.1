@@ -410,3 +410,8 @@ If you decode an entire file, you get a nested \fB\fCFeatureCollection\fR identi
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.
+.SS Options
+.RS
+.IP \(bu 2
+\-t \fIprojection\fP: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+.RE

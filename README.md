@@ -351,3 +351,7 @@ If you decode an entire file, you get a nested `FeatureCollection` identifying e
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.
+
+### Options
+
+ * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).

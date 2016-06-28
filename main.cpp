@@ -1705,14 +1705,6 @@ static bool has_name(struct option *long_options, int *pl) {
 	return false;
 }
 
-struct projection projections[] = {
-	{"EPSG:4326", lonlat2tile, "urn:ogc:def:crs:OGC:1.3:CRS84"},
-	{"EPSG:3857", epsg3857totile, "urn:ogc:def:crs:EPSG::3857"},
-	{NULL, NULL},
-};
-
-struct projection *projection = &projections[0];
-
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -1987,23 +1979,9 @@ int main(int argc, char **argv) {
 			read_parallel = 1;
 			break;
 
-		case 's': {
-			struct projection *p;
-			for (p = projections; p->name != NULL; p++) {
-				if (strcmp(p->name, optarg) == 0) {
-					projection = p;
-					break;
-				}
-				if (strcmp(p->alias, optarg) == 0) {
-					projection = p;
-					break;
-				}
-			}
-			if (p->name == NULL) {
-				fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
-				exit(EXIT_FAILURE);
-			}
-		} break;
+		case 's':
+			set_projection_or_exit(optarg);
+			break;
 
 		default: {
 			int width = 7 + strlen(argv[0]);
