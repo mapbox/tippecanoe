@@ -1,4 +1,4 @@
-{ "type": "FeatureCollection", "properties": { "zoom": 11, "x": 328, "y": 791 }, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 11, "x": 328, "y": 791 }, "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 1, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "LINEARID": "1104485645649", "FULLNAME": "W Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -13612111.421538, 4555240.804753 ], [ -13612183.081252, 4555231.250125 ], [ -13612426.724279, 4555159.590410 ], [ -13612522.270565, 4555145.258468 ], [ -13612646.480736, 4555111.817268 ], [ -13612665.589993, 4555130.926525 ] ] } }
 ,

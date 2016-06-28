@@ -64,6 +64,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	if (describe) {
 		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+
+		if (projection != projections) {
+			printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
+			printq(projection->alias);
+			printf(" } }");
+		}
 	}
 
 	printf(", \"features\": [\n");

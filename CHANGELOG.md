@@ -1,3 +1,7 @@
+## 1.12.2
+
+* Add ability to specify a projection to tippecanoe-decode
+
 ## 1.12.1
 
 * Fix incorrect tile layer version numbers in tile-join output
