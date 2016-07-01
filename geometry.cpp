@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <stack>
+#include <map>
 #include <vector>
 #include <algorithm>
 #include <cstdio>
@@ -405,7 +406,134 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
+std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
+	bool again = true;
+
+	while (again) {
+		again = false;
+
+		std::multimap<long long, size_t> starts;
+		std::multimap<long long, size_t> ends;
+		std::vector<long long> transitions;
+		std::set<size_t> active;
+
+		for (size_t i = 0; i < segments.size(); i++) {
+			long long top, bottom;
+
+			if (segments[i][0].y < segments[i][1].y) {
+				top = segments[i][0].y;
+				bottom = segments[i][1].y;
+			} else {
+				top = segments[i][1].y;
+				bottom = segments[i][0].y;
+			}
+
+			starts.insert(std::pair<const long long, size_t>(top, i));
+			ends.insert(std::pair<const long long, size_t>(bottom, i));
+
+			transitions.push_back(top);
+			transitions.push_back(bottom);
+		}
+
+		std::sort(transitions.begin(), transitions.end());
+
+		for (size_t i = 0; i < transitions.size(); i++) {
+			while (i + 1 < transitions.size() && transitions[i + 1] == transitions[i]) {
+				i++;
+			}
+
+			auto st = starts.equal_range(transitions[i]);
+			for (std::multimap<long long, size_t>::iterator it = st.first; it != st.second; ++it) {
+				active.insert(it->second);
+			}
+
+			std::multimap<long long, size_t> h_starts;
+			std::multimap<long long, size_t> h_ends;
+			std::vector<long long> h_transitions;
+			std::set<size_t> h_active;
+
+			for (std::set<size_t>::iterator it = active.begin(); it != active.end(); ++it) {
+				long long left, right;
+
+				if (segments[*it][0].x < segments[*it][1].x) {
+					left = segments[*it][0].x;
+					right = segments[*it][1].x;
+				} else {
+					left = segments[*it][1].x;
+					right = segments[*it][0].x;
+				}
+
+				h_starts.insert(std::pair<const long long, size_t>(left, *it));
+				h_ends.insert(std::pair<const long long, size_t>(right, *it));
+
+				h_transitions.push_back(left);
+				h_transitions.push_back(right);
+			}
+
+			std::sort(h_transitions.begin(), h_transitions.end());
+
+			for (size_t j = 0; j < h_transitions.size(); j++) {
+				while (j + 1 < h_transitions.size() && h_transitions[j + 1] == h_transitions[j]) {
+					j++;
+				}
+
+				auto hst = h_starts.equal_range(h_transitions[j]);
+				for (std::multimap<long long, size_t>::iterator hit = hst.first; hit != hst.second; ++hit) {
+					h_active.insert(hit->second);
+				}
+
+				if (h_active.size() > 1) {
+					printf("at %lld %lld: ", transitions[i], h_transitions[j]);
+					for (std::set<size_t>::iterator hit = h_active.begin(); hit != h_active.end(); ++hit) {
+						printf("%lu ", *hit);
+					}
+					printf("\n");
+				}
+
+				auto hen = h_ends.equal_range(h_transitions[j]);
+				for (std::multimap<long long, size_t>::iterator hit = hen.first; hit != hen.second; ++hit) {
+					h_active.erase(hit->second);
+				}
+			}
+
+			auto en = ends.equal_range(transitions[i]);
+			for (std::multimap<long long, size_t>::iterator it = en.first; it != en.second; ++it) {
+				active.erase(it->second);
+			}
+		}
+	}
+
+	printf("---\n");
+
+	return segments;
+}
+
+drawvec clean_polygon(drawvec &geom) {
+	std::vector<drawvec> segments;
+
+	// Note that this assumes that polygons are closed.
+	// If they do not duplicate the last point, the last
+	// segment will need to be added explicitly.
+
+	for (size_t i = 1; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO) {
+			if (geom[i].x != geom[i - 1].x || geom[i].y != geom[i - 1].y) {
+				drawvec dv;
+				dv.push_back(geom[i - 1]);
+				dv.push_back(geom[i]);
+				segments.push_back(dv);
+			}
+		}
+	}
+
+	segments = intersect_segments(segments);
+
+	return drawvec();
+}
+
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+	return clean_polygon(geom);
+
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	bool has_area = false;
