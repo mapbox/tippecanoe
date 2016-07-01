@@ -406,6 +406,28 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
+void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again, std::set<std::pair<size_t, size_t>> &tried) {
+	if (tried.count(std::pair<size_t, size_t>(a, b)) != 0) {
+		return;
+	}
+	tried.insert(std::pair<size_t, size_t>(a, b));
+
+	long long ccw = segments[a][0].x * segments[a][1].y +
+			segments[a][1].x * segments[b][0].y +
+			segments[b][0].x * segments[a][0].y -
+			segments[a][0].x * segments[b][0].y -
+			segments[a][1].x * segments[a][0].y -
+			segments[b][0].x * segments[a][1].y;
+
+	if (ccw == 0) {
+		printf("intersect %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
+		       segments[a][0].x, segments[a][0].y,
+		       segments[a][1].x, segments[a][1].y,
+		       segments[b][0].x, segments[b][0].y,
+		       segments[b][1].x, segments[b][1].y);
+	}
+}
+
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
 
@@ -416,6 +438,8 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		std::multimap<long long, size_t> ends;
 		std::vector<long long> transitions;
 		std::set<size_t> active;
+
+		std::set<std::pair<size_t, size_t>> tried;
 
 		for (size_t i = 0; i < segments.size(); i++) {
 			long long top, bottom;
@@ -483,11 +507,17 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 				}
 
 				if (h_active.size() > 1) {
-					printf("at %lld %lld: ", transitions[i], h_transitions[j]);
+					std::vector<size_t> tocheck;
+
 					for (std::set<size_t>::iterator hit = h_active.begin(); hit != h_active.end(); ++hit) {
-						printf("%lu ", *hit);
+						tocheck.push_back(*hit);
 					}
-					printf("\n");
+
+					for (size_t ii = 0; ii < tocheck.size(); ii++) {
+						for (size_t jj = ii + 1; jj < tocheck.size(); jj++) {
+							check_intersection(segments, ii, jj, again, tried);
+						}
+					}
 				}
 
 				auto hen = h_ends.equal_range(h_transitions[j]);
@@ -502,8 +532,6 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			}
 		}
 	}
-
-	printf("---\n");
 
 	return segments;
 }
