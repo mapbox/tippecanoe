@@ -406,12 +406,8 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
-void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again, std::set<std::pair<size_t, size_t>> &tried) {
-	if (tried.count(std::pair<size_t, size_t>(a, b)) != 0) {
-		return;
-	}
-	tried.insert(std::pair<size_t, size_t>(a, b));
-
+void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again) {
+	// http://www.cpsc.ucalgary.ca/~marina/papers/Segment_intersection.ps
 	long long ccw = segments[a][0].x * segments[a][1].y +
 			segments[a][1].x * segments[b][0].y +
 			segments[b][0].x * segments[a][0].y -
@@ -439,7 +435,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		std::vector<long long> transitions;
 		std::set<size_t> active;
 
-		std::set<std::pair<size_t, size_t>> tried;
+		std::set<std::pair<size_t, size_t>> possible;
 
 		for (size_t i = 0; i < segments.size(); i++) {
 			long long top, bottom;
@@ -515,7 +511,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 
 					for (size_t ii = 0; ii < tocheck.size(); ii++) {
 						for (size_t jj = ii + 1; jj < tocheck.size(); jj++) {
-							check_intersection(segments, ii, jj, again, tried);
+							possible.insert(std::pair<size_t, size_t>(ii, jj));
 						}
 					}
 				}
@@ -530,6 +526,10 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			for (std::multimap<long long, size_t>::iterator it = en.first; it != en.second; ++it) {
 				active.erase(it->second);
 			}
+		}
+
+		for (auto it = possible.begin(); it != possible.end(); ++it) {
+			check_intersection(segments, it->first, it->second, again);
 		}
 	}
 
