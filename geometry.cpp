@@ -406,21 +406,53 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again) {
-	// http://www.cpsc.ucalgary.ca/~marina/papers/Segment_intersection.ps
-	long long ccw = segments[a][0].x * segments[a][1].y +
+	long long s10_x = segments[a][1].x - segments[a][0].x;
+	long long s10_y = segments[a][1].y - segments[a][0].y;
+	long long s32_x = segments[b][1].x - segments[b][0].x;
+	long long s32_y = segments[b][1].y - segments[b][0].y;
+
+	long long denom = s10_x * s32_y - s32_x * s10_y;
+
+	if (denom == 0) {
+		// They are parallel or collinear. Find out if they are collinear.
+		// http://www.cpsc.ucalgary.ca/~marina/papers/Segment_intersection.ps
+
+		long long ccw =
+			segments[a][0].x * segments[a][1].y +
 			segments[a][1].x * segments[b][0].y +
 			segments[b][0].x * segments[a][0].y -
 			segments[a][0].x * segments[b][0].y -
 			segments[a][1].x * segments[a][0].y -
 			segments[b][0].x * segments[a][1].y;
 
-	if (ccw == 0) {
-		printf("intersect %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
-		       segments[a][0].x, segments[a][0].y,
-		       segments[a][1].x, segments[a][1].y,
-		       segments[b][0].x, segments[b][0].y,
-		       segments[b][1].x, segments[b][1].y);
+		if (ccw == 0) {
+			printf("collinear %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
+			       segments[a][0].x, segments[a][0].y,
+			       segments[a][1].x, segments[a][1].y,
+			       segments[b][0].x, segments[b][0].y,
+			       segments[b][1].x, segments[b][1].y);
+		}
+	} else {
+		// Neither parallel nor collinear, so may intersect at a single point
+
+		long long s02_x = segments[a][0].x - segments[b][0].x;
+		long long s02_y = segments[a][0].y - segments[b][0].y;
+
+		double s = (s10_x * s02_y - s10_y * s02_x) / (long double) denom;
+		double t = (s32_x * s02_y - s32_y * s02_x) / (long double) denom;
+
+		if ((t >= 0 && t <= 1 && s > 0 && s < 1) ||
+		    (t > 0 && t < 1 && s >= 0 && s <= 1)) {
+			printf("intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
+			       segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
+			       segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
+			       segments[a][0].x, segments[a][0].y,
+			       segments[a][1].x, segments[a][1].y,
+			       segments[b][0].x, segments[b][0].y,
+			       segments[b][1].x, segments[b][1].y);
+		}
 	}
 }
 
