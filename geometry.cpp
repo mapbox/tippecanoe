@@ -433,6 +433,50 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			       segments[a][1].x, segments[a][1].y,
 			       segments[b][0].x, segments[b][0].y,
 			       segments[b][1].x, segments[b][1].y);
+
+			if (segments[a][0].x == segments[a][1].x) {
+				// Vertical
+
+				if (segments[b][0].y > segments[a][0].y && segments[b][0].y < segments[a][1].y) {
+					// B0 is in A
+					again = true;
+					drawvec dv;
+					dv.push_back(segments[b][0]);
+					dv.push_back(segments[a][1]);
+					segments.push_back(dv);
+					segments[a][1] = segments[b][0];
+					printf("split vertical\n");
+				} else if (segments[b][1].y > segments[a][0].y && segments[b][1].y < segments[a][1].y) {
+					// B1 is in A
+					again = true;
+					drawvec dv;
+					dv.push_back(segments[b][1]);
+					dv.push_back(segments[a][1]);
+					segments.push_back(dv);
+					segments[a][1] = segments[b][1];
+					printf("split vertical\n");
+				} else if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+					// A0 is in B
+					again = true;
+					drawvec dv;
+					dv.push_back(segments[a][0]);
+					dv.push_back(segments[b][1]);
+					segments.push_back(dv);
+					segments[b][1] = segments[a][0];
+					printf("split vertical\n");
+				} else if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+					// A1 is in B
+					again = true;
+					drawvec dv;
+					dv.push_back(segments[a][1]);
+					dv.push_back(segments[b][1]);
+					segments.push_back(dv);
+					segments[b][1] = segments[a][1];
+					printf("split vertical\n");
+				}
+			} else {
+				// Horizontal or diagonal
+			}
 		}
 	} else {
 		// Neither parallel nor collinear, so may intersect at a single point
@@ -445,6 +489,10 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 
 		if ((t >= 0 && t <= 1 && s > 0 && s < 1) ||
 		    (t > 0 && t < 1 && s >= 0 && s <= 1)) {
+			long long x = segments[a][0].x + t * s10_x;
+			long long y = segments[a][0].y + t * s10_y;
+			again = true;
+
 			printf("intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
 			       segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
 			       segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
@@ -452,6 +500,24 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			       segments[a][1].x, segments[a][1].y,
 			       segments[b][0].x, segments[b][0].y,
 			       segments[b][1].x, segments[b][1].y);
+
+			if (t > 0 && t < 1) {
+				// splitting a
+				drawvec dv;
+				dv.push_back(draw(VT_MOVETO, x, y));
+				dv.push_back(segments[a][1]);
+				segments.push_back(dv);
+				segments[a][1] = draw(VT_LINETO, x, y);
+			}
+
+			if (s > 0 && s < 1) {
+				// splitting b
+				drawvec dv;
+				dv.push_back(draw(VT_MOVETO, x, y));
+				dv.push_back(segments[b][1]);
+				segments.push_back(dv);
+				segments[b][1] = draw(VT_LINETO, x, y);
+			}
 		}
 	}
 }
@@ -562,6 +628,10 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);
+		}
+
+		if (again) {
+			printf("again!\n");
 		}
 	}
 
