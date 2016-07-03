@@ -28,6 +28,14 @@ struct draw {
 
 	draw() {
 	}
+
+	bool operator<(draw const &s) const {
+		if (y < s.y || (y == s.y && x < s.x)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 };
 
 typedef std::vector<draw> drawvec;

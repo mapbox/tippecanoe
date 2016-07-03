@@ -560,6 +560,13 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
 
+	printf("0 setlinewidth .5 .5 1 setrgbcolor\n");
+	for (size_t i = 0; i < segments.size(); i++) {
+		printf("%lld %lld moveto %lld %lld lineto stroke\n",
+		       segments[i][0].x, 4095 - segments[i][0].y,
+		       segments[i][1].x, 4095 - segments[i][1].y);
+	}
+
 	while (again) {
 		again = false;
 
@@ -673,7 +680,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		}
 	}
 
-	printf("0 setlinewidth\n");
+	printf("0 setlinewidth 0 setgray\n");
 	for (size_t i = 0; i < segments.size(); i++) {
 		printf("%lld %lld moveto %lld %lld lineto stroke\n",
 		       segments[i][0].x, 4095 - segments[i][0].y,
@@ -705,6 +712,23 @@ drawvec clean_polygon(drawvec &geom) {
 	}
 
 	segments = intersect_segments(segments);
+
+	// Sort for stable order between runs
+	std::sort(segments.begin(), segments.end());
+
+	std::multimap<std::pair<long long, long long>, size_t> paths;
+	for (size_t i = 0; i < segments.size(); i++) {
+		// Have to use temporaries because x and y are bitfields
+		long long x0 = segments[i][0].x;
+		long long y0 = segments[i][0].y;
+		long long x1 = segments[i][1].x;
+		long long y1 = segments[i][1].y;
+
+		std::pair<long long, long long> start(x0, y0);
+		std::pair<long long, long long> end(x1, y1);
+		paths.insert(std::pair<std::pair<long long, long long>, size_t>(start, i));
+		paths.insert(std::pair<std::pair<long long, long long>, size_t>(end, i));
+	}
 
 	return drawvec();
 }
