@@ -406,6 +406,40 @@ static void dump(drawvec &geom) {
 	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
+void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
+	again = true;
+	drawvec dv;
+	dv.push_back(segments[intermediate][which_end]);
+	dv.push_back(segments[into][1]);
+	segments.push_back(dv);
+	segments[into][1] = segments[intermediate][which_end];
+	fprintf(stderr, "split vertical\n");
+}
+
+void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
+	again = true;
+
+	long long x = segments[intermediate][which_end].x;
+	long long y = segments[intermediate][0].y +
+		      (segments[intermediate][which_end].x - segments[intermediate][0].x) *
+			      (segments[intermediate][1].y - segments[intermediate][0].y) /
+			      (segments[intermediate][1].x - segments[intermediate][0].x);
+	draw d(VT_LINETO, x, y);
+
+	fprintf(stderr, "split horizontal: %lld,%lld in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
+		d.x, d.y,
+		segments[intermediate][0].x, segments[intermediate][0].y,
+		segments[intermediate][1].x, segments[intermediate][1].y,
+		segments[into][0].x, segments[into][0].y,
+		segments[into][1].x, segments[into][1].y);
+
+	drawvec dv;
+	dv.push_back(d);
+	dv.push_back(segments[into][1]);
+	segments.push_back(dv);
+	segments[into][1] = d;
+}
+
 // http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again) {
 	long long s10_x = segments[a][1].x - segments[a][0].x;
@@ -428,54 +462,51 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			segments[b][0].x * segments[a][1].y;
 
 		if (ccw == 0) {
-			printf("collinear %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
+#if 0
+			fprintf(stderr, "collinear %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
 			       segments[a][0].x, segments[a][0].y,
 			       segments[a][1].x, segments[a][1].y,
 			       segments[b][0].x, segments[b][0].y,
 			       segments[b][1].x, segments[b][1].y);
+#endif
 
 			if (segments[a][0].x == segments[a][1].x) {
 				// Vertical
 
+				// All of these transformations preserve verticality so we can check multiple cases
 				if (segments[b][0].y > segments[a][0].y && segments[b][0].y < segments[a][1].y) {
 					// B0 is in A
-					again = true;
-					drawvec dv;
-					dv.push_back(segments[b][0]);
-					dv.push_back(segments[a][1]);
-					segments.push_back(dv);
-					segments[a][1] = segments[b][0];
-					printf("split vertical\n");
-				} else if (segments[b][1].y > segments[a][0].y && segments[b][1].y < segments[a][1].y) {
+					add_vertical(b, 0, a, segments, again);
+				}
+				if (segments[b][1].y > segments[a][0].y && segments[b][1].y < segments[a][1].y) {
 					// B1 is in A
-					again = true;
-					drawvec dv;
-					dv.push_back(segments[b][1]);
-					dv.push_back(segments[a][1]);
-					segments.push_back(dv);
-					segments[a][1] = segments[b][1];
-					printf("split vertical\n");
-				} else if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+					add_vertical(b, 1, a, segments, again);
+				}
+				if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
 					// A0 is in B
-					again = true;
-					drawvec dv;
-					dv.push_back(segments[a][0]);
-					dv.push_back(segments[b][1]);
-					segments.push_back(dv);
-					segments[b][1] = segments[a][0];
-					printf("split vertical\n");
-				} else if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+					add_vertical(a, 0, b, segments, again);
+				}
+				if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
 					// A1 is in B
-					again = true;
-					drawvec dv;
-					dv.push_back(segments[a][1]);
-					dv.push_back(segments[b][1]);
-					segments.push_back(dv);
-					segments[b][1] = segments[a][1];
-					printf("split vertical\n");
+					add_vertical(a, 1, b, segments, again);
 				}
 			} else {
 				// Horizontal or diagonal
+
+				// Don't check multiples, because rounding may corrupt collinearity
+				if (segments[b][0].x > segments[a][0].x && segments[b][0].x < segments[a][1].x) {
+					// B0 is in A
+					add_horizontal(b, 0, a, segments, again);
+				} else if (segments[b][1].x > segments[a][0].x && segments[b][1].x < segments[a][1].x) {
+					// B1 is in A
+					add_horizontal(b, 1, a, segments, again);
+				} else if (segments[a][0].x > segments[b][0].x && segments[a][0].x < segments[b][1].x) {
+					// A0 is in B
+					add_horizontal(a, 0, b, segments, again);
+				} else if (segments[a][0].x > segments[b][0].x && segments[a][0].x < segments[b][1].x) {
+					// A1 is in B
+					add_horizontal(a, 1, b, segments, again);
+				}
 			}
 		}
 	} else {
@@ -489,34 +520,38 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 
 		if ((t >= 0 && t <= 1 && s > 0 && s < 1) ||
 		    (t > 0 && t < 1 && s >= 0 && s <= 1)) {
-			long long x = segments[a][0].x + t * s10_x;
-			long long y = segments[a][0].y + t * s10_y;
+			long long x = round(segments[a][0].x + t * s10_x);
+			long long y = round(segments[a][0].y + t * s10_y);
 			again = true;
 
-			printf("intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
-			       segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
-			       segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
-			       segments[a][0].x, segments[a][0].y,
-			       segments[a][1].x, segments[a][1].y,
-			       segments[b][0].x, segments[b][0].y,
-			       segments[b][1].x, segments[b][1].y);
+			fprintf(stderr, "intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
+				segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
+				segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
+				segments[a][0].x, segments[a][0].y,
+				segments[a][1].x, segments[a][1].y,
+				segments[b][0].x, segments[b][0].y,
+				segments[b][1].x, segments[b][1].y);
 
 			if (t > 0 && t < 1) {
-				// splitting a
-				drawvec dv;
-				dv.push_back(draw(VT_MOVETO, x, y));
-				dv.push_back(segments[a][1]);
-				segments.push_back(dv);
-				segments[a][1] = draw(VT_LINETO, x, y);
+				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
+					// splitting a
+					drawvec dv;
+					dv.push_back(draw(VT_MOVETO, x, y));
+					dv.push_back(segments[a][1]);
+					segments.push_back(dv);
+					segments[a][1] = draw(VT_LINETO, x, y);
+				}
 			}
 
 			if (s > 0 && s < 1) {
-				// splitting b
-				drawvec dv;
-				dv.push_back(draw(VT_MOVETO, x, y));
-				dv.push_back(segments[b][1]);
-				segments.push_back(dv);
-				segments[b][1] = draw(VT_LINETO, x, y);
+				if ((x != segments[b][0].x || y != segments[b][0].y) && (x != segments[b][1].x || y != segments[b][1].y)) {
+					// splitting b
+					drawvec dv;
+					dv.push_back(draw(VT_MOVETO, x, y));
+					dv.push_back(segments[b][1]);
+					segments.push_back(dv);
+					segments[b][1] = draw(VT_LINETO, x, y);
+				}
 			}
 		}
 	}
@@ -609,7 +644,9 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 
 					for (size_t ii = 0; ii < tocheck.size(); ii++) {
 						for (size_t jj = ii + 1; jj < tocheck.size(); jj++) {
-							possible.insert(std::pair<size_t, size_t>(ii, jj));
+							if (tocheck[ii] < tocheck[jj]) {
+								possible.insert(std::pair<size_t, size_t>(tocheck[ii], tocheck[jj]));
+							}
 						}
 					}
 				}
@@ -626,13 +663,24 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			}
 		}
 
+		fprintf(stderr, "checking %lu with %lu\n", possible.size(), segments.size());
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);
 		}
 
 		if (again) {
-			printf("again!\n");
+			fprintf(stderr, "again!\n");
 		}
+	}
+
+	printf("0 setlinewidth\n");
+	for (size_t i = 0; i < segments.size(); i++) {
+		printf("%lld %lld moveto %lld %lld lineto stroke\n",
+		       segments[i][0].x, 4095 - segments[i][0].y,
+		       segments[i][1].x, 4095 - segments[i][1].y);
+		printf("%lld %lld .25 0 360 arc fill %lld %lld .25 0 360 arc fill\n",
+		       segments[i][0].x, 4095 - segments[i][0].y,
+		       segments[i][1].x, 4095 - segments[i][1].y);
 	}
 
 	return segments;
