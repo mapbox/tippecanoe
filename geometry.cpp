@@ -680,6 +680,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		}
 	}
 
+#if 0
 	printf("0 setlinewidth 0 setgray\n");
 	for (size_t i = 0; i < segments.size(); i++) {
 		printf("%lld %lld moveto %lld %lld lineto stroke\n",
@@ -689,6 +690,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		       segments[i][0].x, 4095 - segments[i][0].y,
 		       segments[i][1].x, 4095 - segments[i][1].y);
 	}
+#endif
 
 	return segments;
 }
@@ -716,18 +718,65 @@ drawvec clean_polygon(drawvec &geom) {
 	// Sort for stable order between runs
 	std::sort(segments.begin(), segments.end());
 
-	std::multimap<std::pair<long long, long long>, size_t> paths;
+	std::multimap<draw, size_t> paths;
 	for (size_t i = 0; i < segments.size(); i++) {
-		// Have to use temporaries because x and y are bitfields
-		long long x0 = segments[i][0].x;
-		long long y0 = segments[i][0].y;
-		long long x1 = segments[i][1].x;
-		long long y1 = segments[i][1].y;
+		paths.insert(std::pair<draw, size_t>(segments[i][0], i));
+		paths.insert(std::pair<draw, size_t>(segments[i][1], i));
+	}
 
-		std::pair<long long, long long> start(x0, y0);
-		std::pair<long long, long long> end(x1, y1);
-		paths.insert(std::pair<std::pair<long long, long long>, size_t>(start, i));
-		paths.insert(std::pair<std::pair<long long, long long>, size_t>(end, i));
+	for (size_t i = 0; i < segments.size(); i++) {
+		// fprintf(stderr, "doing segment %lu\n", i);
+
+		if (segments[i].size() > 0) {
+			drawvec ring;
+
+			ring.push_back(segments[i][0]);
+			ring.push_back(segments[i][1]);
+			segments[i].clear();
+
+			while (ring.size() > 1) {
+				auto match = paths.equal_range(ring[ring.size() - 1]);
+
+				bool unspiked = false;
+				// Look for spikes
+				for (auto mi = match.first; mi != match.second; ++mi) {
+					size_t m = mi->second;
+					// fprintf(stderr, "looking at match %lu\n", m);
+
+					if (segments[m].size() > 0 &&
+					    segments[m][0] == ring[ring.size() - 1] &&
+					    segments[m][1] == ring[ring.size() - 2]) {
+						fprintf(stderr, "%lu is a spike\n", m);
+						segments[m].clear();
+						ring.resize(ring.size() - 1);
+						unspiked = true;
+						break;
+					}
+				}
+
+				// fprintf(stderr, "done looking at spikes\n");
+
+				if (unspiked) {
+					// fprintf(stderr, "looping with size %lu\n", ring.size());
+					continue;
+				}
+
+				// XXX look for best continuation now
+
+				break;
+			}
+
+			// fprintf(stderr, "out of ring loop\n");
+
+			if (ring.size() > 1) {
+				printf("0 setlinewidth 0 setgray\n");
+				for (size_t j = 0; j < ring.size(); j++) {
+					printf("%lld %lld %s\n", ring[j].x, 4095 - ring[j].y,
+					       j == 0 ? "moveto" : "lineto");
+				}
+				printf("stroke\n");
+			}
+		}
 	}
 
 	return drawvec();

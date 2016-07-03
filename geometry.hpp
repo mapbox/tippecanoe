@@ -36,6 +36,10 @@ struct draw {
 			return false;
 		}
 	}
+
+	bool operator==(draw const &s) const {
+		return y == s.y && x == s.x;
+	}
 };
 
 typedef std::vector<draw> drawvec;
