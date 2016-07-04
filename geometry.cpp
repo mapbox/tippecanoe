@@ -729,14 +729,18 @@ drawvec clean_polygon(drawvec &geom) {
 	for (size_t i = 0; i < segments.size(); i++) {
 		// fprintf(stderr, "doing segment %lu\n", i);
 
+		std::map<draw, size_t> seen;
+
 		if (segments[i].size() > 0) {
 			drawvec ring;
 
 			ring.push_back(segments[i][0]);
+			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
 			ring.push_back(segments[i][1]);
+			seen.insert(std::pair<draw, size_t>(segments[i][1], 1));
 			segments[i].clear();
 
-			while (ring.size() > 1 && ring[0] != ring[ring.size() - 1]) {
+			while (ring.size() > 1) {
 				auto match = paths.equal_range(ring[ring.size() - 1]);
 
 				bool unspiked = false;
@@ -750,6 +754,7 @@ drawvec clean_polygon(drawvec &geom) {
 					    segments[m][1] == ring[ring.size() - 2]) {
 						fprintf(stderr, "%lu is a spike\n", m);
 						segments[m].clear();
+						seen.erase(ring[ring.size() - 1]);
 						ring.resize(ring.size() - 1);
 						unspiked = true;
 						break;
@@ -811,6 +816,39 @@ drawvec clean_polygon(drawvec &geom) {
 							ring.push_back(segments[ei->second][1]);
 							segments[ei->second].clear();
 							found_something = true;
+
+							auto where_seen = seen.find(ring[ring.size() - 1]);
+							if (where_seen != seen.end()) {
+								drawvec ring2;
+								size_t loop = where_seen->second;
+
+								// fprintf(stderr, "looped at %lu with %lld,%lld\n", loop, ring[ring.size() - 1].x, ring[ring.size() - 1].y);
+								// fprintf(stderr, "remove: ");
+
+								for (size_t j = loop; j < ring.size(); j++) {
+									ring2.push_back(ring[j]);
+									// fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
+								}
+								rings.push_back(ring2);
+								// fprintf(stderr, "\n");
+
+								ring.resize(loop + 1);
+								seen.clear();
+								for (size_t j = 0; j < ring.size(); j++) {
+									seen.insert(std::pair<draw, size_t>(ring[j], j));
+								}
+
+#if 0
+								fprintf(stderr, "leaving: ");
+								for (size_t j = 0; j < ring.size(); j++) {
+									fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
+								}
+								fprintf(stderr, "\n");
+#endif
+							} else {
+								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+							}
+
 							break;
 						}
 					}
@@ -826,16 +864,19 @@ drawvec clean_polygon(drawvec &geom) {
 			// fprintf(stderr, "out of ring loop\n");
 
 			if (ring.size() > 1) {
-				printf(".5 .setopacityalpha 0 setlinewidth 0 setgray newpath\n");
-				for (size_t j = 0; j < ring.size(); j++) {
-					printf("%lld %lld %s\n", ring[j].x, 4095 - ring[j].y,
-					       j == 0 ? "moveto" : "lineto");
-				}
-				printf("closepath fill\n");
-
 				rings.push_back(ring);
 			}
 		}
+	}
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		printf(".5 .setopacityalpha 0 setlinewidth newpath\n");
+		printf("%.3f %.3f %.3f setrgbcolor\n", (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0);
+		for (size_t j = 0; j < rings[i].size(); j++) {
+			printf("%lld %lld %s\n", rings[i][j].x, 4095 - rings[i][j].y,
+			       j == 0 ? "moveto" : "lineto");
+		}
+		printf("closepath fill\n");
 	}
 
 	return drawvec();
