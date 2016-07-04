@@ -40,6 +40,10 @@ struct draw {
 	bool operator==(draw const &s) const {
 		return y == s.y && x == s.x;
 	}
+
+	bool operator!=(draw const &s) const {
+		return y != s.y || x != s.x;
+	}
 };
 
 typedef std::vector<draw> drawvec;

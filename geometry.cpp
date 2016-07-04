@@ -724,6 +724,8 @@ drawvec clean_polygon(drawvec &geom) {
 		paths.insert(std::pair<draw, size_t>(segments[i][1], i));
 	}
 
+	std::vector<drawvec> rings;
+
 	for (size_t i = 0; i < segments.size(); i++) {
 		// fprintf(stderr, "doing segment %lu\n", i);
 
@@ -734,7 +736,7 @@ drawvec clean_polygon(drawvec &geom) {
 			ring.push_back(segments[i][1]);
 			segments[i].clear();
 
-			while (ring.size() > 1) {
+			while (ring.size() > 1 && ring[0] != ring[ring.size() - 1]) {
 				auto match = paths.equal_range(ring[ring.size() - 1]);
 
 				bool unspiked = false;
@@ -761,20 +763,77 @@ drawvec clean_polygon(drawvec &geom) {
 					continue;
 				}
 
-				// XXX look for best continuation now
+				draw prev = ring[ring.size() - 2];
+				draw here = ring[ring.size() - 1];
+				double found_something = false;
+				std::multimap<double, size_t> exits;
 
-				break;
+				for (auto mi = match.first; mi != match.second; ++mi) {
+					size_t m = mi->second;
+
+					double ang = atan2(prev.y - here.y, prev.x - here.x);
+
+					if (segments[m].size() > 0) {
+						draw next;
+
+						if (segments[m][0] == here) {
+							next = segments[m][1];
+						} else {
+							next = segments[m][0];
+						}
+
+						double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
+						if (ang2 < 0) {
+							ang2 += 2 * M_PI;
+						}
+
+						exits.insert(std::pair<double, size_t>(ang2, m));
+					}
+				}
+
+				int depth = 0;
+
+				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
+#if 0
+                    printf("exit from %lld,%lld to %lld,%lld: %lf is %lld,%lld to %lld,%lld\n",
+                           prev.x, prev.y, here.x, here.y,
+                           ei->first,
+                           segments[ei->second][0].x, segments[ei->second][0].y,
+                           segments[ei->second][1].x, segments[ei->second][1].y);
+#endif
+
+					if (segments[ei->second][1] == here) {
+						// Points inward
+						depth++;
+					} else {
+						depth--;
+						if (depth < 0) {
+							ring.push_back(segments[ei->second][1]);
+							segments[ei->second].clear();
+							found_something = true;
+							break;
+						}
+					}
+				}
+
+				if (!found_something) {
+					fprintf(stderr, "couldn't find a way out\n");
+					exit(EXIT_FAILURE);
+					break;
+				}
 			}
 
 			// fprintf(stderr, "out of ring loop\n");
 
 			if (ring.size() > 1) {
-				printf("0 setlinewidth 0 setgray\n");
+				printf(".5 .setopacityalpha 0 setlinewidth 0 setgray newpath\n");
 				for (size_t j = 0; j < ring.size(); j++) {
 					printf("%lld %lld %s\n", ring[j].x, 4095 - ring[j].y,
 					       j == 0 ? "moveto" : "lineto");
 				}
-				printf("stroke\n");
+				printf("closepath fill\n");
+
+				rings.push_back(ring);
 			}
 		}
 	}
