@@ -413,7 +413,7 @@ void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vecto
 	dv.push_back(segments[into][1]);
 	segments.push_back(dv);
 	segments[into][1] = segments[intermediate][which_end];
-	fprintf(stderr, "split vertical\n");
+	// fprintf(stderr, "split vertical\n");
 }
 
 void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
@@ -426,12 +426,14 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 			      (segments[intermediate][1].x - segments[intermediate][0].x);
 	draw d(VT_LINETO, x, y);
 
+#if 0
 	fprintf(stderr, "split horizontal: %lld,%lld in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
 		d.x, d.y,
 		segments[intermediate][0].x, segments[intermediate][0].y,
 		segments[intermediate][1].x, segments[intermediate][1].y,
 		segments[into][0].x, segments[into][0].y,
 		segments[into][1].x, segments[into][1].y);
+#endif
 
 	drawvec dv;
 	dv.push_back(d);
@@ -524,6 +526,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			long long y = round(segments[a][0].y + t * s10_y);
 			again = true;
 
+#if 0
 			fprintf(stderr, "intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
 				segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
 				segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
@@ -531,6 +534,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				segments[a][1].x, segments[a][1].y,
 				segments[b][0].x, segments[b][0].y,
 				segments[b][1].x, segments[b][1].y);
+#endif
 
 			if (t > 0 && t < 1) {
 				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
@@ -670,13 +674,13 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			}
 		}
 
-		fprintf(stderr, "checking %lu with %lu\n", possible.size(), segments.size());
+		// fprintf(stderr, "checking %lu with %lu\n", possible.size(), segments.size());
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);
 		}
 
 		if (again) {
-			fprintf(stderr, "again!\n");
+			// fprintf(stderr, "again!\n");
 		}
 	}
 
@@ -693,6 +697,117 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 #endif
 
 	return segments;
+}
+
+drawvec reassemble_rings(std::vector<drawvec> &orings) {
+	// Index points by ring so we can find out which points appear in only one ring
+	std::multimap<draw, size_t> point_to_ring;
+	for (size_t i = 0; i < orings.size(); i++) {
+		// -1 because the last point of each ring duplicates the first
+		for (size_t j = 0; j < orings[i].size() - 1; j++) {
+			if (j == 0) {
+				orings[i][j].op = VT_MOVETO;
+			} else {
+				orings[i][j].op = VT_LINETO;
+			}
+			point_to_ring.insert(std::pair<draw, size_t>(orings[i][j], i));
+		}
+	}
+
+	std::vector<ring> rings;
+
+	for (size_t i = 0; i < orings.size(); i++) {
+		ring r(orings[i]);
+		rings.push_back(r);
+	}
+	std::sort(rings.begin(), rings.end());
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		ssize_t unique_point = -1;
+
+		for (size_t k = 0; k < rings[i].data.size(); k++) {
+			if (point_to_ring.count(rings[i].data[k]) == 1) {
+				unique_point = k;
+				break;
+			}
+		}
+
+		if (unique_point < 0) {
+			fprintf(stderr, "Skipping ring with no unique point\n");
+
+			for (size_t k = 0; k < rings[i].data.size(); k++) {
+				fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
+			}
+
+			fprintf(stderr, "\n");
+			continue;
+		}
+
+		for (size_t j = i + 1; j < rings.size(); j++) {
+			if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[unique_point].x, rings[i].data[unique_point].y)) {
+				rings[i].parent = j;
+				rings[j].children.push_back(i);
+				break;
+			}
+		}
+	}
+
+	// Then reverse the winding order of any rings that turned out
+	// to actually be inner when they are outer, or vice versa.
+	// (A ring is outer if it has no parent or if its parent is
+	// an inner ring.)
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].parent < 0) {
+			if (rings[i].area < 0) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		} else {
+			if ((rings[i].area > 0) == (rings[rings[i].parent].area > 0)) {
+				rings[i].area = -rings[i].area;
+				reverse_ring(rings[i].data, 0, rings[i].data.size());
+			}
+		}
+	}
+
+	// Then run through the rings again, outputting each outer ring
+	// followed by its direct children, and checking to make sure
+	// there are no child rings whose parents weren't identified.
+
+	drawvec out;
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].area > 0) {
+#if 0
+			fprintf(stderr, "ring area %Lf at %lld\n", rings[i].area, (long long) out.size());
+#endif
+
+			for (size_t j = 0; j < rings[i].data.size(); j++) {
+				out.push_back(rings[i].data[j]);
+			}
+
+			for (size_t j = 0; j < rings[i].children.size(); j++) {
+#if 0
+				fprintf(stderr, "ring area %Lf at %lld\n", rings[rings[i].children[j]].area, (long long) out.size());
+#endif
+
+				for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
+					out.push_back(rings[rings[i].children[j]].data[k]);
+				}
+
+				rings[rings[i].children[j]].parent = -2;
+			}
+		} else if (rings[i].parent != -2) {
+			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
+		}
+	}
+
+	return out;
 }
 
 drawvec clean_polygon(drawvec &geom) {
@@ -752,7 +867,7 @@ drawvec clean_polygon(drawvec &geom) {
 					if (segments[m].size() > 0 &&
 					    segments[m][0] == ring[ring.size() - 1] &&
 					    segments[m][1] == ring[ring.size() - 2]) {
-						fprintf(stderr, "%lu is a spike\n", m);
+						// fprintf(stderr, "%lu is a spike\n", m);
 						segments[m].clear();
 						seen.erase(ring[ring.size() - 1]);
 						ring.resize(ring.size() - 1);
@@ -879,7 +994,7 @@ drawvec clean_polygon(drawvec &geom) {
 		printf("closepath fill\n");
 	}
 
-	return drawvec();
+	return reassemble_rings(rings);
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
