@@ -237,11 +237,13 @@ struct ring {
 	long double area;
 	long long parent;
 	std::vector<size_t> children;
+	int depth;
 
 	ring(drawvec &_data) {
 		data = _data;
 		area = get_area(_data, 0, _data.size());
 		parent = -1;
+		depth = -999;
 	}
 
 	bool operator<(const ring &o) const {
@@ -701,6 +703,19 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	return segments;
 }
 
+void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
+	rings[i].depth = depth;
+	// fprintf(stderr, "ring %lu depth is %i\n", i, depth);
+
+	for (size_t j = 0; j < rings[i].children.size(); j++) {
+		if (rings[rings[i].children[j]].area > 0) {
+			assign_depth(rings, rings[i].children[j], depth + 1);
+		} else {
+			assign_depth(rings, rings[i].children[j], depth - 1);
+		}
+	}
+}
+
 drawvec reassemble_rings(std::vector<drawvec> &orings) {
 	// Index points by ring so we can find out which points appear in only one ring
 	std::multimap<draw, size_t> point_to_ring;
@@ -734,33 +749,33 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 			}
 		}
 
-        double xx, yy;
+		double xx, yy;
 
 		if (unique_point >= 0) {
-            xx = rings[i].data[unique_point].x;
-            yy = rings[i].data[unique_point].y;
-        } else {
-            size_t count = rings[i].data.size() - 1;
-            xx = yy = 0;
+			xx = rings[i].data[unique_point].x;
+			yy = rings[i].data[unique_point].y;
+		} else {
+			size_t count = rings[i].data.size() - 1;
+			xx = yy = 0;
 
-            for (size_t k = 0; k < count; k++) {
-                xx += (double) rings[i].data[k].x / count;
-                yy += (double) rings[i].data[k].y / count;
-            }
+			for (size_t k = 0; k < count; k++) {
+				xx += (double) rings[i].data[k].x / count;
+				yy += (double) rings[i].data[k].y / count;
+			}
 
 			if (!pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
-                fprintf(stderr, "Skipping ring with no unique point, centroid %f,%f not within\n", xx, yy);
+				fprintf(stderr, "Skipping ring with no unique point, centroid %f,%f not within\n", xx, yy);
 
-                printf(".5 setlinewidth 1 .setopacityalpha 0 setgray\n");
-                for (size_t k = 0; k < rings[i].data.size(); k++) {
-                    printf("%lld %lld %s ", rings[i].data[k].x, 4095 - rings[i].data[k].y, k == 0 ? "moveto" : "lineto");
-                    fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
-                }
-                printf("stroke\n");
+				// printf(".5 setlinewidth 1 .setopacityalpha 0 setgray\n");
+				for (size_t k = 0; k < rings[i].data.size(); k++) {
+					// printf("%lld %lld %s ", rings[i].data[k].x, 4095 - rings[i].data[k].y, k == 0 ? "moveto" : "lineto");
+					fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
+				}
+				// printf("stroke\n");
 
-                fprintf(stderr, "\n");
-                continue;
-            }
+				fprintf(stderr, "\n");
+				continue;
+			}
 		}
 
 		for (size_t j = i + 1; j < rings.size(); j++) {
@@ -771,6 +786,8 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 			}
 		}
 	}
+
+#if 0
 
 	// Then reverse the winding order of any rings that turned out
 	// to actually be inner when they are outer, or vice versa.
@@ -793,37 +810,44 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 		}
 	}
 
-	// Then run through the rings again, outputting each outer ring
-	// followed by its direct children, and checking to make sure
-	// there are no child rings whose parents weren't identified.
+#endif
+
+	// Find all the outer rings with no parents, which are level 1.
+	// Follow their children down to assign a winding count to each.
+
+	for (size_t ii = rings.size(); ii > 0; ii--) {
+		size_t i = ii - 1;
+
+		if (rings[i].area > 0 && rings[i].parent < 0) {
+			assign_depth(rings, i, 1);
+		}
+	}
+
+	// Now output each ring with a depth of 1 that either has no parent
+	// or is the child of a ring with a depth of 0, followed by its children
+	// that have a depth of 0.
 
 	drawvec out;
 
 	for (size_t ii = rings.size(); ii > 0; ii--) {
 		size_t i = ii - 1;
 
-		if (rings[i].area > 0) {
-#if 0
-			fprintf(stderr, "ring area %Lf at %lld\n", rings[i].area, (long long) out.size());
-#endif
-
+		if (rings[i].depth == 1 &&
+		    (rings[i].parent < 0 || rings[rings[i].parent].depth == 0)) {
 			for (size_t j = 0; j < rings[i].data.size(); j++) {
 				out.push_back(rings[i].data[j]);
 			}
 
 			for (size_t j = 0; j < rings[i].children.size(); j++) {
-#if 0
-				fprintf(stderr, "ring area %Lf at %lld\n", rings[rings[i].children[j]].area, (long long) out.size());
-#endif
-
-				for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
-					out.push_back(rings[rings[i].children[j]].data[k]);
+				if (rings[rings[i].children[j]].depth == 0) {
+					// fprintf(stderr, "doing child with depth %i\n", rings[rings[i].children[j]].depth);
+					for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
+						out.push_back(rings[rings[i].children[j]].data[k]);
+					}
+				} else {
+					// fprintf(stderr, "skipping child with depth %i\n", rings[rings[i].children[j]].depth);
 				}
-
-				rings[rings[i].children[j]].parent = -2;
 			}
-		} else if (rings[i].parent != -2) {
-			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
 		}
 	}
 
@@ -1004,6 +1028,7 @@ drawvec clean_polygon(drawvec &geom) {
 		}
 	}
 
+#if 0
 	for (size_t i = 0; i < rings.size(); i++) {
 		printf(".1 .setopacityalpha 0 setlinewidth newpath\n");
 		printf("%.3f %.3f %.3f setrgbcolor\n", (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0);
@@ -1013,6 +1038,7 @@ drawvec clean_polygon(drawvec &geom) {
 		}
 		printf("closepath fill\n");
 	}
+#endif
 
 	return reassemble_rings(rings);
 }
