@@ -703,14 +703,14 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 	// Index points by ring so we can find out which points appear in only one ring
 	std::multimap<draw, size_t> point_to_ring;
 	for (size_t i = 0; i < orings.size(); i++) {
-		// -1 because the last point of each ring duplicates the first
-		for (size_t j = 0; j < orings[i].size() - 1; j++) {
+		for (size_t j = 0; j < orings[i].size(); j++) {
 			if (j == 0) {
 				orings[i][j].op = VT_MOVETO;
 			} else {
 				orings[i][j].op = VT_LINETO;
+				// skip 0 because the last point of each ring duplicates the first
+				point_to_ring.insert(std::pair<draw, size_t>(orings[i][j], i));
 			}
-			point_to_ring.insert(std::pair<draw, size_t>(orings[i][j], i));
 		}
 	}
 
@@ -1198,6 +1198,7 @@ drawvec close_poly(drawvec &geom) {
 			if (j - 1 > i) {
 				if (geom[j - 1].x != geom[i].x || geom[j - 1].y != geom[i].y) {
 					fprintf(stderr, "Internal error: polygon not closed\n");
+					exit(EXIT_FAILURE);
 				}
 			}
 
