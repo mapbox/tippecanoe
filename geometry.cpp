@@ -16,7 +16,7 @@
 #include "serial.hpp"
 #include "main.hpp"
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
+static int pnpoly(drawvec &vert, size_t start, size_t nvert, double testx, double testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
 drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, int detail, long long *bbox, unsigned initial_x, unsigned initial_y) {
@@ -564,12 +564,14 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
 
+#if 0
 	printf("0 setlinewidth .5 .5 1 setrgbcolor\n");
 	for (size_t i = 0; i < segments.size(); i++) {
 		printf("%lld %lld moveto %lld %lld lineto stroke\n",
 		       segments[i][0].x, 4095 - segments[i][0].y,
 		       segments[i][1].x, 4095 - segments[i][1].y);
 	}
+#endif
 
 	while (again) {
 		again = false;
@@ -732,19 +734,37 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 			}
 		}
 
-		if (unique_point < 0) {
-			fprintf(stderr, "Skipping ring with no unique point\n");
+        double xx, yy;
 
-			for (size_t k = 0; k < rings[i].data.size(); k++) {
-				fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
-			}
+		if (unique_point >= 0) {
+            xx = rings[i].data[unique_point].x;
+            yy = rings[i].data[unique_point].y;
+        } else {
+            size_t count = rings[i].data.size() - 1;
+            xx = yy = 0;
 
-			fprintf(stderr, "\n");
-			continue;
+            for (size_t k = 0; k < count; k++) {
+                xx += (double) rings[i].data[k].x / count;
+                yy += (double) rings[i].data[k].y / count;
+            }
+
+			if (!pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
+                fprintf(stderr, "Skipping ring with no unique point, centroid %f,%f not within\n", xx, yy);
+
+                printf(".5 setlinewidth 1 .setopacityalpha 0 setgray\n");
+                for (size_t k = 0; k < rings[i].data.size(); k++) {
+                    printf("%lld %lld %s ", rings[i].data[k].x, 4095 - rings[i].data[k].y, k == 0 ? "moveto" : "lineto");
+                    fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
+                }
+                printf("stroke\n");
+
+                fprintf(stderr, "\n");
+                continue;
+            }
 		}
 
 		for (size_t j = i + 1; j < rings.size(); j++) {
-			if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[unique_point].x, rings[i].data[unique_point].y)) {
+			if (pnpoly(rings[j].data, 0, rings[j].data.size(), xx, yy)) {
 				rings[i].parent = j;
 				rings[j].children.push_back(i);
 				break;
@@ -985,7 +1005,7 @@ drawvec clean_polygon(drawvec &geom) {
 	}
 
 	for (size_t i = 0; i < rings.size(); i++) {
-		printf(".5 .setopacityalpha 0 setlinewidth newpath\n");
+		printf(".1 .setopacityalpha 0 setlinewidth newpath\n");
 		printf("%.3f %.3f %.3f setrgbcolor\n", (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0);
 		for (size_t j = 0; j < rings[i].size(); j++) {
 			printf("%lld %lld %s\n", rings[i][j].x, 4095 - rings[i][j].y,
@@ -1097,7 +1117,7 @@ The name of W. Randolph Franklin may not be used to endorse or promote products 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+static int pnpoly(drawvec &vert, size_t start, size_t nvert, double testx, double testy) {
 	size_t i, j;
 	bool c = false;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
