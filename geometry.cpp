@@ -885,6 +885,24 @@ drawvec clean_polygon(drawvec &geom) {
 
 	std::vector<drawvec> rings;
 
+	// Look for spikes
+	for (size_t i = 0; i < segments.size(); i++) {
+		if (segments[i].size() > 0) {
+			auto match = paths.equal_range(segments[i][1]);
+			for (auto mi = match.first; mi != match.second; ++mi) {
+				size_t m = mi->second;
+
+				if (segments[m].size() > 0 &&
+				    segments[m][0] == segments[i][1] &&
+				    segments[m][1] == segments[i][0]) {
+					segments[m].clear();
+					segments[i].clear();
+					break;
+				}
+			}
+		}
+	}
+
 	for (size_t i = 0; i < segments.size(); i++) {
 		// fprintf(stderr, "doing segment %lu\n", i);
 
@@ -901,31 +919,6 @@ drawvec clean_polygon(drawvec &geom) {
 
 			while (ring.size() > 1) {
 				auto match = paths.equal_range(ring[ring.size() - 1]);
-
-				bool unspiked = false;
-				// Look for spikes
-				for (auto mi = match.first; mi != match.second; ++mi) {
-					size_t m = mi->second;
-					// fprintf(stderr, "looking at match %lu\n", m);
-
-					if (segments[m].size() > 0 &&
-					    segments[m][0] == ring[ring.size() - 1] &&
-					    segments[m][1] == ring[ring.size() - 2]) {
-						// fprintf(stderr, "%lu is a spike\n", m);
-						segments[m].clear();
-						seen.erase(ring[ring.size() - 1]);
-						ring.resize(ring.size() - 1);
-						unspiked = true;
-						break;
-					}
-				}
-
-				// fprintf(stderr, "done looking at spikes\n");
-
-				if (unspiked) {
-					// fprintf(stderr, "looping with size %lu\n", ring.size());
-					continue;
-				}
 
 				draw prev = ring[ring.size() - 2];
 				draw here = ring[ring.size() - 1];
