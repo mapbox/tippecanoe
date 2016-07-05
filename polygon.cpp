@@ -32,7 +32,7 @@ struct ring {
 		if (std::fabs(this->area) < std::fabs(o.area)) {
 			return true;
 		} else {
-			return false;
+			return this->data < o.data;
 		}
 	}
 };
