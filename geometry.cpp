@@ -716,6 +716,42 @@ void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
 	}
 }
 
+std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
+	std::vector<drawvec> out;
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		drawvec outring;
+
+		if (rings[i].size() < 4) {
+			continue;
+		}
+
+		// Exclude duplicated last point
+		size_t len = rings[i].size() - 1;
+		for (size_t j = 0; j < len; j++) {
+			long long ccw =
+				rings[i][(j + len - 1) % len].x * rings[i][(j + len - 0) % len].y +
+				rings[i][(j + len - 0) % len].x * rings[i][(j + len + 1) % len].y +
+				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 1) % len].y -
+				rings[i][(j + len - 1) % len].x * rings[i][(j + len + 1) % len].y -
+				rings[i][(j + len - 0) % len].x * rings[i][(j + len - 1) % len].y -
+				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 0) % len].y;
+
+			if (ccw != 0) {
+				outring.push_back(rings[i][j]);
+			}
+		}
+
+		// Don't include rings that have degenerated away
+		if (outring.size() >= 3) {
+			outring.push_back(outring[0]);
+			out.push_back(outring);
+		}
+	}
+
+	return out;
+}
+
 drawvec reassemble_rings(std::vector<drawvec> &orings) {
 	// Index points by ring so we can find out which points appear in only one ring
 	std::multimap<draw, size_t> point_to_ring;
@@ -1032,6 +1068,8 @@ drawvec clean_polygon(drawvec &geom) {
 		printf("closepath fill\n");
 	}
 #endif
+
+	rings = remove_collinear(rings);
 
 	return reassemble_rings(rings);
 }
