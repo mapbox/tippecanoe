@@ -155,11 +155,9 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 		double s = (s10_x * s02_y - s10_y * s02_x) / (long double) denom;
 		double t = (s32_x * s02_y - s32_y * s02_x) / (long double) denom;
 
-		if ((t >= 0 && t <= 1 && s > 0 && s < 1) ||
-		    (t > 0 && t < 1 && s >= 0 && s <= 1)) {
+		if (t >= 0 && t <= 1 && s >= 0 && s <= 1) {
 			long long x = round(segments[a][0].x + t * s10_x);
 			long long y = round(segments[a][0].y + t * s10_y);
-			again = true;
 
 			if (t > 0 && t < 1) {
 				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
@@ -169,6 +167,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 					dv.push_back(segments[a][1]);
 					segments.push_back(dv);
 					segments[a][1] = draw(VT_LINETO, x, y);
+					again = true;
 				}
 			}
 
@@ -180,6 +179,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 					dv.push_back(segments[b][1]);
 					segments.push_back(dv);
 					segments[b][1] = draw(VT_LINETO, x, y);
+					again = true;
 				}
 			}
 		}
@@ -312,42 +312,6 @@ void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
 	}
 }
 
-std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
-	std::vector<drawvec> out;
-
-	for (size_t i = 0; i < rings.size(); i++) {
-		drawvec outring;
-
-		if (rings[i].size() < 4) {
-			continue;
-		}
-
-		// Exclude duplicated last point
-		size_t len = rings[i].size() - 1;
-		for (size_t j = 0; j < len; j++) {
-			long long ccw =
-				rings[i][(j + len - 1) % len].x * rings[i][(j + len - 0) % len].y +
-				rings[i][(j + len - 0) % len].x * rings[i][(j + len + 1) % len].y +
-				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 1) % len].y -
-				rings[i][(j + len - 1) % len].x * rings[i][(j + len + 1) % len].y -
-				rings[i][(j + len - 0) % len].x * rings[i][(j + len - 1) % len].y -
-				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 0) % len].y;
-
-			if (ccw != 0) {
-				outring.push_back(rings[i][j]);
-			}
-		}
-
-		// Don't include rings that have degenerated away
-		if (outring.size() >= 3) {
-			outring.push_back(outring[0]);
-			out.push_back(outring);
-		}
-	}
-
-	return out;
-}
-
 drawvec reassemble_rings(std::vector<drawvec> &orings) {
 	// Index points by ring so we can find out which points appear in only one ring
 	std::multimap<draw, size_t> point_to_ring;
@@ -443,6 +407,42 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 					}
 				}
 			}
+		}
+	}
+
+	return out;
+}
+
+std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
+	std::vector<drawvec> out;
+
+	for (size_t i = 0; i < rings.size(); i++) {
+		drawvec outring;
+
+		if (rings[i].size() < 4) {
+			continue;
+		}
+
+		// Exclude duplicated last point
+		size_t len = rings[i].size() - 1;
+		for (size_t j = 0; j < len; j++) {
+			long long ccw =
+				rings[i][(j + len - 1) % len].x * rings[i][(j + len - 0) % len].y +
+				rings[i][(j + len - 0) % len].x * rings[i][(j + len + 1) % len].y +
+				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 1) % len].y -
+				rings[i][(j + len - 1) % len].x * rings[i][(j + len + 1) % len].y -
+				rings[i][(j + len - 0) % len].x * rings[i][(j + len - 1) % len].y -
+				rings[i][(j + len + 1) % len].x * rings[i][(j + len - 0) % len].y;
+
+			if (ccw != 0) {
+				outring.push_back(rings[i][j]);
+			}
+		}
+
+		// Don't include rings that have degenerated away
+		if (outring.size() >= 3) {
+			outring.push_back(outring[0]);
+			out.push_back(outring);
 		}
 	}
 
