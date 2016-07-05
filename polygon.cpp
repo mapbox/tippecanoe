@@ -31,8 +31,10 @@ struct ring {
 	bool operator<(const ring &o) const {
 		if (std::fabs(this->area) < std::fabs(o.area)) {
 			return true;
-		} else {
+		} else if (std::fabs(this->area) == std::fabs(o.area)) {
 			return this->data < o.data;
+		} else {
+			return false;
 		}
 	}
 };
