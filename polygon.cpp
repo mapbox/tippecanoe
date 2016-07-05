@@ -66,7 +66,6 @@ void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vecto
 	dv.push_back(segments[into][1]);
 	segments.push_back(dv);
 	segments[into][1] = segments[intermediate][which_end];
-	// fprintf(stderr, "split vertical\n");
 }
 
 void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
@@ -79,15 +78,6 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 			      (segments[intermediate][1].x - segments[intermediate][0].x);
 	draw d(VT_LINETO, x, y);
 
-#if 0
-	fprintf(stderr, "split horizontal: %lld,%lld in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
-		d.x, d.y,
-		segments[intermediate][0].x, segments[intermediate][0].y,
-		segments[intermediate][1].x, segments[intermediate][1].y,
-		segments[into][0].x, segments[into][0].y,
-		segments[into][1].x, segments[into][1].y);
-#endif
-
 	drawvec dv;
 	dv.push_back(d);
 	dv.push_back(segments[into][1]);
@@ -95,13 +85,13 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 	segments[into][1] = d;
 }
 
-// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again) {
 	long long s10_x = segments[a][1].x - segments[a][0].x;
 	long long s10_y = segments[a][1].y - segments[a][0].y;
 	long long s32_x = segments[b][1].x - segments[b][0].x;
 	long long s32_y = segments[b][1].y - segments[b][0].y;
 
+	// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 	long long denom = s10_x * s32_y - s32_x * s10_y;
 
 	if (denom == 0) {
@@ -117,14 +107,6 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			segments[b][0].x * segments[a][1].y;
 
 		if (ccw == 0) {
-#if 0
-			fprintf(stderr, "collinear %lld: %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n", ccw,
-			       segments[a][0].x, segments[a][0].y,
-			       segments[a][1].x, segments[a][1].y,
-			       segments[b][0].x, segments[b][0].y,
-			       segments[b][1].x, segments[b][1].y);
-#endif
-
 			if (segments[a][0].x == segments[a][1].x) {
 				// Vertical
 
@@ -179,16 +161,6 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			long long y = round(segments[a][0].y + t * s10_y);
 			again = true;
 
-#if 0
-			fprintf(stderr, "intersection %f,%f (%f) / %f,%f (%f) in %lld,%lld to %lld,%lld and %lld,%lld to %lld,%lld\n",
-				segments[a][0].x + t * s10_x, segments[a][0].y + t * s10_y, t,
-				segments[b][0].x + s * s32_x, segments[b][0].y + s * s32_y, s,
-				segments[a][0].x, segments[a][0].y,
-				segments[a][1].x, segments[a][1].y,
-				segments[b][0].x, segments[b][0].y,
-				segments[b][1].x, segments[b][1].y);
-#endif
-
 			if (t > 0 && t < 1) {
 				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
 					// splitting a
@@ -216,15 +188,6 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
-
-#if 0
-	printf("0 setlinewidth .5 .5 1 setrgbcolor\n");
-	for (size_t i = 0; i < segments.size(); i++) {
-		printf("%lld %lld moveto %lld %lld lineto stroke\n",
-		       segments[i][0].x, 4095 - segments[i][0].y,
-		       segments[i][1].x, 4095 - segments[i][1].y);
-	}
-#endif
 
 	while (again) {
 		again = false;
@@ -329,34 +292,16 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			}
 		}
 
-		// fprintf(stderr, "checking %lu with %lu\n", possible.size(), segments.size());
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);
 		}
-
-		if (again) {
-			// fprintf(stderr, "again!\n");
-		}
 	}
-
-#if 0
-	printf("0 setlinewidth 0 setgray\n");
-	for (size_t i = 0; i < segments.size(); i++) {
-		printf("%lld %lld moveto %lld %lld lineto stroke\n",
-		       segments[i][0].x, 4095 - segments[i][0].y,
-		       segments[i][1].x, 4095 - segments[i][1].y);
-		printf("%lld %lld .25 0 360 arc fill %lld %lld .25 0 360 arc fill\n",
-		       segments[i][0].x, 4095 - segments[i][0].y,
-		       segments[i][1].x, 4095 - segments[i][1].y);
-	}
-#endif
 
 	return segments;
 }
 
 void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
 	rings[i].depth = depth;
-	// fprintf(stderr, "ring %lu depth is %i\n", i, depth);
 
 	for (size_t j = 0; j < rings[i].children.size(); j++) {
 		if (rings[rings[i].children[j]].area > 0) {
@@ -452,15 +397,6 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 
 			if (!pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
 				fprintf(stderr, "Skipping ring with no unique point, centroid %f,%f not within\n", xx, yy);
-
-				// printf(".5 setlinewidth 1 .setopacityalpha 0 setgray\n");
-				for (size_t k = 0; k < rings[i].data.size(); k++) {
-					// printf("%lld %lld %s ", rings[i].data[k].x, 4095 - rings[i].data[k].y, k == 0 ? "moveto" : "lineto");
-					fprintf(stderr, "%lld,%lld(%lu) ", rings[i].data[k].x, rings[i].data[k].y, point_to_ring.count(rings[i].data[k]));
-				}
-				// printf("stroke\n");
-
-				fprintf(stderr, "\n");
 				continue;
 			}
 		}
@@ -502,12 +438,9 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 
 			for (size_t j = 0; j < rings[i].children.size(); j++) {
 				if (rings[rings[i].children[j]].depth == 0) {
-					// fprintf(stderr, "doing child with depth %i\n", rings[rings[i].children[j]].depth);
 					for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
 						out.push_back(rings[rings[i].children[j]].data[k]);
 					}
-				} else {
-					// fprintf(stderr, "skipping child with depth %i\n", rings[rings[i].children[j]].depth);
 				}
 			}
 		}
@@ -566,8 +499,6 @@ drawvec clean_polygon(drawvec &geom) {
 	}
 
 	for (size_t i = 0; i < segments.size(); i++) {
-		// fprintf(stderr, "doing segment %lu\n", i);
-
 		std::map<draw, size_t> seen;
 
 		if (segments[i].size() > 0) {
@@ -613,14 +544,6 @@ drawvec clean_polygon(drawvec &geom) {
 				int depth = 0;
 
 				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
-#if 0
-                    printf("exit from %lld,%lld to %lld,%lld: %lf is %lld,%lld to %lld,%lld\n",
-                           prev.x, prev.y, here.x, here.y,
-                           ei->first,
-                           segments[ei->second][0].x, segments[ei->second][0].y,
-                           segments[ei->second][1].x, segments[ei->second][1].y);
-#endif
-
 					if (segments[ei->second][1] == here) {
 						// Points inward
 						depth++;
@@ -636,29 +559,16 @@ drawvec clean_polygon(drawvec &geom) {
 								drawvec ring2;
 								size_t loop = where_seen->second;
 
-								// fprintf(stderr, "looped at %lu with %lld,%lld\n", loop, ring[ring.size() - 1].x, ring[ring.size() - 1].y);
-								// fprintf(stderr, "remove: ");
-
 								for (size_t j = loop; j < ring.size(); j++) {
 									ring2.push_back(ring[j]);
-									// fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
 								}
 								rings.push_back(ring2);
-								// fprintf(stderr, "\n");
 
 								ring.resize(loop + 1);
 								seen.clear();
 								for (size_t j = 0; j < ring.size(); j++) {
 									seen.insert(std::pair<draw, size_t>(ring[j], j));
 								}
-
-#if 0
-								fprintf(stderr, "leaving: ");
-								for (size_t j = 0; j < ring.size(); j++) {
-									fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
-								}
-								fprintf(stderr, "\n");
-#endif
 							} else {
 								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 							}
@@ -675,25 +585,11 @@ drawvec clean_polygon(drawvec &geom) {
 				}
 			}
 
-			// fprintf(stderr, "out of ring loop\n");
-
 			if (ring.size() > 1) {
 				rings.push_back(ring);
 			}
 		}
 	}
-
-#if 0
-	for (size_t i = 0; i < rings.size(); i++) {
-		printf(".1 .setopacityalpha 0 setlinewidth newpath\n");
-		printf("%.3f %.3f %.3f setrgbcolor\n", (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0, (rand() % 1000) / 1000.0);
-		for (size_t j = 0; j < rings[i].size(); j++) {
-			printf("%lld %lld %s\n", rings[i][j].x, 4095 - rings[i][j].y,
-			       j == 0 ? "moveto" : "lineto");
-		}
-		printf("closepath fill\n");
-	}
-#endif
 
 	rings = remove_collinear(rings);
 
