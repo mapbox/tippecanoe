@@ -418,6 +418,7 @@ std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
 
 	for (size_t i = 0; i < rings.size(); i++) {
 		drawvec outring;
+		ssize_t best = -1;
 
 		if (rings[i].size() < 4) {
 			continue;
@@ -436,13 +437,23 @@ std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
 
 			if (ccw != 0) {
 				outring.push_back(rings[i][j]);
+
+				if (best < 0 || rings[i][j] < outring[best]) {
+					best = outring.size() - 1;
+				}
 			}
 		}
 
 		// Don't include rings that have degenerated away
 		if (outring.size() >= 3) {
-			outring.push_back(outring[0]);
-			out.push_back(outring);
+			drawvec outring2;
+
+			for (size_t j = 0; j < outring.size(); j++) {
+				outring2.push_back(outring[(j + best) % outring.size()]);
+			}
+
+			outring2.push_back(outring2[0]);
+			out.push_back(outring2);
 		}
 	}
 
