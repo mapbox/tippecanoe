@@ -18,7 +18,7 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
+all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join fuzz
 
 docs: man/tippecanoe.1
 

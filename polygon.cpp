@@ -112,37 +112,69 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			if (segments[a][0].x == segments[a][1].x) {
 				// Vertical
 
+				long long amin, amax, bmin, bmax;
+				if (segments[a][0].y < segments[a][1].y) {
+					amin = segments[a][0].y;
+					amax = segments[a][1].y;
+				} else {
+					amin = segments[a][1].y;
+					amax = segments[a][0].y;
+				}
+				if (segments[b][0].y < segments[b][1].y) {
+					bmin = segments[b][0].y;
+					bmax = segments[b][1].y;
+				} else {
+					bmin = segments[b][1].y;
+					bmax = segments[b][0].y;
+				}
+
 				// All of these transformations preserve verticality so we can check multiple cases
-				if (segments[b][0].y > segments[a][0].y && segments[b][0].y < segments[a][1].y) {
+				if (segments[b][0].y > amin && segments[b][0].y < amax) {
 					// B0 is in A
 					add_vertical(b, 0, a, segments, again);
 				}
-				if (segments[b][1].y > segments[a][0].y && segments[b][1].y < segments[a][1].y) {
+				if (segments[b][1].y > amin && segments[b][1].y < amax) {
 					// B1 is in A
 					add_vertical(b, 1, a, segments, again);
 				}
-				if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+				if (segments[a][0].y > bmin && segments[a][0].y < bmax) {
 					// A0 is in B
 					add_vertical(a, 0, b, segments, again);
 				}
-				if (segments[a][0].y > segments[b][0].y && segments[a][0].y < segments[b][1].y) {
+				if (segments[a][1].y > bmin && segments[a][1].y < bmax) {
 					// A1 is in B
 					add_vertical(a, 1, b, segments, again);
 				}
 			} else {
 				// Horizontal or diagonal
 
+				long long amin, amax, bmin, bmax;
+				if (segments[a][0].x < segments[a][1].x) {
+					amin = segments[a][0].x;
+					amax = segments[a][1].x;
+				} else {
+					amin = segments[a][1].x;
+					amax = segments[a][0].x;
+				}
+				if (segments[b][0].x < segments[b][1].x) {
+					bmin = segments[b][0].x;
+					bmax = segments[b][1].x;
+				} else {
+					bmin = segments[b][1].x;
+					bmax = segments[b][0].x;
+				}
+
 				// Don't check multiples, because rounding may corrupt collinearity
-				if (segments[b][0].x > segments[a][0].x && segments[b][0].x < segments[a][1].x) {
+				if (segments[b][0].x > amin && segments[b][0].x < amax) {
 					// B0 is in A
 					add_horizontal(b, 0, a, segments, again);
-				} else if (segments[b][1].x > segments[a][0].x && segments[b][1].x < segments[a][1].x) {
+				} else if (segments[b][1].x > amin && segments[b][1].x < amax) {
 					// B1 is in A
 					add_horizontal(b, 1, a, segments, again);
-				} else if (segments[a][0].x > segments[b][0].x && segments[a][0].x < segments[b][1].x) {
+				} else if (segments[a][0].x > bmin && segments[a][0].x < bmax) {
 					// A0 is in B
 					add_horizontal(a, 0, b, segments, again);
-				} else if (segments[a][0].x > segments[b][0].x && segments[a][0].x < segments[b][1].x) {
+				} else if (segments[a][1].x > bmin && segments[a][1].x < bmax) {
 					// A1 is in B
 					add_horizontal(a, 1, b, segments, again);
 				}
@@ -276,7 +308,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			subset.push_back(i);
 		}
 
-#if 1
+#if 0
 		partition(segments, subset, 0, possible);
 #else
 		std::multimap<long long, size_t> starts;
@@ -565,26 +597,84 @@ drawvec clean_polygon(drawvec &geom) {
 	// Look for spikes
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
+			double angle = atan2(segments[i][1].y - segments[i][0].y, segments[i][1].x - segments[i][0].x);
+
 			auto match = paths.equal_range(segments[i][1]);
+
+#if 0
+			for (auto mi = match.first; mi != match.second; ++mi) {
+				size_t m = mi->second;
+                fprintf(stderr, "%lu->%lu ", i, m);
+            }
+            fprintf(stderr, "\n");
+#endif
+
 			for (auto mi = match.first; mi != match.second; ++mi) {
 				size_t m = mi->second;
 
 				if (segments[m].size() > 0 &&
 				    segments[m][0] == segments[i][1] &&
 				    segments[m][1] == segments[i][0]) {
+#if 0
+                    fprintf(stderr, "remove spike %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld (%lu and %lu)\n",
+                        segments[i][0].x, segments[i][0].y,
+                        segments[i][1].x, segments[i][1].y,
+                        segments[m][0].x, segments[m][0].y,
+                        segments[m][1].x, segments[m][1].y, i, m);
+#endif
+
 					segments[m].clear();
 					segments[i].clear();
 					break;
+				} else if (segments[m].size() > 0) {
+#if 0
+                    fprintf(stderr, "not a spike %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld (%lu and %lu)\n",
+                        segments[i][0].x, segments[i][0].y,
+                        segments[i][1].x, segments[i][1].y,
+                        segments[m][0].x, segments[m][0].y,
+                        segments[m][1].x, segments[m][1].y, i, m);
+#endif
+				}
+
+				if (segments[m].size() > 0 &&
+				    segments[m][0] == segments[i][1]) {
+					double angle2 = atan2(segments[m][0].y - segments[m][1].y, segments[m][0].x - segments[m][1].x);
+
+					if (angle2 == angle) {
+						fprintf(stderr, "impossible %f %f in %lu %lu\n", angle, angle2, i, m);
+						fprintf(stderr, "   %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld\n",
+							segments[i][0].x, segments[i][0].y,
+							segments[i][1].x, segments[i][1].y,
+							segments[m][0].x, segments[m][0].y,
+							segments[m][1].x, segments[m][1].y);
+
+						long long ccw =
+							segments[i][0].x * segments[i][1].y +
+							segments[i][1].x * segments[m][0].y +
+							segments[m][0].x * segments[i][0].y -
+							segments[i][0].x * segments[m][0].y -
+							segments[i][1].x * segments[i][0].y -
+							segments[m][0].x * segments[i][1].y;
+						fprintf(stderr, "   ccw is %lld\n", ccw);
+
+						bool again = false;
+						check_intersection(segments, i, m, again);
+
+						fprintf(stderr, "   afterward %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld\n",
+							segments[i][0].x, segments[i][0].y,
+							segments[i][1].x, segments[i][1].y,
+							segments[m][0].x, segments[m][0].y,
+							segments[m][1].x, segments[m][1].y);
+					}
 				}
 			}
 		}
 	}
 
 	for (size_t i = 0; i < segments.size(); i++) {
-		std::map<draw, size_t> seen;
-
 		if (segments[i].size() > 0) {
 			drawvec ring;
+			std::map<draw, size_t> seen;
 
 			ring.push_back(segments[i][0]);
 			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
@@ -593,11 +683,18 @@ drawvec clean_polygon(drawvec &geom) {
 			segments[i].clear();
 
 			while (ring.size() > 1) {
+#if 0
+                for (size_t j = 0; j < ring.size(); j++) {
+                    fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
+                }
+                fprintf(stderr, "\n");
+#endif
+
 				auto match = paths.equal_range(ring[ring.size() - 1]);
 
 				draw prev = ring[ring.size() - 2];
 				draw here = ring[ring.size() - 1];
-				double found_something = false;
+				bool found_something = false;
 				std::multimap<double, size_t> exits;
 
 				for (auto mi = match.first; mi != match.second; ++mi) {
@@ -632,6 +729,7 @@ drawvec clean_polygon(drawvec &geom) {
 					} else {
 						depth--;
 						if (depth < 0) {
+							// fprintf(stderr, "... %lu\n", ei->second);
 							ring.push_back(segments[ei->second][1]);
 							segments[ei->second].clear();
 							found_something = true;
