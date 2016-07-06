@@ -540,6 +540,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 					       geom[j + 0].x, geom[j + 0].y,
 					       geom[j + 1].x, geom[j + 1].y);
 					// dump(before);
+					exit(EXIT_FAILURE);
 				}
 			}
 		}
