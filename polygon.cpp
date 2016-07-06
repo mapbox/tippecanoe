@@ -399,16 +399,12 @@ void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
 }
 
 drawvec reassemble_rings(std::vector<drawvec> &orings) {
-	// Index points by ring so we can find out which points appear in only one ring
-	std::multimap<draw, size_t> point_to_ring;
 	for (size_t i = 0; i < orings.size(); i++) {
 		for (size_t j = 0; j < orings[i].size(); j++) {
 			if (j == 0) {
 				orings[i][j].op = VT_MOVETO;
 			} else {
 				orings[i][j].op = VT_LINETO;
-				// skip 0 because the last point of each ring duplicates the first
-				point_to_ring.insert(std::pair<draw, size_t>(orings[i][j], i));
 			}
 		}
 	}
@@ -422,37 +418,22 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 	std::sort(rings.begin(), rings.end());
 
 	for (size_t i = 0; i < rings.size(); i++) {
-		ssize_t unique_point = -1;
+		size_t count = rings[i].data.size() - 1;
+		double xx, yy;
 
-		for (size_t k = 0; k < rings[i].data.size(); k++) {
-			if (point_to_ring.count(rings[i].data[k]) == 1) {
-				unique_point = k;
+		size_t k;
+		for (k = 0; k < count; k++) {
+			xx = (rings[i].data[k].x + rings[i].data[(k + 1) % count].x + rings[i].data[(k + 2) % count].x) / 3.0;
+			yy = (rings[i].data[k].y + rings[i].data[(k + 1) % count].y + rings[i].data[(k + 2) % count].y) / 3.0;
+
+			if (pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
 				break;
 			}
 		}
 
-		double xx, yy;
-
-		if (unique_point >= 0) {
-			xx = rings[i].data[unique_point].x;
-			yy = rings[i].data[unique_point].y;
-		} else {
-			size_t count = rings[i].data.size() - 1;
-			size_t k;
-
-			for (k = 0; k < count; k++) {
-				xx = (rings[i].data[k].x + rings[i].data[(k + 1) % count].x) / 2.0;
-				yy = (rings[i].data[k].y + rings[i].data[(k + 1) % count].y) / 2.0;
-
-				if (pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
-					break;
-				}
-			}
-
-			if (k >= count) {
-				fprintf(stderr, "Ring with no unique point, no ear within\n");
-				exit(EXIT_FAILURE);
-			}
+		if (k >= count) {
+			fprintf(stderr, "Ring with no ear within\n");
+			exit(EXIT_FAILURE);
 		}
 
 		for (size_t j = i + 1; j < rings.size(); j++) {
