@@ -191,12 +191,6 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 void partition(std::vector<drawvec> &segs, std::vector<size_t> &subset, int direction, std::set<std::pair<size_t, size_t>> &possible) {
 	std::vector<long long> points;
 
-	printf("direction %d: ", direction);
-	for (size_t i = 0; i < subset.size(); i++) {
-		printf("%lu ", subset[i]);
-	}
-	printf("\n");
-
 	// List of X or Y midpoints of edges, so we can find the median
 
 	if (direction == 0) {
@@ -238,8 +232,6 @@ void partition(std::vector<drawvec> &segs, std::vector<size_t> &subset, int dire
 		}
 	}
 
-	printf("partition from %lu into %lu and %lu\n", subset.size(), one.size(), two.size());
-
 	if (one.size() >= subset.size() || two.size() >= subset.size()) {
 		for (size_t i = 0; i < subset.size(); i++) {
 			for (size_t j = i + 1; j < subset.size(); j++) {
@@ -247,6 +239,8 @@ void partition(std::vector<drawvec> &segs, std::vector<size_t> &subset, int dire
 			}
 		}
 	} else {
+		// By experiment, stopping at 10 is a little faster than either 5 or 20
+
 		if (one.size() < 10) {
 			for (size_t i = 0; i < one.size(); i++) {
 				for (size_t j = i + 1; j < one.size(); j++) {
@@ -282,8 +276,8 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 			subset.push_back(i);
 		}
 
-#if 0
-        partition(segments, subset, 0, possible);
+#if 1
+		partition(segments, subset, 0, possible);
 #else
 		std::multimap<long long, size_t> starts;
 		std::multimap<long long, size_t> ends;
