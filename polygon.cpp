@@ -557,6 +557,7 @@ drawvec clean_polygon(drawvec &geom) {
 	std::multimap<draw, size_t> paths;
 	for (size_t i = 0; i < segments.size(); i++) {
 		paths.insert(std::pair<draw, size_t>(segments[i][0], i));
+		paths.insert(std::pair<draw, size_t>(segments[i][1], i));
 	}
 
 	std::vector<drawvec> rings;
@@ -569,6 +570,7 @@ drawvec clean_polygon(drawvec &geom) {
 				size_t m = mi->second;
 
 				if (segments[m].size() > 0 &&
+				    segments[m][0] == segments[i][1] &&
 				    segments[m][1] == segments[i][0]) {
 					segments[m].clear();
 					segments[i].clear();
@@ -591,20 +593,28 @@ drawvec clean_polygon(drawvec &geom) {
 			segments[i].clear();
 
 			while (ring.size() > 1) {
+				auto match = paths.equal_range(ring[ring.size() - 1]);
+
 				draw prev = ring[ring.size() - 2];
 				draw here = ring[ring.size() - 1];
 				double found_something = false;
 				std::multimap<double, size_t> exits;
 
-				auto match = paths.equal_range(ring[ring.size() - 1]);
 				for (auto mi = match.first; mi != match.second; ++mi) {
 					size_t m = mi->second;
+
 					double ang = atan2(prev.y - here.y, prev.x - here.x);
 
 					if (segments[m].size() > 0) {
-						draw next = segments[m][1];
-						double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
+						draw next;
 
+						if (segments[m][0] == here) {
+							next = segments[m][1];
+						} else {
+							next = segments[m][0];
+						}
+
+						double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
 						if (ang2 < 0) {
 							ang2 += 2 * M_PI;
 						}
@@ -614,30 +624,32 @@ drawvec clean_polygon(drawvec &geom) {
 				}
 
 				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
-					ring.push_back(segments[ei->second][1]);
-					segments[ei->second].clear();
-					found_something = true;
+					if (segments[ei->second][0] == here) {
+						ring.push_back(segments[ei->second][1]);
+						segments[ei->second].clear();
+						found_something = true;
 
-					auto where_seen = seen.find(ring[ring.size() - 1]);
-					if (where_seen != seen.end()) {
-						drawvec ring2;
-						size_t loop = where_seen->second;
+						auto where_seen = seen.find(ring[ring.size() - 1]);
+						if (where_seen != seen.end()) {
+							drawvec ring2;
+							size_t loop = where_seen->second;
 
-						for (size_t j = loop; j < ring.size(); j++) {
-							ring2.push_back(ring[j]);
+							for (size_t j = loop; j < ring.size(); j++) {
+								ring2.push_back(ring[j]);
+							}
+							rings.push_back(ring2);
+
+							ring.resize(loop + 1);
+							seen.clear();
+							for (size_t j = 0; j < ring.size(); j++) {
+								seen.insert(std::pair<draw, size_t>(ring[j], j));
+							}
+						} else {
+							seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 						}
-						rings.push_back(ring2);
 
-						ring.resize(loop + 1);
-						seen.clear();
-						for (size_t j = 0; j < ring.size(); j++) {
-							seen.insert(std::pair<draw, size_t>(ring[j], j));
-						}
-					} else {
-						seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+						break;
 					}
-
-					break;
 				}
 
 				if (!found_something) {
