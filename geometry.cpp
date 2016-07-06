@@ -520,6 +520,44 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, double testx, doubl
 	return c;
 }
 
+void psdump(drawvec &geom, size_t a, size_t b) {
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			if (get_area(geom, i, j) < 0) {
+				printf("1 1 0 setrgbcolor ");
+			} else {
+				printf(".5 .5 1 setrgbcolor ");
+			}
+
+			printf("newpath ");
+			for (size_t k = i; k < j; k++) {
+				printf("%lld %lld %s ", geom[k].x, geom[k].y, k == i ? "moveto" : "lineto");
+			}
+			printf("closepath fill\n");
+		}
+	}
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO) {
+			if (i == a + 1 || i == b + 1) {
+				printf("1 0 0 setrgbcolor .3 setlinewidth ");
+			} else {
+				printf("0 setgray 0 setlinewidth ");
+			}
+
+			printf("%lld %lld moveto %lld %lld lineto stroke\n",
+			       geom[i - 1].x, geom[i - 1].y, geom[i].x, geom[i].y);
+		}
+	}
+}
+
 void check_polygon(drawvec &geom, drawvec &before) {
 	for (size_t i = 0; i + 1 < geom.size(); i++) {
 		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
@@ -534,11 +572,13 @@ void check_polygon(drawvec &geom, drawvec &before) {
 				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 				if (t > 0 && t < 1 && s > 0 && s < 1) {
-					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
-					       geom[i + 0].x, geom[i + 0].y,
-					       geom[i + 1].x, geom[i + 1].y,
-					       geom[j + 0].x, geom[j + 0].y,
-					       geom[j + 1].x, geom[j + 1].y);
+					fprintf(stderr, "Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
+						geom[i + 0].x, geom[i + 0].y,
+						geom[i + 1].x, geom[i + 1].y,
+						geom[j + 0].x, geom[j + 0].y,
+						geom[j + 1].x, geom[j + 1].y);
+
+					psdump(geom, i, j);
 					// dump(before);
 					exit(EXIT_FAILURE);
 				}
@@ -580,7 +620,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 						}
 
 						if (!on_edge) {
-							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+							fprintf(stderr, "%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
 
 // dump(before);
 #if 0

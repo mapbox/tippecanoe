@@ -74,13 +74,13 @@ int main() {
 
 		fclose(f);
 
-		printf("%d sides\n", len);
+		fprintf(stderr, "%d sides\n", len);
 		clock_t before = clock();
 
 		drawvec out = clean_or_clip_poly(dv, 0, 12, 0, false);
 
 		clock_t after = clock();
-		printf("%d sides took %lld\n", len, (long long) (after - before));
+		fprintf(stderr, "%d sides took %lld\n", len, (long long) (after - before));
 
 		check_polygon(out, dv);
 	}
