@@ -623,32 +623,40 @@ drawvec clean_polygon(drawvec &geom) {
 					}
 				}
 
+				int depth = 0;
+
 				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
-					if (segments[ei->second][0] == here) {
-						ring.push_back(segments[ei->second][1]);
-						segments[ei->second].clear();
-						found_something = true;
+					if (segments[ei->second][1] == here) {
+						// Points inward
+						depth++;
+					} else {
+						depth--;
+						if (depth < 0) {
+							ring.push_back(segments[ei->second][1]);
+							segments[ei->second].clear();
+							found_something = true;
 
-						auto where_seen = seen.find(ring[ring.size() - 1]);
-						if (where_seen != seen.end()) {
-							drawvec ring2;
-							size_t loop = where_seen->second;
+							auto where_seen = seen.find(ring[ring.size() - 1]);
+							if (where_seen != seen.end()) {
+								drawvec ring2;
+								size_t loop = where_seen->second;
 
-							for (size_t j = loop; j < ring.size(); j++) {
-								ring2.push_back(ring[j]);
+								for (size_t j = loop; j < ring.size(); j++) {
+									ring2.push_back(ring[j]);
+								}
+								rings.push_back(ring2);
+
+								ring.resize(loop + 1);
+								seen.clear();
+								for (size_t j = 0; j < ring.size(); j++) {
+									seen.insert(std::pair<draw, size_t>(ring[j], j));
+								}
+							} else {
+								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 							}
-							rings.push_back(ring2);
 
-							ring.resize(loop + 1);
-							seen.clear();
-							for (size_t j = 0; j < ring.size(); j++) {
-								seen.insert(std::pair<draw, size_t>(ring[j], j));
-							}
-						} else {
-							seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+							break;
 						}
-
-						break;
 					}
 				}
 
