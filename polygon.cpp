@@ -438,16 +438,20 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 			yy = rings[i].data[unique_point].y;
 		} else {
 			size_t count = rings[i].data.size() - 1;
-			xx = yy = 0;
+			size_t k;
 
-			for (size_t k = 0; k < count; k++) {
-				xx += (double) rings[i].data[k].x / count;
-				yy += (double) rings[i].data[k].y / count;
+			for (k = 0; k < count; k++) {
+				xx = (rings[i].data[k].x + rings[i].data[(k + 1) % count].x) / 2.0;
+				yy = (rings[i].data[k].y + rings[i].data[(k + 1) % count].y) / 2.0;
+
+				if (pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
+					break;
+				}
 			}
 
-			if (!pnpoly(rings[i].data, 0, rings[i].data.size(), xx, yy)) {
-				fprintf(stderr, "Skipping ring with no unique point, centroid %f,%f not within\n", xx, yy);
-				continue;
+			if (k >= count) {
+				fprintf(stderr, "Ring with no unique point, no ear within\n");
+				exit(EXIT_FAILURE);
 			}
 		}
 
