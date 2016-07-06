@@ -188,18 +188,107 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 	}
 }
 
+void partition(std::vector<drawvec> &segs, std::vector<size_t> &subset, int direction, std::set<std::pair<size_t, size_t>> &possible) {
+	std::vector<long long> points;
+
+	printf("direction %d: ", direction);
+	for (size_t i = 0; i < subset.size(); i++) {
+		printf("%lu ", subset[i]);
+	}
+	printf("\n");
+
+	// List of X or Y midpoints of edges, so we can find the median
+
+	if (direction == 0) {
+		for (size_t i = 0; i < subset.size(); i++) {
+			points.push_back((segs[subset[i]][0].x + segs[subset[i]][1].x) / 2);
+		}
+	} else {
+		for (size_t i = 0; i < subset.size(); i++) {
+			points.push_back((segs[subset[i]][0].y + segs[subset[i]][1].y) / 2);
+		}
+	}
+
+	std::sort(points.begin(), points.end());
+	long long median = points[points.size() / 2];
+
+	// Partition into sets that are above or below, or to the left or to the right of, the median.
+	// Segments that cross the median appear in both.
+
+	std::vector<size_t> one;
+	std::vector<size_t> two;
+
+	if (direction == 0) {
+		for (size_t i = 0; i < subset.size(); i++) {
+			if (segs[subset[i]][0].x <= median || segs[subset[i]][1].x <= median) {
+				one.push_back(subset[i]);
+			}
+			if (segs[subset[i]][0].x >= median || segs[subset[i]][1].x >= median) {
+				two.push_back(subset[i]);
+			}
+		}
+	} else {
+		for (size_t i = 0; i < subset.size(); i++) {
+			if (segs[subset[i]][0].y <= median || segs[subset[i]][1].y <= median) {
+				one.push_back(subset[i]);
+			}
+			if (segs[subset[i]][0].y >= median || segs[subset[i]][1].y >= median) {
+				two.push_back(subset[i]);
+			}
+		}
+	}
+
+	printf("partition from %lu into %lu and %lu\n", subset.size(), one.size(), two.size());
+
+	if (one.size() >= subset.size() || two.size() >= subset.size()) {
+		for (size_t i = 0; i < subset.size(); i++) {
+			for (size_t j = i + 1; j < subset.size(); j++) {
+				possible.insert(std::pair<size_t, size_t>(subset[i], subset[j]));
+			}
+		}
+	} else {
+		if (one.size() < 10) {
+			for (size_t i = 0; i < one.size(); i++) {
+				for (size_t j = i + 1; j < one.size(); j++) {
+					possible.insert(std::pair<size_t, size_t>(one[i], one[j]));
+				}
+			}
+		} else {
+			partition(segs, one, !direction, possible);
+		}
+
+		if (two.size() < 10) {
+			for (size_t i = 0; i < two.size(); i++) {
+				for (size_t j = i + 1; j < two.size(); j++) {
+					possible.insert(std::pair<size_t, size_t>(two[i], two[j]));
+				}
+			}
+		} else {
+			partition(segs, two, !direction, possible);
+		}
+	}
+}
+
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
 
 	while (again) {
 		again = false;
 
+		std::set<std::pair<size_t, size_t>> possible;
+		std::vector<size_t> subset;
+
+		for (size_t i = 0; i < segments.size(); i++) {
+			subset.push_back(i);
+		}
+
+#if 0
+        partition(segments, subset, 0, possible);
+#else
 		std::multimap<long long, size_t> starts;
 		std::multimap<long long, size_t> ends;
 		std::vector<long long> transitions;
 		std::set<size_t> active;
-
-		std::set<std::pair<size_t, size_t>> possible;
 
 		for (size_t i = 0; i < segments.size(); i++) {
 			long long top, bottom;
@@ -293,6 +382,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 				active.erase(it->second);
 			}
 		}
+#endif
 
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);

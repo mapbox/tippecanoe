@@ -539,7 +539,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 					       geom[i + 1].x, geom[i + 1].y,
 					       geom[j + 0].x, geom[j + 0].y,
 					       geom[j + 1].x, geom[j + 1].y);
-					dump(before);
+					// dump(before);
 				}
 			}
 		}
@@ -581,7 +581,7 @@ void check_polygon(drawvec &geom, drawvec &before) {
 						if (!on_edge) {
 							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
 
-							dump(before);
+// dump(before);
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
 								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
