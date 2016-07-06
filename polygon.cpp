@@ -646,11 +646,10 @@ drawvec clean_polygon(drawvec &geom) {
 								}
 								rings.push_back(ring2);
 
-								ring.resize(loop + 1);
-								seen.clear();
-								for (size_t j = 0; j < ring.size(); j++) {
-									seen.insert(std::pair<draw, size_t>(ring[j], j));
+								for (size_t j = loop + 1; j < ring.size(); j++) {
+									seen.erase(ring[j]);
 								}
+								ring.resize(loop + 1);
 							} else {
 								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 							}
