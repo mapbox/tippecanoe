@@ -410,7 +410,7 @@ static void dump(drawvec &geom) {
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
-	return clean_polygon(geom);
+	return clean_polygon(geom, false);
 
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
@@ -547,18 +547,24 @@ void psdump(drawvec &geom, size_t a, size_t b) {
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO) {
 			if (i == a + 1 || i == b + 1) {
-				printf("1 0 0 setrgbcolor .3 setlinewidth ");
+				printf("1 0 0 setrgbcolor 0 setlinewidth ");
 			} else {
 				printf("0 setgray 0 setlinewidth ");
 			}
 
 			printf("%lld %lld moveto %lld %lld lineto stroke\n",
 			       geom[i - 1].x, geom[i - 1].y, geom[i].x, geom[i].y);
+
+			printf(".3 setlinewidth ");
+			printf("%lld %lld moveto %f %f lineto stroke\n",
+			       geom[i - 1].x, geom[i - 1].y, (geom[i].x + geom[i - 1].x) / 2.0, (geom[i].y + geom[i - 1].y) / 2.0);
 		}
 	}
 }
 
 void check_polygon(drawvec &geom, drawvec &before) {
+	// psdump(geom, -1, -1);
+	// printf("showpage\n");
 	for (size_t i = 0; i + 1 < geom.size(); i++) {
 		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
 			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {

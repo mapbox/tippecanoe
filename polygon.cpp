@@ -430,7 +430,7 @@ void assign_depth(std::vector<ring> &rings, size_t i, int depth) {
 	}
 }
 
-drawvec reassemble_rings(std::vector<drawvec> &orings) {
+drawvec reassemble_rings(std::vector<drawvec> &orings, bool all_rings) {
 	for (size_t i = 0; i < orings.size(); i++) {
 		for (size_t j = 0; j < orings[i].size(); j++) {
 			if (j == 0) {
@@ -475,6 +475,20 @@ drawvec reassemble_rings(std::vector<drawvec> &orings) {
 				break;
 			}
 		}
+	}
+
+	if (all_rings) {
+		drawvec out;
+
+		for (size_t ii = rings.size(); ii > 0; ii--) {
+			size_t i = ii - 1;
+
+			for (size_t j = 0; j < rings[i].data.size(); j++) {
+				out.push_back(rings[i].data[j]);
+			}
+		}
+
+		return out;
 	}
 
 	// Find all the outer rings with no parents, which are level 1.
@@ -563,7 +577,7 @@ std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
 	return out;
 }
 
-drawvec clean_polygon(drawvec &geom) {
+drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
 
 	// Note that this assumes that polygons are closed.
@@ -674,7 +688,7 @@ drawvec clean_polygon(drawvec &geom) {
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
 			drawvec ring;
-			std::multimap<draw, size_t> seen;
+			std::map<draw, size_t> seen;
 
 			ring.push_back(segments[i][0]);
 			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
@@ -802,5 +816,5 @@ drawvec clean_polygon(drawvec &geom) {
 
 	rings = remove_collinear(rings);
 
-	return reassemble_rings(rings);
+	return reassemble_rings(rings, all_rings);
 }

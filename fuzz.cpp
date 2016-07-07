@@ -6,6 +6,7 @@
 
 #include "tile.hpp"
 #include "geometry.hpp"
+#include "polygon.hpp"
 #include "options.hpp"
 
 int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
@@ -77,7 +78,7 @@ int main() {
 		fprintf(stderr, "%d sides\n", len);
 		clock_t before = clock();
 
-		drawvec out = clean_or_clip_poly(dv, 0, 12, 0, false);
+		drawvec out = clean_polygon(dv, true);
 
 		clock_t after = clock();
 		fprintf(stderr, "%d sides took %lld\n", len, (long long) (after - before));
