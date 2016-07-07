@@ -193,7 +193,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 			long long x = round(segments[a][0].x + t * s10_x);
 			long long y = round(segments[a][0].y + t * s10_y);
 
-			if (t > 0 && t < 1) {
+			if (t >= 0 && t <= 1) {
 				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
 					// splitting a
 					drawvec dv;
@@ -205,7 +205,7 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				}
 			}
 
-			if (s > 0 && s < 1) {
+			if (s >= 0 && s <= 1) {
 				if ((x != segments[b][0].x || y != segments[b][0].y) && (x != segments[b][1].x || y != segments[b][1].y)) {
 					// splitting b
 					drawvec dv;
@@ -674,7 +674,7 @@ drawvec clean_polygon(drawvec &geom) {
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
 			drawvec ring;
-			std::map<draw, size_t> seen;
+			std::multimap<draw, size_t> seen;
 
 			ring.push_back(segments[i][0]);
 			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
@@ -689,6 +689,17 @@ drawvec clean_polygon(drawvec &geom) {
                 }
                 fprintf(stderr, "\n");
 #endif
+
+				if (seen.size() != ring.size()) {
+					fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
+					for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
+						fprintf(stderr, "seen: %lld,%lld %lu\n", mi->first.x, mi->first.y, mi->second);
+					}
+					for (size_t j = 0; j < ring.size(); j++) {
+						fprintf(stderr, "ring: %lu %lld,%lld\n", j, ring[j].x, ring[j].y);
+					}
+					exit(EXIT_FAILURE);
+				}
 
 				auto match = paths.equal_range(ring[ring.size() - 1]);
 
@@ -722,17 +733,35 @@ drawvec clean_polygon(drawvec &geom) {
 
 				int depth = 0;
 
+#if 0
+				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
+					if (segments[ei->second][1] == here) {
+						fprintf(stderr, "XXXX %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
+							prev.x, prev.y, here.x, here.y, ei->first,
+							segments[ei->second][1].x, segments[ei->second][1].y);
+					} else {
+						fprintf(stderr, "from %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
+							prev.x, prev.y, here.x, here.y, ei->first,
+							segments[ei->second][1].x, segments[ei->second][1].y);
+					}
+				}
+#endif
+
 				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
 					if (segments[ei->second][1] == here) {
 						// Points inward
 						depth++;
 					} else {
 						depth--;
-						if (depth < 0) {
-							// fprintf(stderr, "... %lu\n", ei->second);
+						if (1 || depth < 0) {
 							ring.push_back(segments[ei->second][1]);
 							segments[ei->second].clear();
 							found_something = true;
+
+							if (seen.count(ring[ring.size() - 1]) > 1) {
+								fprintf(stderr, "duplicate in seen\n");
+								exit(EXIT_FAILURE);
+							}
 
 							auto where_seen = seen.find(ring[ring.size() - 1]);
 							if (where_seen != seen.end()) {
@@ -748,6 +777,7 @@ drawvec clean_polygon(drawvec &geom) {
 									seen.erase(ring[j]);
 								}
 								ring.resize(loop + 1);
+								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 							} else {
 								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 							}
