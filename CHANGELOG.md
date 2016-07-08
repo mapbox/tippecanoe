@@ -1,3 +1,7 @@
+## 1.12.3
+
+* Fix double-counted progress in the progress indicator
+
 ## 1.12.2
 
 * Add ability to specify a projection to tippecanoe-decode
