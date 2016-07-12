@@ -64,9 +64,6 @@
 ] }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "zoom": 11, "x": 328, "y": 791 }, "features": [
-] }
-,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 650, "y": 1578 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.822235, 38.090509 ], [ -122.822213, 38.090543 ] ] } }

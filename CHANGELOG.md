@@ -1,3 +1,8 @@
+## 1.12.5
+
+* Be careful not to produce an empty tile if there was a feature with
+  empty geometry.
+
 ## 1.12.4
 
 * Be even more careful not to produce features with empty geometry
