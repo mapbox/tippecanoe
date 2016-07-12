@@ -1010,6 +1010,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					features[k][x].geom = remove_noop(features[k][x].geom, features[k][x].type, 0);
 				}
 
+				if (features[k][x].geom.size() == 0) {
+					continue;
+				}
+
 				feature.type = features[k][x].type;
 				feature.geometry = to_feature(features[k][x].geom);
 				count += features[k][x].geom.size();
