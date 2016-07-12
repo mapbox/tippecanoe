@@ -1,3 +1,7 @@
+## 1.12.4
+
+* Be even more careful not to produce features with empty geometry
+
 ## 1.12.3
 
 * Fix double-counted progress in the progress indicator
