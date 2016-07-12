@@ -1050,7 +1050,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
@@ -1081,7 +1081,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) 
 			geom[j - 1].necessary = 1;
 
 			if (j - i > 1) {
-				douglas_peucker(geom, i, j - i, res);
+				douglas_peucker(geom, i, j - i, res * simplification);
 			}
 			i = j - 1;
 		}

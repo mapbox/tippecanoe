@@ -110,6 +110,11 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
    compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
  * -g _gamma_ or --gamma=_gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
+### Line and polygon simplification
+
+ * -S _scale_ or --simplify=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
+   the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
+
 ### Doing more
 
  * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties.

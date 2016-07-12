@@ -1,5 +1,6 @@
 ## 1.12.5
 
+* Add an option to vary the level of line and polygon simplification
 * Be careful not to produce an empty tile if there was a feature with
   empty geometry.
 
