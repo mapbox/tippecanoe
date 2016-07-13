@@ -1,3 +1,7 @@
+## 1.12.6
+
+* Fix error reports when reading from an empty file with parallel input
+
 ## 1.12.5
 
 * Add an option to vary the level of line and polygon simplification
