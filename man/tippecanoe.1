@@ -126,6 +126,12 @@ compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber
 .IP \(bu 2
 \-g \fIgamma\fP or \-\-gamma=\fIgamma\fP: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 .RE
+.SS Line and polygon simplification
+.RS
+.IP \(bu 2
+\-S \fIscale\fP or \-\-simplify=\fIscale\fP: Multiply the tolerance for line and polygon simplification by \fIscale\fP\&. The standard tolerance tries to keep
+the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
+.RE
 .SS Doing more
 .RS
 .IP \(bu 2
