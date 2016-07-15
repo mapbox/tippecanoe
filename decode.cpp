@@ -102,6 +102,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			within = 1;
 
 			printf("{ \"type\": \"Feature\"");
+
+			if (feat.has_id) {
+				printf(", \"id\": %llu", feat.id);
+			}
+
 			printf(", \"properties\": { ");
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {

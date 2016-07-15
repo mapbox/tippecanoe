@@ -178,6 +178,11 @@ bool mvt_tile::decode(std::string &message) {
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
+						case 1: /* id */
+							feature.id = feature_reader.get_uint64();
+							feature.has_id = true;
+							break;
+
 						case 2: /* tag */
 						{
 							auto pi = feature_reader.get_packed_uint32();
