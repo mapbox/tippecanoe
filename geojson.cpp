@@ -301,7 +301,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
 	serialize_long_long(geomfile, *layer_seq, geompos, fname);
 
-	serialize_long_long(geomfile, (layer << 3) | ((has_id << 2) | (tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
+	serialize_long_long(geomfile, (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
 	if (tippecanoe_minzoom != -1) {
 		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
 	}
