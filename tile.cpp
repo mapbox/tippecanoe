@@ -74,6 +74,8 @@ struct coalesce {
 	int m;
 	bool coalesced;
 	double spacing;
+	bool has_id;
+	unsigned long long id;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -260,7 +262,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -334,12 +336,15 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					// printf("type %d, meta %lld\n", t, metastart);
 					serialize_byte(geomfile[j], t, &geompos[j], fname);
 					serialize_long_long(geomfile[j], seq, &geompos[j], fname);
-					serialize_long_long(geomfile[j], (layer << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), &geompos[j], fname);
+					serialize_long_long(geomfile[j], (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), &geompos[j], fname);
 					if (tippecanoe_minzoom != -1) {
 						serialize_int(geomfile[j], tippecanoe_minzoom, geompos, fname);
 					}
 					if (tippecanoe_maxzoom != -1) {
 						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
+					}
+					if (has_id) {
+						serialize_ulong_long(geomfile[j], id, geompos, fname);
 					}
 					serialize_int(geomfile[j], segment, &geompos[j], fname);
 					long long wx = initial_x[segment], wy = initial_y[segment];
@@ -391,6 +396,8 @@ struct partial {
 	double spacing;
 	double simplification;
 	signed char t;
+	unsigned long long id;
+	bool has_id;
 };
 
 struct partial_arg {
@@ -642,13 +649,19 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			long long layer;
 			deserialize_long_long_io(geoms, &layer, geompos_in);
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
+			unsigned long long id = 0;
+			bool has_id = false;
 			if (layer & 2) {
 				deserialize_int_io(geoms, &tippecanoe_minzoom, geompos_in);
 			}
 			if (layer & 1) {
 				deserialize_int_io(geoms, &tippecanoe_maxzoom, geompos_in);
 			}
-			layer >>= 2;
+			if (layer & 4) {
+				has_id = true;
+				deserialize_ulong_long_io(geoms, &id, geompos_in);
+			}
+			layer >>= 3;
 
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);
@@ -778,7 +791,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id);
 			}
 
 			if (z < minzoom) {
@@ -862,6 +875,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.values = metavals;
 				p.spacing = spacing;
 				p.simplification = simplification;
+				p.id = id;
+				p.has_id = has_id;
 				partials.push_back(p);
 			}
 		}
@@ -923,6 +938,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;
 					c.spacing = partials[i].spacing;
+					c.id = partials[i].id;
+					c.has_id = partials[i].has_id;
 
 					features[layer].push_back(c);
 				}
@@ -1020,6 +1037,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.geometry = to_feature(features[k][x].geom);
 				count += features[k][x].geom.size();
 				features[k][x].geom.clear();
+
+				feature.id = features[k][x].id;
+				feature.has_id = features[k][x].has_id;
 
 				decode_meta(features[k][x].m, features[k][x].keys, features[k][x].values, features[k][x].stringpool, layer, feature);
 
