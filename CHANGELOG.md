@@ -1,3 +1,7 @@
+## 1.12.7
+
+* Support the "id" field of GeoJSON objects and vector tile features
+
 ## 1.12.6
 
 * Fix error reports when reading from an empty file with parallel input

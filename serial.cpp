@@ -21,6 +21,10 @@ void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
 	unsigned long long zigzag = protozero::encode_zigzag32(n);
 
+	serialize_ulong_long(out, zigzag, fpos, fname);
+}
+
+void serialize_ulong_long(FILE *out, unsigned long long zigzag, long long *fpos, const char *fname) {
 	while (1) {
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
@@ -60,22 +64,26 @@ void deserialize_int(char **f, int *n) {
 
 void deserialize_long_long(char **f, long long *n) {
 	unsigned long long zigzag = 0;
+	deserialize_ulong_long(f, &zigzag);
+	*n = protozero::decode_zigzag32(zigzag);
+}
+
+void deserialize_ulong_long(char **f, unsigned long long *zigzag) {
+	*zigzag = 0;
 	int shift = 0;
 
 	while (1) {
 		if ((**f & 0x80) == 0) {
-			zigzag |= ((unsigned long long) **f) << shift;
+			*zigzag |= ((unsigned long long) **f) << shift;
 			*f += 1;
 			shift += 7;
 			break;
 		} else {
-			zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
+			*zigzag |= ((unsigned long long) (**f & 0x7F)) << shift;
 			*f += 1;
 			shift += 7;
 		}
 	}
-
-	*n = protozero::decode_zigzag32(zigzag);
 }
 
 void deserialize_uint(char **f, unsigned *n) {
@@ -90,6 +98,13 @@ void deserialize_byte(char **f, signed char *n) {
 
 int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 	unsigned long long zigzag = 0;
+	int ret = deserialize_ulong_long_io(f, &zigzag, geompos);
+	*n = protozero::decode_zigzag32(zigzag);
+	return ret;
+}
+
+int deserialize_ulong_long_io(FILE *f, unsigned long long *zigzag, long long *geompos) {
+	*zigzag = 0;
 	int shift = 0;
 
 	while (1) {
@@ -100,16 +115,15 @@ int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 		(*geompos)++;
 
 		if ((c & 0x80) == 0) {
-			zigzag |= ((unsigned long long) c) << shift;
+			*zigzag |= ((unsigned long long) c) << shift;
 			shift += 7;
 			break;
 		} else {
-			zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
+			*zigzag |= ((unsigned long long) (c & 0x7F)) << shift;
 			shift += 7;
 		}
 	}
 
-	*n = protozero::decode_zigzag32(zigzag);
 	return 1;
 }
 
