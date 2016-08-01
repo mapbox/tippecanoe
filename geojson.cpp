@@ -63,7 +63,19 @@ static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
-long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos, FILE *out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname) {
+	for (size_t i = 0; i < dv.size(); i++) {
+		if (dv[i].op == VT_CLOSEPATH) {
+			serialize_byte(out, dv[i].op, fpos, fname);
+		} else {
+			serialize_byte(out, dv[i].op, fpos, fname);
+			serialize_long_long(out, dv[i].x, fpos, fname);
+			serialize_long_long(out, dv[i].y, fpos, fname);
+		}
+	}
+}
+
+long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long g = 0;
 
 	if (j == NULL || j->type != JSON_ARRAY) {
@@ -83,7 +95,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos
 				}
 			}
 
-			g += parse_geometry(within, j->array[i], bbox, fpos, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
+			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -130,9 +142,8 @@ long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos
 				*initialized = 1;
 			}
 
-			serialize_byte(out, op, fpos, fname);
-			serialize_long_long(out, (x >> geometry_scale) - (*wx >> geometry_scale), fpos, fname);
-			serialize_long_long(out, (y >> geometry_scale) - (*wy >> geometry_scale), fpos, fname);
+			draw d(op, (x >> geometry_scale) - (*wx >> geometry_scale), (y >> geometry_scale) - (*wy >> geometry_scale));
+			out.push_back(d);
 			*wx = x;
 			*wy = y;
 			g++;
@@ -151,7 +162,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, long long *fpos
 		// rings come from which Polygons so that it can make the winding order
 		// of the outer ring be the opposite of the order of the inner rings.
 
-		serialize_byte(out, VT_CLOSEPATH, fpos, fname);
+		out.push_back(draw(VT_CLOSEPATH, 0, 0));
 	}
 
 	return g;
@@ -314,7 +325,9 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	serialize_int(geomfile, segment, geompos, fname);
 	long long wx = *initial_x, wy = *initial_y;
-	long long g = parse_geometry(t, coordinates, bbox, geompos, geomfile, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
+	drawvec dv;
+	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
+	write_geometry(dv, geompos, geomfile, fname);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	bool inline_meta = true;
