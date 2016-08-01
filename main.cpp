@@ -1795,7 +1795,7 @@ int main(int argc, char **argv) {
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
-		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
+		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},

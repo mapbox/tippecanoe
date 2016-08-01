@@ -1,3 +1,7 @@
+## 1.12.8
+
+* Fix the spelling of the --preserve-input-order option
+
 ## 1.12.7
 
 * Support the "id" field of GeoJSON objects and vector tile features
