@@ -710,10 +710,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			original_features++;
 
-			if (z == 0 && t == VT_POLYGON) {
-				geom = fix_polygon(geom);
-			}
-
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {
 				continue;

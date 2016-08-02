@@ -63,19 +63,21 @@ static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
-static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname) {
+static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_CLOSEPATH) {
 			serialize_byte(out, dv[i].op, fpos, fname);
 		} else {
 			serialize_byte(out, dv[i].op, fpos, fname);
-			serialize_long_long(out, dv[i].x, fpos, fname);
-			serialize_long_long(out, dv[i].y, fpos, fname);
+			serialize_long_long(out, dv[i].x - wx, fpos, fname);
+			serialize_long_long(out, dv[i].y - wy, fpos, fname);
+			wx = dv[i].x;
+			wy = dv[i].y;
 		}
 	}
 }
 
-long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, long long *wx, long long *wy, int *initialized, unsigned *initial_x, unsigned *initial_y) {
+long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long g = 0;
 
 	if (j == NULL || j->type != JSON_ARRAY) {
@@ -95,7 +97,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 				}
 			}
 
-			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, wx, wy, initialized, initial_x, initial_y);
+			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, initialized, initial_x, initial_y);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -130,22 +132,16 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
 					*initial_x = 1LL << 31;
 					*initial_y = 1LL << 31;
-					*wx = 1LL << 31;
-					*wy = 1LL << 31;
 				} else {
 					*initial_x = (x >> geometry_scale) << geometry_scale;
 					*initial_y = (y >> geometry_scale) << geometry_scale;
-					*wx = x;
-					*wy = y;
 				}
 
 				*initialized = 1;
 			}
 
-			draw d(op, (x >> geometry_scale) - (*wx >> geometry_scale), (y >> geometry_scale) - (*wy >> geometry_scale));
+			draw d(op, (x >> geometry_scale), (y >> geometry_scale));
 			out.push_back(d);
-			*wx = x;
-			*wy = y;
 			g++;
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
@@ -324,10 +320,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	}
 
 	serialize_int(geomfile, segment, geompos, fname);
-	long long wx = *initial_x, wy = *initial_y;
+
 	drawvec dv;
-	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, &wx, &wy, initialized, initial_x, initial_y);
-	write_geometry(dv, geompos, geomfile, fname);
+	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y);
+	if (mb_geometry[t] == VT_POLYGON) {
+		dv = fix_polygon(dv);
+	}
+	write_geometry(dv, geompos, geomfile, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
 	bool inline_meta = true;
