@@ -256,8 +256,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	int metatype[nprop];
 	int m = 0;
 
-	int i;
-	for (i = 0; i < nprop; i++) {
+	for (size_t i = 0; i < nprop; i++) {
 		if (properties->keys[i]->type == JSON_STRING) {
 			std::string s(properties->keys[i]->string);
 
@@ -309,27 +308,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		dv = fix_polygon(dv);
 	}
 
-	long long geomstart = *geompos;
-
-	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
-	serialize_long_long(geomfile, *layer_seq, geompos, fname);
-
-	serialize_long_long(geomfile, (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
-	if (tippecanoe_minzoom != -1) {
-		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
-	}
-	if (tippecanoe_maxzoom != -1) {
-		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
-	}
-	if (has_id) {
-		serialize_ulong_long(geomfile, id_value, geompos, fname);
-	}
-
-	serialize_int(geomfile, segment, geompos, fname);
-
-	write_geometry(dv, geompos, geomfile, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
-	serialize_byte(geomfile, VT_END, geompos, fname);
-
 	bool inline_meta = true;
 	// Don't inline metadata for features that will span several tiles at maxzoom
 	if (g > 0 && (bbox[2] < bbox[0] || bbox[3] < bbox[1])) {
@@ -353,18 +331,39 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
+	long long geomstart = *geompos;
+
+	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
+	serialize_long_long(geomfile, *layer_seq, geompos, fname);
+
+	serialize_long_long(geomfile, (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
+	if (tippecanoe_minzoom != -1) {
+		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
+	}
+	if (tippecanoe_maxzoom != -1) {
+		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
+	}
+	if (has_id) {
+		serialize_ulong_long(geomfile, id_value, geompos, fname);
+	}
+
+	serialize_int(geomfile, segment, geompos, fname);
+
+	write_geometry(dv, geompos, geomfile, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
+	serialize_byte(geomfile, VT_END, geompos, fname);
+
 	serialize_int(geomfile, m, geompos, fname);
 	if (inline_meta) {
 		serialize_long_long(geomfile, -1, geompos, fname);
 
-		for (i = 0; i < m; i++) {
+		for (size_t i = 0; i < m; i++) {
 			serialize_long_long(geomfile, addpool(poolfile, treefile, metakey[i], VT_STRING), geompos, fname);
 			serialize_long_long(geomfile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), geompos, fname);
 		}
 	} else {
 		serialize_long_long(geomfile, metastart, geompos, fname);
 
-		for (i = 0; i < m; i++) {
+		for (size_t i = 0; i < m; i++) {
 			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
 			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
 		}
@@ -415,12 +414,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 	*indexpos += sizeof(struct index);
 
-	for (i = 0; i < 2; i++) {
+	for (size_t i = 0; i < 2; i++) {
 		if (bbox[i] < file_bbox[i]) {
 			file_bbox[i] = bbox[i];
 		}
 	}
-	for (i = 2; i < 4; i++) {
+	for (size_t i = 2; i < 4; i++) {
 		if (bbox[i] > file_bbox[i]) {
 			file_bbox[i] = bbox[i];
 		}
