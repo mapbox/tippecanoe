@@ -251,9 +251,9 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	long long metastart = *metapos;
 	char *metakey[nprop];
-	const char *metaval[nprop];
+	std::vector<std::string> metaval;
+	metaval.resize(nprop);
 	int metatype[nprop];
-	int mustfree[nprop];
 	int m = 0;
 
 	int i;
@@ -274,26 +274,26 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			tas.type = -1;
 
 			metakey[m] = properties->keys[i]->string;
-			mustfree[m] = 0;
 
 			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 				tas.type = metatype[m] = VT_STRING;
-				metaval[m] = properties->values[i]->string;
+				metaval[m] = std::string(properties->values[i]->string);
 				m++;
 			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
 				tas.type = metatype[m] = VT_NUMBER;
-				metaval[m] = properties->values[i]->string;
+				metaval[m] = std::string(properties->values[i]->string);
 				m++;
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
 				tas.type = metatype[m] = VT_BOOLEAN;
-				metaval[m] = properties->values[i]->type == JSON_TRUE ? "true" : "false";
+				metaval[m] = std::string(properties->values[i]->type == JSON_TRUE ? "true" : "false");
 				m++;
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
 				tas.type = metatype[m] = VT_STRING;
-				metaval[m] = json_stringify(properties->values[i]);
-				mustfree[m] = 1;
+				const char *v = json_stringify(properties->values[i]);
+				metaval[m] = std::string(v);
+				free((void *) v);
 				m++;
 			}
 
@@ -301,6 +301,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				file_keys->insert(tas);
 			}
 		}
+	}
+
+	drawvec dv;
+	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y);
+	if (mb_geometry[t] == VT_POLYGON) {
+		dv = fix_polygon(dv);
 	}
 
 	long long geomstart = *geompos;
@@ -321,11 +327,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	serialize_int(geomfile, segment, geompos, fname);
 
-	drawvec dv;
-	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y);
-	if (mb_geometry[t] == VT_POLYGON) {
-		dv = fix_polygon(dv);
-	}
 	write_geometry(dv, geompos, geomfile, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 
@@ -358,20 +359,14 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 		for (i = 0; i < m; i++) {
 			serialize_long_long(geomfile, addpool(poolfile, treefile, metakey[i], VT_STRING), geompos, fname);
-			serialize_long_long(geomfile, addpool(poolfile, treefile, metaval[i], metatype[i]), geompos, fname);
+			serialize_long_long(geomfile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), geompos, fname);
 		}
 	} else {
 		serialize_long_long(geomfile, metastart, geompos, fname);
 
 		for (i = 0; i < m; i++) {
 			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
-			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i], metatype[i]), metapos, fname);
-		}
-	}
-
-	for (i = 0; i < m; i++) {
-		if (mustfree[i]) {
-			free((void *) metaval[i]);
+			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
 		}
 	}
 
