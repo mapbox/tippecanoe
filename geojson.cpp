@@ -31,12 +31,12 @@ extern "C" {
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
-#include "serial.hpp"
 #include "main.hpp"
 #include "mbtiles.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
 #include "options.hpp"
+#include "serial.hpp"
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -62,20 +62,6 @@ static int geometry_within[GEOM_TYPES] = {
 static int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
-
-static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
-	for (size_t i = 0; i < dv.size(); i++) {
-		if (dv[i].op == VT_CLOSEPATH) {
-			serialize_byte(out, dv[i].op, fpos, fname);
-		} else {
-			serialize_byte(out, dv[i].op, fpos, fname);
-			serialize_long_long(out, dv[i].x - wx, fpos, fname);
-			serialize_long_long(out, dv[i].y - wy, fpos, fname);
-			wx = dv[i].x;
-			wy = dv[i].y;
-		}
-	}
-}
 
 long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y) {
 	long long g = 0;
@@ -249,7 +235,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		nprop = properties->length;
 	}
 
-	long long metastart = *metapos;
 	char *metakey[nprop];
 	std::vector<std::string> metaval;
 	metaval.resize(nprop);
@@ -331,44 +316,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
-	long long geomstart = *geompos;
-
-	serialize_byte(geomfile, mb_geometry[t], geompos, fname);
-	serialize_long_long(geomfile, *layer_seq, geompos, fname);
-
-	serialize_long_long(geomfile, (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), geompos, fname);
-	if (tippecanoe_minzoom != -1) {
-		serialize_int(geomfile, tippecanoe_minzoom, geompos, fname);
-	}
-	if (tippecanoe_maxzoom != -1) {
-		serialize_int(geomfile, tippecanoe_maxzoom, geompos, fname);
-	}
-	if (has_id) {
-		serialize_ulong_long(geomfile, id_value, geompos, fname);
-	}
-
-	serialize_int(geomfile, segment, geompos, fname);
-
-	write_geometry(dv, geompos, geomfile, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
-	serialize_byte(geomfile, VT_END, geompos, fname);
-
-	serialize_int(geomfile, m, geompos, fname);
-	if (inline_meta) {
-		serialize_long_long(geomfile, -1, geompos, fname);
-
-		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(geomfile, addpool(poolfile, treefile, metakey[i], VT_STRING), geompos, fname);
-			serialize_long_long(geomfile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), geompos, fname);
-		}
-	} else {
-		serialize_long_long(geomfile, metastart, geompos, fname);
-
-		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
-			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
-		}
-	}
-
 	/*
 	 * Note that feature_minzoom for lines is the dimension
 	 * of the geometry in world coordinates, but
@@ -397,7 +344,38 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
 	}
 
-	serialize_byte(geomfile, feature_minzoom, geompos, fname);
+	long long geomstart = *geompos;
+
+	serial_feature sf;
+	sf.layer = layer;
+	sf.segment = segment;
+	sf.seq = *layer_seq;
+	sf.t = mb_geometry[t];
+	sf.has_id = has_id;
+	sf.id = id_value;
+	sf.has_tippecanoe_minzoom = (tippecanoe_minzoom != -1);
+	sf.tippecanoe_minzoom = tippecanoe_minzoom;
+	sf.has_tippecanoe_maxzoom = (tippecanoe_maxzoom != -1);
+	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
+	sf.geometry = dv;
+	sf.m = m;
+	sf.feature_minzoom = feature_minzoom;
+
+	if (inline_meta) {
+		sf.metapos = -1;
+		for (size_t i = 0; i < m; i++) {
+			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], VT_STRING));
+			sf.values.push_back(addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]));
+		}
+	} else {
+		sf.metapos = *metapos;
+		for (size_t i = 0; i < m; i++) {
+			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
+			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
+		}
+	}
+
+	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
 
 	struct index index;
 	index.start = geomstart;

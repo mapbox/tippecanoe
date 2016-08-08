@@ -2,7 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <vector>
+#include <sqlite3.h>
 #include "protozero/varint.hpp"
+#include "geometry.hpp"
+#include "tile.hpp"
 #include "serial.hpp"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
@@ -150,4 +154,48 @@ int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
 	*n = c;
 	(*geompos)++;
 	return 1;
+}
+
+static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
+	for (size_t i = 0; i < dv.size(); i++) {
+		if (dv[i].op == VT_CLOSEPATH) {
+			serialize_byte(out, dv[i].op, fpos, fname);
+		} else {
+			serialize_byte(out, dv[i].op, fpos, fname);
+			serialize_long_long(out, dv[i].x - wx, fpos, fname);
+			serialize_long_long(out, dv[i].y - wy, fpos, fname);
+			wx = dv[i].x;
+			wy = dv[i].y;
+		}
+	}
+}
+
+void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy) {
+	serialize_byte(geomfile, sf->t, geompos, fname);
+	serialize_long_long(geomfile, sf->seq, geompos, fname);
+
+	serialize_long_long(geomfile, (sf->layer << 3) | (sf->has_id ? 4 : 0) | (sf->has_tippecanoe_minzoom ? 2 : 0) | (sf->has_tippecanoe_maxzoom ? 1 : 0), geompos, fname);
+	if (sf->has_tippecanoe_minzoom) {
+		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
+	}
+	if (sf->has_tippecanoe_maxzoom) {
+		serialize_int(geomfile, sf->tippecanoe_maxzoom, geompos, fname);
+	}
+	if (sf->has_id) {
+		serialize_ulong_long(geomfile, sf->id, geompos, fname);
+	}
+
+	serialize_int(geomfile, sf->segment, geompos, fname);
+
+	write_geometry(sf->geometry, geompos, geomfile, fname, wx, wy);
+	serialize_byte(geomfile, VT_END, geompos, fname);
+
+	serialize_int(geomfile, sf->m, geompos, fname);
+	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	for (size_t i = 0; i < sf->keys.size(); i++) {
+		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
+		serialize_long_long(geomfile, sf->values[i], geompos, fname);
+	}
+
+	serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
 }
