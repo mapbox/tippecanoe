@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <string>
 #include <vector>
 #include <sqlite3.h>
 #include "protozero/varint.hpp"
@@ -194,7 +195,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	serialize_long_long(geomfile, sf->metapos, geompos, fname);
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
-		fprintf(stderr, "Internal error: %d doesn't match %lld\n", sf->m, (long long) sf->keys.size());
+		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());
 		exit(EXIT_FAILURE);
 	}
 

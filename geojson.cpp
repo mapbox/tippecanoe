@@ -206,7 +206,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	}
 
 	bool has_id = false;
-	unsigned long long id_value;
+	unsigned long long id_value = 0;
 	if (id != NULL) {
 		if (id->type == JSON_NUMBER) {
 			if (id->number >= 0) {
@@ -230,7 +230,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	long long bbox[] = {LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN};
 
-	int nprop = 0;
+	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
 		nprop = properties->length;
 	}
@@ -239,7 +239,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	std::vector<std::string> metaval;
 	metaval.resize(nprop);
 	int metatype[nprop];
-	int m = 0;
+	size_t m = 0;
 
 	for (size_t i = 0; i < nprop; i++) {
 		if (properties->keys[i]->type == JSON_STRING) {

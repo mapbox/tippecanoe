@@ -38,7 +38,7 @@ struct serial_feature {
 
 	drawvec geometry;
 
-	int m;
+	size_t m;
 	std::vector<long long> keys;
 	std::vector<long long> values;
 	long long metapos;
