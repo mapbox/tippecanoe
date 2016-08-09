@@ -158,14 +158,14 @@ int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
 
 static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
-		if (dv[i].op == VT_CLOSEPATH) {
-			serialize_byte(out, dv[i].op, fpos, fname);
-		} else {
+		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			serialize_byte(out, dv[i].op, fpos, fname);
 			serialize_long_long(out, dv[i].x - wx, fpos, fname);
 			serialize_long_long(out, dv[i].y - wy, fpos, fname);
 			wx = dv[i].x;
 			wy = dv[i].y;
+		} else {
+			serialize_byte(out, dv[i].op, fpos, fname);
 		}
 	}
 }
@@ -192,6 +192,12 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 
 	serialize_int(geomfile, sf->m, geompos, fname);
 	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+
+	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
+		fprintf(stderr, "Internal error: %d doesn't match %lld\n", sf->m, (long long) sf->keys.size());
+		exit(EXIT_FAILURE);
+	}
+
 	for (size_t i = 0; i < sf->keys.size(); i++) {
 		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
 		serialize_long_long(geomfile, sf->values[i], geompos, fname);

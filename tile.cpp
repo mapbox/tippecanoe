@@ -293,6 +293,18 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			bbox2[k] /= 256;
 		}
 
+		// Offset from tile coordinates back to world coordinates
+		unsigned sx = 0, sy = 0;
+		if (z != 0) {
+			sx = tx << (32 - z);
+			sy = ty << (32 - z);
+		}
+
+		drawvec geom2;
+		for (size_t i = 0; i < geom.size(); i++) {
+			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
+		}
+
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
 			for (yo = bbox2[1]; yo <= bbox2[3]; yo++) {
 				unsigned jx = tx * span + xo;
@@ -326,52 +338,30 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 						within[j] = 1;
 					}
 
-					// Offset from tile coordinates back to world coordinates
-					unsigned sx = 0, sy = 0;
-					if (z != 0) {
-						sx = tx << (32 - z);
-						sy = ty << (32 - z);
-					}
+					serial_feature sf;
+					sf.layer = layer;
+					sf.segment = segment;
+					sf.seq = seq;
+					sf.t = t;
+					sf.has_id = has_id;
+					sf.id = id;
+					sf.has_tippecanoe_minzoom = tippecanoe_minzoom != -1;
+					sf.tippecanoe_minzoom = tippecanoe_minzoom;
+					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
+					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
+					sf.metapos = metastart;
+					sf.geometry = geom2;
+					sf.m = m;
+					sf.feature_minzoom = feature_minzoom;
 
-					// printf("type %d, meta %lld\n", t, metastart);
-					serialize_byte(geomfile[j], t, &geompos[j], fname);
-					serialize_long_long(geomfile[j], seq, &geompos[j], fname);
-					serialize_long_long(geomfile[j], (layer << 3) | (has_id << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), &geompos[j], fname);
-					if (tippecanoe_minzoom != -1) {
-						serialize_int(geomfile[j], tippecanoe_minzoom, geompos, fname);
-					}
-					if (tippecanoe_maxzoom != -1) {
-						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
-					}
-					if (has_id) {
-						serialize_ulong_long(geomfile[j], id, geompos, fname);
-					}
-					serialize_int(geomfile[j], segment, &geompos[j], fname);
-					long long wx = initial_x[segment], wy = initial_y[segment];
-
-					for (size_t u = 0; u < geom.size(); u++) {
-						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
-
-						if (geom[u].op != VT_CLOSEPATH) {
-							serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
-							serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
-							wx = geom[u].x + sx;
-							wy = geom[u].y + sy;
-						}
-					}
-
-					serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
-
-					serialize_int(geomfile[j], m, &geompos[j], fname);
-					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					if (metastart < 0) {
 						for (int i = 0; i < m; i++) {
-							serialize_long_long(geomfile[j], metakeys[i], &geompos[j], fname);
-							serialize_long_long(geomfile[j], metavals[i], &geompos[j], fname);
+							sf.keys.push_back(metakeys[i]);
+							sf.values.push_back(metavals[i]);
 						}
 					}
 
-					serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+					serialize_feature(geomfile[j], &sf, &geompos[j], fname, initial_x[segment] >> geometry_scale, initial_y[segment] >> geometry_scale);
 				}
 			}
 		}
