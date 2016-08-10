@@ -1,8 +1,8 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large collections of [GeoJSON](http://geojson.org/)
-features. This is a tool for [making maps from huge datasets](MADE_WITH.md).
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) features,
+[like these](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
 [![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
@@ -154,7 +154,7 @@ GeoJSON extension
 -----------------
 
 Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
-at which an individual feature will be included in the vector tile dataset being produced.
+at which an individual feature will be included in the vector tileset being produced.
 If you have a feature like this:
 
 ```
