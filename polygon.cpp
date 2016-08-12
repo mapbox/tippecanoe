@@ -577,6 +577,118 @@ std::vector<drawvec> remove_collinear(std::vector<drawvec> &rings) {
 	return out;
 }
 
+void spew(drawvec ring, size_t start, size_t end) {
+	for (size_t i = start; i < end; i++) {
+		fprintf(stderr, " %lld,%lld", ring[i % ring.size()].x, ring[i % ring.size()].y);
+	}
+	fprintf(stderr, "\n");
+}
+
+void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
+	if (ring.size() > 0 && ring[0] == ring[ring.size() - 1]) {
+		ring.resize(ring.size() - 1);
+	}
+
+	while (ring.size() > 0) {
+		std::multimap<draw, size_t> seen;
+
+		for (size_t i = 0; i < ring.size(); i++) {
+			seen.insert(std::pair<draw, size_t>(ring[i], i));
+		}
+
+		double best_area = INT_MAX;
+		ssize_t best_start = -1;
+		ssize_t best_end = -1;
+
+		for (size_t i = 0; i < ring.size(); i++) {
+			if (seen.count(ring[i]) > 1) {
+				auto match = seen.equal_range(ring[i]);
+
+				for (auto mi = match.first; mi != match.second; ++mi) {
+					double area = 0;
+					size_t end;
+
+					if (mi->second < i) {
+						area = fabs(get_area(ring, i, mi->second + ring.size()));
+						end = mi->second + ring.size();
+					} else {
+						area = fabs(get_area(ring, i, mi->second));
+						end = mi->second;
+					}
+
+					std::multimap<draw, size_t> seen2;
+
+					bool acceptable = true;
+					for (size_t j = i; j < end; j++) {
+						if (seen2.count(ring[j % ring.size()]) > 0) {
+							acceptable = false;
+							break;
+						}
+						seen2.insert(std::pair<draw, size_t>(ring[j % ring.size()], j));
+					}
+
+					if (acceptable && area > 0 && area < best_area) {
+						best_area = area;
+						best_start = i;
+						best_end = mi->second;
+
+						fprintf(stderr, "best: %ld to %ld with %f\n", best_start, best_end, best_area);
+					}
+
+#if 0
+					if (area > 0) {
+						fprintf(stderr, "SUB %lu to %lu: %f\n", i, mi->second, area);
+						if (mi->second < i) {
+							spew(ring, i, mi->second + ring.size());
+						} else {
+							spew(ring, i, mi->second);
+						}
+					}
+#endif
+				}
+			}
+		}
+
+		if (best_start >= 0) {
+			drawvec dv;
+
+			if (best_start < best_end) {
+				for (size_t i = best_start; i < best_end; i++) {
+					dv.push_back(ring[i % ring.size()]);
+				}
+			} else {
+				for (size_t i = best_start; i < best_end + ring.size(); i++) {
+					dv.push_back(ring[i % ring.size()]);
+				}
+			}
+
+			if (dv.size() == 0) {
+				fprintf(stderr, "can't happen %ld to %ld\n", best_start, best_end);
+				exit(EXIT_FAILURE);
+			}
+
+			dv.push_back(dv[0]);
+			rings.push_back(dv);
+
+			if (best_end > best_start) {
+				ring.erase(ring.begin() + best_start, ring.begin() + best_end);
+			} else {
+				ring.erase(ring.begin() + best_start, ring.end());
+				ring.erase(ring.begin(), ring.begin() + best_end);
+			}
+
+#if 0
+			fprintf(stderr, "now: ");
+			spew(ring, 0, ring.size());
+#endif
+		} else {
+			ring.push_back(ring[0]);
+			rings.push_back(ring);
+			break;
+		}
+	}
+}
+
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
 
@@ -608,6 +720,12 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 	std::vector<drawvec> rings;
 
+	for (size_t i = 0; i < segments.size(); i++) {
+		if (segments[i].size() > 0 && segments[i][0] == segments[i][1]) {
+			segments[i].clear();
+		}
+	}
+
 	// Look for spikes
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
@@ -615,39 +733,15 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 			auto match = paths.equal_range(segments[i][1]);
 
-#if 0
-			for (auto mi = match.first; mi != match.second; ++mi) {
-				size_t m = mi->second;
-                fprintf(stderr, "%lu->%lu ", i, m);
-            }
-            fprintf(stderr, "\n");
-#endif
-
 			for (auto mi = match.first; mi != match.second; ++mi) {
 				size_t m = mi->second;
 
-				if (segments[m].size() > 0 &&
+				if (m != i && segments[m].size() > 0 &&
 				    segments[m][0] == segments[i][1] &&
 				    segments[m][1] == segments[i][0]) {
-#if 0
-                    fprintf(stderr, "remove spike %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld (%lu and %lu)\n",
-                        segments[i][0].x, segments[i][0].y,
-                        segments[i][1].x, segments[i][1].y,
-                        segments[m][0].x, segments[m][0].y,
-                        segments[m][1].x, segments[m][1].y, i, m);
-#endif
-
 					segments[m].clear();
 					segments[i].clear();
 					break;
-				} else if (segments[m].size() > 0) {
-#if 0
-                    fprintf(stderr, "not a spike %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld (%lu and %lu)\n",
-                        segments[i][0].x, segments[i][0].y,
-                        segments[i][1].x, segments[i][1].y,
-                        segments[m][0].x, segments[m][0].y,
-                        segments[m][1].x, segments[m][1].y, i, m);
-#endif
 				}
 
 				if (segments[m].size() > 0 &&
@@ -687,8 +781,14 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
+			fprintf(stderr, "... %lld,%lld to %lld,%lld\n", segments[i][0].x, segments[i][0].y, segments[i][1].x, segments[i][1].y);
+		}
+	}
+
+	for (size_t i = 0; i < segments.size(); i++) {
+		if (segments[i].size() > 0) {
 			drawvec ring;
-			std::map<draw, size_t> seen;
+			std::multimap<draw, size_t> seen;
 
 			ring.push_back(segments[i][0]);
 			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
@@ -697,13 +797,6 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 			segments[i].clear();
 
 			while (ring.size() > 1) {
-#if 0
-                for (size_t j = 0; j < ring.size(); j++) {
-                    fprintf(stderr, "%lld,%lld ", ring[j].x, ring[j].y);
-                }
-                fprintf(stderr, "\n");
-#endif
-
 				if (seen.size() != ring.size()) {
 					fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
 					for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
@@ -733,17 +826,21 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 						if (segments[m][0] == here) {
 							next = segments[m][1];
 						} else {
+							continue;
 							next = segments[m][0];
 						}
 
 						double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
-						if (ang2 < 0) {
+						while (ang2 < 0) {
 							ang2 += 2 * M_PI;
 						}
+
+						fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
 
 						exits.insert(std::pair<double, size_t>(ang2, m));
 					}
 				}
+				fprintf(stderr, "\n");
 
 				int depth = 0;
 
@@ -765,36 +862,13 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					if (segments[ei->second][1] == here) {
 						// Points inward
 						depth++;
-					} else {
+					} else if (segments[ei->second][0] == here) {
 						depth--;
 						if (1 || depth < 0) {
 							ring.push_back(segments[ei->second][1]);
 							segments[ei->second].clear();
 							found_something = true;
-
-							if (seen.count(ring[ring.size() - 1]) > 1) {
-								fprintf(stderr, "duplicate in seen\n");
-								exit(EXIT_FAILURE);
-							}
-
-							auto where_seen = seen.find(ring[ring.size() - 1]);
-							if (where_seen != seen.end()) {
-								drawvec ring2;
-								size_t loop = where_seen->second;
-
-								for (size_t j = loop; j < ring.size(); j++) {
-									ring2.push_back(ring[j]);
-								}
-								rings.push_back(ring2);
-
-								for (size_t j = loop + 1; j < ring.size(); j++) {
-									seen.erase(ring[j]);
-								}
-								ring.resize(loop + 1);
-								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
-							} else {
-								seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
-							}
+							seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
 
 							break;
 						}
@@ -802,15 +876,16 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 				}
 
 				if (!found_something) {
-					fprintf(stderr, "couldn't find a way out\n");
-					exit(EXIT_FAILURE);
+					if (ring[ring.size() - 1] != ring[0]) {
+						fprintf(stderr, "couldn't find a way out\n");
+						exit(EXIT_FAILURE);
+					}
 					break;
 				}
 			}
 
-			if (ring.size() > 1) {
-				rings.push_back(ring);
-			}
+			fprintf(stderr, "ring size %lu\n", ring.size());
+			find_subrings(ring, rings);
 		}
 	}
 

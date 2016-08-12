@@ -207,10 +207,11 @@ drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *
 #endif
 
 double get_area(drawvec &geom, size_t i, size_t j) {
+	size_t s = geom.size();
 	double area = 0;
 	for (size_t k = i; k < j; k++) {
-		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+		area += (long double) geom[k % s].x * (long double) geom[(i + ((k - i + 1) % (j - i))) % s].y;
+		area -= (long double) geom[k % s].y * (long double) geom[(i + ((k - i + 1) % (j - i))) % s].x;
 	}
 	area /= 2;
 	return area;
@@ -585,6 +586,11 @@ void check_polygon(drawvec &geom, drawvec &before) {
 						geom[j + 1].x, geom[j + 1].y);
 
 					psdump(geom, i, j);
+					for (size_t a = 0; a < before.size(); a++) {
+						fprintf(stderr, "%lld,%lld ", before[a].x, before[a].y);
+					}
+					fprintf(stderr, "\n");
+
 					// dump(before);
 					exit(EXIT_FAILURE);
 				}
