@@ -632,7 +632,7 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 						best_start = i;
 						best_end = mi->second;
 
-						fprintf(stderr, "best: %ld to %ld with %f\n", best_start, best_end, best_area);
+						// fprintf(stderr, "best: %ld to %ld with %f\n", best_start, best_end, best_area);
 					}
 
 #if 0
@@ -781,7 +781,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
-			fprintf(stderr, "... %lld,%lld to %lld,%lld\n", segments[i][0].x, segments[i][0].y, segments[i][1].x, segments[i][1].y);
+			// fprintf(stderr, "... %lld,%lld to %lld,%lld\n", segments[i][0].x, segments[i][0].y, segments[i][1].x, segments[i][1].y);
 		}
 	}
 
@@ -826,7 +826,6 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 						if (segments[m][0] == here) {
 							next = segments[m][1];
 						} else {
-							continue;
 							next = segments[m][0];
 						}
 
@@ -835,12 +834,12 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 							ang2 += 2 * M_PI;
 						}
 
-						fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
+						// fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
 
 						exits.insert(std::pair<double, size_t>(ang2, m));
 					}
 				}
-				fprintf(stderr, "\n");
+				// fprintf(stderr, "\n");
 
 				int depth = 0;
 
@@ -864,7 +863,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 						depth++;
 					} else if (segments[ei->second][0] == here) {
 						depth--;
-						if (1 || depth < 0) {
+						if (depth < 0) {
 							ring.push_back(segments[ei->second][1]);
 							segments[ei->second].clear();
 							found_something = true;
@@ -884,7 +883,8 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 				}
 			}
 
-			fprintf(stderr, "ring size %lu\n", ring.size());
+			// fprintf(stderr, "ring size %lu\n", ring.size());
+			// spew(ring, 0, ring.size());
 			find_subrings(ring, rings);
 		}
 	}
