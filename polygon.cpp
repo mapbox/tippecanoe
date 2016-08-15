@@ -689,6 +689,106 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 	}
 }
 
+drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign) {
+	drawvec ring;
+	std::multimap<draw, size_t> seen;
+
+	ring.push_back(segments[i][0]);
+	seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
+	ring.push_back(segments[i][1]);
+	seen.insert(std::pair<draw, size_t>(segments[i][1], 1));
+	segments[i].clear();
+
+	while (ring.size() > 1) {
+		if (seen.size() != ring.size()) {
+			fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
+			for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
+				fprintf(stderr, "seen: %lld,%lld %lu\n", mi->first.x, mi->first.y, mi->second);
+			}
+			for (size_t j = 0; j < ring.size(); j++) {
+				fprintf(stderr, "ring: %lu %lld,%lld\n", j, ring[j].x, ring[j].y);
+			}
+			exit(EXIT_FAILURE);
+		}
+
+		auto match = paths.equal_range(ring[ring.size() - 1]);
+
+		draw prev = ring[ring.size() - 2];
+		draw here = ring[ring.size() - 1];
+		bool found_something = false;
+		std::multimap<double, size_t> exits;
+
+		for (auto mi = match.first; mi != match.second; ++mi) {
+			size_t m = mi->second;
+
+			double ang = atan2(prev.y - here.y, prev.x - here.x);
+
+			if (segments[m].size() > 0) {
+				draw next;
+
+				if (segments[m][0] == here) {
+					next = segments[m][1];
+				} else {
+					next = segments[m][0];
+				}
+
+				double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
+				while (ang2 < 0) {
+					ang2 += 2 * M_PI;
+				}
+
+				// fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
+
+				exits.insert(std::pair<double, size_t>(ang2 * sign, m));
+			}
+		}
+		// fprintf(stderr, "\n");
+
+		int depth = 0;
+
+#if 0
+				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
+					if (segments[ei->second][1] == here) {
+						fprintf(stderr, "XXXX %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
+							prev.x, prev.y, here.x, here.y, ei->first,
+							segments[ei->second][1].x, segments[ei->second][1].y);
+					} else {
+						fprintf(stderr, "from %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
+							prev.x, prev.y, here.x, here.y, ei->first,
+							segments[ei->second][1].x, segments[ei->second][1].y);
+					}
+				}
+#endif
+
+		for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
+			if (segments[ei->second][1] == here) {
+				// Points inward
+				depth++;
+			} else if (segments[ei->second][0] == here) {
+				depth--;
+				if (depth < 0) {
+					ring.push_back(segments[ei->second][1]);
+					segments[ei->second].clear();
+					found_something = true;
+					seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+
+					break;
+				}
+			}
+		}
+
+		if (!found_something) {
+			if (ring[ring.size() - 1] != ring[0]) {
+				fprintf(stderr, "couldn't find a way out\n");
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
+	}
+
+	return ring;
+}
+
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
 
@@ -787,100 +887,12 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
-			drawvec ring;
-			std::multimap<draw, size_t> seen;
+			std::vector<drawvec> before = segments;
 
-			ring.push_back(segments[i][0]);
-			seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
-			ring.push_back(segments[i][1]);
-			seen.insert(std::pair<draw, size_t>(segments[i][1], 1));
-			segments[i].clear();
-
-			while (ring.size() > 1) {
-				if (seen.size() != ring.size()) {
-					fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
-					for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
-						fprintf(stderr, "seen: %lld,%lld %lu\n", mi->first.x, mi->first.y, mi->second);
-					}
-					for (size_t j = 0; j < ring.size(); j++) {
-						fprintf(stderr, "ring: %lu %lld,%lld\n", j, ring[j].x, ring[j].y);
-					}
-					exit(EXIT_FAILURE);
-				}
-
-				auto match = paths.equal_range(ring[ring.size() - 1]);
-
-				draw prev = ring[ring.size() - 2];
-				draw here = ring[ring.size() - 1];
-				bool found_something = false;
-				std::multimap<double, size_t> exits;
-
-				for (auto mi = match.first; mi != match.second; ++mi) {
-					size_t m = mi->second;
-
-					double ang = atan2(prev.y - here.y, prev.x - here.x);
-
-					if (segments[m].size() > 0) {
-						draw next;
-
-						if (segments[m][0] == here) {
-							next = segments[m][1];
-						} else {
-							next = segments[m][0];
-						}
-
-						double ang2 = ang - atan2(next.y - here.y, next.x - here.x);
-						while (ang2 < 0) {
-							ang2 += 2 * M_PI;
-						}
-
-						// fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
-
-						exits.insert(std::pair<double, size_t>(ang2, m));
-					}
-				}
-				// fprintf(stderr, "\n");
-
-				int depth = 0;
-
-#if 0
-				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
-					if (segments[ei->second][1] == here) {
-						fprintf(stderr, "XXXX %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
-							prev.x, prev.y, here.x, here.y, ei->first,
-							segments[ei->second][1].x, segments[ei->second][1].y);
-					} else {
-						fprintf(stderr, "from %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
-							prev.x, prev.y, here.x, here.y, ei->first,
-							segments[ei->second][1].x, segments[ei->second][1].y);
-					}
-				}
-#endif
-
-				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
-					if (segments[ei->second][1] == here) {
-						// Points inward
-						depth++;
-					} else if (segments[ei->second][0] == here) {
-						depth--;
-						if (depth < 0) {
-							ring.push_back(segments[ei->second][1]);
-							segments[ei->second].clear();
-							found_something = true;
-							seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
-
-							break;
-						}
-					}
-				}
-
-				if (!found_something) {
-					if (ring[ring.size() - 1] != ring[0]) {
-						fprintf(stderr, "couldn't find a way out\n");
-						exit(EXIT_FAILURE);
-					}
-					break;
-				}
+			drawvec ring = walk_ring(segments, i, paths, 1);
+			if (get_area(ring, 0, ring.size()) < 0) {
+				segments = before;
+				ring = walk_ring(segments, i, paths, -1);
 			}
 
 			// fprintf(stderr, "ring size %lu\n", ring.size());
