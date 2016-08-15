@@ -1,3 +1,7 @@
+## 1.12.9
+
+* Clean up parsing and serialization. Provide some context with parsing errors.
+
 ## 1.12.8
 
 * Fix the spelling of the --preserve-input-order option

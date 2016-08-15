@@ -18,3 +18,30 @@ int deserialize_long_long_io(FILE *f, long long *n, long long *geompos);
 int deserialize_ulong_long_io(FILE *f, unsigned long long *n, long long *geompos);
 int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos);
 int deserialize_byte_io(FILE *f, signed char *n, long long *geompos);
+
+struct serial_feature {
+	long long layer;
+	int segment;
+	long long seq;
+
+	signed char t;
+	signed char feature_minzoom;
+
+	bool has_id;
+	unsigned long long id;
+
+	bool has_tippecanoe_minzoom;
+	int tippecanoe_minzoom;
+
+	bool has_tippecanoe_maxzoom;
+	int tippecanoe_maxzoom;
+
+	drawvec geometry;
+
+	size_t m;
+	std::vector<long long> keys;
+	std::vector<long long> values;
+	long long metapos;
+};
+
+void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy);

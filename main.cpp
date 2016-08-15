@@ -42,11 +42,11 @@ extern "C" {
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
-#include "serial.hpp"
 #include "mbtiles.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
+#include "serial.hpp"
 #include "options.hpp"
 
 static int low_detail = 12;
