@@ -1,3 +1,7 @@
+## 1.12.10
+
+* Pass feature IDs through in tile-join
+
 ## 1.12.9
 
 * Clean up parsing and serialization. Provide some context with parsing errors.
