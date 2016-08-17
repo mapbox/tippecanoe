@@ -62,6 +62,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			mvt_feature outfeature;
 			int matched = 0;
 
+			if (feat.has_id) {
+				outfeature.has_id = true;
+				outfeature.id = feat.id;
+			}
+
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
