@@ -25,6 +25,13 @@ struct mvt_feature {
 	std::vector<unsigned> tags;
 	std::vector<mvt_geometry> geometry;
 	int /* mvt_geometry_type */ type;
+	unsigned long long id;
+	bool has_id;
+
+	mvt_feature() {
+		has_id = false;
+		id = 0;
+	}
 };
 
 enum mvt_value_type {

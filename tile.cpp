@@ -74,6 +74,8 @@ struct coalesce {
 	int m;
 	bool coalesced;
 	double spacing;
+	bool has_id;
+	unsigned long long id;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -260,7 +262,7 @@ struct sll {
 	}
 };
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -289,6 +291,18 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			}
 
 			bbox2[k] /= 256;
+		}
+
+		// Offset from tile coordinates back to world coordinates
+		unsigned sx = 0, sy = 0;
+		if (z != 0) {
+			sx = tx << (32 - z);
+			sy = ty << (32 - z);
+		}
+
+		drawvec geom2;
+		for (size_t i = 0; i < geom.size(); i++) {
+			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -324,49 +338,30 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 						within[j] = 1;
 					}
 
-					// Offset from tile coordinates back to world coordinates
-					unsigned sx = 0, sy = 0;
-					if (z != 0) {
-						sx = tx << (32 - z);
-						sy = ty << (32 - z);
-					}
+					serial_feature sf;
+					sf.layer = layer;
+					sf.segment = segment;
+					sf.seq = seq;
+					sf.t = t;
+					sf.has_id = has_id;
+					sf.id = id;
+					sf.has_tippecanoe_minzoom = tippecanoe_minzoom != -1;
+					sf.tippecanoe_minzoom = tippecanoe_minzoom;
+					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
+					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
+					sf.metapos = metastart;
+					sf.geometry = geom2;
+					sf.m = m;
+					sf.feature_minzoom = feature_minzoom;
 
-					// printf("type %d, meta %lld\n", t, metastart);
-					serialize_byte(geomfile[j], t, &geompos[j], fname);
-					serialize_long_long(geomfile[j], seq, &geompos[j], fname);
-					serialize_long_long(geomfile[j], (layer << 2) | ((tippecanoe_minzoom != -1) << 1) | (tippecanoe_maxzoom != -1), &geompos[j], fname);
-					if (tippecanoe_minzoom != -1) {
-						serialize_int(geomfile[j], tippecanoe_minzoom, geompos, fname);
-					}
-					if (tippecanoe_maxzoom != -1) {
-						serialize_int(geomfile[j], tippecanoe_maxzoom, geompos, fname);
-					}
-					serialize_int(geomfile[j], segment, &geompos[j], fname);
-					long long wx = initial_x[segment], wy = initial_y[segment];
-
-					for (size_t u = 0; u < geom.size(); u++) {
-						serialize_byte(geomfile[j], geom[u].op, &geompos[j], fname);
-
-						if (geom[u].op != VT_CLOSEPATH) {
-							serialize_long_long(geomfile[j], ((geom[u].x + sx) >> geometry_scale) - (wx >> geometry_scale), &geompos[j], fname);
-							serialize_long_long(geomfile[j], ((geom[u].y + sy) >> geometry_scale) - (wy >> geometry_scale), &geompos[j], fname);
-							wx = geom[u].x + sx;
-							wy = geom[u].y + sy;
-						}
-					}
-
-					serialize_byte(geomfile[j], VT_END, &geompos[j], fname);
-
-					serialize_int(geomfile[j], m, &geompos[j], fname);
-					serialize_long_long(geomfile[j], metastart, &geompos[j], fname);
 					if (metastart < 0) {
 						for (int i = 0; i < m; i++) {
-							serialize_long_long(geomfile[j], metakeys[i], &geompos[j], fname);
-							serialize_long_long(geomfile[j], metavals[i], &geompos[j], fname);
+							sf.keys.push_back(metakeys[i]);
+							sf.values.push_back(metavals[i]);
 						}
 					}
 
-					serialize_byte(geomfile[j], feature_minzoom, &geompos[j], fname);
+					serialize_feature(geomfile[j], &sf, &geompos[j], fname, initial_x[segment] >> geometry_scale, initial_y[segment] >> geometry_scale);
 				}
 			}
 		}
@@ -389,7 +384,10 @@ struct partial {
 	int line_detail;
 	int maxzoom;
 	double spacing;
+	double simplification;
 	signed char t;
+	unsigned long long id;
+	bool has_id;
 };
 
 struct partial_arg {
@@ -462,7 +460,7 @@ void *partial_feature_worker(void *v) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
+				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification);
 
 				if (t != VT_POLYGON || ngeom.size() >= 3) {
 					geom = ngeom;
@@ -500,7 +498,11 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (geoms[g].size() < 3) {
-					geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
+					if (area > 0) {
+						geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
+					} else {
+						geoms[g].clear();
+					}
 				}
 			}
 		}
@@ -559,7 +561,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, double gamma, int nlayers, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int nlayers, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification) {
 	int line_detail;
 	double fraction = 1;
 
@@ -641,13 +643,19 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			long long layer;
 			deserialize_long_long_io(geoms, &layer, geompos_in);
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
+			unsigned long long id = 0;
+			bool has_id = false;
 			if (layer & 2) {
 				deserialize_int_io(geoms, &tippecanoe_minzoom, geompos_in);
 			}
 			if (layer & 1) {
 				deserialize_int_io(geoms, &tippecanoe_maxzoom, geompos_in);
 			}
-			layer >>= 2;
+			if (layer & 4) {
+				has_id = true;
+				deserialize_ulong_long_io(geoms, &id, geompos_in);
+			}
+			layer >>= 3;
 
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);
@@ -686,7 +694,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			signed char feature_minzoom;
 			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
 
-			double progress = floor((((*geompos_in + *along) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
+			double progress = floor((((*geompos_in + *along - alongminus) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
 				if (!quiet) {
 					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
@@ -695,10 +703,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			original_features++;
-
-			if (z == 0 && t == VT_POLYGON) {
-				geom = fix_polygon(geom);
-			}
 
 			int quick = quick_check(bbox, z, line_detail, buffer);
 			if (quick == 0) {
@@ -777,7 +781,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id);
 			}
 
 			if (z < minzoom) {
@@ -860,6 +864,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.keys = metakeys;
 				p.values = metavals;
 				p.spacing = spacing;
+				p.simplification = simplification;
+				p.id = id;
+				p.has_id = has_id;
 				partials.push_back(p);
 			}
 		}
@@ -921,6 +928,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;
 					c.spacing = partials[i].spacing;
+					c.id = partials[i].id;
+					c.has_id = partials[i].has_id;
 
 					features[layer].push_back(c);
 				}
@@ -972,7 +981,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
 					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
 					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0,
-									     !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]));
+									     !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
 				}
 
 				if (features[j][x].type == VT_POLYGON) {
@@ -1010,10 +1019,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					features[k][x].geom = remove_noop(features[k][x].geom, features[k][x].type, 0);
 				}
 
+				if (features[k][x].geom.size() == 0) {
+					continue;
+				}
+
 				feature.type = features[k][x].type;
 				feature.geometry = to_feature(features[k][x].geom);
 				count += features[k][x].geom.size();
 				features[k][x].geom.clear();
+
+				feature.id = features[k][x].id;
+				feature.has_id = features[k][x].has_id;
 
 				decode_meta(features[k][x].m, features[k][x].keys, features[k][x].values, features[k][x].stringpool, layer, feature);
 
@@ -1049,7 +1065,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			totalsize += features[j].size();
 		}
 
-		if (totalsize > 0) {
+		double progress = floor((((*geompos_in + *along - alongminus) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
+		if (progress >= oprogress + 0.1) {
+			if (!quiet) {
+				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+			}
+			oprogress = progress;
+		}
+
+		if (totalsize > 0 && tile.layers.size() > 0) {
 			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 				fprintf(stderr, "Try using -B to set a higher base zoom level.\n");
@@ -1127,6 +1151,7 @@ struct write_tile_args {
 	int minzoom;
 	int full_detail;
 	int low_detail;
+	double simplification;
 	volatile long long *most;
 	long long *meta_off;
 	long long *pool_off;
@@ -1174,7 +1199,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, arg->gamma, arg->nlayers, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->nlayers, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -1225,7 +1250,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification) {
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1346,6 +1371,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].gamma = gamma;
 			args[thread].nlayers = nlayers;
 			args[thread].child_shards = TEMP_FILES / threads;
+			args[thread].simplification = simplification;
 
 			args[thread].geomfd = geomfd;
 			args[thread].geom_size = geom_size;

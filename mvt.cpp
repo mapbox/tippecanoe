@@ -178,6 +178,11 @@ bool mvt_tile::decode(std::string &message) {
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
+						case 1: /* id */
+							feature.id = feature_reader.get_uint64();
+							feature.has_id = true;
+							break;
+
 						case 2: /* tag */
 						{
 							auto pi = feature_reader.get_packed_uint32();
@@ -302,6 +307,10 @@ std::string mvt_tile::encode() {
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
+
+			if (layers[i].features[f].has_id) {
+				feature_writer.add_uint64(1, layers[i].features[f].id);
+			}
 
 			std::vector<uint32_t> geometry;
 

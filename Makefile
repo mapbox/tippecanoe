@@ -1,6 +1,7 @@
 PREFIX ?= /usr/local
 MANDIR ?= $(PREFIX)/share/man/man1/
 BUILDTYPE ?= Release
+SHELL = /bin/bash
 
 # inherit from env if set
 CC := $(CC)
@@ -87,17 +88,22 @@ parallel-test:
 	perl -e 'for ($$i = 0; $$i < 20; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { \"yes\": \"no\", \"who\": 1 }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in1.json
 	perl -e 'for ($$i = 0; $$i < 300000; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in2.json
 	perl -e 'for ($$i = 0; $$i < 20; $$i++) { $$lon = rand(360) - 180; $$lat = rand(180) - 90; print "{ \"type\": \"Feature\", \"properties\": { }, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ $$lon, $$lat ] } }\n"; }' > tests/parallel/in3.json
-	./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-file.mbtiles tests/parallel/in[123].json
-	./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-file.mbtiles tests/parallel/in[123].json
+	echo -n "" > tests/parallel/empty1.json
+	echo "" > tests/parallel/empty2.json
+	./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-file.mbtiles tests/parallel/in[123].json tests/parallel/empty[12].json
+	./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-file.mbtiles tests/parallel/in[123].json tests/parallel/empty[12].json
 	cat tests/parallel/in[123].json | ./tippecanoe -z5 -f -pi -l test -n test -o tests/parallel/linear-pipe.mbtiles
 	cat tests/parallel/in[123].json | ./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-pipe.mbtiles
+	./tippecanoe -z5 -f -pi -l test -n test -P -o tests/parallel/parallel-pipes.mbtiles <(cat tests/parallel/in1.json) <(cat tests/parallel/empty1.json) <(cat tests/parallel/empty2.json) <(cat tests/parallel/in2.json) /dev/null <(cat tests/parallel/in3.json)
 	./tippecanoe-decode tests/parallel/linear-file.mbtiles > tests/parallel/linear-file.json
 	./tippecanoe-decode tests/parallel/parallel-file.mbtiles > tests/parallel/parallel-file.json
 	./tippecanoe-decode tests/parallel/linear-pipe.mbtiles > tests/parallel/linear-pipe.json
 	./tippecanoe-decode tests/parallel/parallel-pipe.mbtiles > tests/parallel/parallel-pipe.json
+	./tippecanoe-decode tests/parallel/parallel-pipes.mbtiles > tests/parallel/parallel-pipes.json
 	cmp tests/parallel/linear-file.json tests/parallel/parallel-file.json
 	cmp tests/parallel/linear-file.json tests/parallel/linear-pipe.json
 	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipe.json
+	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipes.json
 	rm tests/parallel/*.mbtiles tests/parallel/*.json
 
 pbf-test:

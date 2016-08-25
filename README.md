@@ -1,8 +1,8 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large collections of [GeoJSON](http://geojson.org/)
-features. This is a tool for [making maps from huge datasets](MADE_WITH.md).
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) features,
+[like these](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
 [![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
@@ -110,6 +110,11 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
    compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
  * -g _gamma_ or --gamma=_gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 
+### Line and polygon simplification
+
+ * -S _scale_ or --simplify=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
+   the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
+
 ### Doing more
 
  * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties.
@@ -149,7 +154,7 @@ GeoJSON extension
 -----------------
 
 Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
-at which an individual feature will be included in the vector tile dataset being produced.
+at which an individual feature will be included in the vector tileset being produced.
 If you have a feature like this:
 
 ```

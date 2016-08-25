@@ -42,11 +42,11 @@ extern "C" {
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
-#include "serial.hpp"
 #include "mbtiles.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
+#include "serial.hpp"
 #include "options.hpp"
 
 static int low_detail = 12;
@@ -55,6 +55,7 @@ static int min_detail = 7;
 
 int quiet = 0;
 int geometry_scale = 0;
+double simplification = 1;
 
 int prevent[256];
 int additional[256];
@@ -366,7 +367,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
-			perror("pthread_join");
+			perror("pthread_join 370");
 		}
 
 		std::set<type_and_string>::iterator j;
@@ -440,7 +441,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys, int maxzoom) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys, int maxzoom) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -480,6 +481,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 		perror("pthread_create");
 		exit(EXIT_FAILURE);
 	}
+	parser_created = true;
 }
 
 void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
@@ -675,7 +677,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					void *retval;
 
 					if (pthread_join(pthreads[a], &retval) != 0) {
-						perror("pthread_join");
+						perror("pthread_join 679");
 					}
 				}
 
@@ -1064,6 +1066,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				long long ahead = 0;
 				long long initial_offset = overall_offset;
 				pthread_t parallel_parser;
+				bool parser_created = false;
 
 #define READ_BUF 2000
 #define PARSE_MIN 10000000
@@ -1082,15 +1085,16 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 						// wait for the parser thread instead of continuing to stream input.
 
 						if (is_parsing == 0 || ahead >= PARSE_MAX) {
-							if (initial_offset != 0) {
+							if (parser_created) {
 								if (pthread_join(parallel_parser, NULL) != 0) {
-									perror("pthread_join");
+									perror("pthread_join 1088");
 									exit(EXIT_FAILURE);
 								}
+								parser_created = false;
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1116,20 +1120,24 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 					perror(reading.c_str());
 				}
 
-				if (initial_offset != 0) {
+				if (parser_created) {
 					if (pthread_join(parallel_parser, NULL) != 0) {
-						perror("pthread_join");
+						perror("pthread_join 1122");
 						exit(EXIT_FAILURE);
 					}
+					parser_created = false;
 				}
 
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
 
-					if (pthread_join(parallel_parser, NULL) != 0) {
-						perror("pthread_join");
+					if (parser_created) {
+						if (pthread_join(parallel_parser, NULL) != 0) {
+							perror("pthread_join 1133");
+						}
+						parser_created = false;
 					}
 
 					overall_offset += ahead;
@@ -1606,7 +1614,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1764,6 +1772,7 @@ int main(int argc, char **argv) {
 		{"prevent", required_argument, 0, 'p'},
 		{"additional", required_argument, 0, 'a'},
 		{"projection", required_argument, 0, 's'},
+		{"simplification", required_argument, 0, 'S'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1786,7 +1795,7 @@ int main(int argc, char **argv) {
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
-		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
+		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
@@ -1812,7 +1821,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -1981,6 +1990,14 @@ int main(int argc, char **argv) {
 
 		case 's':
 			set_projection_or_exit(optarg);
+			break;
+
+		case 'S':
+			simplification = atof(optarg);
+			if (simplification <= 0) {
+				fprintf(stderr, "%s: --simplification must be > 0\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		default: {

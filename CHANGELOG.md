@@ -1,3 +1,41 @@
+## 1.12.11
+
+* Don't try to revive a placeholder for a degenerate polygon that had negative area
+
+## 1.12.10
+
+* Pass feature IDs through in tile-join
+
+## 1.12.9
+
+* Clean up parsing and serialization. Provide some context with parsing errors.
+
+## 1.12.8
+
+* Fix the spelling of the --preserve-input-order option
+
+## 1.12.7
+
+* Support the "id" field of GeoJSON objects and vector tile features
+
+## 1.12.6
+
+* Fix error reports when reading from an empty file with parallel input
+
+## 1.12.5
+
+* Add an option to vary the level of line and polygon simplification
+* Be careful not to produce an empty tile if there was a feature with
+  empty geometry.
+
+## 1.12.4
+
+* Be even more careful not to produce features with empty geometry
+
+## 1.12.3
+
+* Fix double-counted progress in the progress indicator
+
 ## 1.12.2
 
 * Add ability to specify a projection to tippecanoe-decode
