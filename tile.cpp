@@ -498,7 +498,11 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (geoms[g].size() < 3) {
-					geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
+					if (area > 0) {
+						geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
+					} else {
+						geoms[g].clear();
+					}
 				}
 			}
 		}
