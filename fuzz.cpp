@@ -40,8 +40,8 @@ int main() {
 		int len = rand() % 100 + 3;
 
 		for (i = 0; i < len; i++) {
-			int x = rand() % 100;
-			int y = rand() % 100;
+			int x = rand() % 10;
+			int y = rand() % 10;
 			fprintf(f, "%d,%d ", x, y);
 
 			if (path.size() == 0) {
@@ -78,7 +78,7 @@ int main() {
 		fprintf(stderr, "%d sides\n", len);
 		clock_t before = clock();
 
-		drawvec out = clean_polygon(dv, true);
+		drawvec out = clean_polygon(dv, false);
 
 		clock_t after = clock();
 		fprintf(stderr, "%d sides took %lld\n", len, (long long) (after - before));

@@ -689,7 +689,7 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 	}
 }
 
-drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign) {
+drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices) {
 	std::multimap<draw, std::pair<draw, draw>> existing;
 
 	drawvec ring;
@@ -703,7 +703,20 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 
 	double entryang = 999;
 
+	ssize_t step = -1;
+
 	while (ring.size() > 1) {
+		step++;
+
+		if (step >= alternatives.size()) {
+			alternatives.resize(step + 1);
+			alternatives[step] = 0;
+		}
+		if (step >= choices.size()) {
+			choices.resize(step + 1);
+			choices[step] = 0;
+		}
+
 		if (seen.size() != ring.size()) {
 			fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
 			for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
@@ -747,6 +760,9 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 		}
 		// fprintf(stderr, "\n");
 
+		alternatives[step] = exits.size();
+		// fprintf(stderr, "%lu alternatives for %lu\n", alternatives[step], step);
+
 		int depth = 0;
 
 #if 0
@@ -763,13 +779,23 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 				}
 #endif
 
+		ssize_t alternative = -1;
+
 		for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
+			alternative++;
+
 			if (segments[ei->second][1] == here) {
 				// Points inward
 				depth++;
 			} else if (segments[ei->second][0] == here) {
 				depth--;
-				if (depth < 0) {
+
+				if (alternative < choices[step]) {
+					fprintf(stderr, "avoiding step %ld choice %ld as <%lu\n", step, alternative, choices[step]);
+					continue;
+				}
+
+				if (1 || depth < 0) {
 					bool suitable = true;
 					double anga = 999, angb = 999;
 
@@ -838,10 +864,13 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 		if (!found_something) {
 			if (ring[ring.size() - 1] != ring[0]) {
 				fprintf(stderr, "couldn't find a way out\n");
+#if 0
 				for (size_t a = 0; a < ring.size(); a++) {
 					fprintf(stderr, "%lld,%lld ", ring[a].x, ring[a].y);
 				}
 				fprintf(stderr, "\n");
+#endif
+				return drawvec();
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -950,15 +979,45 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
 			std::vector<drawvec> before = segments;
+			std::vector<size_t> alternatives;
+			std::vector<size_t> choices;
 
-			drawvec ring = walk_ring(segments, i, paths, 1);
-			if (get_area(ring, 0, ring.size()) < 0) {
-				segments = before;
-				ring = walk_ring(segments, i, paths, -1);
+			drawvec ring;
+
+			while (1) {
+				ring = walk_ring(segments, i, paths, 1, alternatives, choices);
+
+				if (ring.size() == 0) {
+					segments = before;
+
+					for (size_t j = 0; j < choices.size(); j++) {
+						if (alternatives[j] > 1) {
+							fprintf(stderr, "step %lu: %ld of %ld\n", j, choices[j], alternatives[j]);
+						}
+					}
+
+					bool again = false;
+
+					for (ssize_t j = choices.size() - 1; j >= 0; j--) {
+						if (alternatives[j] > 1 && choices[j] + 1 < alternatives[j]) {
+							choices[j]++;
+							fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
+							choices.resize(j + 1);
+							alternatives.resize(j + 1);
+							again = true;
+							break;
+						}
+					}
+
+					if (!again) {
+						fprintf(stderr, "out of alternatives\n");
+						exit(EXIT_FAILURE);
+					}
+				} else {
+					break;
+				}
 			}
 
-			// fprintf(stderr, "ring size %lu\n", ring.size());
-			// spew(ring, 0, ring.size());
 			find_subrings(ring, rings);
 		}
 	}
