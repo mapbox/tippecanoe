@@ -690,6 +690,8 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 }
 
 drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign) {
+	std::multimap<draw, std::pair<draw, draw>> existing;
+
 	drawvec ring;
 	std::multimap<draw, size_t> seen;
 
@@ -717,11 +719,10 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 		draw here = ring[ring.size() - 1];
 		bool found_something = false;
 		std::multimap<double, size_t> exits;
+		double ang = atan2(prev.y - here.y, prev.x - here.x);
 
 		for (auto mi = match.first; mi != match.second; ++mi) {
 			size_t m = mi->second;
-
-			double ang = atan2(prev.y - here.y, prev.x - here.x);
 
 			if (segments[m].size() > 0) {
 				draw next;
@@ -767,12 +768,47 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 			} else if (segments[ei->second][0] == here) {
 				depth--;
 				if (depth < 0) {
-					ring.push_back(segments[ei->second][1]);
-					segments[ei->second].clear();
-					found_something = true;
-					seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+					bool suitable = true;
 
-					break;
+					auto alsohere = existing.equal_range(ring[ring.size() - 1]);
+					for (auto ahi = alsohere.first; ahi != alsohere.second; ++ahi) {
+						fprintf(stderr, "from %lld,%lld there is also %lld,%lld to %lld,%lld\n",
+							ring[ring.size() - 1].x, ring[ring.size() - 1].y,
+							ahi->second.first.x, ahi->second.first.y,
+							ahi->second.second.x, ahi->second.second.y);
+
+						double anga = ang - atan2(ahi->second.first.y - here.y, ahi->second.first.x - here.x);
+						while (anga < 0) {
+							anga += 2 * M_PI;
+						}
+
+						double angb = ang - atan2(ahi->second.second.y - here.y, ahi->second.second.x - here.x);
+						while (angb < 0) {
+							angb += 2 * M_PI;
+						}
+
+						fprintf(stderr, "those have angles %f and %f compared to %f\n", anga, angb, ei->first);
+
+						if ((anga < ei->first && angb > ei->first) ||
+						    (anga > ei->first && angb < ei->first)) {
+							fprintf(stderr, "exit unsuitable because of crossing\n");
+							suitable = false;
+							break;
+						}
+					}
+
+					if (suitable) {
+						existing.insert(std::pair<draw, std::pair<draw, draw>>(here,
+												       std::pair<draw, draw>(prev, segments[ei->second][1])));
+
+						ring.push_back(segments[ei->second][1]);
+
+						segments[ei->second].clear();
+						found_something = true;
+						seen.insert(std::pair<draw, size_t>(ring[ring.size() - 1], ring.size() - 1));
+
+						break;
+					}
 				}
 			}
 		}
@@ -780,6 +816,10 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 		if (!found_something) {
 			if (ring[ring.size() - 1] != ring[0]) {
 				fprintf(stderr, "couldn't find a way out\n");
+				for (size_t a = 0; a < ring.size(); a++) {
+					fprintf(stderr, "%lld,%lld ", ring[a].x, ring[a].y);
+				}
+				fprintf(stderr, "\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
