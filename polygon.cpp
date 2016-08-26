@@ -701,6 +701,8 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 	seen.insert(std::pair<draw, size_t>(segments[i][1], 1));
 	segments[i].clear();
 
+	double entryang = 999;
+
 	while (ring.size() > 1) {
 		if (seen.size() != ring.size()) {
 			fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
@@ -769,6 +771,7 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 				depth--;
 				if (depth < 0) {
 					bool suitable = true;
+					double anga = 999, angb = 999;
 
 					auto alsohere = existing.equal_range(ring[ring.size() - 1]);
 					for (auto ahi = alsohere.first; ahi != alsohere.second; ++ahi) {
@@ -777,17 +780,27 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 							ahi->second.first.x, ahi->second.first.y,
 							ahi->second.second.x, ahi->second.second.y);
 
-						double anga = ang - atan2(ahi->second.first.y - here.y, ahi->second.first.x - here.x);
+						anga = ang - atan2(ahi->second.first.y - here.y, ahi->second.first.x - here.x);
 						while (anga < 0) {
 							anga += 2 * M_PI;
 						}
 
-						double angb = ang - atan2(ahi->second.second.y - here.y, ahi->second.second.x - here.x);
+						angb = ang - atan2(ahi->second.second.y - here.y, ahi->second.second.x - here.x);
 						while (angb < 0) {
 							angb += 2 * M_PI;
 						}
 
-						fprintf(stderr, "those have angles %f and %f compared to %f\n", anga, angb, ei->first);
+						// If we are following a straight line, use the angle that led into the straight line
+						if (anga == 0) {
+							fprintf(stderr, "using %f to follow straight line\n", entryang);
+							anga = entryang;
+						}
+						if (angb == 0) {
+							fprintf(stderr, "using %f to follow straight line\n", entryang);
+							angb = entryang;
+						}
+
+						fprintf(stderr, "those have angles %f and %f compared to %f for %lld,%lld\n", anga, angb, ei->first, segments[ei->second][1].x, segments[ei->second][1].y);
 
 						if ((anga < ei->first && angb > ei->first) ||
 						    (anga > ei->first && angb < ei->first)) {
@@ -798,6 +811,15 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 					}
 
 					if (suitable) {
+						// if we are following a straight line, keep track of the angle that led into the straight line
+						if (anga == ei->first) {
+							entryang = angb;
+							fprintf(stderr, "entered straight line from %f\n", entryang);
+						} else if (angb == ei->first) {
+							entryang = anga;
+							fprintf(stderr, "entered straight line from %f\n", entryang);
+						}
+
 						existing.insert(std::pair<draw, std::pair<draw, draw>>(here,
 												       std::pair<draw, draw>(prev, segments[ei->second][1])));
 
