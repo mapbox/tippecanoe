@@ -5,6 +5,15 @@ struct type_and_string {
 	bool operator<(const type_and_string &o) const;
 };
 
+struct layermap_entry {
+	size_t id;
+	std::set<type_and_string> file_keys;
+
+	layermap_entry(size_t _id) {
+		id = _id;
+	}
+};
+
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);
 
 void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size);
