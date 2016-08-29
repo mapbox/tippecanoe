@@ -690,20 +690,31 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 }
 
 drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices) {
+	std::vector<size_t> all_intersecting;
+	all_intersecting.resize(segments.size());
+	for (size_t a = 0; a < all_intersecting.size(); a++) {
+		all_intersecting[a] = 0;
+	}
+
 	std::multimap<draw, std::pair<draw, draw>> existing;
 
 	drawvec ring;
 	std::multimap<draw, size_t> seen;
+
+	ssize_t step = -1;
+
+again:
+
+	size_t initial = ring.size();
 
 	ring.push_back(segments[i][0]);
 	seen.insert(std::pair<draw, size_t>(segments[i][0], 0));
 	ring.push_back(segments[i][1]);
 	seen.insert(std::pair<draw, size_t>(segments[i][1], 1));
 	segments[i].clear();
+	all_intersecting[i] = 0;
 
 	double entryang = 999;
-
-	ssize_t step = -1;
 
 	while (ring.size() > 1) {
 		step++;
@@ -744,6 +755,7 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 
 				if (segments[m][0] == here) {
 					next = segments[m][1];
+					all_intersecting[m] = 1;
 				} else {
 					next = segments[m][0];
 				}
@@ -791,7 +803,7 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 				depth--;
 
 				if (alternative < choices[step]) {
-					fprintf(stderr, "avoiding step %ld choice %ld as <%lu\n", step, alternative, choices[step]);
+					// fprintf(stderr, "avoiding step %ld choice %ld as <%lu\n", step, alternative, choices[step]);
 					continue;
 				}
 
@@ -801,10 +813,12 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 
 					auto alsohere = existing.equal_range(ring[ring.size() - 1]);
 					for (auto ahi = alsohere.first; ahi != alsohere.second; ++ahi) {
+#if 0
 						fprintf(stderr, "from %lld,%lld there is also %lld,%lld to %lld,%lld\n",
 							ring[ring.size() - 1].x, ring[ring.size() - 1].y,
 							ahi->second.first.x, ahi->second.first.y,
 							ahi->second.second.x, ahi->second.second.y);
+#endif
 
 						anga = ang - atan2(ahi->second.first.y - here.y, ahi->second.first.x - here.x);
 						while (anga < 0) {
@@ -818,19 +832,19 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 
 						// If we are following a straight line, use the angle that led into the straight line
 						if (anga == 0) {
-							fprintf(stderr, "using %f to follow straight line\n", entryang);
+							//fprintf(stderr, "using %f to follow straight line\n", entryang);
 							anga = entryang;
 						}
 						if (angb == 0) {
-							fprintf(stderr, "using %f to follow straight line\n", entryang);
+							// fprintf(stderr, "using %f to follow straight line\n", entryang);
 							angb = entryang;
 						}
 
-						fprintf(stderr, "those have angles %f and %f compared to %f for %lld,%lld\n", anga, angb, ei->first, segments[ei->second][1].x, segments[ei->second][1].y);
+						// fprintf(stderr, "those have angles %f and %f compared to %f for %lld,%lld\n", anga, angb, ei->first, segments[ei->second][1].x, segments[ei->second][1].y);
 
 						if ((anga < ei->first && angb > ei->first) ||
 						    (anga > ei->first && angb < ei->first)) {
-							fprintf(stderr, "exit unsuitable because of crossing\n");
+							// fprintf(stderr, "exit unsuitable because of crossing\n");
 							suitable = false;
 							break;
 						}
@@ -840,11 +854,13 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 						// if we are following a straight line, keep track of the angle that led into the straight line
 						if (anga == ei->first) {
 							entryang = angb;
-							fprintf(stderr, "entered straight line from %f\n", entryang);
+							// fprintf(stderr, "entered straight line from %f\n", entryang);
 						} else if (angb == ei->first) {
 							entryang = anga;
-							fprintf(stderr, "entered straight line from %f\n", entryang);
+							// fprintf(stderr, "entered straight line from %f\n", entryang);
 						}
+
+						all_intersecting[ei->second] = 0;
 
 						existing.insert(std::pair<draw, std::pair<draw, draw>>(here,
 												       std::pair<draw, draw>(prev, segments[ei->second][1])));
@@ -862,8 +878,8 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 		}
 
 		if (!found_something) {
-			if (ring[ring.size() - 1] != ring[0]) {
-				fprintf(stderr, "couldn't find a way out\n");
+			if (ring[ring.size() - 1] != ring[initial]) {
+// fprintf(stderr, "couldn't find a way out\n");
 #if 0
 				for (size_t a = 0; a < ring.size(); a++) {
 					fprintf(stderr, "%lld,%lld ", ring[a].x, ring[a].y);
@@ -874,6 +890,27 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 				exit(EXIT_FAILURE);
 			}
 			break;
+		}
+	}
+
+	for (size_t a = 0; a < all_intersecting.size(); a++) {
+		if (all_intersecting[a]) {
+			fprintf(stderr, "segment %lu was intersected but not used\n", a);
+
+#if 0
+           for (size_t x = 0; x < ring.size(); x++) {
+                fprintf(stderr, "%lld,%lld ", ring[x].x, ring[x].y);
+            }
+            fprintf(stderr, "\n");
+#endif
+
+// fprintf(stderr, "not used: %lld,%lld to %lld,%lld\n", segments[a][0].x, segments[a][0].y, segments[a][1].x, segments[a][1].y);
+
+#if 0
+            // XXX unusably slow
+			i = a;
+			goto again;
+#endif
 		}
 	}
 
@@ -992,7 +1029,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 					for (size_t j = 0; j < choices.size(); j++) {
 						if (alternatives[j] > 1) {
-							fprintf(stderr, "step %lu: %ld of %ld\n", j, choices[j], alternatives[j]);
+							// fprintf(stderr, "step %lu: %ld of %ld\n", j, choices[j], alternatives[j]);
 						}
 					}
 
@@ -1001,7 +1038,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					for (ssize_t j = choices.size() - 1; j >= 0; j--) {
 						if (alternatives[j] > 1 && choices[j] + 1 < alternatives[j]) {
 							choices[j]++;
-							fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
+							// fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
 							choices.resize(j + 1);
 							alternatives.resize(j + 1);
 							again = true;
