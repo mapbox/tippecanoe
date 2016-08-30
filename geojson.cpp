@@ -72,7 +72,7 @@ void json_context(json_object *j) {
 	}
 
 	fprintf(stderr, "In JSON object %s\n", s);
-	free(s);
+	free(s);  // stringify
 }
 
 long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
@@ -251,7 +251,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		} else {
 			char *s = json_stringify(id);
 			fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
-			free(s);
+			free(s);  // stringify
 		}
 	}
 
@@ -304,7 +304,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				tas.type = metatype[m] = VT_STRING;
 				const char *v = json_stringify(properties->values[i]);
 				metaval[m] = std::string(v);
-				free((void *) v);
+				free((void *) v);  // stringify
 				m++;
 			}
 
@@ -622,7 +622,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 }
 
 struct json_pull *json_begin_map(char *map, long long len) {
-	struct jsonmap *jm = (struct jsonmap *) malloc(sizeof(struct jsonmap));
+	struct jsonmap *jm = new jsonmap;
 	if (jm == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -633,4 +633,9 @@ struct json_pull *json_begin_map(char *map, long long len) {
 	jm->end = len;
 
 	return json_begin(json_map_read, jm);
+}
+
+void json_end_map(struct json_pull *jp) {
+	delete (struct jsonmap *) jp->source;
+	json_end(jp);
 }

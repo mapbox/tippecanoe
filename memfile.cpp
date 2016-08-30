@@ -16,7 +16,7 @@ struct memfile *memfile_open(int fd) {
 		return NULL;
 	}
 
-	struct memfile *mf = (struct memfile *) malloc(sizeof(struct memfile));
+	struct memfile *mf = new memfile;
 	if (mf == NULL) {
 		munmap(map, INCREMENT);
 		return NULL;
@@ -42,7 +42,7 @@ int memfile_close(struct memfile *file) {
 		}
 	}
 
-	free(file);
+	delete file;
 	return 0;
 }
 

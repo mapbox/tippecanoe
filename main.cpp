@@ -372,8 +372,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 			perror("pthread_join 370");
 		}
 
-		free(pja[i].jp->source);
-		json_end(pja[i].jp);
+		json_end_map(pja[i].jp);
 	}
 }
 
@@ -404,37 +403,37 @@ struct read_parallel_arg {
 };
 
 void *run_read_parallel(void *v) {
-	struct read_parallel_arg *a = (struct read_parallel_arg *) v;
+	struct read_parallel_arg *rpa = (struct read_parallel_arg *) v;
 
 	struct stat st;
-	if (fstat(a->fd, &st) != 0) {
+	if (fstat(rpa->fd, &st) != 0) {
 		perror("stat read temp");
 	}
-	if (a->len != st.st_size) {
-		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", a->len, (long long) st.st_size);
+	if (rpa->len != st.st_size) {
+		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", rpa->len, (long long) st.st_size);
 	}
-	a->len = st.st_size;
+	rpa->len = st.st_size;
 
-	char *map = (char *) mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
+	char *map = (char *) mmap(NULL, rpa->len, PROT_READ, MAP_PRIVATE, rpa->fd, 0);
 	if (map == NULL || map == MAP_FAILED) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
-	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
+	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->layermaps, a->droprate, a->initialized, a->initial_x, a->initial_y, a->maxzoom, a->layername);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername);
 
-	madvise(map, a->len, MADV_DONTNEED);
-	if (munmap(map, a->len) != 0) {
+	madvise(map, rpa->len, MADV_DONTNEED);
+	if (munmap(map, rpa->len) != 0) {
 		perror("munmap source file");
 	}
-	if (fclose(a->fp) != 0) {
+	if (fclose(rpa->fp) != 0) {
 		perror("close source file");
 		exit(EXIT_FAILURE);
 	}
 
-	*(a->is_parsing) = 0;
-	free(a);
+	*(rpa->is_parsing) = 0;
+	delete rpa;
 
 	return NULL;
 }
@@ -446,7 +445,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 
 	*is_parsing = 1;
 
-	struct read_parallel_arg *rpa = (struct read_parallel_arg *) malloc(sizeof(struct read_parallel_arg));
+	struct read_parallel_arg *rpa = new struct read_parallel_arg;
 	if (rpa == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -1210,7 +1209,6 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				fflush(readfp);
 
 				if (ahead > 0) {
-					printf("layer name %s\n", layernames[source < nlayers ? source : 0].c_str());
 					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0]);
 
 					if (parser_created) {
