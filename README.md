@@ -112,7 +112,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Line and polygon simplification
 
- * -S _scale_ or --simplify=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
+ * -S _scale_ or --simplification=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
    the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
 
 ### Doing more

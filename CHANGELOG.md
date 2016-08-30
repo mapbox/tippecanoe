@@ -1,3 +1,7 @@
+## 1.12.11
+
+* Don't try to revive a placeholder for a degenerate polygon that had negative area
+
 ## 1.12.10
 
 * Pass feature IDs through in tile-join
