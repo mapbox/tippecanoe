@@ -3,7 +3,7 @@
 "center": "-122.409668,37.770713,13",
 "description": "tests/muni/out/-Z11_-z13_-rf2000.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 13, \"fields\": {\"name\": \"String\"} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 13, \"fields\": {\"name\": \"String\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 13, \"fields\": {} } ] }",
 "maxzoom": "13",
 "minzoom": "11",
 "name": "tests/muni/out/-Z11_-z13_-rf2000.json.check.mbtiles",
@@ -1826,8 +1826,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 16th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435288, 37.764167 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762641 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435417, 37.762471 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Castro St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.435288, 37.762403 ] } }
@@ -1963,8 +1961,6 @@
 { "type": "Feature", "properties": { "name": "Forest Hill Station" }, "geometry": { "type": "Point", "coordinates": [ -122.459064, 37.748118 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Forest Hill Station" }, "geometry": { "type": "Point", "coordinates": [ -122.458978, 37.748186 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/FOREST HILL STA" }, "geometry": { "type": "Point", "coordinates": [ -122.458849, 37.747915 ] } }
 ,
@@ -2898,8 +2894,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402501, 37.788522 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788726 ] } }
-,
 { "type": "Feature", "properties": { "name": "Pine St & Battery St" }, "geometry": { "type": "Point", "coordinates": [ -122.400098, 37.792321 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Sutter St & Sansome St" }, "geometry": { "type": "Point", "coordinates": [ -122.400699, 37.790320 ] } }
@@ -2941,8 +2935,6 @@
 { "type": "Feature", "properties": { "name": "MARKET ST & BEALE ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396622, 37.793033 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & DRUMM ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793202 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793168 ] } }
 ,
 { "type": "Feature", "properties": { "name": "The Embarcadero & Washington St" }, "geometry": { "type": "Point", "coordinates": [ -122.395592, 37.796695 ] } }
 ,
@@ -3234,8 +3226,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & 7th St" }, "geometry": { "type": "Point", "coordinates": [ -122.413187, 37.779840 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412543, 37.780348 ] } }
-,
 { "type": "Feature", "properties": { "name": "Turk St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.409925, 37.783401 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.410269, 37.782349 ] } }
@@ -3250,11 +3240,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Oak St" }, "geometry": { "type": "Point", "coordinates": [ -122.419496, 37.775532 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419367, 37.775260 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775260 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775091 ] } }
 ,
 { "type": "Feature", "properties": { "name": "11th St/btw Market & Mission" }, "geometry": { "type": "Point", "coordinates": [ -122.418680, 37.775532 ] } }
 ,
@@ -3269,8 +3255,6 @@
 { "type": "Feature", "properties": { "name": "Market St & South Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419324, 37.775057 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & VAN NESS AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775057 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775057 ] } }
 ,
 { "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St." }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774955 ] } }
 ,
@@ -3485,8 +3469,6 @@
 { "type": "Feature", "properties": { "name": "POWELL & MARKET TURNTABLE" }, "geometry": { "type": "Point", "coordinates": [ -122.407694, 37.784825 ] } }
 ,
 { "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB" }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784792 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.408209, 37.784181 ] } }
 ,
@@ -4623,6 +4605,26 @@
 { "type": "Feature", "properties": { "name": "Gilman Ave & Griffith St" }, "geometry": { "type": "Point", "coordinates": [ -122.388296, 37.718251 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Gilman Ave & Giants Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.387009, 37.717504 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762641 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788726 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793168 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412543, 37.780348 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419367, 37.775260 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775091 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775057 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
 ] }
 ] }
 ,
@@ -6590,10 +6592,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 16th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435267, 37.764167 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435310, 37.762691 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762624 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435396, 37.762471 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435267, 37.762556 ] } }
@@ -6791,8 +6789,6 @@
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/Forest Hill Sta" }, "geometry": { "type": "Point", "coordinates": [ -122.458956, 37.748186 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/Forest Hill Sta" }, "geometry": { "type": "Point", "coordinates": [ -122.458956, 37.748169 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/FOREST HILL STA" }, "geometry": { "type": "Point", "coordinates": [ -122.458827, 37.747915 ] } }
 ,
@@ -7613,6 +7609,14 @@
 { "type": "Feature", "properties": { "name": "Naples St & France Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.433572, 37.717674 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Russia Ave & Moscow St" }, "geometry": { "type": "Point", "coordinates": [ -122.430139, 37.718183 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435310, 37.762691 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762624 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ] }
 ] }
 ,
@@ -8618,8 +8622,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & 7th St" }, "geometry": { "type": "Point", "coordinates": [ -122.412629, 37.780365 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412522, 37.780348 ] } }
-,
 { "type": "Feature", "properties": { "name": "Turk St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.409904, 37.783401 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & 6th St" }, "geometry": { "type": "Point", "coordinates": [ -122.410419, 37.782112 ] } }
@@ -8646,8 +8648,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775243 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775074 ] } }
-,
 { "type": "Feature", "properties": { "name": "SOUTH VAN NESS AVE & 12TH ST" }, "geometry": { "type": "Point", "coordinates": [ -122.419152, 37.775091 ] } }
 ,
 { "type": "Feature", "properties": { "name": "11th St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.418530, 37.775515 ] } }
@@ -8670,8 +8670,6 @@
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & 12TH ST" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775040 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775040 ] } }
-,
 { "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St." }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774938 ] } }
 ,
 { "type": "Feature", "properties": { "name": "South Van Ness Ave & Mission St" }, "geometry": { "type": "Point", "coordinates": [ -122.418637, 37.773327 ] } }
@@ -8689,8 +8687,6 @@
 { "type": "Feature", "properties": { "name": "11th St & Howard St" }, "geometry": { "type": "Point", "coordinates": [ -122.415740, 37.773344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "11th St & Howard St" }, "geometry": { "type": "Point", "coordinates": [ -122.415397, 37.772835 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415011, 37.778686 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & 8th St" }, "geometry": { "type": "Point", "coordinates": [ -122.414839, 37.778618 ] } }
 ,
@@ -8745,8 +8741,6 @@
 { "type": "Feature", "properties": { "name": "Church St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.429066, 37.767831 ] } }
 ,
 { "type": "Feature", "properties": { "name": "14th St & Church St" }, "geometry": { "type": "Point", "coordinates": [ -122.429130, 37.767679 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767339 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Church St" }, "geometry": { "type": "Point", "coordinates": [ -122.429152, 37.767271 ] } }
 ,
@@ -8991,8 +8985,6 @@
 { "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.408230, 37.784011 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & 5th St" }, "geometry": { "type": "Point", "coordinates": [ -122.408144, 37.783893 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407715, 37.784215 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Powell St" }, "geometry": { "type": "Point", "coordinates": [ -122.407329, 37.784690 ] } }
 ,
@@ -10532,6 +10524,20 @@
 ,
 { "type": "Feature", "properties": { "name": "Gilman Ave & Giants Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.387009, 37.717487 ] } }
 ] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412522, 37.780348 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775074 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775040 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415011, 37.778686 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767339 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407715, 37.784215 ] } }
+] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1582 }, "features": [
@@ -11192,11 +11198,7 @@
 ,
 { "type": "Feature", "properties": { "name": "POST & MONTGOMERY" }, "geometry": { "type": "Point", "coordinates": [ -122.402201, 37.788997 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & New Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402179, 37.788624 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788709 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Pine St & Battery St" }, "geometry": { "type": "Point", "coordinates": [ -122.400098, 37.792304 ] } }
 ,
@@ -11257,8 +11259,6 @@
 { "type": "Feature", "properties": { "name": "MARKET ST & BEALE ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396600, 37.793033 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & DRUMM ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396386, 37.793202 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396450, 37.793168 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Drumm St" }, "geometry": { "type": "Point", "coordinates": [ -122.396193, 37.793474 ] } }
 ,
@@ -11505,6 +11505,14 @@
 { "type": "Feature", "properties": { "name": "FREMONT & FOLSOM" }, "geometry": { "type": "Point", "coordinates": [ -122.393618, 37.787963 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Harrison St & Main St" }, "geometry": { "type": "Point", "coordinates": [ -122.390614, 37.788014 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788709 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396450, 37.793168 ] } }
 ] }
 ] }
 ,
@@ -13628,8 +13636,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/Forest Hill Sta" }, "geometry": { "type": "Point", "coordinates": [ -122.458946, 37.748161 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458624, 37.748356 ] } }
-,
 { "type": "Feature", "properties": { "name": "LAGUNA HONDA BLVD & 19TH AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.458731, 37.748203 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Laguna Honda Blvd/FOREST HILL STA" }, "geometry": { "type": "Point", "coordinates": [ -122.458817, 37.747906 ] } }
@@ -14721,6 +14727,10 @@
 { "type": "Feature", "properties": { "name": "San Jose Ave & Mt Vernon Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.448646, 37.718472 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Mt Vernon Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.448603, 37.718285 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458624, 37.748356 ] } }
 ] }
 ] }
 ,
@@ -15912,10 +15922,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & 17th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435385, 37.762624 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435299, 37.762691 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435235, 37.762624 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435449, 37.762462 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435396, 37.762462 ] } }
@@ -16065,6 +16071,12 @@
 { "type": "Feature", "properties": { "name": "Market St & Sanchez St" }, "geometry": { "type": "Point", "coordinates": [ -122.431222, 37.765635 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Sanchez St" }, "geometry": { "type": "Point", "coordinates": [ -122.431147, 37.765694 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435299, 37.762691 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435235, 37.762624 ] } }
 ] }
 ] }
 ,
@@ -18268,8 +18280,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & New Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402169, 37.788616 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
-,
 { "type": "Feature", "properties": { "name": "2nd St & Stevenson St" }, "geometry": { "type": "Point", "coordinates": [ -122.400656, 37.788624 ] } }
 ,
 { "type": "Feature", "properties": { "name": "2nd St & Stevenson St" }, "geometry": { "type": "Point", "coordinates": [ -122.400076, 37.788285 ] } }
@@ -18622,8 +18632,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & 7th St" }, "geometry": { "type": "Point", "coordinates": [ -122.412618, 37.780365 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412522, 37.780348 ] } }
-,
 { "type": "Feature", "properties": { "name": "Golden Gate Ave & Jones St" }, "geometry": { "type": "Point", "coordinates": [ -122.411932, 37.782078 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Turk St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.409904, 37.783392 ] } }
@@ -18656,15 +18664,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419388, 37.775218 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419345, 37.775235 ] } }
-,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775311 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419184, 37.775243 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419270, 37.775150 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775074 ] } }
 ,
 { "type": "Feature", "properties": { "name": "SOUTH VAN NESS AVE & 12TH ST" }, "geometry": { "type": "Point", "coordinates": [ -122.419142, 37.775082 ] } }
 ,
@@ -18698,8 +18700,6 @@
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & 12TH ST" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775031 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775031 ] } }
-,
 { "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St." }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774972 ] } }
 ,
 { "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St." }, "geometry": { "type": "Point", "coordinates": [ -122.419270, 37.774930 ] } }
@@ -18728,13 +18728,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Hyde St & Fulton St" }, "geometry": { "type": "Point", "coordinates": [ -122.415140, 37.779365 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415000, 37.778678 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & 8th St" }, "geometry": { "type": "Point", "coordinates": [ -122.414829, 37.778610 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Hyde St" }, "geometry": { "type": "Point", "coordinates": [ -122.414732, 37.778788 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414818, 37.778542 ] } }
 ,
 { "type": "Feature", "properties": { "name": "8TH St AND MARKET St" }, "geometry": { "type": "Point", "coordinates": [ -122.414764, 37.778585 ] } }
 ,
@@ -18807,10 +18803,6 @@
 { "type": "Feature", "properties": { "name": "Church St & 14th St" }, "geometry": { "type": "Point", "coordinates": [ -122.429001, 37.767789 ] } }
 ,
 { "type": "Feature", "properties": { "name": "14th St & Church St" }, "geometry": { "type": "Point", "coordinates": [ -122.429130, 37.767670 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767331 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429173, 37.767195 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Church St" }, "geometry": { "type": "Point", "coordinates": [ -122.429152, 37.767263 ] } }
 ,
@@ -19152,8 +19144,6 @@
 ,
 { "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB" }, "geometry": { "type": "Point", "coordinates": [ -122.407619, 37.784783 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784308 ] } }
-,
 { "type": "Feature", "properties": { "name": "Powell/Market" }, "geometry": { "type": "Point", "coordinates": [ -122.407640, 37.784461 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.408177, 37.784164 ] } }
@@ -19165,8 +19155,6 @@
 { "type": "Feature", "properties": { "name": "Market St & 5th St" }, "geometry": { "type": "Point", "coordinates": [ -122.408144, 37.783893 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.408069, 37.783994 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407705, 37.784206 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Powell St" }, "geometry": { "type": "Point", "coordinates": [ -122.407318, 37.784681 ] } }
 ,
@@ -19931,6 +19919,32 @@
 { "type": "Feature", "properties": { "name": "Not a public stop" }, "geometry": { "type": "Point", "coordinates": [ -122.386837, 37.755388 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.387663, 37.753132 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412522, 37.780348 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419345, 37.775235 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419270, 37.775150 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775074 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419260, 37.775031 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415000, 37.778678 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414818, 37.778542 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767331 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429173, 37.767195 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784308 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407705, 37.784206 ] } }
 ] }
 ] }
 ,
@@ -20870,13 +20884,9 @@
 ,
 { "type": "Feature", "properties": { "name": "POST & MONTGOMERY" }, "geometry": { "type": "Point", "coordinates": [ -122.402190, 37.788997 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
-,
 { "type": "Feature", "properties": { "name": "Market St & Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402490, 37.788497 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & New Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402169, 37.788616 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Sansome St & Pine St" }, "geometry": { "type": "Point", "coordinates": [ -122.400870, 37.792024 ] } }
 ,
@@ -20962,13 +20972,7 @@
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & BEALE ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396600, 37.793033 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.396557, 37.793007 ] } }
-,
 { "type": "Feature", "properties": { "name": "MARKET ST & DRUMM ST" }, "geometry": { "type": "Point", "coordinates": [ -122.396386, 37.793194 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396439, 37.793160 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396396, 37.793143 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Drumm St" }, "geometry": { "type": "Point", "coordinates": [ -122.396182, 37.793474 ] } }
 ,
@@ -21207,6 +21211,18 @@
 { "type": "Feature", "properties": { "name": "FREMONT & FOLSOM" }, "geometry": { "type": "Point", "coordinates": [ -122.393607, 37.787963 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Harrison St & Main St" }, "geometry": { "type": "Point", "coordinates": [ -122.390614, 37.788014 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.396557, 37.793007 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396439, 37.793160 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396396, 37.793143 ] } }
 ] }
 ] }
 ,

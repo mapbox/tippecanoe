@@ -173,6 +173,21 @@ with a `tippecanoe` object specifiying a `maxzoom` of 9 and a `minzoom` of 4, th
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the `tippecanoe`
 object belongs to the Feature, not to its `properties`.
 
+You can also specify a layer name in the `tippecanoe` object, which will take precedence over
+the filename or name specified using `--layer`, like this:
+
+```
+{
+    "type" : "Feature",
+    "tippecanoe" : { "layer" : "streets" },
+    "properties" : { "FULLNAME" : "N Vasco Rd" },
+    "geometry" : {
+        "type" : "LineString",
+        "coordinates" : [ [ -121.733350, 37.767671 ], [ -121.733600, 37.767483 ], [ -121.733131, 37.766952 ] ]
+    }
+}
+```
+
 Point styling
 -------------
 

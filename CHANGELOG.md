@@ -1,3 +1,7 @@
+## 1.13.0
+
+* Add the ability to specify layer names within the GeoJSON input
+
 ## 1.12.11
 
 * Don't try to revive a placeholder for a degenerate polygon that had negative area

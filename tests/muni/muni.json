@@ -2406,9 +2406,9 @@
 { "type": "Feature", "properties": { "name": "Macalla St & Nimitz Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.369859,37.812036 ] } }
 { "type": "Feature", "properties": { "name": "Macalla St & Treasure Island Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.3709,37.81324 ] } }
 { "type": "Feature", "properties": { "name": "Mccoppin St & Gough St" }, "geometry": { "type": "Point", "coordinates": [ -122.42079,37.77177 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407695,37.784199 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407695,37.784199 ] } }
 { "type": "Feature", "properties": { "name": "Balboa Park BART/Mezzanine Level" }, "geometry": { "type": "Point", "coordinates": [ -122.447127,37.720988 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419193,37.775069 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419193,37.775069 ] } }
 { "type": "Feature", "properties": { "name": "Monterey Blvd & Acadia St" }, "geometry": { "type": "Point", "coordinates": [ -122.437768,37.731668 ] } }
 { "type": "Feature", "properties": { "name": "Monterey Blvd & Acadia St" }, "geometry": { "type": "Point", "coordinates": [ -122.43726,37.7315 ] } }
 { "type": "Feature", "properties": { "name": "Monterey Blvd & Baden St" }, "geometry": { "type": "Point", "coordinates": [ -122.439635,37.731668 ] } }
@@ -2714,12 +2714,12 @@
 { "type": "Feature", "properties": { "name": "Montgomery St (Presidio)/Bldg 102" }, "geometry": { "type": "Point", "coordinates": [ -122.45899,37.8002 ] } }
 { "type": "Feature", "properties": { "name": "Montgomery St (Presidio)/Bldg 102" }, "geometry": { "type": "Point", "coordinates": [ -122.45913,37.80013 ] } }
 { "type": "Feature", "properties": { "name": "Montgomery St & Moraga Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.46036,37.79853 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429168,37.767194 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414813,37.778542 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435231,37.76262 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.396549,37.793003 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458623,37.748351 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401925,37.788702 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429168,37.767194 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414813,37.778542 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435231,37.76262 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.396549,37.793003 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458623,37.748351 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401925,37.788702 ] } }
 { "type": "Feature", "properties": { "name": "Noe St & 27th St" }, "geometry": { "type": "Point", "coordinates": [ -122.43148,37.74668 ] } }
 { "type": "Feature", "properties": { "name": "Noe St & 27th St" }, "geometry": { "type": "Point", "coordinates": [ -122.43132,37.74654 ] } }
 { "type": "Feature", "properties": { "name": "Noe St & 28th St" }, "geometry": { "type": "Point", "coordinates": [ -122.43134,37.74519 ] } }
@@ -3977,14 +3977,14 @@
 { "type": "Feature", "properties": { "name": "Yerba Buena Ave & Hazelwood Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.459705,37.734389 ] } }
 { "type": "Feature", "properties": { "name": "Yerba Buena Ave & Ravenwood Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.46055,37.73531 ] } }
 { "type": "Feature", "properties": { "name": "Yerba Buena Ave & Saint Elmo Way" }, "geometry": { "type": "Point", "coordinates": [ -122.458719,37.732623 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435289,37.762683 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396396,37.793143 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435289,37.762683 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396396,37.793143 ] } }
 { "type": "Feature", "properties": { "name": "Forest Hill Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.459192,37.74817 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402127,37.788791 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407822,37.7843 ] } }
-{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.41934,37.775234 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.414995,37.778675 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429321,37.767327 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402127,37.788791 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407822,37.7843 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.41934,37.775234 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.414995,37.778675 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429321,37.767327 ] } }
 { "type": "Feature", "properties": { "name": "7th St & Bryant St" }, "geometry": { "type": "Point", "coordinates": [ -122.405005,37.774587 ] } }
 { "type": "Feature", "properties": { "name": "4th St & Townsend St" }, "geometry": { "type": "Point", "coordinates": [ -122.39498,37.77709 ] } }
 { "type": "Feature", "properties": { "name": "19th Ave & Junipero Serra Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.472813,37.717371 ] } }
@@ -4145,7 +4145,7 @@
 { "type": "Feature", "properties": { "name": "BAY SHORE BLVD & SUNNYDALE AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.405067,37.708837 ] } }
 { "type": "Feature", "properties": { "name": "3RD ST & WILLIAMS ST" }, "geometry": { "type": "Point", "coordinates": [ -122.392753,37.72922 ] } }
 { "type": "Feature", "properties": { "name": "COLUMBUS AVE & CHESTNUT ST" }, "geometry": { "type": "Point", "coordinates": [ -122.413978,37.80283 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412521,37.780345 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412521,37.780345 ] } }
 { "type": "Feature", "properties": { "name": "SPEAR ST & MARKET ST" }, "geometry": { "type": "Point", "coordinates": [ -122.395605,37.793633 ] } }
 { "type": "Feature", "properties": { "name": "BROADWAY & GRANT AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.407342,37.797849 ] } }
 { "type": "Feature", "properties": { "name": "Lincoln Way & 19TH AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.477186,37.765384 ] } }
@@ -4177,9 +4177,9 @@
 { "type": "Feature", "properties": { "name": "CORTLAND AVE & BRONTE ST" }, "geometry": { "type": "Point", "coordinates": [ -122.41017,37.739711 ] } }
 { "type": "Feature", "properties": { "name": "5TH ST & FOLSOM ST" }, "geometry": { "type": "Point", "coordinates": [ -122.403466,37.78044 ] } }
 { "type": "Feature", "properties": { "name": "ELLIS ST & MASON ST" }, "geometry": { "type": "Point", "coordinates": [ -122.409367,37.785358 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419252,37.775029 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396431,37.793152 ] } }
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419263,37.775145 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419252,37.775029 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396431,37.793152 ] } }
+{ "type": "Feature", "tippecanoe": { "layer": "subway" }, "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419263,37.775145 ] } }
 { "type": "Feature", "properties": { "name": "Judah/La Playa/Ocean Beach" }, "geometry": { "type": "Point", "coordinates": [ -122.509201,37.760348 ] } }
 { "type": "Feature", "properties": { "name": "ASHBURY ST & CLAYTON ST" }, "geometry": { "type": "Point", "coordinates": [ -122.446966,37.763014 ] } }
 { "type": "Feature", "properties": { "name": "KANSAS ST & 23RD ST" }, "geometry": { "type": "Point", "coordinates": [ -122.402462,37.75443 ] } }
