@@ -557,7 +557,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int nlayers, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
 	int line_detail;
 	double fraction = 1;
 
@@ -1136,7 +1136,6 @@ struct write_tile_args {
 	char *stringpool;
 	int min_detail;
 	int basezoom;
-	std::vector<std::string> *layernames;
 	sqlite3 *outdb;
 	double droprate;
 	int buffer;
@@ -1145,7 +1144,6 @@ struct write_tile_args {
 	double todo;
 	volatile long long *along;
 	double gamma;
-	int nlayers;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1205,7 +1203,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->nlayers, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -1256,7 +1254,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps) {
 	// Table to map segment and layer number back to layer name
 	std::vector<std::vector<std::string>> layer_unmaps;
 	for (size_t seg = 0; seg < layermaps.size(); seg++) {
@@ -1379,7 +1377,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
 			args[thread].basezoom = basezoom;
-			args[thread].layernames = &layernames;
 			args[thread].outdb = outdb;  // locked with db_lock
 			args[thread].droprate = droprate;
 			args[thread].buffer = buffer;
@@ -1388,7 +1385,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].todo = todo;
 			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
-			args[thread].nlayers = nlayers;
 			args[thread].child_shards = TEMP_FILES / threads;
 			args[thread].simplification = simplification;
 

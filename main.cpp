@@ -1643,7 +1643,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
