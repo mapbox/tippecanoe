@@ -226,8 +226,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			tippecanoe_maxzoom = atoi(max->string);
 		}
 
-		json_object *ln = json_hash_get(tippecanoe, "layername");
-		if (ln != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
+		json_object *ln = json_hash_get(tippecanoe, "layer");
+		if (ln != NULL && (ln->type == JSON_STRING || ln->type == JSON_NUMBER)) {
 			tippecanoe_layername = std::string(ln->string);
 		}
 	}

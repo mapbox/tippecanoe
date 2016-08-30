@@ -3,7 +3,7 @@
 "center": "-90.000000,37.836443,1",
 "description": "tests/muni/out/-z1_-Z1_-ao_-P.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {\"name\": \"String\"} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {\"name\": \"String\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {} } ] }",
 "maxzoom": "1",
 "minzoom": "1",
 "name": "tests/muni/out/-z1_-Z1_-ao_-P.json.check.mbtiles",
@@ -5704,42 +5704,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Merchant St & Lincoln Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
 { "type": "Feature", "properties": { "name": "Middle Point & Acacia" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Middle Point Rd & Innes Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.753344 ] } }
@@ -8964,8 +8928,6 @@
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave&North Point St SE-NS/BZ" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
-,
 { "type": "Feature", "properties": { "name": "Vermont St & 17th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Vermont St & 18th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
@@ -9233,6 +9195,46 @@
 { "type": "Feature", "properties": { "name": "Yerba Buena Ave & Ravenwood Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Yerba Buena Ave & Saint Elmo Way" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ] }
 ] }
 ] }
