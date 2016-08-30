@@ -608,7 +608,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		long long unclipped_features = 0;
 
 		std::vector<struct partial> partials;
-		std::map<std::string, std::vector<coalesce>> features;
+		std::map<std::string, std::vector<coalesce>> layers;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -926,12 +926,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
 
 					std::string layername = (*layer_unmaps)[partials[i].segment][partials[i].layer];
-					if (features.count(layername) == 0) {
-						features.insert(std::pair<std::string, std::vector<coalesce>>(layername, std::vector<coalesce>()));
+					if (layers.count(layername) == 0) {
+						layers.insert(std::pair<std::string, std::vector<coalesce>>(layername, std::vector<coalesce>()));
 					}
 
-					auto f = features.find(layername);
-					f->second.push_back(c);
+					auto l = layers.find(layername);
+					l->second.push_back(c);
 				}
 			}
 		}
@@ -946,100 +946,100 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
-		for (auto fj = features.begin(); fj != features.end(); ++fj) {
-			std::vector<coalesce> &ff = fj->second;
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
 
 			if (additional[A_REORDER]) {
-				std::sort(ff.begin(), ff.end());
+				std::sort(layer_features.begin(), layer_features.end());
 			}
 
 			std::vector<coalesce> out;
-			if (ff.size() > 0) {
-				out.push_back(ff[0]);
+			if (layer_features.size() > 0) {
+				out.push_back(layer_features[0]);
 			}
-			for (size_t x = 1; x < ff.size(); x++) {
+			for (size_t x = 1; x < layer_features.size(); x++) {
 				size_t y = out.size() - 1;
 
 #if 0
-				if (out.size() > 0 && coalcmp(&ff[x], &out[y]) < 0) {
+				if (out.size() > 0 && coalcmp(&layer_features[x], &out[y]) < 0) {
 					fprintf(stderr, "\nfeature out of order\n");
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + ff[x].geom.size() < 700 && coalcmp(&ff[x], &out[y]) == 0 && ff[x].type != VT_POINT) {
-					for (size_t g = 0; g < ff[x].geom.size(); g++) {
-						out[y].geom.push_back(ff[x].geom[g]);
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + layer_features[x].geom.size() < 700 && coalcmp(&layer_features[x], &out[y]) == 0 && layer_features[x].type != VT_POINT) {
+					for (size_t g = 0; g < layer_features[x].geom.size(); g++) {
+						out[y].geom.push_back(layer_features[x].geom[g]);
 					}
 					out[y].coalesced = true;
 				} else {
-					out.push_back(ff[x]);
+					out.push_back(layer_features[x]);
 				}
 			}
 
-			ff = out;
+			layer_features = out;
 
 			out.clear();
-			for (size_t x = 0; x < ff.size(); x++) {
-				if (ff[x].coalesced && ff[x].type == VT_LINE) {
-					ff[x].geom = remove_noop(ff[x].geom, ff[x].type, 0);
-					ff[x].geom = simplify_lines(ff[x].geom, 32, 0,
-								    !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
+			for (size_t x = 0; x < layer_features.size(); x++) {
+				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
+					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
+					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
 				}
 
-				if (ff[x].type == VT_POLYGON) {
-					if (ff[x].coalesced) {
-						ff[x].geom = clean_or_clip_poly(ff[x].geom, 0, 0, 0, false);
+				if (layer_features[x].type == VT_POLYGON) {
+					if (layer_features[x].coalesced) {
+						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, 0, false);
 					}
 
-					ff[x].geom = close_poly(ff[x].geom);
+					layer_features[x].geom = close_poly(layer_features[x].geom);
 				}
 
-				if (ff[x].geom.size() > 0) {
-					out.push_back(ff[x]);
+				if (layer_features[x].geom.size() > 0) {
+					out.push_back(layer_features[x]);
 				}
 			}
-			ff = out;
+			layer_features = out;
 
 			if (prevent[P_INPUT_ORDER]) {
-				std::sort(ff.begin(), ff.end(), preservecmp);
+				std::sort(layer_features.begin(), layer_features.end(), preservecmp);
 			}
 		}
 
 		mvt_tile tile;
 
-		for (auto fj = features.begin(); fj != features.end(); ++fj) {
-			std::vector<coalesce> &ff = fj->second;
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
 
 			mvt_layer layer;
-			layer.name = fj->first;
+			layer.name = layer_iterator->first;
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
 
-			for (size_t x = 0; x < ff.size(); x++) {
+			for (size_t x = 0; x < layer_features.size(); x++) {
 				mvt_feature feature;
 
-				if (ff[x].type == VT_LINE || ff[x].type == VT_POLYGON) {
-					ff[x].geom = remove_noop(ff[x].geom, ff[x].type, 0);
+				if (layer_features[x].type == VT_LINE || layer_features[x].type == VT_POLYGON) {
+					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
 				}
 
-				if (ff[x].geom.size() == 0) {
+				if (layer_features[x].geom.size() == 0) {
 					continue;
 				}
 
-				feature.type = ff[x].type;
-				feature.geometry = to_feature(ff[x].geom);
-				count += ff[x].geom.size();
-				ff[x].geom.clear();
+				feature.type = layer_features[x].type;
+				feature.geometry = to_feature(layer_features[x].geom);
+				count += layer_features[x].geom.size();
+				layer_features[x].geom.clear();
 
-				feature.id = ff[x].id;
-				feature.has_id = ff[x].has_id;
+				feature.id = layer_features[x].id;
+				feature.has_id = layer_features[x].has_id;
 
-				decode_meta(ff[x].m, ff[x].keys, ff[x].values, ff[x].stringpool, layer, feature);
+				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 					int glow = 255;
-					if (ff[x].spacing > 0) {
-						glow = (1 / ff[x].spacing);
+					if (layer_features[x].spacing > 0) {
+						glow = (1 / layer_features[x].spacing);
 						if (glow > 255) {
 							glow = 255;
 						}
@@ -1064,9 +1064,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		long long totalsize = 0;
-		for (auto fj = features.begin(); fj != features.end(); ++fj) {
-			std::vector<coalesce> &ff = fj->second;
-			totalsize += ff.size();
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
+			totalsize += layer_features.size();
 		}
 
 		double progress = floor((((*geompos_in + *along - alongminus) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
