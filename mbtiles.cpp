@@ -133,7 +133,7 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, std::vector<std::string> &layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, std::vector<std::set<type_and_string> > &file_keys, int nlayers, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, std::vector<std::string> &layername, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int nlayers, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);

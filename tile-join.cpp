@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
 		layermap.find(layernames[i])->second.file_keys = file_keys[i];
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
+	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, nlayers, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
 	mbtiles_close(outdb, argv);
 
 	return 0;

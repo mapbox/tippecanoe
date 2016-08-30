@@ -1155,7 +1155,7 @@ struct write_tile_args {
 	unsigned *initial_y;
 	volatile int *running;
 	int err;
-    std::vector<std::map<std::string, layermap_entry> > *layermaps;
+	std::vector<std::map<std::string, layermap_entry> > *layermaps;
 };
 
 void *run_thread(void *vargs) {
@@ -1383,7 +1383,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].pool_off = pool_off;
 			args[thread].initial_x = initial_x;
 			args[thread].initial_y = initial_y;
-            args[thread].layermaps = &layermaps;
+			args[thread].layermaps = &layermaps;
 
 			args[thread].tasks = dispatches[thread].tasks;
 			args[thread].running = &running;
