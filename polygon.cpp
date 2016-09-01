@@ -708,7 +708,7 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 	}
 }
 
-drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices) {
+std::vector<drawvec> walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices) {
 	std::vector<size_t> all_intersecting;
 	all_intersecting.resize(segments.size());
 	for (size_t a = 0; a < all_intersecting.size(); a++) {
@@ -716,6 +716,8 @@ drawvec walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, 
 	}
 
 	std::multimap<draw, std::pair<draw, draw>> existing;
+
+	std::vector<drawvec> ret;
 
 	drawvec ring;
 	std::multimap<draw, size_t> seen;
@@ -747,6 +749,7 @@ again:
 			choices[step] = 0;
 		}
 
+#if 0
 		if (seen.size() != ring.size()) {
 			fprintf(stderr, "mismatched size: seen %lu, ring %lu\n", seen.size(), ring.size());
 			for (auto mi = seen.begin(); mi != seen.end(); ++mi) {
@@ -757,6 +760,7 @@ again:
 			}
 			exit(EXIT_FAILURE);
 		}
+#endif
 
 		auto match = paths.equal_range(ring[ring.size() - 1]);
 
@@ -905,7 +909,13 @@ again:
 				}
 				fprintf(stderr, "\n");
 #endif
-				return drawvec();
+				printf(".5 setlinewidth\n");
+				for (size_t a = 0; a < ring.size(); a++) {
+					printf("%lld %lld %s\n", ring[a].x, ring[a].y, a == 0 ? "moveto" : "lineto");
+				}
+				printf("stroke\n");
+
+				return std::vector<drawvec>();
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -917,23 +927,29 @@ again:
 			fprintf(stderr, "segment %lu was intersected but not used\n", a);
 
 #if 0
-           for (size_t x = 0; x < ring.size(); x++) {
-                fprintf(stderr, "%lld,%lld ", ring[x].x, ring[x].y);
-            }
-            fprintf(stderr, "\n");
+		        for (size_t x = 0; x < ring.size(); x++) {
+				fprintf(stderr, "%lld,%lld ", ring[x].x, ring[x].y);
+		        }
+		        fprintf(stderr, "\n");
 #endif
 
 // fprintf(stderr, "not used: %lld,%lld to %lld,%lld\n", segments[a][0].x, segments[a][0].y, segments[a][1].x, segments[a][1].y);
 
 #if 0
-            // XXX unusably slow
+			// XXX unusably slow
+
+			ret.push_back(ring);
+			ring.resize(0);
+
 			i = a;
 			goto again;
 #endif
 		}
 	}
 
-	return ring;
+	ret.push_back(ring);
+
+	return ret;
 }
 
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
@@ -1060,12 +1076,23 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 			std::vector<size_t> alternatives;
 			std::vector<size_t> choices;
 
-			drawvec ring;
+			std::vector<drawvec> found;
 
 			while (1) {
-				ring = walk_ring(segments, i, paths, 1, alternatives, choices);
+				found = walk_ring(segments, i, paths, 1, alternatives, choices);
 
-				if (ring.size() == 0) {
+				if (found.size() == 0) {
+					printf("0 setlinewidth\n");
+					printf(".5 .setopacityalpha\n");
+					for (size_t j = 0; j < before.size(); j++) {
+						if (before[j].size() > 0) {
+							printf("%lld %lld moveto %lld %lld lineto stroke\n",
+							       before[j][0].x, before[j][0].y,
+							       before[j][1].x, before[j][1].y);
+						}
+					}
+					printf("showpage\n");
+
 					segments = before;
 
 					for (size_t j = 0; j < choices.size(); j++) {
@@ -1079,7 +1106,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					for (ssize_t j = choices.size() - 1; j >= 0; j--) {
 						if (alternatives[j] > 1 && choices[j] + 1 < alternatives[j]) {
 							choices[j]++;
-							// fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
+							fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
 							choices.resize(j + 1);
 							alternatives.resize(j + 1);
 							again = true;
@@ -1096,7 +1123,9 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 				}
 			}
 
-			find_subrings(ring, rings);
+			for (size_t j = 0; j < found.size(); j++) {
+				find_subrings(found[j], rings);
+			}
 		}
 	}
 
