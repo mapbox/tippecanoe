@@ -66,8 +66,10 @@ void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vecto
 	drawvec dv;
 	dv.push_back(segments[intermediate][which_end]);
 	dv.push_back(segments[into][1]);
+	dv[0].op = dv[1].op;
 	segments.push_back(dv);
 	segments[into][1] = segments[intermediate][which_end];
+	segments[into][1].op = segments[into][0].op;
 }
 
 void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
@@ -78,7 +80,7 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 		      (segments[intermediate][which_end].x - segments[intermediate][0].x) *
 			      (segments[intermediate][1].y - segments[intermediate][0].y) /
 			      (segments[intermediate][1].x - segments[intermediate][0].x);
-	draw d(VT_LINETO, x, y);
+	draw d(segments[into][0].op, x, y);
 
 	drawvec dv;
 	dv.push_back(d);
@@ -197,10 +199,10 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				if ((x != segments[a][0].x || y != segments[a][0].y) && (x != segments[a][1].x || y != segments[a][1].y)) {
 					// splitting a
 					drawvec dv;
-					dv.push_back(draw(VT_MOVETO, x, y));
+					dv.push_back(draw(segments[a][1].op, x, y));
 					dv.push_back(segments[a][1]);
 					segments.push_back(dv);
-					segments[a][1] = draw(VT_LINETO, x, y);
+					segments[a][1] = draw(segments[a][1].op, x, y);
 					again = true;
 				}
 			}
@@ -209,10 +211,10 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				if ((x != segments[b][0].x || y != segments[b][0].y) && (x != segments[b][1].x || y != segments[b][1].y)) {
 					// splitting b
 					drawvec dv;
-					dv.push_back(draw(VT_MOVETO, x, y));
+					dv.push_back(draw(segments[b][1].op, x, y));
 					dv.push_back(segments[b][1]);
 					segments.push_back(dv);
-					segments[b][1] = draw(VT_LINETO, x, y);
+					segments[b][1] = draw(segments[b][1].op, x, y);
 					again = true;
 				}
 			}
@@ -295,6 +297,20 @@ void partition(std::vector<drawvec> &segs, std::vector<size_t> &subset, int dire
 	}
 }
 
+void sanity_check(std::vector<drawvec> const &segments) {
+	for (size_t i = 0; i < segments.size(); i++) {
+		if (segments[i].size() != 2) {
+			fprintf(stderr, "not a segment\n");
+			abort();
+		}
+
+		if (segments[i][0].op != segments[i][1].op) {
+			fprintf(stderr, "mismatched winding\n");
+			abort();
+		}
+	}
+}
+
 std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 	bool again = true;
 
@@ -302,13 +318,13 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		again = false;
 
 		std::set<std::pair<size_t, size_t>> possible;
-		std::vector<size_t> subset;
 
+#if 1
+		std::vector<size_t> subset;
 		for (size_t i = 0; i < segments.size(); i++) {
 			subset.push_back(i);
 		}
 
-#if 0
 		partition(segments, subset, 0, possible);
 #else
 		std::multimap<long long, size_t> starts;
@@ -413,6 +429,9 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
 			check_intersection(segments, it->first, it->second, again);
 		}
+
+		// XXX
+		sanity_check(segments);
 	}
 
 	return segments;
@@ -807,7 +826,7 @@ again:
 					continue;
 				}
 
-				if (1 || depth < 0) {
+				if (depth < 0) {
 					bool suitable = true;
 					double anga = 999, angb = 999;
 
@@ -924,14 +943,36 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	// If they do not duplicate the last point, the last
 	// segment will need to be added explicitly.
 
-	for (size_t i = 1; i < geom.size(); i++) {
-		if (geom[i].op == VT_LINETO) {
-			if (geom[i].x != geom[i - 1].x || geom[i].y != geom[i - 1].y) {
-				drawvec dv;
-				dv.push_back(geom[i - 1]);
-				dv.push_back(geom[i]);
-				segments.push_back(dv);
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
 			}
+
+			double area = get_area(geom, i, j);
+
+			for (size_t k = i + 1; k < j; k++) {
+				if (geom[k].x != geom[k - 1].x || geom[k].y != geom[k - 1].y) {
+					drawvec dv;
+					dv.push_back(geom[k - 1]);
+					dv.push_back(geom[k]);
+
+					if (area < 0) {
+						dv[0].op = -1;
+						dv[1].op = -1;
+					} else {
+						dv[0].op = 1;
+						dv[1].op = 1;
+					}
+
+					segments.push_back(dv);
+				}
+			}
+
+			i = j - 1;
 		}
 	}
 
