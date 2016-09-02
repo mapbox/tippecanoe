@@ -924,7 +924,7 @@ again:
 
 	for (size_t a = 0; a < all_intersecting.size(); a++) {
 		if (all_intersecting[a]) {
-			fprintf(stderr, "segment %lu was intersected but not used\n", a);
+// fprintf(stderr, "segment %lu was intersected but not used\n", a);
 
 #if 0
 		        for (size_t x = 0; x < ring.size(); x++) {

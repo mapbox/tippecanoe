@@ -564,6 +564,21 @@ void psdump(drawvec &geom, size_t a, size_t b) {
 			       geom[i - 1].x, geom[i - 1].y, (geom[i].x + geom[i - 1].x) / 2.0, (geom[i].y + geom[i - 1].y) / 2.0);
 		}
 	}
+
+	printf("showpage");
+}
+
+double distanceAlongSegment(double p1x, double p1y, double p2x, double p2y, double p3x, double p3y) {
+	double xDelta = p2x - p1x;
+	double yDelta = p2y - p1y;
+
+	if (xDelta * xDelta + yDelta * yDelta == 0) {
+		return -1;
+	}
+
+	double u = ((p3x - p1x) * xDelta + (p3y - p1y) * yDelta) / (xDelta * xDelta + yDelta * yDelta);
+
+	return u;
 }
 
 void check_polygon(drawvec &geom, drawvec &before) {
@@ -628,15 +643,31 @@ void check_polygon(drawvec &geom, drawvec &before) {
 						bool on_edge = false;
 
 						for (size_t l = outer_start; l < outer_start + outer_len; l++) {
+#if 0
 							if (geom[k].x == geom[l].x || geom[k].y == geom[l].y) {
 								on_edge = true;
 								break;
+							}
+#endif
+
+							if (l > outer_start) {
+								double along = distanceAlongSegment(geom[l - 1].x, geom[l - 1].y, geom[l].x, geom[l].y, geom[k].x, geom[k].y);
+								if (along >= 0 && along <= 1) {
+									long long xx = geom[l - 1].x + along * (geom[l].x - geom[l - 1].x);
+									long long yy = geom[l - 1].y + along * (geom[l].y - geom[l - 1].y);
+
+									if (xx == geom[k].x && yy == geom[k].y) {
+										on_edge = true;
+										break;
+									}
+								}
 							}
 						}
 
 						if (!on_edge) {
 							fprintf(stderr, "%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
 
+							psdump(geom, k, -1);
 // dump(before);
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
