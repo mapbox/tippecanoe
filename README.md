@@ -112,7 +112,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Line and polygon simplification
 
- * -S _scale_ or --simplify=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
+ * -S _scale_ or --simplification=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
    the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
 
 ### Doing more
@@ -172,6 +172,21 @@ If you have a feature like this:
 with a `tippecanoe` object specifiying a `maxzoom` of 9 and a `minzoom` of 4, the feature
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the `tippecanoe`
 object belongs to the Feature, not to its `properties`.
+
+You can also specify a layer name in the `tippecanoe` object, which will take precedence over
+the filename or name specified using `--layer`, like this:
+
+```
+{
+    "type" : "Feature",
+    "tippecanoe" : { "layer" : "streets" },
+    "properties" : { "FULLNAME" : "N Vasco Rd" },
+    "geometry" : {
+        "type" : "LineString",
+        "coordinates" : [ [ -121.733350, 37.767671 ], [ -121.733600, 37.767483 ], [ -121.733131, 37.766952 ] ]
+    }
+}
+```
 
 Point styling
 -------------

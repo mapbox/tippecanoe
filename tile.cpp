@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include "mvt.hpp"
+#include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -27,7 +28,6 @@
 #include "serial.hpp"
 #include "options.hpp"
 #include "main.hpp"
-#include "mbtiles.hpp"
 
 #define CMD_BITS 3
 
@@ -561,7 +561,7 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, std::vector<std::string> *layernames, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int nlayers, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
 	int line_detail;
 	double fraction = 1;
 
@@ -612,10 +612,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		long long unclipped_features = 0;
 
 		std::vector<struct partial> partials;
-		std::vector<std::vector<coalesce> > features;
-		for (int i = 0; i < nlayers; i++) {
-			features.push_back(std::vector<coalesce>());
-		}
+		std::map<std::string, std::vector<coalesce>> layers;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -905,7 +902,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> &pgeoms = partials[i].geoms;
-			long long layer = partials[i].layer;
 			signed char t = partials[i].t;
 			long long original_seq = partials[i].original_seq;
 
@@ -931,7 +927,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
 
-					features[layer].push_back(c);
+					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
+
+					std::string layername = (*layer_unmaps)[partials[i].segment][partials[i].layer];
+					if (layers.count(layername) == 0) {
+						layers.insert(std::pair<std::string, std::vector<coalesce>>(layername, std::vector<coalesce>()));
+					}
+
+					auto l = layers.find(layername);
+					l->second.push_back(c);
 				}
 			}
 		}
@@ -946,97 +950,100 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
-		for (j = 0; j < nlayers; j++) {
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
+
 			if (additional[A_REORDER]) {
-				std::sort(features[j].begin(), features[j].end());
+				std::sort(layer_features.begin(), layer_features.end());
 			}
 
 			std::vector<coalesce> out;
-			if (features[j].size() > 0) {
-				out.push_back(features[j][0]);
+			if (layer_features.size() > 0) {
+				out.push_back(layer_features[0]);
 			}
-			for (size_t x = 1; x < features[j].size(); x++) {
+			for (size_t x = 1; x < layer_features.size(); x++) {
 				size_t y = out.size() - 1;
 
 #if 0
-				if (out.size() > 0 && coalcmp(&features[j][x], &out[y]) < 0) {
+				if (out.size() > 0 && coalcmp(&layer_features[x], &out[y]) < 0) {
 					fprintf(stderr, "\nfeature out of order\n");
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + features[j][x].geom.size() < 700 && coalcmp(&features[j][x], &out[y]) == 0 && features[j][x].type != VT_POINT) {
-					for (size_t g = 0; g < features[j][x].geom.size(); g++) {
-						out[y].geom.push_back(features[j][x].geom[g]);
+				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + layer_features[x].geom.size() < 700 && coalcmp(&layer_features[x], &out[y]) == 0 && layer_features[x].type != VT_POINT) {
+					for (size_t g = 0; g < layer_features[x].geom.size(); g++) {
+						out[y].geom.push_back(layer_features[x].geom[g]);
 					}
 					out[y].coalesced = true;
 				} else {
-					out.push_back(features[j][x]);
+					out.push_back(layer_features[x]);
 				}
 			}
 
-			features[j] = out;
+			layer_features = out;
 
 			out.clear();
-			for (size_t x = 0; x < features[j].size(); x++) {
-				if (features[j][x].coalesced && features[j][x].type == VT_LINE) {
-					features[j][x].geom = remove_noop(features[j][x].geom, features[j][x].type, 0);
-					features[j][x].geom = simplify_lines(features[j][x].geom, 32, 0,
-									     !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
+			for (size_t x = 0; x < layer_features.size(); x++) {
+				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
+					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
+					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
 				}
 
-				if (features[j][x].type == VT_POLYGON) {
-					if (features[j][x].coalesced) {
-						features[j][x].geom = clean_or_clip_poly(features[j][x].geom, 0, 0, 0, false);
+				if (layer_features[x].type == VT_POLYGON) {
+					if (layer_features[x].coalesced) {
+						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, 0, false);
 					}
 
-					features[j][x].geom = close_poly(features[j][x].geom);
+					layer_features[x].geom = close_poly(layer_features[x].geom);
 				}
 
-				if (features[j][x].geom.size() > 0) {
-					out.push_back(features[j][x]);
+				if (layer_features[x].geom.size() > 0) {
+					out.push_back(layer_features[x]);
 				}
 			}
-			features[j] = out;
+			layer_features = out;
 
 			if (prevent[P_INPUT_ORDER]) {
-				std::sort(features[j].begin(), features[j].end(), preservecmp);
+				std::sort(layer_features.begin(), layer_features.end(), preservecmp);
 			}
 		}
 
 		mvt_tile tile;
 
-		for (size_t k = 0; k < features.size(); k++) {
-			mvt_layer layer;
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
 
-			layer.name = (*layernames)[k];
+			mvt_layer layer;
+			layer.name = layer_iterator->first;
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
 
-			for (size_t x = 0; x < features[k].size(); x++) {
+			for (size_t x = 0; x < layer_features.size(); x++) {
 				mvt_feature feature;
 
-				if (features[k][x].type == VT_LINE || features[k][x].type == VT_POLYGON) {
-					features[k][x].geom = remove_noop(features[k][x].geom, features[k][x].type, 0);
+				if (layer_features[x].type == VT_LINE || layer_features[x].type == VT_POLYGON) {
+					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
 				}
 
-				if (features[k][x].geom.size() == 0) {
+				if (layer_features[x].geom.size() == 0) {
 					continue;
 				}
 
-				feature.type = features[k][x].type;
-				feature.geometry = to_feature(features[k][x].geom);
-				count += features[k][x].geom.size();
-				features[k][x].geom.clear();
+				feature.type = layer_features[x].type;
+				feature.geometry = to_feature(layer_features[x].geom);
+				count += layer_features[x].geom.size();
+				layer_features[x].geom.clear();
 
-				feature.id = features[k][x].id;
-				feature.has_id = features[k][x].has_id;
+				feature.id = layer_features[x].id;
+				feature.has_id = layer_features[x].has_id;
 
-				decode_meta(features[k][x].m, features[k][x].keys, features[k][x].values, features[k][x].stringpool, layer, feature);
+				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 					int glow = 255;
-					if (features[k][x].spacing > 0) {
-						glow = (1 / features[k][x].spacing);
+					if (layer_features[x].spacing > 0) {
+						glow = (1 / layer_features[x].spacing);
 						if (glow > 255) {
 							glow = 255;
 						}
@@ -1061,8 +1068,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		long long totalsize = 0;
-		for (j = 0; j < nlayers; j++) {
-			totalsize += features[j].size();
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
+			totalsize += layer_features.size();
 		}
 
 		double progress = floor((((*geompos_in + *along - alongminus) / (double) todo) + z) / (maxzoom + 1) * 1000) / 10;
@@ -1132,7 +1140,6 @@ struct write_tile_args {
 	char *stringpool;
 	int min_detail;
 	int basezoom;
-	std::vector<std::string> *layernames;
 	sqlite3 *outdb;
 	double droprate;
 	int buffer;
@@ -1141,7 +1148,6 @@ struct write_tile_args {
 	double todo;
 	volatile long long *along;
 	double gamma;
-	int nlayers;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1159,6 +1165,8 @@ struct write_tile_args {
 	unsigned *initial_y;
 	volatile int *running;
 	int err;
+	std::vector<std::map<std::string, layermap_entry>> *layermaps;
+	std::vector<std::vector<std::string>> *layer_unmaps;
 };
 
 void *run_thread(void *vargs) {
@@ -1199,7 +1207,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->layernames, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->nlayers, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -1250,7 +1258,20 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, std::vector<std::string> &layernames, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int nlayers, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps) {
+	// Table to map segment and layer number back to layer name
+	std::vector<std::vector<std::string>> layer_unmaps;
+	for (size_t seg = 0; seg < layermaps.size(); seg++) {
+		layer_unmaps.push_back(std::vector<std::string>());
+
+		for (auto a = layermaps[seg].begin(); a != layermaps[seg].end(); ++a) {
+			if (a->second.id >= layer_unmaps[seg].size()) {
+				layer_unmaps[seg].resize(a->second.id + 1);
+			}
+			layer_unmaps[seg][a->second.id] = a->first;
+		}
+	}
+
 	int i;
 	for (i = 0; i <= maxzoom; i++) {
 		long long most = 0;
@@ -1360,7 +1381,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
 			args[thread].basezoom = basezoom;
-			args[thread].layernames = &layernames;
 			args[thread].outdb = outdb;  // locked with db_lock
 			args[thread].droprate = droprate;
 			args[thread].buffer = buffer;
@@ -1369,7 +1389,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].todo = todo;
 			args[thread].along = &along;  // locked with var_lock
 			args[thread].gamma = gamma;
-			args[thread].nlayers = nlayers;
 			args[thread].child_shards = TEMP_FILES / threads;
 			args[thread].simplification = simplification;
 
@@ -1386,6 +1405,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			args[thread].pool_off = pool_off;
 			args[thread].initial_x = initial_x;
 			args[thread].initial_y = initial_y;
+			args[thread].layermaps = &layermaps;
+			args[thread].layer_unmaps = &layer_unmaps;
 
 			args[thread].tasks = dispatches[thread].tasks;
 			args[thread].running = &running;

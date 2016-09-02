@@ -423,7 +423,13 @@ int main(int argc, char **argv) {
 		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 	}
 
-	mbtiles_write_metadata(outdb, outfile, layernames, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, file_keys, nlayers, 0, attribution.size() != 0 ? attribution.c_str() : NULL);
+	std::map<std::string, layermap_entry> layermap;
+	for (i = 0; i < nlayers; i++) {
+		layermap.insert(std::pair<std::string, layermap_entry>(layernames[i], layermap_entry(layermap.size())));
+		layermap.find(layernames[i])->second.file_keys = file_keys[i];
+	}
+
+	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
 	mbtiles_close(outdb, argv);
 
 	return 0;

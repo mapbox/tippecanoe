@@ -129,7 +129,7 @@ compensate for the larger marker, or \-rf\fInumber\fP to allow at most \fInumber
 .SS Line and polygon simplification
 .RS
 .IP \(bu 2
-\-S \fIscale\fP or \-\-simplify=\fIscale\fP: Multiply the tolerance for line and polygon simplification by \fIscale\fP\&. The standard tolerance tries to keep
+\-S \fIscale\fP or \-\-simplification=\fIscale\fP: Multiply the tolerance for line and polygon simplification by \fIscale\fP\&. The standard tolerance tries to keep
 the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
 .RE
 .SS Doing more
@@ -208,6 +208,23 @@ If you have a feature like this:
 with a \fB\fCtippecanoe\fR object specifiying a \fB\fCmaxzoom\fR of 9 and a \fB\fCminzoom\fR of 4, the feature
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the \fB\fCtippecanoe\fR
 object belongs to the Feature, not to its \fB\fCproperties\fR\&.
+.PP
+You can also specify a layer name in the \fB\fCtippecanoe\fR object, which will take precedence over
+the filename or name specified using \fB\fC\-\-layer\fR, like this:
+.PP
+.RS
+.nf
+{
+    "type" : "Feature",
+    "tippecanoe" : { "layer" : "streets" },
+    "properties" : { "FULLNAME" : "N Vasco Rd" },
+    "geometry" : {
+        "type" : "LineString",
+        "coordinates" : [ [ \-121.733350, 37.767671 ], [ \-121.733600, 37.767483 ], [ \-121.733131, 37.766952 ] ]
+    }
+}
+.fi
+.RE
 .SH Point styling
 .PP
 To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
