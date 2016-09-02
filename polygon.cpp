@@ -790,7 +790,7 @@ again:
 
 				// fprintf(stderr, "%lld,%lld to %lld,%lld to %lld,%lld %f\n", prev.x, prev.y, here.x, here.y, next.x, next.y, ang2);
 
-				exits.insert(std::pair<double, size_t>(ang2 * sign, m));
+				exits.insert(std::pair<double, size_t>(ang2 * segments[m][0].op, m));
 			}
 		}
 		// fprintf(stderr, "\n");
@@ -804,11 +804,11 @@ again:
 				for (auto ei = exits.begin(); ei != exits.end(); ++ei) {
 					if (segments[ei->second][1] == here) {
 						fprintf(stderr, "XXXX %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
-							prev.x, prev.y, here.x, here.y, ei->first,
+							prev.x, prev.y, here.x, here.y, ei->first * segments[ei->second][0].op,
 							segments[ei->second][1].x, segments[ei->second][1].y);
 					} else {
 						fprintf(stderr, "from %lld,%lld to %lld,%lld: %f to %lld,%lld\n",
-							prev.x, prev.y, here.x, here.y, ei->first,
+							prev.x, prev.y, here.x, here.y, ei->first * segments[ei->second][0].op,
 							segments[ei->second][1].x, segments[ei->second][1].y);
 					}
 				}
@@ -863,10 +863,10 @@ again:
 							angb = entryang;
 						}
 
-						// fprintf(stderr, "those have angles %f and %f compared to %f for %lld,%lld\n", anga, angb, ei->first, segments[ei->second][1].x, segments[ei->second][1].y);
+						// fprintf(stderr, "those have angles %f and %f compared to %f for %lld,%lld\n", anga, angb, ei->first * segments[ei->second][0].op, segments[ei->second][1].x, segments[ei->second][1].y);
 
-						if ((anga < ei->first && angb > ei->first) ||
-						    (anga > ei->first && angb < ei->first)) {
+						if ((anga < ei->first * segments[ei->second][0].op && angb > ei->first * segments[ei->second][0].op) ||
+						    (anga > ei->first * segments[ei->second][0].op && angb < ei->first * segments[ei->second][0].op)) {
 							// fprintf(stderr, "exit unsuitable because of crossing\n");
 							suitable = false;
 							break;
@@ -875,10 +875,10 @@ again:
 
 					if (suitable) {
 						// if we are following a straight line, keep track of the angle that led into the straight line
-						if (anga == ei->first) {
+						if (anga == ei->first * segments[ei->second][0].op) {
 							entryang = angb;
 							// fprintf(stderr, "entered straight line from %f\n", entryang);
-						} else if (angb == ei->first) {
+						} else if (angb == ei->first * segments[ei->second][0].op) {
 							entryang = anga;
 							// fprintf(stderr, "entered straight line from %f\n", entryang);
 						}
@@ -977,11 +977,11 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					dv.push_back(geom[k]);
 
 					if (area < 0) {
-						dv[0].op = -1;
-						dv[1].op = -1;
-					} else {
 						dv[0].op = 1;
 						dv[1].op = 1;
+					} else {
+						dv[0].op = -1;
+						dv[1].op = -1;
 					}
 
 					segments.push_back(dv);
