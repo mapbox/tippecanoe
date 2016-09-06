@@ -104,7 +104,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Point simplification
 
- * -r _rate_ or --drop_rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+ * -r _rate_ or --drop-rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
    If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with -rg*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
