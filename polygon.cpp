@@ -976,6 +976,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
 
 	double initial_area = get_area_rings(geom);
+	bool missed_ring = false;
 
 	// Note that this assumes that polygons are closed.
 	// If they do not duplicate the last point, the last
@@ -1133,7 +1134,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					for (ssize_t j = choices.size() - 1; j >= 0; j--) {
 						if (alternatives[j] > 1 && choices[j] + 1 < alternatives[j]) {
 							choices[j]++;
-							fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
+							// fprintf(stderr, "using choice %lu for %ld\n", choices[j], j);
 							choices.resize(j + 1);
 							alternatives.resize(j + 1);
 							again = true;
@@ -1143,6 +1144,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 					if (!again) {
 						fprintf(stderr, "out of alternatives\n");
+						missed_ring = true;
 						break;
 					}
 				} else {
@@ -1166,8 +1168,8 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	drawvec ret = reassemble_rings(rings, all_rings);
 	double final_area = get_area_rings(ret);
 
-	if (final_area < initial_area * .99 || final_area > initial_area / .99) {
-		printf("%f vs %f\n", initial_area, final_area);
+	if (missed_ring && (final_area < initial_area * .99 || final_area > initial_area / .99)) {
+		fprintf(stderr, "polygon area: %f vs %f\n", initial_area, final_area);
 	}
 
 	return ret;
