@@ -950,8 +950,32 @@ again:
 	return ret;
 }
 
+double get_area_rings(drawvec &geom) {
+	double ret = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			ret += get_area(geom, i, j);
+
+			i = j - 1;
+		}
+	}
+
+	return ret;
+}
+
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
+
+	double initial_area = get_area_rings(geom);
 
 	// Note that this assumes that polygons are closed.
 	// If they do not duplicate the last point, the last
@@ -1132,12 +1156,19 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 		}
 	}
 
-	if (rings.size() == 0) {
-		fprintf(stderr, "Feature lost entirely!\n");
+	if (rings.size() == 0 && initial_area != 0) {
+		fprintf(stderr, "Feature lost entirely! Initial %f\n", initial_area);
 		exit(EXIT_FAILURE);
 	}
 
 	rings = remove_collinear(rings);
 
-	return reassemble_rings(rings, all_rings);
+	drawvec ret = reassemble_rings(rings, all_rings);
+	double final_area = get_area_rings(ret);
+
+	if (final_area < initial_area * .99 || final_area > initial_area / .99) {
+		printf("%f vs %f\n", initial_area, final_area);
+	}
+
+	return ret;
 }
