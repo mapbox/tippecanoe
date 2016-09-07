@@ -9,6 +9,7 @@
 #include <cmath>
 #include <limits.h>
 #include <sqlite3.h>
+#include <sstream>
 #include "geometry.hpp"
 #include "clipper/clipper.hpp"
 #include "projection.hpp"
