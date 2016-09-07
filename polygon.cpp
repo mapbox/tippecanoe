@@ -708,14 +708,12 @@ void find_subrings(drawvec ring, std::vector<drawvec> &rings) {
 	}
 }
 
-std::vector<drawvec> walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices) {
+std::vector<drawvec> walk_ring(std::vector<drawvec> &segments, size_t i, std::multimap<draw, size_t> const &paths, int sign, std::vector<size_t> &alternatives, std::vector<size_t> &choices, std::multimap<draw, std::pair<draw, draw>> &existing) {
 	std::vector<size_t> all_intersecting;
 	all_intersecting.resize(segments.size());
 	for (size_t a = 0; a < all_intersecting.size(); a++) {
 		all_intersecting[a] = 0;
 	}
-
-	std::multimap<draw, std::pair<draw, draw>> existing;
 
 	std::vector<drawvec> ret;
 
@@ -1070,16 +1068,20 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 		}
 	}
 
+	std::multimap<draw, std::pair<draw, draw>> existing;
+
 	for (size_t i = 0; i < segments.size(); i++) {
 		if (segments[i].size() > 0) {
 			std::vector<drawvec> before = segments;
+			std::multimap<draw, std::pair<draw, draw>> existing_before = existing;
+
 			std::vector<size_t> alternatives;
 			std::vector<size_t> choices;
 
 			std::vector<drawvec> found;
 
 			while (1) {
-				found = walk_ring(segments, i, paths, 1, alternatives, choices);
+				found = walk_ring(segments, i, paths, 1, alternatives, choices, existing);
 
 				if (found.size() == 0) {
 					printf("0 setlinewidth\n");
@@ -1094,6 +1096,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					printf("showpage\n");
 
 					segments = before;
+					existing = existing_before;
 
 					for (size_t j = 0; j < choices.size(); j++) {
 						if (alternatives[j] > 1) {
@@ -1116,7 +1119,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 					if (!again) {
 						fprintf(stderr, "out of alternatives\n");
-						exit(EXIT_FAILURE);
+						break;
 					}
 				} else {
 					break;
@@ -1127,6 +1130,11 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 				find_subrings(found[j], rings);
 			}
 		}
+	}
+
+	if (rings.size() == 0) {
+		fprintf(stderr, "Feature lost entirely!\n");
+		exit(EXIT_FAILURE);
 	}
 
 	rings = remove_collinear(rings);
