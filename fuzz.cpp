@@ -3,7 +3,11 @@
 #include <sqlite3.h>
 #include <time.h>
 #include <vector>
+#include <set>
+#include <map>
+#include <string>
 
+#include "mbtiles.hpp"
 #include "tile.hpp"
 #include "geometry.hpp"
 #include "polygon.hpp"
