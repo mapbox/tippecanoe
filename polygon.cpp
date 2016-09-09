@@ -1105,6 +1105,8 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 
 			std::vector<drawvec> found;
 
+			size_t tries = 0;
+
 			while (1) {
 				found = walk_ring(segments, i, paths, 1, alternatives, choices, existing);
 
@@ -1130,6 +1132,11 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 					}
 
 					bool again = false;
+
+					tries++;
+					if (tries > 10) {
+						break;
+					}
 
 					for (ssize_t j = choices.size() - 1; j >= 0; j--) {
 						if (alternatives[j] > 1 && choices[j] + 1 < alternatives[j]) {
