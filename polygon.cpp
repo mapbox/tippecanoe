@@ -61,7 +61,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, double testx, doubl
 	return c;
 }
 
-void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
+void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<ssize_t> &nexts) {
 	again = true;
 	drawvec dv;
 	dv.push_back(segments[intermediate][which_end]);
@@ -70,9 +70,11 @@ void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vecto
 	segments.push_back(dv);
 	segments[into][1] = segments[intermediate][which_end];
 	segments[into][1].op = segments[into][0].op;
+	nexts.push_back(nexts[into]);
+	nexts[into] = nexts.size() - 1;
 }
 
-void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again) {
+void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<ssize_t> &nexts) {
 	again = true;
 
 	long long x = segments[intermediate][which_end].x;
@@ -87,9 +89,11 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 	dv.push_back(segments[into][1]);
 	segments.push_back(dv);
 	segments[into][1] = d;
+	nexts.push_back(nexts[into]);
+	nexts[into] = nexts.size() - 1;
 }
 
-void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again) {
+void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again, std::vector<ssize_t> &nexts) {
 	long long s10_x = segments[a][1].x - segments[a][0].x;
 	long long s10_y = segments[a][1].y - segments[a][0].y;
 	long long s32_x = segments[b][1].x - segments[b][0].x;
@@ -133,19 +137,19 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				// All of these transformations preserve verticality so we can check multiple cases
 				if (segments[b][0].y > amin && segments[b][0].y < amax) {
 					// B0 is in A
-					add_vertical(b, 0, a, segments, again);
+					add_vertical(b, 0, a, segments, again, nexts);
 				}
 				if (segments[b][1].y > amin && segments[b][1].y < amax) {
 					// B1 is in A
-					add_vertical(b, 1, a, segments, again);
+					add_vertical(b, 1, a, segments, again, nexts);
 				}
 				if (segments[a][0].y > bmin && segments[a][0].y < bmax) {
 					// A0 is in B
-					add_vertical(a, 0, b, segments, again);
+					add_vertical(a, 0, b, segments, again, nexts);
 				}
 				if (segments[a][1].y > bmin && segments[a][1].y < bmax) {
 					// A1 is in B
-					add_vertical(a, 1, b, segments, again);
+					add_vertical(a, 1, b, segments, again, nexts);
 				}
 			} else {
 				// Horizontal or diagonal
@@ -169,16 +173,16 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 				// Don't check multiples, because rounding may corrupt collinearity
 				if (segments[b][0].x > amin && segments[b][0].x < amax) {
 					// B0 is in A
-					add_horizontal(b, 0, a, segments, again);
+					add_horizontal(b, 0, a, segments, again, nexts);
 				} else if (segments[b][1].x > amin && segments[b][1].x < amax) {
 					// B1 is in A
-					add_horizontal(b, 1, a, segments, again);
+					add_horizontal(b, 1, a, segments, again, nexts);
 				} else if (segments[a][0].x > bmin && segments[a][0].x < bmax) {
 					// A0 is in B
-					add_horizontal(a, 0, b, segments, again);
+					add_horizontal(a, 0, b, segments, again, nexts);
 				} else if (segments[a][1].x > bmin && segments[a][1].x < bmax) {
 					// A1 is in B
-					add_horizontal(a, 1, b, segments, again);
+					add_horizontal(a, 1, b, segments, again, nexts);
 				}
 			}
 		}
@@ -203,6 +207,8 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 					dv.push_back(segments[a][1]);
 					segments.push_back(dv);
 					segments[a][1] = draw(segments[a][1].op, x, y);
+					nexts.push_back(nexts[a]);
+					nexts[a] = nexts.size() - 1;
 					again = true;
 				}
 			}
@@ -215,6 +221,8 @@ void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool
 					dv.push_back(segments[b][1]);
 					segments.push_back(dv);
 					segments[b][1] = draw(segments[b][1].op, x, y);
+					nexts.push_back(nexts[b]);
+					nexts[b] = nexts.size() - 1;
 					again = true;
 				}
 			}
@@ -311,7 +319,7 @@ void sanity_check(std::vector<drawvec> const &segments) {
 	}
 }
 
-std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
+std::vector<drawvec> intersect_segments(std::vector<drawvec> segments, std::vector<ssize_t> &nexts) {
 	bool again = true;
 
 	while (again) {
@@ -427,7 +435,7 @@ std::vector<drawvec> intersect_segments(std::vector<drawvec> segments) {
 #endif
 
 		for (auto it = possible.begin(); it != possible.end(); ++it) {
-			check_intersection(segments, it->first, it->second, again);
+			check_intersection(segments, it->first, it->second, again, nexts);
 		}
 
 		// XXX
@@ -972,8 +980,70 @@ double get_area_rings(drawvec &geom) {
 	return ret;
 }
 
+void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, std::vector<drawvec> &segments) {
+	std::vector<int> used;
+	used.resize(nexts.size());
+
+	for (size_t i = 0; i < ring_starts.size(); i++) {
+		ssize_t j = ring_starts[i];
+
+		do {
+			// fprintf(stderr, "%ld ", j);
+			used[j]++;
+			j = nexts[j];
+
+			if (used[j] > 10) {
+				fprintf(stderr, "stuck in a loop at %ld\n", j);
+
+				for (size_t k = 0; k < nexts.size(); k++) {
+					fprintf(stderr, "%lu: %d %ld %lld,%lld to %lld,%lld\n", k, used[k], nexts[k],
+						segments[k][0].x, segments[k][0].y, segments[k][1].x, segments[k][1].y);
+				}
+
+				exit(EXIT_FAILURE);
+			}
+		} while (j != ring_starts[i]);
+
+		// fprintf(stderr, "   \n");
+	}
+
+	for (size_t i = 0; i < used.size(); i++) {
+		if (segments[i][1] != segments[nexts[i]][0]) {
+			fprintf(stderr, "mismatched next: %lld,%lld != %lld,%lld at %lu, %ld\n",
+				segments[i][1].x, segments[i][1].y,
+				segments[nexts[i]][0].x, segments[nexts[i]][0].y, i, nexts[i]);
+
+			for (size_t j = 0; j < nexts.size(); j++) {
+				fprintf(stderr, "%lu: %d %ld %lld,%lld to %lld,%lld\n", j, used[j], nexts[j],
+					segments[j][0].x, segments[j][0].y, segments[j][1].x, segments[j][1].y);
+			}
+			fprintf(stderr, "\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (size_t i = 0; i < used.size(); i++) {
+		if (used[i] != 1) {
+			fprintf(stderr, "didn't use segment %lu exactly once: %d\n", i, used[i]);
+			for (size_t j = 0; j < ring_starts.size(); j++) {
+				fprintf(stderr, "%lu ", ring_starts[j]);
+			}
+			fprintf(stderr, "\n");
+
+			for (size_t j = 0; j < nexts.size(); j++) {
+				fprintf(stderr, "%lu: %d %ld\n", j, used[j], nexts[j]);
+			}
+			fprintf(stderr, "\n");
+
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
+	std::vector<ssize_t> nexts;
+	std::vector<size_t> ring_starts;
 
 	double initial_area = get_area_rings(geom);
 	bool missed_ring = false;
@@ -992,6 +1062,9 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 			}
 
 			double area = get_area(geom, i, j);
+			ssize_t start = segments.size();
+
+			bool first = true;
 
 			for (size_t k = i + 1; k < j; k++) {
 				if (geom[k].x != geom[k - 1].x || geom[k].y != geom[k - 1].y) {
@@ -1007,15 +1080,31 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 						dv[1].op = -1;
 					}
 
+					if (first) {
+						ring_starts.push_back(start);
+						first = false;
+					}
+
 					segments.push_back(dv);
+					nexts.push_back(segments.size());
 				}
+			}
+
+			// Fix up afterward since the last segment to be considered
+			// might have been 0-length
+			if (!first) {
+				nexts[nexts.size() - 1] = start;
 			}
 
 			i = j - 1;
 		}
 	}
 
-	segments = intersect_segments(segments);
+	check_nexts(nexts, ring_starts, segments);
+
+	segments = intersect_segments(segments, nexts);
+
+	check_nexts(nexts, ring_starts, segments);
 
 	// Sort for stable order between runs
 	std::sort(segments.begin(), segments.end());
@@ -1074,7 +1163,7 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 						fprintf(stderr, "   ccw is %lld\n", ccw);
 
 						bool again = false;
-						check_intersection(segments, i, m, again);
+						check_intersection(segments, i, m, again, nexts);
 
 						fprintf(stderr, "   afterward %lld,%lld %lld,%lld vs %lld,%lld %lld,%lld\n",
 							segments[i][0].x, segments[i][0].y,
