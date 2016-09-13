@@ -61,7 +61,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, double testx, doubl
 	return c;
 }
 
-void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<ssize_t> &nexts) {
+void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<size_t> &nexts) {
 	again = true;
 	drawvec dv;
 	dv.push_back(segments[intermediate][which_end]);
@@ -74,7 +74,7 @@ void add_vertical(size_t intermediate, size_t which_end, size_t into, std::vecto
 	nexts[into] = nexts.size() - 1;
 }
 
-void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<ssize_t> &nexts) {
+void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vector<drawvec> &segments, bool &again, std::vector<size_t> &nexts) {
 	again = true;
 
 	long long x = segments[intermediate][which_end].x;
@@ -93,7 +93,7 @@ void add_horizontal(size_t intermediate, size_t which_end, size_t into, std::vec
 	nexts[into] = nexts.size() - 1;
 }
 
-void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again, std::vector<ssize_t> &nexts) {
+void check_intersection(std::vector<drawvec> &segments, size_t a, size_t b, bool &again, std::vector<size_t> &nexts) {
 	long long s10_x = segments[a][1].x - segments[a][0].x;
 	long long s10_y = segments[a][1].y - segments[a][0].y;
 	long long s32_x = segments[b][1].x - segments[b][0].x;
@@ -319,7 +319,7 @@ void sanity_check(std::vector<drawvec> const &segments) {
 	}
 }
 
-std::vector<drawvec> intersect_segments(std::vector<drawvec> segments, std::vector<ssize_t> &nexts) {
+std::vector<drawvec> intersect_segments(std::vector<drawvec> segments, std::vector<size_t> &nexts) {
 	bool again = true;
 
 	while (again) {
@@ -980,12 +980,24 @@ double get_area_rings(drawvec &geom) {
 	return ret;
 }
 
-void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, std::vector<drawvec> &segments) {
+void mark_rings(std::vector<size_t> const &nexts, std::vector<size_t> const &ring_starts, std::vector<drawvec> &segments) {
+	std::map<draw, size_t> seen;
+
+	for (size_t i = 0; i < ring_starts.size(); i++) {
+		size_t j = ring_starts[i];
+
+		do {
+			j = nexts[j];
+		} while (j != ring_starts[i]);
+	}
+};
+
+void check_nexts(std::vector<size_t> &nexts, std::vector<size_t> &ring_starts, std::vector<drawvec> &segments) {
 	std::vector<int> used;
 	used.resize(nexts.size());
 
 	for (size_t i = 0; i < ring_starts.size(); i++) {
-		ssize_t j = ring_starts[i];
+		size_t j = ring_starts[i];
 
 		do {
 			// fprintf(stderr, "%ld ", j);
@@ -996,7 +1008,7 @@ void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, 
 				fprintf(stderr, "stuck in a loop at %ld\n", j);
 
 				for (size_t k = 0; k < nexts.size(); k++) {
-					fprintf(stderr, "%lu: %d %ld %lld,%lld to %lld,%lld\n", k, used[k], nexts[k],
+					fprintf(stderr, "%lu: %d %lu %lld,%lld to %lld,%lld\n", k, used[k], nexts[k],
 						segments[k][0].x, segments[k][0].y, segments[k][1].x, segments[k][1].y);
 				}
 
@@ -1014,7 +1026,7 @@ void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, 
 				segments[nexts[i]][0].x, segments[nexts[i]][0].y, i, nexts[i]);
 
 			for (size_t j = 0; j < nexts.size(); j++) {
-				fprintf(stderr, "%lu: %d %ld %lld,%lld to %lld,%lld\n", j, used[j], nexts[j],
+				fprintf(stderr, "%lu: %d %lu %lld,%lld to %lld,%lld\n", j, used[j], nexts[j],
 					segments[j][0].x, segments[j][0].y, segments[j][1].x, segments[j][1].y);
 			}
 			fprintf(stderr, "\n");
@@ -1031,7 +1043,7 @@ void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, 
 			fprintf(stderr, "\n");
 
 			for (size_t j = 0; j < nexts.size(); j++) {
-				fprintf(stderr, "%lu: %d %ld\n", j, used[j], nexts[j]);
+				fprintf(stderr, "%lu: %d %lu\n", j, used[j], nexts[j]);
 			}
 			fprintf(stderr, "\n");
 
@@ -1042,7 +1054,7 @@ void check_nexts(std::vector<ssize_t> &nexts, std::vector<size_t> &ring_starts, 
 
 drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	std::vector<drawvec> segments;
-	std::vector<ssize_t> nexts;
+	std::vector<size_t> nexts;
 	std::vector<size_t> ring_starts;
 
 	double initial_area = get_area_rings(geom);
@@ -1105,6 +1117,8 @@ drawvec clean_polygon(drawvec &geom, bool all_rings) {
 	segments = intersect_segments(segments, nexts);
 
 	check_nexts(nexts, ring_starts, segments);
+
+	mark_rings(nexts, ring_starts, segments);
 
 	// Sort for stable order between runs
 	std::sort(segments.begin(), segments.end());
