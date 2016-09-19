@@ -344,7 +344,9 @@ void decode(struct reader *readers, char *map, std::vector<std::set<type_and_str
 		*rr = r;
 	}
 
-	for (struct reader *r = readers; r != NULL; r = r->next) {
+	struct reader *next;
+	for (struct reader *r = readers; r != NULL; r = next) {
+		next = r->next;
 		sqlite3_finalize(r->stmt);
 
 		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
@@ -391,6 +393,8 @@ void decode(struct reader *readers, char *map, std::vector<std::set<type_and_str
 			fprintf(stderr, "Could not close database: %s\n", sqlite3_errmsg(r->db));
 			exit(EXIT_FAILURE);
 		}
+
+		delete r;
 	}
 }
 
