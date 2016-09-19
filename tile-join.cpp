@@ -562,12 +562,6 @@ int main(int argc, char **argv) {
 
 	decode(readers, csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 
-	{
-		for (struct reader *r = readers; r != NULL; r = r->next) {
-			printf("%lld/%lld/%lld\n", r->zoom, r->x, r->y);
-		}
-	}
-
 	std::map<std::string, layermap_entry> layermap;
 	for (i = 0; i < nlayers; i++) {
 		layermap.insert(std::pair<std::string, layermap_entry>(layernames[i], layermap_entry(layermap.size())));
