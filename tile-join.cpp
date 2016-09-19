@@ -25,9 +25,8 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
-	mvt_tile outtile;
 	int features_added = 0;
 
 	if (!tile.decode(message)) {
@@ -37,11 +36,28 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
-		mvt_layer outlayer;
 
-		outlayer.name = layer.name;
-		outlayer.version = layer.version;
-		outlayer.extent = layer.extent;
+		size_t ol;
+		for (ol = 0; ol < outtile.layers.size(); ol++) {
+			if (tile.layers[l].name == outtile.layers[ol].name) {
+				break;
+			}
+		}
+
+		if (ol == outtile.layers.size()) {
+			outtile.layers.push_back(mvt_layer());
+
+			outtile.layers[ol].name = layer.name;
+			outtile.layers[ol].version = layer.version;
+			outtile.layers[ol].extent = layer.extent;
+		}
+
+		if (tile.layers[l].extent != outtile.layers[ol].extent) {
+			fprintf(stderr, "Mismatched extents: %d vs %d\n", tile.layers[l].extent, outtile.layers[ol].extent);
+			exit(EXIT_FAILURE);
+		}
+
+		mvt_layer &outlayer = outtile.layers[ol];
 
 		const char *ln = layer.name.c_str();
 
@@ -162,22 +178,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 				outlayer.features.push_back(outfeature);
 			}
 		}
-
-		outtile.layers.push_back(outlayer);
 	}
 
 	if (features_added == 0) {
 		return;
 	}
-
-	std::string compressed = outtile.encode();
-
-	if (compressed.size() > 500000) {
-		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());
-		return;
-	}
-
-	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
 double min(double a, double b) {
@@ -268,13 +273,38 @@ struct reader *begin_reading(char *fname) {
 }
 
 void decode(struct reader *readers, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+	mvt_tile tile;
+
 	while (readers != NULL && readers->zoom < 32) {
 		reader *r = readers;
 		readers = readers->next;
 		r->next = NULL;
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", r->zoom, r->x, r->y);
-		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched);
+		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched, tile);
+
+		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
+			bool anything = false;
+			for (size_t i = 0; i < tile.layers.size(); i++) {
+				if (tile.layers[i].features.size() > 0) {
+					anything = true;
+					break;
+				}
+			}
+
+			if (anything) {
+				std::string compressed = tile.encode();
+
+				if (compressed.size() > 500000) {
+					fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", r->zoom, r->x, r->y, (long long) compressed.size());
+				} else {
+					mbtiles_write_tile(outdb, r->zoom, r->x, r->y, compressed.data(), compressed.size());
+				}
+			}
+
+			tile = mvt_tile();
+		}
+
 		if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 			r->zoom = sqlite3_column_int(r->stmt, 0);
 			r->x = sqlite3_column_int(r->stmt, 1);
