@@ -196,7 +196,43 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+struct reader {
+	long long zoom;
+	long long x;
+	long long sorty;
+	long long y;
+
+	long long len;
+	const char *data;
+
+	sqlite3 *db;
+	sqlite3_stmt *stmt;
+	struct reader *next;
+
+	bool operator<(const struct reader &r) const {
+		if (zoom < r.zoom) {
+			return true;
+		}
+		if (zoom > r.zoom) {
+			return false;
+		}
+
+		if (x < r.x) {
+			return true;
+		}
+		if (x > r.x) {
+			return false;
+		}
+
+		if (sorty < r.sorty) {
+			return true;
+		}
+
+		return false;
+	}
+};
+
+struct reader *begin_reading(char *fname) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -204,72 +240,112 @@ void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &fil
 		exit(EXIT_FAILURE);
 	}
 
-	const char *sql = "SELECT zoom_level, tile_column, tile_row, tile_data from tiles;";
+	const char *sql = "SELECT zoom_level, tile_column, tile_row, tile_data from tiles order by zoom_level, tile_column, tile_row;";
 	sqlite3_stmt *stmt;
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 		fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
 
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		long long zoom = sqlite3_column_int(stmt, 0);
-		long long x = sqlite3_column_int(stmt, 1);
-		long long y = sqlite3_column_int(stmt, 2);
-		y = (1LL << zoom) - 1 - y;
+	struct reader *r = new reader;
+	r->db = db;
+	r->stmt = stmt;
+	r->next = NULL;
 
-		int len = sqlite3_column_bytes(stmt, 3);
-		const char *s = (const char *) sqlite3_column_blob(stmt, 3);
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		r->zoom = sqlite3_column_int(stmt, 0);
+		r->x = sqlite3_column_int(stmt, 1);
+		r->sorty = sqlite3_column_int(stmt, 2);
+		r->y = (1LL << r->zoom) - 1 - r->sorty;
 
-		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
-
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched);
+		r->len = sqlite3_column_bytes(stmt, 3);
+		r->data = (const char *) sqlite3_column_blob(stmt, 3);
+	} else {
+		r->zoom = 32;
 	}
 
-	sqlite3_finalize(stmt);
+	return r;
+}
 
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			int minzoom = sqlite3_column_int(stmt, 0);
-			st->minzoom = min(st->minzoom, minzoom);
+void decode(struct reader *readers, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+	while (readers != NULL && readers->zoom < 32) {
+		reader *r = readers;
+		readers = readers->next;
+		r->next = NULL;
+
+		fprintf(stderr, "%lld/%lld/%lld   \r", r->zoom, r->x, r->y);
+		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched);
+		if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+			r->zoom = sqlite3_column_int(r->stmt, 0);
+			r->x = sqlite3_column_int(r->stmt, 1);
+			r->sorty = sqlite3_column_int(r->stmt, 2);
+			r->y = (1LL << r->zoom) - 1 - r->sorty;
+
+			r->len = sqlite3_column_bytes(r->stmt, 3);
+			r->data = (const char *) sqlite3_column_blob(r->stmt, 3);
+		} else {
+			r->zoom = 32;
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			int maxzoom = sqlite3_column_int(stmt, 0);
-			st->maxzoom = max(st->maxzoom, maxzoom);
+
+		struct reader **rr;
+
+		for (rr = &readers; *rr != NULL; rr = &((*rr)->next)) {
+			if (*r < **rr) {
+				break;
+			}
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'center'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			const unsigned char *s = sqlite3_column_text(stmt, 0);
-			sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
-		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'attribution'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			attribution = std::string((char *) sqlite3_column_text(stmt, 0));
-		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'bounds'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			const unsigned char *s = sqlite3_column_text(stmt, 0);
-			double minlon, minlat, maxlon, maxlat;
-			sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
-			st->minlon = min(minlon, st->minlon);
-			st->maxlon = max(maxlon, st->maxlon);
-			st->minlat = min(minlat, st->minlat);
-			st->maxlat = max(maxlat, st->maxlat);
-		}
-		sqlite3_finalize(stmt);
+
+		r->next = *rr;
+		*rr = r;
 	}
 
-	if (sqlite3_close(db) != SQLITE_OK) {
-		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+	for (struct reader *r = readers; r != NULL; r = r->next) {
+		sqlite3_finalize(r->stmt);
+
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int minzoom = sqlite3_column_int(r->stmt, 0);
+				st->minzoom = min(st->minzoom, minzoom);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int maxzoom = sqlite3_column_int(r->stmt, 0);
+				st->maxzoom = max(st->maxzoom, maxzoom);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				attribution = std::string((char *) sqlite3_column_text(r->stmt, 0));
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				double minlon, minlat, maxlon, maxlat;
+				sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
+				st->minlon = min(minlon, st->minlon);
+				st->maxlon = max(maxlon, st->maxlon);
+				st->minlat = min(minlat, st->minlat);
+				st->maxlat = max(maxlat, st->maxlat);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+
+		if (sqlite3_close(r->db) != SQLITE_OK) {
+			fprintf(stderr, "Could not close database: %s\n", sqlite3_errmsg(r->db));
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
@@ -419,8 +495,28 @@ int main(int argc, char **argv) {
 	int nlayers = 0;
 	std::string attribution;
 
+	struct reader *readers = NULL;
+
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
+		reader *r = begin_reading(argv[i]);
+		struct reader **rr;
+
+		for (rr = &readers; *rr != NULL; rr = &((*rr)->next)) {
+			if (*r < **rr) {
+				break;
+			}
+		}
+
+		r->next = *rr;
+		*rr = r;
+	}
+
+	decode(readers, csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
+
+	{
+		for (struct reader *r = readers; r != NULL; r = r->next) {
+			printf("%lld/%lld/%lld\n", r->zoom, r->x, r->y);
+		}
 	}
 
 	std::map<std::string, layermap_entry> layermap;
