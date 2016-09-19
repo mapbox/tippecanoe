@@ -25,7 +25,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
 	int features_added = 0;
 
@@ -67,19 +67,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			}
 		}
 
-		const char *ln = layer.name.c_str();
-
-		int ll;
-		for (ll = 0; ll < *nlayers; ll++) {
-			if (strcmp(layernames[ll].c_str(), ln) == 0) {
-				break;
-			}
+		if (layermap.count(layer.name) == 0) {
+			layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
 		}
-		if (ll == *nlayers) {
-			file_keys.push_back(std::set<type_and_string>());
-			layernames.push_back(std::string(ln));
-			*nlayers = ll + 1;
-		}
+		auto file_keys = layermap.find(layer.name);
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
@@ -130,7 +121,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 					type_and_string tas;
 					tas.string = std::string(key);
 					tas.type = type;
-					file_keys[ll].insert(tas);
+					file_keys->second.file_keys.insert(tas);
 					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
@@ -160,7 +151,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 								type_and_string tas;
 								tas.string = std::string(sjoinkey);
 								tas.type = attr_type;
-								file_keys[ll].insert(tas);
+								file_keys->second.file_keys.insert(tas);
 
 								mvt_value outval;
 								if (attr_type == VT_STRING) {
@@ -287,7 +278,7 @@ struct reader *begin_reading(char *fname) {
 	return r;
 }
 
-void decode(struct reader *readers, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
 	mvt_tile tile;
 
 	while (readers != NULL && readers->zoom < 32) {
@@ -296,7 +287,7 @@ void decode(struct reader *readers, char *map, std::vector<std::set<type_and_str
 		r->next = NULL;
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", r->zoom, r->x, r->y);
-		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched, tile);
+		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, layermap, outdb, header, mapping, exclude, ifmatched, tile);
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			bool anything = false;
@@ -539,9 +530,7 @@ int main(int argc, char **argv) {
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
-	std::vector<std::set<type_and_string> > file_keys;
-	std::vector<std::string> layernames;
-	int nlayers = 0;
+	std::map<std::string, layermap_entry> layermap;
 	std::string attribution;
 
 	struct reader *readers = NULL;
@@ -560,13 +549,7 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
-
-	std::map<std::string, layermap_entry> layermap;
-	for (i = 0; i < nlayers; i++) {
-		layermap.insert(std::pair<std::string, layermap_entry>(layernames[i], layermap_entry(layermap.size())));
-		layermap.find(layernames[i])->second.file_keys = file_keys[i];
-	}
+	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 
 	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
 	mbtiles_close(outdb, argv);
