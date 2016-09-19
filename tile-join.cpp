@@ -52,12 +52,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			outtile.layers[ol].extent = layer.extent;
 		}
 
-		if (tile.layers[l].extent != outtile.layers[ol].extent) {
-			fprintf(stderr, "Mismatched extents: %d vs %d\n", tile.layers[l].extent, outtile.layers[ol].extent);
-			exit(EXIT_FAILURE);
-		}
-
 		mvt_layer &outlayer = outtile.layers[ol];
+
+		if (layer.extent != outlayer.extent) {
+			if (layer.extent > outlayer.extent) {
+				for (size_t i = 0; i < outlayer.features.size(); i++) {
+					for (size_t j = 0; j < outlayer.features[i].geometry.size(); j++) {
+						outlayer.features[i].geometry[j].x = outlayer.features[i].geometry[j].x * layer.extent / outlayer.extent;
+						outlayer.features[i].geometry[j].y = outlayer.features[i].geometry[j].y * layer.extent / outlayer.extent;
+					}
+				}
+
+				outlayer.extent = layer.extent;
+			}
+		}
 
 		const char *ln = layer.name.c_str();
 
@@ -173,6 +181,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 			if (matched || !ifmatched) {
 				outfeature.type = feat.type;
 				outfeature.geometry = feat.geometry;
+
+				if (layer.extent != outlayer.extent) {
+					for (size_t i = 0; i < outfeature.geometry.size(); i++) {
+						outfeature.geometry[i].x = outfeature.geometry[i].x * outlayer.extent / layer.extent;
+						outfeature.geometry[i].y = outfeature.geometry[i].y * outlayer.extent / layer.extent;
+					}
+				}
 
 				features_added++;
 				outlayer.features.push_back(outfeature);
