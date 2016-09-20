@@ -295,3 +295,37 @@ void mbtiles_close(sqlite3 *outdb, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 }
+
+std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps) {
+	std::map<std::string, layermap_entry> out;
+
+	for (size_t i = 0; i < maps.size(); i++) {
+		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
+			if (out.count(map->first) == 0) {
+				out.insert(std::pair<std::string, layermap_entry>(map->first, layermap_entry(out.size())));
+				auto out_entry = out.find(map->first);
+				out_entry->second.minzoom = map->second.minzoom;
+				out_entry->second.maxzoom = map->second.maxzoom;
+			}
+
+			auto out_entry = out.find(map->first);
+			if (out_entry == out.end()) {
+				fprintf(stderr, "Internal error merging layers\n");
+				exit(EXIT_FAILURE);
+			}
+
+			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
+				out_entry->second.file_keys.insert(*fk);
+			}
+
+			if (map->second.minzoom < out_entry->second.minzoom) {
+				out_entry->second.minzoom = map->second.minzoom;
+			}
+			if (map->second.maxzoom > out_entry->second.maxzoom) {
+				out_entry->second.maxzoom = map->second.maxzoom;
+			}
+		}
+	}
+
+	return out;
+}

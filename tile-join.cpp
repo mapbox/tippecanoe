@@ -19,6 +19,7 @@
 std::string dequote(std::string s);
 
 bool pk = false;
+int CPUS;
 
 struct stats {
 	int minzoom;
@@ -299,6 +300,11 @@ struct reader *begin_reading(char *fname) {
 }
 
 void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+	std::vector<std::map<std::string, layermap_entry> > layermaps;
+	for (size_t i = 0; i < CPUS; i++) {
+		layermaps.push_back(std::map<std::string, layermap_entry>());
+	}
+
 	mvt_tile tile;
 
 	while (readers != NULL && readers->zoom < 32) {
@@ -307,7 +313,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		r->next = NULL;
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", r->zoom, r->x, r->y);
-		handle(r->data, r->zoom, r->x, r->y, layermap, outdb, header, mapping, exclude, ifmatched, tile);
+		handle(r->data, r->zoom, r->x, r->y, layermaps[0], outdb, header, mapping, exclude, ifmatched, tile);
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			bool anything = false;
@@ -356,6 +362,8 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		r->next = *rr;
 		*rr = r;
 	}
+
+	layermap = merge_layermaps(layermaps);
 
 	struct reader *next;
 	for (struct reader *r = readers; r != NULL; r = next) {
@@ -495,6 +503,11 @@ int main(int argc, char **argv) {
 	char *csv = NULL;
 	int force = 0;
 	int ifmatched = 0;
+
+	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	if (CPUS < 1) {
+		CPUS = 1;
+	}
 
 	std::vector<std::string> header;
 	std::map<std::string, std::vector<std::string> > mapping;
