@@ -18,6 +18,8 @@
 
 std::string dequote(std::string s);
 
+bool pk = false;
+
 struct stats {
 	int minzoom;
 	int maxzoom;
@@ -301,7 +303,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			if (anything) {
 				std::string compressed = tile.encode();
 
-				if (compressed.size() > 500000) {
+				if (!pk && compressed.size() > 500000) {
 					fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", r->zoom, r->x, r->y, (long long) compressed.size());
 				} else {
 					mbtiles_write_tile(outdb, r->zoom, r->x, r->y, compressed.data(), compressed.size());
@@ -390,7 +392,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -483,7 +485,7 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:i")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:ip:")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -495,6 +497,15 @@ int main(int argc, char **argv) {
 
 		case 'i':
 			ifmatched = 1;
+			break;
+
+		case 'p':
+			if (strcmp(optarg, "k") == 0) {
+				pk = true;
+			} else {
+				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'c':

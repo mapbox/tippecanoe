@@ -285,6 +285,10 @@ Tile-join is a tool for joining new attributes from a CSV file to features that
 have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
 file, matches them against the records of the CSV, and writes out a new tileset.
 
+If you specify multiple source mbtiles files, they are all read and their combined
+contents are written to the new mbtiles output. If they define the same layers or
+the same tiles, the layers or tiles are merged.
+
 The options are:
 
  * -o *out.mbtiles*: Write the new tiles to the specified .mbtiles file
@@ -292,10 +296,12 @@ The options are:
  * -c *match.csv*: Use *match.csv* as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
  * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * -i: Only include features that matched the CSV.
+ * -pk: Don't skip tiles larger than 500K.
 
-Because tile-join just copies the geometries to the new .mbtiles without processing them,
+Because tile-join just copies the geometries to the new .mbtiles without processing them
+(except to rescale the extents if necessary),
 it doesn't have any of tippecanoe's recourses if the new tiles are bigger than the 500K tile limit.
-If a tile is too big, it is just left out of the new tileset.
+If a tile is too big and you haven't specified `-pk`, it is just left out of the new tileset.
 
 Example
 -------
