@@ -8,6 +8,8 @@ struct type_and_string {
 struct layermap_entry {
 	size_t id;
 	std::set<type_and_string> file_keys;
+	int minzoom;
+	int maxzoom;
 
 	layermap_entry(size_t _id) {
 		id = _id;

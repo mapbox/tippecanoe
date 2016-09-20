@@ -71,6 +71,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 		if (layermap.count(layer.name) == 0) {
 			layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
+			auto file_keys = layermap.find(layer.name);
+			file_keys->second.minzoom = z;
+			file_keys->second.maxzoom = z;
 		}
 		auto file_keys = layermap.find(layer.name);
 
@@ -184,6 +187,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				features_added++;
 				outlayer.features.push_back(outfeature);
+
+				if (z < file_keys->second.minzoom) {
+					file_keys->second.minzoom = z;
+				}
+				if (z > file_keys->second.maxzoom) {
+					file_keys->second.maxzoom = z;
+				}
 			}
 		}
 	}

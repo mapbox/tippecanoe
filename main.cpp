@@ -1729,6 +1729,10 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
 
+	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
+		ai->second.minzoom = minzoom;
+		ai->second.maxzoom = maxzoom;
+	}
 	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm);
 
 	return ret;

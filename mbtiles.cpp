@@ -242,11 +242,11 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 			aprintf(&buf, ", ");
 		}
 
+		auto fk = layermap.find(lnames[i]);
 		aprintf(&buf, "{ \"id\": \"");
 		quote(&buf, lnames[i].c_str());
-		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
+		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
-		auto fk = layermap.find(lnames[i]);
 		std::set<type_and_string>::iterator j;
 		bool first = true;
 		for (j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
