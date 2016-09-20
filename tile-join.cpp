@@ -225,8 +225,7 @@ struct reader {
 	long long sorty;
 	long long y;
 
-	long long len;
-	const char *data;
+	std::string data;
 
 	sqlite3 *db;
 	sqlite3_stmt *stmt;
@@ -248,6 +247,13 @@ struct reader {
 		}
 
 		if (sorty < r.sorty) {
+			return true;
+		}
+		if (sorty > r.sorty) {
+			return false;
+		}
+
+		if (data < r.data) {
 			return true;
 		}
 
@@ -281,8 +287,10 @@ struct reader *begin_reading(char *fname) {
 		r->sorty = sqlite3_column_int(stmt, 2);
 		r->y = (1LL << r->zoom) - 1 - r->sorty;
 
-		r->len = sqlite3_column_bytes(stmt, 3);
-		r->data = (const char *) sqlite3_column_blob(stmt, 3);
+		const char *data = (const char *) sqlite3_column_blob(stmt, 3);
+		size_t len = sqlite3_column_bytes(stmt, 3);
+
+		r->data = std::string(data, len);
 	} else {
 		r->zoom = 32;
 	}
@@ -299,7 +307,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		r->next = NULL;
 
 		fprintf(stderr, "%lld/%lld/%lld   \r", r->zoom, r->x, r->y);
-		handle(std::string(r->data, r->len), r->zoom, r->x, r->y, layermap, outdb, header, mapping, exclude, ifmatched, tile);
+		handle(r->data, r->zoom, r->x, r->y, layermap, outdb, header, mapping, exclude, ifmatched, tile);
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			bool anything = false;
@@ -329,8 +337,10 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			r->sorty = sqlite3_column_int(r->stmt, 2);
 			r->y = (1LL << r->zoom) - 1 - r->sorty;
 
-			r->len = sqlite3_column_bytes(r->stmt, 3);
-			r->data = (const char *) sqlite3_column_blob(r->stmt, 3);
+			const char *data = (const char *) sqlite3_column_blob(r->stmt, 3);
+			size_t len = sqlite3_column_bytes(r->stmt, 3);
+
+			r->data = std::string(data, len);
 		} else {
 			r->zoom = 32;
 		}
