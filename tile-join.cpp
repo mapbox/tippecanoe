@@ -356,6 +356,8 @@ void *join_worker(void *v) {
 			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), a->ifmatched, tile);
 		}
 
+		ai->second.clear();
+
 		bool anything = false;
 		for (size_t i = 0; i < tile.layers.size(); i++) {
 			if (tile.layers[i].features.size() > 0) {
@@ -393,7 +395,9 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 
 	size_t count = 0;
-	// XXX Be more careful to distribute tasks evenly across CPUs
+	// This isn't careful about distributing tasks evenly across CPUs,
+	// but, from testing, it actually takes a little longer to do
+	// the proper allocation than is saved by perfectly balanced threads.
 	for (auto ai = tasks.begin(); ai != tasks.end(); ++ai) {
 		args[count].inputs.insert(*ai);
 		count = (count + 1) % CPUS;
