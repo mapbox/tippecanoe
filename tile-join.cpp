@@ -10,6 +10,7 @@
 #include <set>
 #include <zlib.h>
 #include <math.h>
+#include <pthread.h>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "pool.hpp"
@@ -18,6 +19,9 @@
 
 std::string dequote(std::string s);
 
+bool pk = false;
+size_t CPUS;
+
 struct stats {
 	int minzoom;
 	int maxzoom;
@@ -25,9 +29,8 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
-	mvt_tile outtile;
 	int features_added = 0;
 
 	if (!tile.decode(message)) {
@@ -37,25 +40,44 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
-		mvt_layer outlayer;
 
-		outlayer.name = layer.name;
-		outlayer.version = layer.version;
-		outlayer.extent = layer.extent;
-
-		const char *ln = layer.name.c_str();
-
-		int ll;
-		for (ll = 0; ll < *nlayers; ll++) {
-			if (strcmp(layernames[ll].c_str(), ln) == 0) {
+		size_t ol;
+		for (ol = 0; ol < outtile.layers.size(); ol++) {
+			if (tile.layers[l].name == outtile.layers[ol].name) {
 				break;
 			}
 		}
-		if (ll == *nlayers) {
-			file_keys.push_back(std::set<type_and_string>());
-			layernames.push_back(std::string(ln));
-			*nlayers = ll + 1;
+
+		if (ol == outtile.layers.size()) {
+			outtile.layers.push_back(mvt_layer());
+
+			outtile.layers[ol].name = layer.name;
+			outtile.layers[ol].version = layer.version;
+			outtile.layers[ol].extent = layer.extent;
 		}
+
+		mvt_layer &outlayer = outtile.layers[ol];
+
+		if (layer.extent != outlayer.extent) {
+			if (layer.extent > outlayer.extent) {
+				for (size_t i = 0; i < outlayer.features.size(); i++) {
+					for (size_t j = 0; j < outlayer.features[i].geometry.size(); j++) {
+						outlayer.features[i].geometry[j].x = outlayer.features[i].geometry[j].x * layer.extent / outlayer.extent;
+						outlayer.features[i].geometry[j].y = outlayer.features[i].geometry[j].y * layer.extent / outlayer.extent;
+					}
+				}
+
+				outlayer.extent = layer.extent;
+			}
+		}
+
+		if (layermap.count(layer.name) == 0) {
+			layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
+			auto file_keys = layermap.find(layer.name);
+			file_keys->second.minzoom = z;
+			file_keys->second.maxzoom = z;
+		}
+		auto file_keys = layermap.find(layer.name);
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
@@ -106,12 +128,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 					type_and_string tas;
 					tas.string = std::string(key);
 					tas.type = type;
-					file_keys[ll].insert(tas);
+					file_keys->second.file_keys.insert(tas);
 					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
-					std::map<std::string, std::vector<std::string> >::iterator ii = mapping.find(value);
+					std::map<std::string, std::vector<std::string>>::iterator ii = mapping.find(value);
 
 					if (ii != mapping.end()) {
 						std::vector<std::string> fields = ii->second;
@@ -136,7 +158,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 								type_and_string tas;
 								tas.string = std::string(sjoinkey);
 								tas.type = attr_type;
-								file_keys[ll].insert(tas);
+								file_keys->second.file_keys.insert(tas);
 
 								mvt_value outval;
 								if (attr_type == VT_STRING) {
@@ -158,26 +180,29 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::vector<std:
 				outfeature.type = feat.type;
 				outfeature.geometry = feat.geometry;
 
+				if (layer.extent != outlayer.extent) {
+					for (size_t i = 0; i < outfeature.geometry.size(); i++) {
+						outfeature.geometry[i].x = outfeature.geometry[i].x * outlayer.extent / layer.extent;
+						outfeature.geometry[i].y = outfeature.geometry[i].y * outlayer.extent / layer.extent;
+					}
+				}
+
 				features_added++;
 				outlayer.features.push_back(outfeature);
+
+				if (z < file_keys->second.minzoom) {
+					file_keys->second.minzoom = z;
+				}
+				if (z > file_keys->second.maxzoom) {
+					file_keys->second.maxzoom = z;
+				}
 			}
 		}
-
-		outtile.layers.push_back(outlayer);
 	}
 
 	if (features_added == 0) {
 		return;
 	}
-
-	std::string compressed = outtile.encode();
-
-	if (compressed.size() > 500000) {
-		fprintf(stderr, "Tile %d/%u/%u size is %lld, >500000. Skipping this tile\n.", z, x, y, (long long) compressed.size());
-		return;
-	}
-
-	mbtiles_write_tile(outdb, z, x, y, compressed.data(), compressed.size());
 }
 
 double min(double a, double b) {
@@ -196,7 +221,49 @@ double max(double a, double b) {
 	}
 }
 
-void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &file_keys, std::vector<std::string> &layernames, int *nlayers, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+struct reader {
+	long long zoom;
+	long long x;
+	long long sorty;
+	long long y;
+
+	std::string data;
+
+	sqlite3 *db;
+	sqlite3_stmt *stmt;
+	struct reader *next;
+
+	bool operator<(const struct reader &r) const {
+		if (zoom < r.zoom) {
+			return true;
+		}
+		if (zoom > r.zoom) {
+			return false;
+		}
+
+		if (x < r.x) {
+			return true;
+		}
+		if (x > r.x) {
+			return false;
+		}
+
+		if (sorty < r.sorty) {
+			return true;
+		}
+		if (sorty > r.sorty) {
+			return false;
+		}
+
+		if (data < r.data) {
+			return true;
+		}
+
+		return false;
+	}
+};
+
+struct reader *begin_reading(char *fname) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
@@ -204,77 +271,274 @@ void decode(char *fname, char *map, std::vector<std::set<type_and_string> > &fil
 		exit(EXIT_FAILURE);
 	}
 
-	const char *sql = "SELECT zoom_level, tile_column, tile_row, tile_data from tiles;";
+	const char *sql = "SELECT zoom_level, tile_column, tile_row, tile_data from tiles order by zoom_level, tile_column, tile_row;";
 	sqlite3_stmt *stmt;
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 		fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
 
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		long long zoom = sqlite3_column_int(stmt, 0);
-		long long x = sqlite3_column_int(stmt, 1);
-		long long y = sqlite3_column_int(stmt, 2);
-		y = (1LL << zoom) - 1 - y;
+	struct reader *r = new reader;
+	r->db = db;
+	r->stmt = stmt;
+	r->next = NULL;
 
-		int len = sqlite3_column_bytes(stmt, 3);
-		const char *s = (const char *) sqlite3_column_blob(stmt, 3);
+	if (sqlite3_step(stmt) == SQLITE_ROW) {
+		r->zoom = sqlite3_column_int(stmt, 0);
+		r->x = sqlite3_column_int(stmt, 1);
+		r->sorty = sqlite3_column_int(stmt, 2);
+		r->y = (1LL << r->zoom) - 1 - r->sorty;
 
-		fprintf(stderr, "%lld/%lld/%lld   \r", zoom, x, y);
+		const char *data = (const char *) sqlite3_column_blob(stmt, 3);
+		size_t len = sqlite3_column_bytes(stmt, 3);
 
-		handle(std::string(s, len), zoom, x, y, file_keys, layernames, nlayers, outdb, header, mapping, exclude, ifmatched);
+		r->data = std::string(data, len);
+	} else {
+		r->zoom = 32;
 	}
 
-	sqlite3_finalize(stmt);
+	return r;
+}
 
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			int minzoom = sqlite3_column_int(stmt, 0);
-			st->minzoom = min(st->minzoom, minzoom);
+struct zxy {
+	long long z;
+	long long x;
+	long long y;
+
+	zxy(long long _z, long long _x, long long _y) {
+		z = _z;
+		x = _x;
+		y = _y;
+	}
+
+	bool operator<(zxy const &other) const {
+		if (z < other.z) {
+			return true;
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			int maxzoom = sqlite3_column_int(stmt, 0);
-			st->maxzoom = max(st->maxzoom, maxzoom);
+		if (z > other.z) {
+			return false;
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'center'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			const unsigned char *s = sqlite3_column_text(stmt, 0);
-			sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+
+		if (x < other.x) {
+			return true;
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'attribution'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			attribution = std::string((char *) sqlite3_column_text(stmt, 0));
+		if (x > other.x) {
+			return false;
 		}
-		sqlite3_finalize(stmt);
-	}
-	if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'bounds'", -1, &stmt, NULL) == SQLITE_OK) {
-		if (sqlite3_step(stmt) == SQLITE_ROW) {
-			const unsigned char *s = sqlite3_column_text(stmt, 0);
-			double minlon, minlat, maxlon, maxlat;
-			sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
-			st->minlon = min(minlon, st->minlon);
-			st->maxlon = max(maxlon, st->maxlon);
-			st->minlat = min(minlat, st->minlat);
-			st->maxlat = max(maxlat, st->maxlat);
+
+		if (y < other.y) {
+			return true;
 		}
-		sqlite3_finalize(stmt);
+
+		return false;
+	}
+};
+
+struct arg {
+	std::map<zxy, std::vector<std::string>> inputs;
+	std::map<zxy, std::string> outputs;
+
+	std::map<std::string, layermap_entry> *layermap;
+
+	std::vector<std::string> *header;
+	std::map<std::string, std::vector<std::string>> *mapping;
+	std::set<std::string> *exclude;
+	int ifmatched;
+};
+
+void *join_worker(void *v) {
+	arg *a = (arg *) v;
+
+	for (auto ai = a->inputs.begin(); ai != a->inputs.end(); ++ai) {
+		mvt_tile tile;
+
+		for (size_t i = 0; i < ai->second.size(); i++) {
+			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), a->ifmatched, tile);
+		}
+
+		ai->second.clear();
+
+		bool anything = false;
+		for (size_t i = 0; i < tile.layers.size(); i++) {
+			if (tile.layers[i].features.size() > 0) {
+				anything = true;
+				break;
+			}
+		}
+
+		if (anything) {
+			std::string compressed = tile.encode();
+
+			if (!pk && compressed.size() > 500000) {
+				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
+			} else {
+				a->outputs.insert(std::pair<zxy, std::string>(ai->first, compressed));
+			}
+		}
 	}
 
-	if (sqlite3_close(db) != SQLITE_OK) {
-		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+	return NULL;
+}
+
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched) {
+	pthread_t pthreads[CPUS];
+	std::vector<arg> args;
+
+	for (size_t i = 0; i < CPUS; i++) {
+		args.push_back(arg());
+
+		args[i].layermap = &layermaps[i];
+		args[i].header = &header;
+		args[i].mapping = &mapping;
+		args[i].exclude = &exclude;
+		args[i].ifmatched = ifmatched;
+	}
+
+	size_t count = 0;
+	// This isn't careful about distributing tasks evenly across CPUs,
+	// but, from testing, it actually takes a little longer to do
+	// the proper allocation than is saved by perfectly balanced threads.
+	for (auto ai = tasks.begin(); ai != tasks.end(); ++ai) {
+		args[count].inputs.insert(*ai);
+		count = (count + 1) % CPUS;
+
+		if (ai == tasks.begin()) {
+			fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+		}
+	}
+
+	for (size_t i = 0; i < CPUS; i++) {
+		if (pthread_create(&pthreads[i], NULL, join_worker, &args[i]) != 0) {
+			perror("pthread_create");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (size_t i = 0; i < CPUS; i++) {
+		void *retval;
+
+		if (pthread_join(pthreads[i], &retval) != 0) {
+			perror("pthread_join");
+		}
+
+		for (auto ai = args[i].outputs.begin(); ai != args[i].outputs.end(); ++ai) {
+			mbtiles_write_tile(outdb, ai->first.z, ai->first.x, ai->first.y, ai->second.data(), ai->second.size());
+		}
+	}
+}
+
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+	std::vector<std::map<std::string, layermap_entry>> layermaps;
+	for (size_t i = 0; i < CPUS; i++) {
+		layermaps.push_back(std::map<std::string, layermap_entry>());
+	}
+
+	std::map<zxy, std::vector<std::string>> tasks;
+
+	while (readers != NULL && readers->zoom < 32) {
+		reader *r = readers;
+		readers = readers->next;
+		r->next = NULL;
+
+		zxy tile = zxy(r->zoom, r->x, r->y);
+		if (tasks.count(tile) == 0) {
+			tasks.insert(std::pair<zxy, std::vector<std::string>>(tile, std::vector<std::string>()));
+		}
+		auto f = tasks.find(tile);
+		f->second.push_back(r->data);
+
+		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
+			if (tasks.size() > 100 * CPUS) {
+				handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched);
+				tasks.clear();
+			}
+		}
+
+		if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+			r->zoom = sqlite3_column_int(r->stmt, 0);
+			r->x = sqlite3_column_int(r->stmt, 1);
+			r->sorty = sqlite3_column_int(r->stmt, 2);
+			r->y = (1LL << r->zoom) - 1 - r->sorty;
+
+			const char *data = (const char *) sqlite3_column_blob(r->stmt, 3);
+			size_t len = sqlite3_column_bytes(r->stmt, 3);
+
+			r->data = std::string(data, len);
+		} else {
+			r->zoom = 32;
+		}
+
+		struct reader **rr;
+
+		for (rr = &readers; *rr != NULL; rr = &((*rr)->next)) {
+			if (*r < **rr) {
+				break;
+			}
+		}
+
+		r->next = *rr;
+		*rr = r;
+	}
+
+	handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched);
+	layermap = merge_layermaps(layermaps);
+
+	struct reader *next;
+	for (struct reader *r = readers; r != NULL; r = next) {
+		next = r->next;
+		sqlite3_finalize(r->stmt);
+
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int minzoom = sqlite3_column_int(r->stmt, 0);
+				st->minzoom = min(st->minzoom, minzoom);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int maxzoom = sqlite3_column_int(r->stmt, 0);
+				st->maxzoom = max(st->maxzoom, maxzoom);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				attribution = std::string((char *) sqlite3_column_text(r->stmt, 0));
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				double minlon, minlat, maxlon, maxlat;
+				sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
+				st->minlon = min(minlon, st->minlon);
+				st->maxlon = max(maxlon, st->maxlon);
+				st->minlat = min(minlat, st->minlat);
+				st->maxlat = max(maxlat, st->maxlat);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+
+		if (sqlite3_close(r->db) != SQLITE_OK) {
+			fprintf(stderr, "Could not close database: %s\n", sqlite3_errmsg(r->db));
+			exit(EXIT_FAILURE);
+		}
+
+		delete r;
 	}
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -322,7 +586,7 @@ std::string dequote(std::string s) {
 	return out;
 }
 
-void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string> > &mapping) {
+void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping) {
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
 		perror(fn);
@@ -345,7 +609,7 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 
 		for (size_t i = 0; i < line.size() && i < header.size(); i++) {
 			// printf("putting %s\n", line[0].c_str());
-			mapping.insert(std::pair<std::string, std::vector<std::string> >(line[0], line));
+			mapping.insert(std::pair<std::string, std::vector<std::string>>(line[0], line));
 		}
 	}
 
@@ -358,8 +622,13 @@ int main(int argc, char **argv) {
 	int force = 0;
 	int ifmatched = 0;
 
+	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	if (CPUS < 1) {
+		CPUS = 1;
+	}
+
 	std::vector<std::string> header;
-	std::map<std::string, std::vector<std::string> > mapping;
+	std::map<std::string, std::vector<std::string>> mapping;
 
 	std::set<std::string> exclude;
 
@@ -367,7 +636,7 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:i")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:ip:")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -379,6 +648,15 @@ int main(int argc, char **argv) {
 
 		case 'i':
 			ifmatched = 1;
+			break;
+
+		case 'p':
+			if (strcmp(optarg, "k") == 0) {
+				pk = true;
+			} else {
+				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'c':
@@ -414,20 +692,26 @@ int main(int argc, char **argv) {
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
-	std::vector<std::set<type_and_string> > file_keys;
-	std::vector<std::string> layernames;
-	int nlayers = 0;
+	std::map<std::string, layermap_entry> layermap;
 	std::string attribution;
 
+	struct reader *readers = NULL;
+
 	for (i = optind; i < argc; i++) {
-		decode(argv[i], csv, file_keys, layernames, &nlayers, outdb, &st, header, mapping, exclude, ifmatched, attribution);
+		reader *r = begin_reading(argv[i]);
+		struct reader **rr;
+
+		for (rr = &readers; *rr != NULL; rr = &((*rr)->next)) {
+			if (*r < **rr) {
+				break;
+			}
+		}
+
+		r->next = *rr;
+		*rr = r;
 	}
 
-	std::map<std::string, layermap_entry> layermap;
-	for (i = 0; i < nlayers; i++) {
-		layermap.insert(std::pair<std::string, layermap_entry>(layernames[i], layermap_entry(layermap.size())));
-		layermap.find(layernames[i])->second.file_keys = file_keys[i];
-	}
+	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 
 	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
 	mbtiles_close(outdb, argv);

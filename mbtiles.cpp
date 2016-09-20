@@ -242,11 +242,11 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 			aprintf(&buf, ", ");
 		}
 
+		auto fk = layermap.find(lnames[i]);
 		aprintf(&buf, "{ \"id\": \"");
 		quote(&buf, lnames[i].c_str());
-		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", minzoom, maxzoom);
+		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
-		auto fk = layermap.find(lnames[i]);
 		std::set<type_and_string>::iterator j;
 		bool first = true;
 		for (j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
@@ -294,4 +294,38 @@ void mbtiles_close(sqlite3 *outdb, char **argv) {
 		fprintf(stderr, "%s: could not close database: %s\n", argv[0], sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
 	}
+}
+
+std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps) {
+	std::map<std::string, layermap_entry> out;
+
+	for (size_t i = 0; i < maps.size(); i++) {
+		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
+			if (out.count(map->first) == 0) {
+				out.insert(std::pair<std::string, layermap_entry>(map->first, layermap_entry(out.size())));
+				auto out_entry = out.find(map->first);
+				out_entry->second.minzoom = map->second.minzoom;
+				out_entry->second.maxzoom = map->second.maxzoom;
+			}
+
+			auto out_entry = out.find(map->first);
+			if (out_entry == out.end()) {
+				fprintf(stderr, "Internal error merging layers\n");
+				exit(EXIT_FAILURE);
+			}
+
+			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
+				out_entry->second.file_keys.insert(*fk);
+			}
+
+			if (map->second.minzoom < out_entry->second.minzoom) {
+				out_entry->second.minzoom = map->second.minzoom;
+			}
+			if (map->second.maxzoom > out_entry->second.maxzoom) {
+				out_entry->second.maxzoom = map->second.maxzoom;
+			}
+		}
+	}
+
+	return out;
 }

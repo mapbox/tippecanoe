@@ -1,3 +1,7 @@
+## 1.14.0
+
+* Tile-join is multithreaded and can merge multiple vector mbtiles files together
+
 ## 1.13.0
 
 * Add the ability to specify layer names within the GeoJSON input

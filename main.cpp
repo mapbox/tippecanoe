@@ -856,37 +856,6 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps) {
-	std::map<std::string, layermap_entry> out;
-
-	for (size_t i = 0; i < maps.size(); i++) {
-		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
-			if (out.count(map->first) == 0) {
-				out.insert(std::pair<std::string, layermap_entry>(map->first, layermap_entry(out.size())));
-			}
-
-			auto out_entry = out.find(map->first);
-			if (out_entry == out.end()) {
-				fprintf(stderr, "Internal error merging layers\n");
-				exit(EXIT_FAILURE);
-			}
-
-			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
-				out_entry->second.file_keys.insert(*fk);
-			}
-
-			if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-				type_and_string tas;
-				tas.type = VT_NUMBER;
-				tas.string = "tippecanoe_feature_density";
-				out_entry->second.file_keys.insert(tas);
-			}
-		}
-	}
-
-	return out;
-}
-
 int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution) {
 	int ret = EXIT_SUCCESS;
 
@@ -1728,7 +1697,19 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
+	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
+			type_and_string tas;
+			tas.type = VT_NUMBER;
+			tas.string = "tippecanoe_feature_density";
+			ai->second.file_keys.insert(tas);
+		}
+	}
 
+	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
+		ai->second.minzoom = minzoom;
+		ai->second.maxzoom = maxzoom;
+	}
 	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm);
 
 	return ret;
