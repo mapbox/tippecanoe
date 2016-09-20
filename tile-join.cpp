@@ -20,7 +20,7 @@
 std::string dequote(std::string s);
 
 bool pk = false;
-int CPUS;
+size_t CPUS;
 
 struct stats {
 	int minzoom;
@@ -414,7 +414,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		}
 	}
 
-	for (int i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
