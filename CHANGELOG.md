@@ -1,6 +1,6 @@
 ## 1.14.0
 
-* Tile-join can merge multiple vector mbtiles files together
+* Tile-join is multithreaded and can merge multiple vector mbtiles files together
 
 ## 1.13.0
 
