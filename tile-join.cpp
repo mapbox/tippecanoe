@@ -566,6 +566,10 @@ std::vector<std::string> split(char *s) {
 
 		if (*s == ',') {
 			s++;
+
+			while (*s && isspace(*s)) {
+				s++;
+			}
 		}
 	}
 
