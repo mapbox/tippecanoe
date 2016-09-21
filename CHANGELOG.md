@@ -1,3 +1,7 @@
+## 1.14.1
+
+* Whitespace after commas in tile-join .csv input is no longer significant
+
 ## 1.14.0
 
 * Tile-join is multithreaded and can merge multiple vector mbtiles files together
