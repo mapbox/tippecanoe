@@ -611,91 +611,106 @@ void find_common_edges(std::vector<partial> &partials) {
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
-				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-					partials[i].geoms[j][k].necessary = 0;
+				drawvec &g = partials[i].geoms[j];
+
+				for (size_t k = 0; k < g.size(); k++) {
+					g[k].necessary = 0;
 				}
 
-				for (size_t k = 1; k + 1 < partials[i].geoms[j].size(); k++) {
-					if (partials[i].geoms[j][k].op == VT_LINETO && partials[i].geoms[j][k + 1].op == VT_LINETO) {
-						drawvec left, right;
-						if (partials[i].geoms[j][k - 1] < partials[i].geoms[j][k]) {
-							left.push_back(partials[i].geoms[j][k - 1]);
-							left.push_back(partials[i].geoms[j][k]);
-						} else {
-							left.push_back(partials[i].geoms[j][k]);
-							left.push_back(partials[i].geoms[j][k - 1]);
+				for (size_t a = 0; a < g.size(); a++) {
+					if (g[a].op == VT_MOVETO) {
+						size_t b;
+
+						for (b = a + 1; b < g.size(); b++) {
+							if (g[b].op != VT_LINETO) {
+								break;
+							}
 						}
 
-						if (partials[i].geoms[j][k] < partials[i].geoms[j][k + 1]) {
-							right.push_back(partials[i].geoms[j][k]);
-							right.push_back(partials[i].geoms[j][k + 1]);
-						} else {
-							right.push_back(partials[i].geoms[j][k + 1]);
-							right.push_back(partials[i].geoms[j][k]);
-						}
+						// -1 because of duplication at the end
+						size_t s = b - a - 1;
 
-						auto e1 = edges.find(left);
-						auto e2 = edges.find(right);
-
-						if (left[1] < left[0]) {
-							fprintf(stderr, "left misordered\n");
-						}
-						if (right[1] < right[0]) {
-							fprintf(stderr, "left misordered\n");
-						}
-
-						if (e1 == edges.end() || e2 == edges.end()) {
-							fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
-
-							for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
-								if (ei->first[1] < ei->first[0]) {
-									fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
-										ei->first[0].x, ei->first[0].y,
-										ei->first[1].x, ei->first[1].y,
-										ei->second.size());
-								}
+						for (size_t k = 0; k < s; k++) {
+							drawvec left, right;
+							if (g[a + (k - 1 + s) % s] < g[a + k]) {
+								left.push_back(g[a + (k - 1 + s) % s]);
+								left.push_back(g[a + k]);
+							} else {
+								left.push_back(g[a + k]);
+								left.push_back(g[a + (k - 1 + s) % s]);
 							}
 
-							exit(EXIT_FAILURE);
+							if (g[a + k] < g[a + k + 1]) {
+								right.push_back(g[a + k]);
+								right.push_back(g[a + k + 1]);
+							} else {
+								right.push_back(g[a + k + 1]);
+								right.push_back(g[a + k]);
+							}
+
+							auto e1 = edges.find(left);
+							auto e2 = edges.find(right);
+
+							if (left[1] < left[0]) {
+								fprintf(stderr, "left misordered\n");
+							}
+							if (right[1] < right[0]) {
+								fprintf(stderr, "left misordered\n");
+							}
+
+							if (e1 == edges.end() || e2 == edges.end()) {
+								fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+
+								for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
+									if (ei->first[1] < ei->first[0]) {
+										fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
+											ei->first[0].x, ei->first[0].y,
+											ei->first[1].x, ei->first[1].y,
+											ei->second.size());
+									}
+								}
+
+								exit(EXIT_FAILURE);
+							}
+
+							if (e1->second != e2->second) {
+								g[a + k].necessary = 1;
+							}
 						}
 
-						if (e1->second != e2->second) {
-							partials[i].geoms[j][k].necessary = 1;
-							// printf("%lld,%lld\n", partials[i].geoms[j][k].x, partials[i].geoms[j][k].y);
-						}
+						a = b - 1;
 					}
 				}
 
 				// Roll rings that include a necessary point around so they start at one
 
-				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-					if (partials[i].geoms[j][k].op == VT_MOVETO) {
+				for (size_t k = 0; k < g.size(); k++) {
+					if (g[k].op == VT_MOVETO) {
 						ssize_t necessary = -1;
 						size_t l;
-						for (l = k + 1; l < partials[i].geoms[j].size(); l++) {
-							if (partials[i].geoms[j][l].op != VT_LINETO) {
+						for (l = k + 1; l < g.size(); l++) {
+							if (g[l].op != VT_LINETO) {
 								break;
 							}
 
-							if (partials[i].geoms[j][l].necessary) {
+							if (g[l].necessary) {
 								necessary = l;
 							}
 						}
 
 						if (necessary >= 0) {
-							printf("roll %lu to %lu with %lu\n", k, l, necessary);
 							drawvec tmp;
 
 							// l - 1 because the endpoint is duplicated
 							for (size_t m = necessary; m < l - 1; m++) {
-								tmp.push_back(partials[i].geoms[j][m]);
+								tmp.push_back(g[m]);
 							}
 							for (size_t m = k; m < necessary; m++) {
-								tmp.push_back(partials[i].geoms[j][m]);
+								tmp.push_back(g[m]);
 							}
 
 							// replace the endpoint
-							tmp.push_back(partials[i].geoms[j][necessary]);
+							tmp.push_back(g[necessary]);
 
 							if (tmp.size() != l - k) {
 								fprintf(stderr, "internal error shifting ring\n");
@@ -709,7 +724,7 @@ void find_common_edges(std::vector<partial> &partials) {
 									tmp[m].op = VT_LINETO;
 								}
 
-								partials[i].geoms[j][k + m] = tmp[m];
+								g[k + m] = tmp[m];
 							}
 						}
 
