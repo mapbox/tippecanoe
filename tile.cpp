@@ -611,15 +611,8 @@ void find_common_edges(std::vector<partial> &partials) {
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
-				// following simplify_lines()
 				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-					if (partials[i].geoms[j][k].op == VT_MOVETO) {
-						partials[i].geoms[j][k].necessary = 1;
-					} else if (partials[i].geoms[j][k].op == VT_LINETO) {
-						partials[i].geoms[j][k].necessary = 0;
-					} else {
-						partials[i].geoms[j][k].necessary = 1;
-					}
+					partials[i].geoms[j][k].necessary = 0;
 				}
 
 				for (size_t k = 1; k + 1 < partials[i].geoms[j].size(); k++) {
@@ -668,9 +661,74 @@ void find_common_edges(std::vector<partial> &partials) {
 
 						if (e1->second != e2->second) {
 							partials[i].geoms[j][k].necessary = 1;
+							// printf("%lld,%lld\n", partials[i].geoms[j][k].x, partials[i].geoms[j][k].y);
 						}
 					}
 				}
+
+				// Roll rings that include a necessary point around so they start at one
+
+				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].op == VT_MOVETO) {
+						ssize_t necessary = -1;
+						size_t l;
+						for (l = k + 1; l < partials[i].geoms[j].size(); l++) {
+							if (partials[i].geoms[j][l].op != VT_LINETO) {
+								break;
+							}
+
+							if (partials[i].geoms[j][l].necessary) {
+								necessary = l;
+							}
+						}
+
+						if (necessary >= 0) {
+							printf("roll %lu to %lu with %lu\n", k, l, necessary);
+							drawvec tmp;
+
+							// l - 1 because the endpoint is duplicated
+							for (size_t m = necessary; m < l - 1; m++) {
+								tmp.push_back(partials[i].geoms[j][m]);
+							}
+							for (size_t m = k; m < necessary; m++) {
+								tmp.push_back(partials[i].geoms[j][m]);
+							}
+
+							// replace the endpoint
+							tmp.push_back(partials[i].geoms[j][necessary]);
+
+							if (tmp.size() != l - k) {
+								fprintf(stderr, "internal error shifting ring\n");
+								exit(EXIT_FAILURE);
+							}
+
+							for (size_t m = 0; m < tmp.size(); m++) {
+								if (m == 0) {
+									tmp[m].op = VT_MOVETO;
+								} else {
+									tmp[m].op = VT_LINETO;
+								}
+
+								partials[i].geoms[j][k + m] = tmp[m];
+							}
+						}
+
+						k = l - 1;
+					}
+				}
+
+#if 0
+				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].necessary) {
+						partial p = partials[i];
+						drawvec dv;
+						dv.push_back(draw(VT_MOVETO, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y));
+						p.geoms[0] = dv;
+						p.t = VT_POINT;
+						partials.push_back(p);
+					}
+				}
+#endif
 			}
 		}
 	}
