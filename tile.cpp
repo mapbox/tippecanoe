@@ -460,7 +460,11 @@ void *partial_feature_worker(void *v) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification);
+				bool already_marked = false;
+				if (additional[A_SIMPLIFY_TOGETHER] && t == VT_POLYGON) {
+					already_marked = true;
+				}
+				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, already_marked);
 
 				if (t != VT_POLYGON || ngeom.size() >= 3) {
 					geom = ngeom;
@@ -559,6 +563,117 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	}
 
 	return 0;
+}
+
+void find_common_edges(std::vector<partial> &partials) {
+	std::map<drawvec, std::set<size_t>> edges;
+
+	// Construct a mapping from all polygon edges to the set of rings
+	// that each edge appears in. (The ring number is across all polygons;
+	// we don't need to look it back up, just to tell where it changes.)
+
+	size_t ring = 0;
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				for (size_t k = 0; k + 1 < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].op == VT_MOVETO) {
+						ring++;
+					}
+
+					if (partials[i].geoms[j][k + 1].op == VT_LINETO) {
+						drawvec dv;
+						if (partials[i].geoms[j][k] < partials[i].geoms[j][k + 1]) {
+							dv.push_back(partials[i].geoms[j][k]);
+							dv.push_back(partials[i].geoms[j][k + 1]);
+						} else {
+							dv.push_back(partials[i].geoms[j][k + 1]);
+							dv.push_back(partials[i].geoms[j][k]);
+						}
+
+						auto e = edges.find(dv);
+						if (e != edges.end()) {
+							e->second.insert(ring);
+						} else {
+							std::set<size_t> s;
+							s.insert(ring);
+							edges.insert(std::pair<drawvec, std::set<size_t>>(dv, s));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Now mark all the points where the set of rings using the edge on one side
+	// is not the same as the set of rings using the edge on the other side.
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				// following simplify_lines()
+				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].op == VT_MOVETO) {
+						partials[i].geoms[j][k].necessary = 1;
+					} else if (partials[i].geoms[j][k].op == VT_LINETO) {
+						partials[i].geoms[j][k].necessary = 0;
+					} else {
+						partials[i].geoms[j][k].necessary = 1;
+					}
+				}
+
+				for (size_t k = 1; k + 1 < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].op == VT_LINETO && partials[i].geoms[j][k + 1].op == VT_LINETO) {
+						drawvec left, right;
+						if (partials[i].geoms[j][k - 1] < partials[i].geoms[j][k]) {
+							left.push_back(partials[i].geoms[j][k - 1]);
+							left.push_back(partials[i].geoms[j][k]);
+						} else {
+							left.push_back(partials[i].geoms[j][k]);
+							left.push_back(partials[i].geoms[j][k - 1]);
+						}
+
+						if (partials[i].geoms[j][k] < partials[i].geoms[j][k + 1]) {
+							right.push_back(partials[i].geoms[j][k]);
+							right.push_back(partials[i].geoms[j][k + 1]);
+						} else {
+							right.push_back(partials[i].geoms[j][k + 1]);
+							right.push_back(partials[i].geoms[j][k]);
+						}
+
+						auto e1 = edges.find(left);
+						auto e2 = edges.find(right);
+
+						if (left[1] < left[0]) {
+							fprintf(stderr, "left misordered\n");
+						}
+						if (right[1] < right[0]) {
+							fprintf(stderr, "left misordered\n");
+						}
+
+						if (e1 == edges.end() || e2 == edges.end()) {
+							fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+
+							for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
+								if (ei->first[1] < ei->first[0]) {
+									fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
+										ei->first[0].x, ei->first[0].y,
+										ei->first[1].x, ei->first[1].y,
+										ei->second.size());
+								}
+							}
+
+							exit(EXIT_FAILURE);
+						}
+
+						if (e1->second != e2->second) {
+							partials[i].geoms[j][k].necessary = 1;
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
@@ -868,6 +983,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
+		if (additional[A_SIMPLIFY_TOGETHER]) {
+			find_common_edges(partials);
+		}
+
 		int tasks = ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
@@ -987,7 +1106,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
 					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
 					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
-										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
 				}
 
 				if (layer_features[x].type == VT_POLYGON) {

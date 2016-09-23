@@ -4,6 +4,7 @@
 #define A_LINE_DROP ((int) 'l')
 #define A_DEBUG_POLYGON ((int) 'd')
 #define A_POLYGON_DROP ((int) 'p')
+#define A_SIMPLIFY_TOGETHER ((int) 't')
 #define A_PREFER_RADIX_SORT ((int) 'R')
 #define A_CALCULATE_FEATURE_DENSITY ((int) 'g')
 
