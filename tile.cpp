@@ -716,6 +716,7 @@ void find_common_edges(std::vector<partial> &partials) {
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_MOVETO) {
 						ssize_t necessary = -1;
+						ssize_t lowest = k;
 						size_t l;
 						for (l = k + 1; l < g.size(); l++) {
 							if (g[l].op != VT_LINETO) {
@@ -725,6 +726,13 @@ void find_common_edges(std::vector<partial> &partials) {
 							if (g[l].necessary) {
 								necessary = l;
 							}
+							if (g[l] < g[lowest]) {
+								lowest = l;
+							}
+						}
+
+						if (necessary < 0) {
+							necessary = lowest;
 						}
 
 						if (necessary >= 0) {
