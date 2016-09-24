@@ -568,6 +568,25 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 void find_common_edges(std::vector<partial> &partials) {
 	std::map<drawvec, std::set<size_t>> edges;
 
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				drawvec &g = partials[i].geoms[j];
+				drawvec out;
+
+				for (size_t k = 0; k < g.size(); k++) {
+					if (g[k].op == VT_LINETO && k > 0 && g[k - 1] == g[k]) {
+						;
+					} else {
+						out.push_back(g[k]);
+					}
+				}
+
+				partials[i].geoms[j] = out;
+			}
+		}
+	}
+
 	// Construct a mapping from all polygon edges to the set of rings
 	// that each edge appears in. (The ring number is across all polygons;
 	// we don't need to look it back up, just to tell where it changes.)
@@ -674,6 +693,16 @@ void find_common_edges(std::vector<partial> &partials) {
 							}
 
 							if (e1->second != e2->second) {
+#if 0
+								for (auto it = e1->second.begin(); it != e1->second.end(); it++) {
+									printf("%lu ", *it);
+								}
+								printf("!= ");
+								for (auto it = e2->second.begin(); it != e2->second.end(); it++) {
+									printf("%lu ", *it);
+								}
+								printf("\n");
+#endif
 								g[a + k].necessary = 1;
 							}
 						}
