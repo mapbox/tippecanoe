@@ -834,19 +834,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 						k = l - 1;
 					}
 				}
-
-#if 0
-				for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-					if (partials[i].geoms[j][k].necessary) {
-						partial p = partials[i];
-						drawvec dv;
-						dv.push_back(draw(VT_MOVETO, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y));
-						p.geoms[0] = dv;
-						p.t = VT_POINT;
-						partials.push_back(p);
-					}
-				}
-#endif
 			}
 		}
 	}
@@ -869,10 +856,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 		simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
 		count++;
-		//drawarc(simplified_arcs[ai->second]);
-	}
-	if (count + 1 != simplified_arcs.size()) {
-		fprintf(stderr, "Internal error: simplified %lu arcs of %lu\n", count + 1, simplified_arcs.size());
 	}
 
 	for (size_t i = 0; i < partials.size(); i++) {
@@ -883,14 +866,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
 				ssize_t p = partials[i].arc_polygon[j];
-
-#if 0
-				if (p > 0) {
-					drawarc(simplified_arcs[p]);
-				} else if (p < 0) {
-					drawarc(simplified_arcs[-p]);
-				}
-#endif
 
 				if (p == 0) {
 					at_start = true;
