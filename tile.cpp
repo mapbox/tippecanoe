@@ -465,10 +465,13 @@ void *partial_feature_worker(void *v) {
 				if (additional[A_SIMPLIFY_TOGETHER] && t == VT_POLYGON) {
 					already_marked = true;
 				}
-				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, already_marked);
 
-				if (t != VT_POLYGON || ngeom.size() >= 3) {
-					geom = ngeom;
+				if (!already_marked) {
+					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, already_marked);
+
+					if (t != VT_POLYGON || ngeom.size() >= 3) {
+						geom = ngeom;
+					}
 				}
 			}
 		}
@@ -577,15 +580,7 @@ static drawvec reverse_subring(drawvec const &dv) {
 	return out;
 }
 
-static void drawarc(drawvec const &dv) {
-	printf("0 setlinewidth\n");
-	for (size_t i = 0; i < dv.size(); i++) {
-		printf("%lld %lld %s ", dv[i].x * 4096 / (1LL << 32), 4096 - dv[i].y * 4096 / (1LL << 32), i == 0 ? "moveto" : "lineto");
-	}
-	printf("stroke\n");
-}
-
-void find_common_edges(std::vector<partial> &partials) {
+void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification) {
 	std::map<drawvec, std::set<size_t>> edges;
 
 	for (size_t i = 0; i < partials.size(); i++) {
@@ -716,16 +711,6 @@ void find_common_edges(std::vector<partial> &partials) {
 							}
 
 							if (e1->second != e2->second) {
-#if 0
-								for (auto it = e1->second.begin(); it != e1->second.end(); it++) {
-									printf("%lu ", *it);
-								}
-								printf("!= ");
-								for (auto it = e2->second.begin(); it != e2->second.end(); it++) {
-									printf("%lu ", *it);
-								}
-								printf("\n");
-#endif
 								g[a + k].necessary = 1;
 								necessaries.insert(g[a + k]);
 							}
@@ -814,7 +799,6 @@ void find_common_edges(std::vector<partial> &partials) {
 								fprintf(stderr, "internal error in arc building\n");
 								exit(EXIT_FAILURE);
 							}
-							printf("0 setgray %lld %lld 1 0 360 arc fill\n", g[m].x * 4096 / (1LL << 32), 4096 - g[m].y * 4096 / (1LL << 32));
 
 							drawvec arc;
 							size_t n;
@@ -835,33 +819,17 @@ void find_common_edges(std::vector<partial> &partials) {
 									size_t added = arcs.size() + 1;
 									arcs.insert(std::pair<drawvec, size_t>(arc, added));
 									partials[i].arc_polygon.push_back(added);
-									//printf("new ");
-									printf(".75 setgray ");
-									drawarc(arc);
 								} else {
-									partials[i].arc_polygon.push_back(-f2->second);
-									//printf("reversed ");
-									printf("0 setgray ");
-									drawarc(arc);
+									partials[i].arc_polygon.push_back(-(long) f2->second);
 								}
 							} else {
 								partials[i].arc_polygon.push_back(f->second);
-								//printf("same ");
-								printf("0 setgray ");
-								drawarc(arc);
 							}
-
-#if 0
-							for (size_t x = 0; x < arc.size(); x++) {
-								printf("%lld,%lld ", arc[x].x, arc[x].y);
-							}
-#endif
 
 							m = n - 1;
 						}
 
 						partials[i].arc_polygon.push_back(0);
-						printf("\n");
 
 						k = l - 1;
 					}
@@ -879,6 +847,72 @@ void find_common_edges(std::vector<partial> &partials) {
 					}
 				}
 #endif
+			}
+		}
+	}
+
+	std::vector<drawvec> simplified_arcs;
+
+	size_t count = 0;
+	for (auto ai = arcs.begin(); ai != arcs.end(); ++ai) {
+		if (simplified_arcs.size() < ai->second + 1) {
+			simplified_arcs.resize(ai->second + 1);
+		}
+
+		drawvec dv = ai->first;
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (i == 0) {
+				dv[i].op = VT_MOVETO;
+			} else {
+				dv[i].op = VT_LINETO;
+			}
+		}
+		simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
+		count++;
+		//drawarc(simplified_arcs[ai->second]);
+	}
+	if (count + 1 != simplified_arcs.size()) {
+		fprintf(stderr, "Internal error: simplified %lu arcs of %lu\n", count + 1, simplified_arcs.size());
+	}
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			partials[i].geoms.resize(0);
+			partials[i].geoms.push_back(drawvec());
+			bool at_start = true;
+
+			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
+				ssize_t p = partials[i].arc_polygon[j];
+
+#if 0
+				if (p > 0) {
+					drawarc(simplified_arcs[p]);
+				} else if (p < 0) {
+					drawarc(simplified_arcs[-p]);
+				}
+#endif
+
+				if (p == 0) {
+					at_start = true;
+				} else if (p > 0) {
+					for (size_t k = 0; k + 1 < simplified_arcs[p].size(); k++) {
+						if (at_start) {
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+						} else {
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+						}
+						at_start = 0;
+					}
+				} else { /* p < 0 */
+					for (ssize_t k = simplified_arcs[-p].size() - 1; k > 0; k--) {
+						if (at_start) {
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+						} else {
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+						}
+						at_start = 0;
+					}
+				}
 			}
 		}
 	}
@@ -1192,7 +1226,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (additional[A_SIMPLIFY_TOGETHER]) {
-			find_common_edges(partials);
+			find_common_edges(partials, z, line_detail, simplification);
 		}
 
 		int tasks = ceil((double) CPUS / *running);
