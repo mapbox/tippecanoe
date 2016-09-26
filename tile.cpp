@@ -372,6 +372,7 @@ struct partial {
 	std::vector<drawvec> geoms;
 	std::vector<long long> keys;
 	std::vector<long long> values;
+	std::vector<ssize_t> arc_polygon;
 	char *meta;
 	long long layer;
 	long long original_seq;
@@ -565,6 +566,25 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	return 0;
 }
 
+// Does not fix up moveto/lineto
+static drawvec reverse_subring(drawvec const &dv) {
+	drawvec out;
+
+	for (size_t i = dv.size(); i > 0; i--) {
+		out.push_back(dv[i - 1]);
+	}
+
+	return out;
+}
+
+static void drawarc(drawvec const &dv) {
+	printf("0 setlinewidth\n");
+	for (size_t i = 0; i < dv.size(); i++) {
+		printf("%lld %lld %s ", dv[i].x * 4096 / (1LL << 32), 4096 - dv[i].y * 4096 / (1LL << 32), i == 0 ? "moveto" : "lineto");
+	}
+	printf("stroke\n");
+}
+
 void find_common_edges(std::vector<partial> &partials) {
 	std::map<drawvec, std::set<size_t>> edges;
 
@@ -623,6 +643,8 @@ void find_common_edges(std::vector<partial> &partials) {
 			}
 		}
 	}
+
+	std::map<drawvec, size_t> arcs;
 
 	// Now mark all the points where the set of rings using the edge on one side
 	// is not the same as the set of rings using the edge on the other side.
@@ -733,9 +755,12 @@ void find_common_edges(std::vector<partial> &partials) {
 
 						if (necessary < 0) {
 							necessary = lowest;
+							// Add a necessary marker if there was none in the ring,
+							// so the arc code below can find it.
+							g[lowest].necessary = 1;
 						}
 
-						if (necessary >= 0) {
+						{
 							drawvec tmp;
 
 							// l - 1 because the endpoint is duplicated
@@ -764,6 +789,63 @@ void find_common_edges(std::vector<partial> &partials) {
 								g[k + m] = tmp[m];
 							}
 						}
+
+						// Now peel off each set of segments from one necessary point to the next
+						// into an "arc" as in TopoJSON
+
+						for (size_t m = k; m < l; m++) {
+							if (!g[m].necessary) {
+								fprintf(stderr, "internal error in arc building\n");
+								exit(EXIT_FAILURE);
+							}
+							printf("0 setgray %lld %lld 1 0 360 arc fill\n", g[m].x * 4096 / (1LL << 32), 4096 - g[m].y * 4096 / (1LL << 32));
+
+							drawvec arc;
+							size_t n;
+							for (n = m; n < l; n++) {
+								arc.push_back(g[n]);
+								if (n > m && g[n].necessary) {
+									break;
+								}
+							}
+
+							auto f = arcs.find(arc);
+							if (f == arcs.end()) {
+								drawvec arc2 = reverse_subring(arc);
+
+								auto f2 = arcs.find(arc2);
+								if (f2 == arcs.end()) {
+									// Add new arc
+									size_t added = arcs.size() + 1;
+									arcs.insert(std::pair<drawvec, size_t>(arc, added));
+									partials[i].arc_polygon.push_back(added);
+									//printf("new ");
+									printf(".75 setgray ");
+									drawarc(arc);
+								} else {
+									partials[i].arc_polygon.push_back(-f2->second);
+									//printf("reversed ");
+									printf("0 setgray ");
+									drawarc(arc);
+								}
+							} else {
+								partials[i].arc_polygon.push_back(f->second);
+								//printf("same ");
+								printf("0 setgray ");
+								drawarc(arc);
+							}
+
+#if 0
+							for (size_t x = 0; x < arc.size(); x++) {
+								printf("%lld,%lld ", arc[x].x, arc[x].y);
+							}
+#endif
+
+							m = n - 1;
+						}
+
+						partials[i].arc_polygon.push_back(0);
+						printf("\n");
 
 						k = l - 1;
 					}
