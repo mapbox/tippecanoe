@@ -645,6 +645,7 @@ void find_common_edges(std::vector<partial> &partials) {
 	}
 
 	std::map<drawvec, size_t> arcs;
+	std::set<draw> necessaries;
 
 	// Now mark all the points where the set of rings using the edge on one side
 	// is not the same as the set of rings using the edge on the other side.
@@ -726,14 +727,29 @@ void find_common_edges(std::vector<partial> &partials) {
 								printf("\n");
 #endif
 								g[a + k].necessary = 1;
+								necessaries.insert(g[a + k]);
 							}
 						}
 
 						a = b - 1;
 					}
 				}
+			}
+		}
+	}
 
-				// Roll rings that include a necessary point around so they start at one
+	// Roll rings that include a necessary point around so they start at one
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				drawvec &g = partials[i].geoms[j];
+
+				for (size_t k = 0; k < g.size(); k++) {
+					if (necessaries.count(g[k]) != 0) {
+						g[k].necessary = 1;
+					}
+				}
 
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_MOVETO) {
