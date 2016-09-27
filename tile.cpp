@@ -580,7 +580,7 @@ static drawvec reverse_subring(drawvec const &dv) {
 	return out;
 }
 
-void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification) {
+void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
 	std::map<drawvec, std::set<size_t>> edges;
 
 	for (size_t i = 0; i < partials.size(); i++) {
@@ -820,7 +820,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									arcs.insert(std::pair<drawvec, size_t>(arc, added));
 									partials[i].arc_polygon.push_back(added);
 								} else {
-									partials[i].arc_polygon.push_back(-(long) f2->second);
+									partials[i].arc_polygon.push_back(-f2->second);
 								}
 							} else {
 								partials[i].arc_polygon.push_back(f->second);
@@ -854,7 +854,11 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 				dv[i].op = VT_LINETO;
 			}
 		}
-		simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
+		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
+			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
+		} else {
+			simplified_arcs[ai->second] = dv;
+		}
 		count++;
 	}
 
@@ -1201,7 +1205,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (additional[A_SIMPLIFY_TOGETHER]) {
-			find_common_edges(partials, z, line_detail, simplification);
+			find_common_edges(partials, z, line_detail, simplification, maxzoom);
 		}
 
 		int tasks = ceil((double) CPUS / *running);
