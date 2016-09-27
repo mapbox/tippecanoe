@@ -867,16 +867,22 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			partials[i].geoms.resize(0);
 			partials[i].geoms.push_back(drawvec());
 			bool at_start = true;
+			draw first(-1, 0, 0);
 
 			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
 				ssize_t p = partials[i].arc_polygon[j];
 
 				if (p == 0) {
+					if (first.op >= 0) {
+						partials[i].geoms[0].push_back(first);
+						first = draw(-1, 0, 0);
+					}
 					at_start = true;
 				} else if (p > 0) {
 					for (size_t k = 0; k + 1 < simplified_arcs[p].size(); k++) {
 						if (at_start) {
 							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+							first = draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y);
 						} else {
 							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
 						}
@@ -886,6 +892,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 					for (ssize_t k = simplified_arcs[-p].size() - 1; k > 0; k--) {
 						if (at_start) {
 							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+							first = draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y);
 						} else {
 							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
 						}
