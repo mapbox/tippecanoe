@@ -122,7 +122,7 @@ bool mvt_tile::decode(std::string &message) {
 							break;
 
 						case 2: /* float */
-							value = value_reader.get_float();
+							value = (double) value_reader.get_float();
 							break;
 
 						case 3: /* double */
@@ -286,6 +286,11 @@ struct write_visitor {
 	}
 
 	void operator()(std::nullptr_t val) const {
+		fprintf(stderr, "Can't happen: Null value in tile\n");
+		exit(EXIT_FAILURE);
+	}
+
+	void operator()(mapbox::geometry::null_value_t val) const {
 		fprintf(stderr, "Can't happen: Null value in tile\n");
 		exit(EXIT_FAILURE);
 	}
@@ -465,6 +470,10 @@ struct stringify_visitor {
 	}
 
 	std::string operator()(std::nullptr_t val) const {
+		return std::string("n");
+	}
+
+	std::string operator()(mapbox::geometry::null_value_t val) const {
 		return std::string("n");
 	}
 

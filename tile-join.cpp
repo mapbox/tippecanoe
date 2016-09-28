@@ -62,6 +62,9 @@ struct to_string_visitor {
 	void operator()(std::nullptr_t val) {
 	}
 
+	void operator()(mapbox::geometry::null_value_t val) {
+	}
+
 	void operator()(std::vector<mvt_value> const &val) {
 	}
 

@@ -6,7 +6,7 @@ BUILDTYPE ?= Release
 CC := $(CC)
 CXX := $(CXX)
 CFLAGS := $(CFLAGS)
-CXXFLAGS := $(CXXFLAGS) -std=c++11
+CXXFLAGS := $(CXXFLAGS) -std=c++14
 LDFLAGS := $(LDFLAGS)
 WARNING_FLAGS := -Wall -Wshadow
 RELEASE_FLAGS := -O3 -DNDEBUG

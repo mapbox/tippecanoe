@@ -99,6 +99,11 @@ struct print_visitor {
 		printf(": null");
 	}
 
+	void operator()(mapbox::geometry::null_value_t val) const {
+		printq(key);
+		printf(": null");
+	}
+
 	void operator()(std::vector<mvt_value> const &val) const {
 	}
 
