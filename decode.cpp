@@ -46,7 +46,7 @@ struct lonlat {
 	}
 };
 
-void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val) {
+void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
 	if (val.type == mvt_string) {
 		printq(val.string_value.c_str());
 	} else if (val.type == mvt_int) {
@@ -77,7 +77,11 @@ void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value con
 			if (i != 0) {
 				printf(",");
 			}
-			print_val(feature, layer, layer.values[val.list_value[i]]);
+			if (val.list_value[i] >= vo || val.list_value[i] >= layer.values.size()) {
+				fprintf(stderr, "Invalid value reference in list (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.values.size());
+				exit(EXIT_FAILURE);
+			}
+			print_val(feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
 		}
 		printf("]");
 	} else if (val.type == mvt_hash) {
@@ -86,9 +90,17 @@ void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value con
 			if (i != 0) {
 				printf(",");
 			}
+			if (val.list_value[i] >= layer.keys.size()) {
+				fprintf(stderr, "Invalid key reference in hash (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.keys.size());
+				exit(EXIT_FAILURE);
+			}
+			if (val.list_value[i + 1] >= vo || val.list_value[i + 1] >= layer.values.size()) {
+				fprintf(stderr, "Invalid value reference in hash (%lu from %lu within %lu)\n", val.list_value[i + 1], vo, layer.values.size());
+				exit(EXIT_FAILURE);
+			}
 			printq(layer.keys[val.list_value[i]].c_str());
 			printf(":");
-			print_val(feature, layer, layer.values[val.list_value[i + 1]]);
+			print_val(feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
 		}
 		printf("}");
 	} else if (val.type == mvt_null) {
@@ -179,7 +191,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				printq(key);
 				printf(": ");
 
-				print_val(feat, layer, val);
+				print_val(feat, layer, val, feat.tags[t + 1]);
 			}
 
 			printf(" }, \"geometry\": { ");
