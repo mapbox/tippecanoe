@@ -152,6 +152,31 @@ bool mvt_tile::decode(std::string &message) {
 							value.numeric_value.bool_value = value_reader.get_bool();
 							break;
 
+						case 8: /* list */
+							value.type = mvt_list;
+							{
+								auto pi = value_reader.get_packed_uint32();
+								for (auto it = pi.first; it != pi.second; ++it) {
+									value.list_value.push_back(*it);
+								}
+							}
+							break;
+
+						case 9: /* hash */
+							value.type = mvt_hash;
+							{
+								auto pi = value_reader.get_packed_uint32();
+								for (auto it = pi.first; it != pi.second; ++it) {
+									value.list_value.push_back(*it);
+								}
+							}
+							break;
+
+						case 10: /* null */
+							value.type = mvt_null;
+							value.numeric_value.int_value = value_reader.get_int64();
+							break;
+
 						default:
 							value_reader.skip();
 							break;
@@ -296,6 +321,15 @@ std::string mvt_tile::encode() {
 				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
 			} else if (pbv.type == mvt_bool) {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
+			} else if (pbv.type == mvt_list) {
+				value_writer.add_packed_uint32(8, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+			} else if (pbv.type == mvt_hash) {
+				value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+			} else if (pbv.type == mvt_null) {
+				value_writer.add_int64(10, 0);
+			} else {
+				fprintf(stderr, "Unknown value type\n");
+				exit(EXIT_FAILURE);
 			}
 
 			layer_writer.add_message(4, value_string);

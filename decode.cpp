@@ -46,6 +46,56 @@ struct lonlat {
 	}
 };
 
+void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val) {
+	if (val.type == mvt_string) {
+		printq(val.string_value.c_str());
+	} else if (val.type == mvt_int) {
+		printf("%lld", (long long) val.numeric_value.int_value);
+	} else if (val.type == mvt_double) {
+		double v = val.numeric_value.double_value;
+		if (v == (long long) v) {
+			printf("%lld", (long long) v);
+		} else {
+			printf("%g", v);
+		}
+	} else if (val.type == mvt_float) {
+		double v = val.numeric_value.float_value;
+		if (v == (long long) v) {
+			printf("%lld", (long long) v);
+		} else {
+			printf("%g", v);
+		}
+	} else if (val.type == mvt_sint) {
+		printf("%lld", (long long) val.numeric_value.sint_value);
+	} else if (val.type == mvt_uint) {
+		printf("%lld", (long long) val.numeric_value.uint_value);
+	} else if (val.type == mvt_bool) {
+		printf("%s", val.numeric_value.bool_value ? "true" : "false");
+	} else if (val.type == mvt_list) {
+		printf("[");
+		for (size_t i = 0; i < val.list_value.size(); i++) {
+			if (i != 0) {
+				printf(",");
+			}
+			print_val(feature, layer, layer.values[val.list_value[i]]);
+		}
+		printf("]");
+	} else if (val.type == mvt_hash) {
+		printf("{");
+		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
+			if (i != 0) {
+				printf(",");
+			}
+			printq(layer.keys[val.list_value[i]].c_str());
+			printf(":");
+			print_val(feature, layer, layer.values[val.list_value[i + 1]]);
+		}
+		printf("}");
+	} else if (val.type == mvt_null) {
+		printf("null");
+	}
+}
+
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
 	mvt_tile tile;
@@ -126,39 +176,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value const &val = layer.values[feat.tags[t + 1]];
 
-				if (val.type == mvt_string) {
-					printq(key);
-					printf(": ");
-					printq(val.string_value.c_str());
-				} else if (val.type == mvt_int) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.int_value);
-				} else if (val.type == mvt_double) {
-					printq(key);
-					double v = val.numeric_value.double_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_float) {
-					printq(key);
-					double v = val.numeric_value.float_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_sint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.sint_value);
-				} else if (val.type == mvt_uint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.uint_value);
-				} else if (val.type == mvt_bool) {
-					printq(key);
-					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
-				}
+				printq(key);
+				printf(": ");
+
+				print_val(feat, layer, val);
 			}
 
 			printf(" }, \"geometry\": { ");

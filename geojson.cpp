@@ -301,7 +301,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
-				tas.type = metatype[m] = VT_STRING;
+				tas.type = metatype[m] = VT_OBJECT;
 				const char *v = json_stringify(properties->values[i]);
 				metaval[m] = std::string(v);
 				free((void *) v);  // stringify

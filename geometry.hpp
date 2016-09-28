@@ -10,6 +10,7 @@
 #define VT_STRING 1
 #define VT_NUMBER 2
 #define VT_BOOLEAN 7
+#define VT_OBJECT 8
 
 // The bitfield is to make sizeof(draw) be 16 instead of 24
 // at the cost, apparently, of a 0.7% increase in running time

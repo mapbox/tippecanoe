@@ -29,6 +29,10 @@
 #include "options.hpp"
 #include "main.hpp"
 
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
+
 #define CMD_BITS 3
 
 #define XSTRINGIFY(s) STRINGIFY(s)
@@ -151,12 +155,92 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	} else if (type == VT_BOOLEAN) {
 		tv.type = mvt_bool;
 		tv.numeric_value.bool_value = (s[0] == 't');
-	} else {
+	} else if (type == VT_STRING) {
 		tv.type = mvt_string;
+		tv.string_value = s;
+	} else {
+		tv.type = mvt_hash; /* or list */
 		tv.string_value = s;
 	}
 
 	return tv;
+}
+
+size_t tag_key(mvt_layer &layer, std::string const &key) {
+	size_t ko;
+
+	std::map<std::string, size_t>::iterator ki = layer.key_map.find(key);
+
+	if (ki == layer.key_map.end()) {
+		ko = layer.keys.size();
+		layer.keys.push_back(key);
+		layer.key_map.insert(std::pair<std::string, size_t>(key, ko));
+	} else {
+		ko = ki->second;
+	}
+
+	return ko;
+}
+
+size_t tag_value(mvt_layer &layer, mvt_value &value) {
+	size_t vo;
+
+	std::map<mvt_value, size_t>::iterator vi = layer.value_map.find(value);
+
+	if (vi == layer.value_map.end()) {
+		vo = layer.values.size();
+		layer.values.push_back(value);
+		layer.value_map.insert(std::pair<mvt_value, size_t>(value, vo));
+	} else {
+		vo = vi->second;
+	}
+
+	return vo;
+}
+
+size_t tag_object(mvt_layer &layer, json_object *j) {
+	mvt_value tv;
+
+	if (j->type == JSON_NUMBER) {
+		long long v;
+		if (is_integer(j->string, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			tv.type = mvt_double;
+			tv.numeric_value.double_value = atof(j->string);
+		}
+	} else if (j->type == JSON_TRUE || j->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = (j->string[0] == 't');
+	} else if (j->type == JSON_STRING) {
+		tv.type = mvt_string;
+		tv.string_value = std::string(j->string);
+	} else if (j->type == JSON_NULL) {
+		tv.type = mvt_null;
+	} else if (j->type == JSON_HASH) {
+		tv.type = mvt_hash;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(tag_key(layer, std::string(j->keys[i]->string)));
+			tv.list_value.push_back(tag_object(layer, j->values[i]));
+		}
+	} else if (j->type == JSON_ARRAY) {
+		tv.type = mvt_list;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(tag_object(layer, j->array[i]));
+		}
+	}
+
+	return tag_value(layer, tv);
 }
 
 void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
@@ -166,7 +250,22 @@ void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long>
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		layer.tag(feature, key.string_value, value);
+		if (value.type == mvt_hash) {
+			json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+			json_object *j = json_read_tree(jp);
+			if (j == NULL) {
+				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+				exit(EXIT_FAILURE);
+			}
+			size_t ko = tag_key(layer, key.string_value);
+			size_t vo = tag_object(layer, j);
+			feature.tags.push_back(ko);
+			feature.tags.push_back(vo);
+			json_free(j);
+			json_end(jp);
+		} else {
+			layer.tag(feature, key.string_value, value);
+		}
 	}
 }
 

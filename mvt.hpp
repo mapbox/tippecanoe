@@ -41,12 +41,16 @@ enum mvt_value_type {
 	mvt_int,
 	mvt_uint,
 	mvt_sint,
-	mvt_bool
+	mvt_bool,
+	mvt_list,
+	mvt_hash,
+	mvt_null,
 };
 
 struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
+	std::vector<size_t> list_value;
 	union {
 		float float_value;
 		double double_value;
