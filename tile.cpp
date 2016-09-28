@@ -19,6 +19,7 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
@@ -582,12 +583,23 @@ static drawvec reverse_subring(drawvec const &dv) {
 
 void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
 	std::map<drawvec, std::set<size_t>> edges;
+#ifdef PERF
+	clock_t then = clock();
+#endif
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
 				drawvec &g = partials[i].geoms[j];
 				drawvec out;
+
+#if 0
+				int shift = 32 - line_detail - z;
+				for (size_t k = 0; k < g.size(); k++) {
+					g[k].x >>= shift;
+					g[k].y >>= shift;
+				}
+#endif
 
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_LINETO && k > 0 && g[k - 1] == g[k]) {
@@ -597,10 +609,23 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 					}
 				}
 
+#if 0
+				for (size_t k = 0; k < out.size(); k++) {
+					out[k].x <<= shift;
+					out[k].y <<= shift;
+				}
+#endif
+
 				partials[i].geoms[j] = out;
 			}
 		}
 	}
+
+#ifdef PERF
+	clock_t now = clock();
+	printf("1: %lld\n", (long long) (now - then));
+	then = now;
+#endif
 
 	// Construct a mapping from all polygon edges to the set of rings
 	// that each edge appears in. (The ring number is across all polygons;
@@ -639,6 +664,12 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
+#ifdef PERF
+	now = clock();
+	printf("2: %lld\n", (long long) (now - then));
+	then = now;
+#endif
+
 	std::map<drawvec, size_t> arcs;
 	std::set<draw> necessaries;
 
@@ -667,52 +698,58 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 						// -1 because of duplication at the end
 						size_t s = b - a - 1;
 
-						for (size_t k = 0; k < s; k++) {
-							drawvec left, right;
-							if (g[a + (k - 1 + s) % s] < g[a + k]) {
-								left.push_back(g[a + (k - 1 + s) % s]);
-								left.push_back(g[a + k]);
+						if (s > 0) {
+							drawvec left;
+							if (g[a + (0 - 1 + s) % s] < g[a + 0]) {
+								left.push_back(g[a + (0 - 1 + s) % s]);
+								left.push_back(g[a + 0]);
 							} else {
-								left.push_back(g[a + k]);
-								left.push_back(g[a + (k - 1 + s) % s]);
+								left.push_back(g[a + 0]);
+								left.push_back(g[a + (0 - 1 + s) % s]);
 							}
-
-							if (g[a + k] < g[a + k + 1]) {
-								right.push_back(g[a + k]);
-								right.push_back(g[a + k + 1]);
-							} else {
-								right.push_back(g[a + k + 1]);
-								right.push_back(g[a + k]);
-							}
-
-							auto e1 = edges.find(left);
-							auto e2 = edges.find(right);
-
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
 							}
-							if (right[1] < right[0]) {
-								fprintf(stderr, "left misordered\n");
-							}
+							std::map<drawvec, std::set<size_t>>::iterator e1 = edges.find(left);
 
-							if (e1 == edges.end() || e2 == edges.end()) {
-								fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+							for (size_t k = 0; k < s; k++) {
+								drawvec right;
 
-								for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
-									if (ei->first[1] < ei->first[0]) {
-										fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
-											ei->first[0].x, ei->first[0].y,
-											ei->first[1].x, ei->first[1].y,
-											ei->second.size());
-									}
+								if (g[a + k] < g[a + k + 1]) {
+									right.push_back(g[a + k]);
+									right.push_back(g[a + k + 1]);
+								} else {
+									right.push_back(g[a + k + 1]);
+									right.push_back(g[a + k]);
 								}
 
-								exit(EXIT_FAILURE);
-							}
+								auto e2 = edges.find(right);
 
-							if (e1->second != e2->second) {
-								g[a + k].necessary = 1;
-								necessaries.insert(g[a + k]);
+								if (right[1] < right[0]) {
+									fprintf(stderr, "left misordered\n");
+								}
+
+								if (e1 == edges.end() || e2 == edges.end()) {
+									fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+
+									for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
+										if (ei->first[1] < ei->first[0]) {
+											fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
+												ei->first[0].x, ei->first[0].y,
+												ei->first[1].x, ei->first[1].y,
+												ei->second.size());
+										}
+									}
+
+									exit(EXIT_FAILURE);
+								}
+
+								if (e1->second != e2->second) {
+									g[a + k].necessary = 1;
+									necessaries.insert(g[a + k]);
+								}
+
+								e1 = e2;
 							}
 						}
 
@@ -722,6 +759,12 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
+
+#ifdef PERF
+	now = clock();
+	printf("3: %lld\n", (long long) (now - then));
+	then = now;
+#endif
 
 	// Roll rings that include a necessary point around so they start at one
 
@@ -838,6 +881,12 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
+#ifdef PERF
+	now = clock();
+	printf("4: %lld\n", (long long) (now - then));
+	then = now;
+#endif
+
 	std::vector<drawvec> simplified_arcs;
 
 	size_t count = 0;
@@ -861,6 +910,12 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 		count++;
 	}
+
+#ifdef PERF
+	now = clock();
+	printf("5: %lld\n", (long long) (now - then));
+	then = now;
+#endif
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
@@ -902,6 +957,12 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
+
+#ifdef PERF
+	now = clock();
+	printf("6: %lld\n", (long long) (now - then));
+	then = now;
+#endif
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
