@@ -29,6 +29,70 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
+size_t tag_key(mvt_layer &layer, std::string const &key) {
+	size_t ko;
+
+	std::map<std::string, size_t>::iterator ki = layer.key_map.find(key);
+
+	if (ki == layer.key_map.end()) {
+		ko = layer.keys.size();
+		layer.keys.push_back(key);
+		layer.key_map.insert(std::pair<std::string, size_t>(key, ko));
+	} else {
+		ko = ki->second;
+	}
+
+	return ko;
+}
+
+size_t tag_value(mvt_layer &layer, mvt_value &value) {
+	size_t vo;
+
+	std::map<mvt_value, size_t>::iterator vi = layer.value_map.find(value);
+
+	if (vi == layer.value_map.end()) {
+		vo = layer.values.size();
+		layer.values.push_back(value);
+		layer.value_map.insert(std::pair<mvt_value, size_t>(value, vo));
+	} else {
+		vo = vi->second;
+	}
+
+	return vo;
+}
+
+size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outlayer) {
+	mvt_value tv;
+
+	if (val.type == mvt_hash) {
+		tv.type = mvt_hash;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
+			tv.list_value.push_back(tag_key(outlayer, layer.keys[val.list_value[i]]));
+			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i + 1]], outlayer));
+		}
+	} else if (val.type == mvt_list) {
+		tv.type = mvt_list;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < val.list_value.size(); i++) {
+			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i]], outlayer));
+		}
+	} else {
+		tv = val;
+	}
+
+	return tag_value(outlayer, tv);
+}
+
+void copy_nested(mvt_layer &layer, mvt_feature &feature, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
+	size_t ko = tag_key(outlayer, key);
+	size_t vo = tag_object(layer, val, outlayer);
+	outfeature.tags.push_back(ko);
+	outfeature.tags.push_back(vo);
+}
+
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
 	int features_added = 0;
@@ -116,6 +180,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				} else if (val.type == mvt_uint) {
 					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
 					type = VT_NUMBER;
+				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
+					type = VT_OBJECT;
 				} else {
 					continue;
 				}
@@ -129,7 +195,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					tas.string = std::string(key);
 					tas.type = type;
 					file_keys->second.file_keys.insert(tas);
-					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
+
+					if (type == VT_OBJECT) {
+						copy_nested(layer, feat, layer.keys[feat.tags[t]], val, outlayer, outfeature);
+					} else {
+						outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
+					}
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
