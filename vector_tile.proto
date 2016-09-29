@@ -23,7 +23,17 @@ message tile {
                 optional sint64 sint_value = 6;
                 optional bool bool_value = 7;
 
-                extensions 8 to max;
+		// Each element refers to the nth value in the layer's values list
+		repeated uint32 list_value = 8 [ packed = true ];
+
+		// Even numbered elements refer to the nth key in the layer's keys list
+		// Odd numbered elements refer to the nth value in the layer's values list
+		repeated uint32 hash_value = 9 [ packed = true ];
+
+		// The actual number written is unused; any value counts as a null value
+		optional int64 null_value = 10;
+
+                extensions 11 to max;
         }
 
         message feature {
