@@ -42,8 +42,8 @@ enum mvt_value_type {
 	mvt_uint,
 	mvt_sint,
 	mvt_bool,
-	mvt_list,
 	mvt_hash,
+	mvt_list,
 	mvt_null,
 };
 
