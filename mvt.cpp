@@ -426,11 +426,10 @@ bool mvt_value::operator<(const mvt_value &o) const {
 	return false;
 }
 
-void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
-	size_t ko, vo;
+size_t mvt_layer::tag_key(std::string const &key) {
+	size_t ko;
 
 	std::map<std::string, size_t>::iterator ki = key_map.find(key);
-	std::map<mvt_value, size_t>::iterator vi = value_map.find(value);
 
 	if (ki == key_map.end()) {
 		ko = keys.size();
@@ -440,6 +439,14 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 		ko = ki->second;
 	}
 
+	return ko;
+}
+
+size_t mvt_layer::tag_value(mvt_value const &value) {
+	size_t vo;
+
+	std::map<mvt_value, size_t>::iterator vi = value_map.find(value);
+
 	if (vi == value_map.end()) {
 		vo = values.size();
 		values.push_back(value);
@@ -448,6 +455,10 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 		vo = vi->second;
 	}
 
-	feature.tags.push_back(ko);
-	feature.tags.push_back(vo);
+	return vo;
+}
+
+void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
+	feature.tags.push_back(tag_key(key));
+	feature.tags.push_back(tag_value(value));
 }

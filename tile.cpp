@@ -166,38 +166,6 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return tv;
 }
 
-size_t tag_key(mvt_layer &layer, std::string const &key) {
-	size_t ko;
-
-	std::map<std::string, size_t>::iterator ki = layer.key_map.find(key);
-
-	if (ki == layer.key_map.end()) {
-		ko = layer.keys.size();
-		layer.keys.push_back(key);
-		layer.key_map.insert(std::pair<std::string, size_t>(key, ko));
-	} else {
-		ko = ki->second;
-	}
-
-	return ko;
-}
-
-size_t tag_value(mvt_layer &layer, mvt_value &value) {
-	size_t vo;
-
-	std::map<mvt_value, size_t>::iterator vi = layer.value_map.find(value);
-
-	if (vi == layer.value_map.end()) {
-		vo = layer.values.size();
-		layer.values.push_back(value);
-		layer.value_map.insert(std::pair<mvt_value, size_t>(value, vo));
-	} else {
-		vo = vi->second;
-	}
-
-	return vo;
-}
-
 size_t tag_object(mvt_layer &layer, json_object *j) {
 	mvt_value tv;
 
@@ -228,7 +196,7 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 		tv.list_value = std::vector<size_t>();
 
 		for (size_t i = 0; i < j->length; i++) {
-			tv.list_value.push_back(tag_key(layer, std::string(j->keys[i]->string)));
+			tv.list_value.push_back(layer.tag_key(std::string(j->keys[i]->string)));
 			tv.list_value.push_back(tag_object(layer, j->values[i]));
 		}
 	} else if (j->type == JSON_ARRAY) {
@@ -240,7 +208,7 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 		}
 	}
 
-	return tag_value(layer, tv);
+	return layer.tag_value(tv);
 }
 
 void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
@@ -257,7 +225,7 @@ void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long>
 				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
 				exit(EXIT_FAILURE);
 			}
-			size_t ko = tag_key(layer, key.string_value);
+			size_t ko = layer.tag_key(key.string_value);
 			size_t vo = tag_object(layer, j);
 			feature.tags.push_back(ko);
 			feature.tags.push_back(vo);

@@ -29,38 +29,6 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-size_t tag_key(mvt_layer &layer, std::string const &key) {
-	size_t ko;
-
-	std::map<std::string, size_t>::iterator ki = layer.key_map.find(key);
-
-	if (ki == layer.key_map.end()) {
-		ko = layer.keys.size();
-		layer.keys.push_back(key);
-		layer.key_map.insert(std::pair<std::string, size_t>(key, ko));
-	} else {
-		ko = ki->second;
-	}
-
-	return ko;
-}
-
-size_t tag_value(mvt_layer &layer, mvt_value &value) {
-	size_t vo;
-
-	std::map<mvt_value, size_t>::iterator vi = layer.value_map.find(value);
-
-	if (vi == layer.value_map.end()) {
-		vo = layer.values.size();
-		layer.values.push_back(value);
-		layer.value_map.insert(std::pair<mvt_value, size_t>(value, vo));
-	} else {
-		vo = vi->second;
-	}
-
-	return vo;
-}
-
 size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outlayer) {
 	mvt_value tv;
 
@@ -69,7 +37,7 @@ size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outla
 		tv.list_value = std::vector<size_t>();
 
 		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
-			tv.list_value.push_back(tag_key(outlayer, layer.keys[val.list_value[i]]));
+			tv.list_value.push_back(outlayer.tag_key(layer.keys[val.list_value[i]]));
 			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i + 1]], outlayer));
 		}
 	} else if (val.type == mvt_list) {
@@ -83,11 +51,11 @@ size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outla
 		tv = val;
 	}
 
-	return tag_value(outlayer, tv);
+	return outlayer.tag_value(tv);
 }
 
 void copy_nested(mvt_layer &layer, mvt_feature &feature, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
-	size_t ko = tag_key(outlayer, key);
+	size_t ko = outlayer.tag_key(key);
 	size_t vo = tag_object(layer, val, outlayer);
 	outfeature.tags.push_back(ko);
 	outfeature.tags.push_back(vo);
