@@ -581,8 +581,54 @@ static drawvec reverse_subring(drawvec const &dv) {
 	return out;
 }
 
+struct edge {
+	unsigned x1;
+	unsigned y1;
+	unsigned x2;
+	unsigned y2;
+	unsigned ring;
+
+	edge(unsigned _x1, unsigned _y1, unsigned _x2, unsigned _y2, unsigned _ring) {
+		x1 = _x1;
+		y1 = _y1;
+		x2 = _x2;
+		y2 = _y2;
+		ring = _ring;
+	}
+
+	bool operator<(const edge &s) const {
+		long long cmp = (long long) y1 - s.y1;
+		if (cmp == 0) {
+			cmp = (long long) x1 - s.x1;
+		}
+		if (cmp == 0) {
+			cmp = (long long) y2 - s.y2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) x2 - s.x2;
+		}
+		return cmp < 0;
+	}
+};
+
+bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1, std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2) {
+	if ((e2.second - e2.first) != (e1.second - e1.first)) {
+		return false;
+	}
+
+	while (e1.first != e1.second) {
+		if (e1.first->ring != e2.first->ring) {
+			return false;
+		}
+
+		++e1.first;
+		++e2.first;
+	}
+
+	return true;
+}
+
 void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
-	std::map<drawvec, std::set<size_t>> edges;
 #ifdef PERF
 	clock_t then = clock();
 #endif
@@ -631,6 +677,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	// that each edge appears in. (The ring number is across all polygons;
 	// we don't need to look it back up, just to tell where it changes.)
 
+	std::vector<edge> edges;
 	size_t ring = 0;
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
@@ -650,19 +697,14 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							dv.push_back(partials[i].geoms[j][k]);
 						}
 
-						auto e = edges.find(dv);
-						if (e != edges.end()) {
-							e->second.insert(ring);
-						} else {
-							std::set<size_t> s;
-							s.insert(ring);
-							edges.insert(std::pair<drawvec, std::set<size_t>>(dv, s));
-						}
+						edges.push_back(edge(dv[0].x, dv[0].y, dv[1].x, dv[1].y, ring));
 					}
 				}
 			}
 		}
 	}
+
+	std::sort(edges.begin(), edges.end());
 
 #ifdef PERF
 	now = clock();
@@ -710,7 +752,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
 							}
-							std::map<drawvec, std::set<size_t>>::iterator e1 = edges.find(left);
+							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge(left[0].x, left[0].y, left[1].x, left[1].y, 0));
 
 							for (size_t k = 0; k < s; k++) {
 								drawvec right;
@@ -723,28 +765,18 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									right.push_back(g[a + k]);
 								}
 
-								auto e2 = edges.find(right);
+								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge(right[0].x, right[0].y, right[1].x, right[1].y, 0));
 
 								if (right[1] < right[0]) {
 									fprintf(stderr, "left misordered\n");
 								}
 
-								if (e1 == edges.end() || e2 == edges.end()) {
+								if (e1.first == e1.second || e2.first == e2.second) {
 									fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
-
-									for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
-										if (ei->first[1] < ei->first[0]) {
-											fprintf(stderr, "%lld,%lld to %lld,%lld %lu\n",
-												ei->first[0].x, ei->first[0].y,
-												ei->first[1].x, ei->first[1].y,
-												ei->second.size());
-										}
-									}
-
 									exit(EXIT_FAILURE);
 								}
 
-								if (e1->second != e2->second) {
+								if (!edges_same(e1, e2)) {
 									g[a + k].necessary = 1;
 									necessaries.insert(g[a + k]);
 								}
@@ -759,6 +791,8 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
+
+	edges.clear();
 
 #ifdef PERF
 	now = clock();
