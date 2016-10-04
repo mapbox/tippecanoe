@@ -167,6 +167,45 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 	return g;
 }
 
+std::string check_utf8(std::string s, json_object *feature, const char *reading, int line) {
+	for (size_t i = 0; i < s.size(); i++) {
+		int fail = 0;
+
+		if ((s[i] & 0x80) == 0x80) {
+			if ((s[i] & 0xE0) == 0xC0) {
+				if (i + 1 >= s.size() || (s[i + 1] & 0xC0) != 0x80) {
+					fail = 2;
+				}
+				i += 1;
+			} else if ((s[i] & 0xF0) == 0xE0) {
+				if (i + 2 >= s.size() || (s[i + 1] & 0xC0) != 0x80 || (s[i + 2] & 0xC0) != 0x80) {
+					fail = 3;
+				}
+				i += 2;
+			} else if ((s[i] & 0xF8) == 0xF0) {
+				if (i + 3 >= s.size() || (s[i + 1] & 0xC0) != 0x80 || (s[i + 2] & 0xC0) != 0x80 || (s[i + 3] & 0xC0) != 0x80) {
+					fail = 4;
+				}
+				i += 3;
+			} else {
+				fail = 1;
+			}
+		}
+
+		if (fail != 0) {
+			fprintf(stderr, "%s:%d: \"%s\" is not valid UTF-8 (%d byte:", reading, line, s.c_str(), fail);
+			for (size_t j = 0; j < fail && j + i < s.size(); j++) {
+				fprintf(stderr, " 0x%02X", s[i + j] & 0xFF);
+			}
+			fprintf(stderr, ")\n");
+			json_context(feature);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return s;
+}
+
 int serialize_geometry(json_object *geometry, json_object *properties, json_object *id, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string const &layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
@@ -288,7 +327,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 				tas.type = metatype[m] = VT_STRING;
-				metaval[m] = std::string(properties->values[i]->string);
+				metaval[m] = check_utf8(std::string(properties->values[i]->string), feature, reading, line);
 				m++;
 			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
 				tas.type = metatype[m] = VT_NUMBER;
