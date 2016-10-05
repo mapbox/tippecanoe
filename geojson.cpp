@@ -38,6 +38,7 @@ extern "C" {
 #include "geometry.hpp"
 #include "options.hpp"
 #include "serial.hpp"
+#include "text.hpp"
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -289,6 +290,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
 				tas.type = metatype[m] = VT_STRING;
 				metaval[m] = std::string(properties->values[i]->string);
+				std::string err = check_utf8(metaval[m]);
+				if (err != "") {
+					fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
+					json_context(feature);
+					exit(EXIT_FAILURE);
+				}
 				m++;
 			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
 				tas.type = metatype[m] = VT_NUMBER;

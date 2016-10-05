@@ -1,3 +1,7 @@
+## 1.14.2
+
+* Enforce that string feature attributes must be encoded as UTF-8
+
 ## 1.14.1
 
 * Whitespace after commas in tile-join .csv input is no longer significant
