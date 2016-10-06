@@ -125,6 +125,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
  * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
  * -ag or --calculate-feature-density: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+ * -ab or --detect-shared-borders: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
 
 ### Doing less
 
@@ -253,12 +254,12 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires sqlite3 (should already be installed on MacOS). Rebuilding the manpage
+Requires sqlite3 and zlib (should already be installed on MacOS). Rebuilding the manpage
 uses md2man (`gem install md2man`).
 
 Linux:
 
-    sudo apt-get install libsqlite3-dev
+    sudo apt-get install libsqlite3-dev zlib1g-dev
 
 Then build:
 

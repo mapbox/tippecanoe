@@ -1801,7 +1801,7 @@ int main(int argc, char **argv) {
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
-		{"simplify-polygons-together", no_argument, &additional[A_SIMPLIFY_TOGETHER], 1},
+		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},

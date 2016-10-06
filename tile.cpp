@@ -463,7 +463,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				bool already_marked = false;
-				if (additional[A_SIMPLIFY_TOGETHER] && t == VT_POLYGON) {
+				if (additional[A_DETECT_SHARED_BORDERS] && t == VT_POLYGON) {
 					already_marked = true;
 				}
 
@@ -1306,7 +1306,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
-		if (additional[A_SIMPLIFY_TOGETHER]) {
+		if (additional[A_DETECT_SHARED_BORDERS]) {
 			find_common_edges(partials, z, line_detail, simplification, maxzoom);
 		}
 
