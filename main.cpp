@@ -223,6 +223,7 @@ static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FIL
 		struct index *ix = (struct index *) (map + head->start);
 		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
 		*geompos += ix->end - ix->start;
+		serialize_byte(geom_out, 0, geompos, "merge geometry");
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
 		*progress += (ix->end - ix->start) * 3 / 4;

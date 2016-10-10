@@ -174,7 +174,7 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 	}
 }
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy) {
+void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 	serialize_long_long(geomfile, sf->seq, geompos, fname);
 
@@ -207,5 +207,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_long_long(geomfile, sf->values[i], geompos, fname);
 	}
 
-	serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	if (include_minzoom) {
+		serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	}
 }

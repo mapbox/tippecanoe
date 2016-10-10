@@ -424,7 +424,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
-	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
+	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale, false);
 
 	struct index index;
 	index.start = geomstart;
