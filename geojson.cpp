@@ -431,6 +431,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	index.end = *geompos;
 	index.segment = segment;
 	index.seq = *layer_seq;
+	index.t = sf.t;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area

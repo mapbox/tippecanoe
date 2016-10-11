@@ -792,11 +792,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				continue;
 			}
 
-			if (t == VT_LINE && z + line_detail <= feature_minzoom) {
-				continue;
-			}
-
-			if (t == VT_POINT && z < feature_minzoom && gamma < 0) {
+			if (z < feature_minzoom) {
 				continue;
 			}
 
@@ -805,20 +801,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 			}
 
-			if (gamma >= 0 && (t == VT_POINT ||
-					   (additional[A_LINE_DROP] && t == VT_LINE) ||
-					   (additional[A_POLYGON_DROP] && t == VT_POLYGON))) {
-				seq++;
-				if (seq >= 0) {
-					seq -= interval;
-				} else {
+			if (gamma > 0) {
+				if (manage_gap(index, &previndex, scale, gamma, &gap)) {
 					continue;
-				}
-
-				if (gamma > 0) {
-					if (manage_gap(index, &previndex, scale, gamma, &gap)) {
-						continue;
-					}
 				}
 			}
 
