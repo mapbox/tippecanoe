@@ -219,6 +219,31 @@ struct drop_state {
 	long long included;
 };
 
+int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, int basezoom, double droprate, double gamma) {
+	int feature_minzoom = 0;
+
+	if (gamma >= 0 && (ix->t == VT_POINT ||
+			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
+			   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
+		for (ssize_t i = maxzoom; i >= 0; i--) {
+			ds[i].seq++;
+		}
+		for (ssize_t i = maxzoom; i >= 0; i--) {
+			if (ds[i].seq >= 0) {
+				ds[i].seq -= ds[i].interval;
+				ds[i].included++;
+			} else {
+				feature_minzoom = i + 1;
+				break;
+			}
+		}
+
+		// XXX manage_gap
+	}
+
+	return feature_minzoom;
+}
+
 static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
@@ -232,27 +257,7 @@ static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FIL
 		struct index *ix = (struct index *) (map + head->start);
 		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
 		*geompos += ix->end - ix->start;
-		double feature_minzoom = 0;
-
-		if (gamma >= 0 && (ix->t == VT_POINT ||
-				   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
-				   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
-			for (ssize_t i = maxzoom; i >= 0; i--) {
-				ds[i].seq++;
-			}
-			for (ssize_t i = maxzoom; i >= 0; i--) {
-				if (ds[i].seq >= 0) {
-					ds[i].seq -= ds[i].interval;
-					ds[i].included++;
-				} else {
-					feature_minzoom = i + 1;
-					break;
-				}
-			}
-
-			// XXX manage_gap
-		}
-
+		double feature_minzoom = calc_feature_minzoom(ix, ds, maxzoom, basezoom, droprate, gamma);
 		serialize_byte(geom_out, feature_minzoom, geompos, "merge geometry");
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
@@ -761,6 +766,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
+					double feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
+					serialize_byte(geomfile, feature_minzoom, geompos_out, "merge geometry");
 
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
 					*progress += (ix.end - ix.start) * 3 / 4;
