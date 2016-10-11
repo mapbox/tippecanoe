@@ -210,35 +210,22 @@ static void insert(struct mergelist *m, struct mergelist **head, unsigned char *
 	*head = m;
 }
 
-static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma) {
+struct drop_state {
+	double gap;
+	unsigned long long previndex;
+	double interval;
+	double scale;
+	double seq;
+	long long included;
+};
+
+static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
 	for (size_t i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
 			insert(&(merges[i]), &head, map);
 		}
-	}
-
-	struct feature_drop {
-		double gap;
-		unsigned long long previndex;
-		double interval;
-		double scale;
-		double seq;
-	} fd[maxzoom + 1];
-
-	// Needs to be signed for interval calculation
-	for (ssize_t i = 0; i <= maxzoom; i++) {
-		fd[i].gap = 0;
-		fd[i].previndex = 0;
-		fd[i].interval = 0;
-
-		if (i < basezoom) {
-			fd[i].interval = std::exp(std::log(droprate) * (basezoom - i));
-		}
-
-		fd[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
-		fd[i].seq = 0;
 	}
 
 	while (head != NULL) {
@@ -251,11 +238,12 @@ static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FIL
 				   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
 				   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
 			for (ssize_t i = maxzoom; i >= 0; i--) {
-				fd[i].seq++;
+				ds[i].seq++;
 			}
 			for (ssize_t i = maxzoom; i >= 0; i--) {
-				if (fd[i].seq >= 0) {
-					fd[i].seq -= fd[i].interval;
+				if (ds[i].seq >= 0) {
+					ds[i].seq -= ds[i].interval;
+					ds[i].included++;
 				} else {
 					feature_minzoom = i + 1;
 					break;
@@ -525,7 +513,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	parser_created = true;
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -738,7 +726,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				madvise(geommap, geomst.st_size, MADV_RANDOM);
 				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma);
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 
 				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
 				if (munmap(indexmap, indexst.st_size) < 0) {
@@ -804,7 +792,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// counter backward but will be an honest estimate of the work remaining.
 				*progress_max += geomst.st_size / 4;
 
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma);
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 				already_closed = 1;
 			}
 		}
@@ -876,8 +864,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	long long geom_total = 0;
 	int geomfds[nreaders];
 	int indexfds[nreaders];
-	int i;
-	for (i = 0; i < nreaders; i++) {
+	for (int i = 0; i < nreaders; i++) {
 		geomfds[i] = reader[i].geomfd;
 		indexfds[i] = reader[i].indexfd;
 
@@ -889,9 +876,26 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		geom_total += geomst.st_size;
 	}
 
+	struct drop_state ds[maxzoom + 1];
+
+	// Needs to be signed for interval calculation
+	for (ssize_t i = 0; i <= maxzoom; i++) {
+		ds[i].gap = 0;
+		ds[i].previndex = 0;
+		ds[i].interval = 0;
+
+		if (i < basezoom) {
+			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
+		}
+
+		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
+		ds[i].seq = 0;
+		ds[i].included = 0;
+	}
+
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
 	long long availfiles_before = availfiles;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported, maxzoom, basezoom, droprate, gamma);
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 
 	if (availfiles - 2 * nreaders != availfiles_before) {
 		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
