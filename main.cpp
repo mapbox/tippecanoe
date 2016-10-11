@@ -244,7 +244,7 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, i
 	return feature_minzoom;
 }
 
-static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
+static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *indexfile, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
 	for (size_t i = 0; i < nmerges; i++) {
@@ -254,20 +254,23 @@ static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FIL
 	}
 
 	while (head != NULL) {
-		struct index *ix = (struct index *) (map + head->start);
-		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
-		*geompos += ix->end - ix->start;
-		double feature_minzoom = calc_feature_minzoom(ix, ds, maxzoom, basezoom, droprate, gamma);
+		struct index ix = *((struct index *) (map + head->start));
+		long long pos = *geompos;
+		fwrite_check(geom_map + ix.start, 1, ix.end - ix.start, geom_out, "merge geometry");
+		*geompos += ix.end - ix.start;
+		double feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
 		serialize_byte(geom_out, feature_minzoom, geompos, "merge geometry");
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
-		*progress += (ix->end - ix->start) * 3 / 4;
+		*progress += (ix.end - ix.start) * 3 / 4;
 		if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
 			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
 		}
 
-		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
+		ix.start = pos;
+		ix.end = *geompos;
+		fwrite_check(&ix, bytes, 1, indexfile, "merge temporary");
 		head->start += bytes;
 
 		struct mergelist *m = head;
