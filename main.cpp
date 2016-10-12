@@ -217,15 +217,38 @@ struct drop_state {
 	double scale;
 	double seq;
 	long long included;
+	unsigned x;
+	unsigned y;
 };
 
 int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, int basezoom, double droprate, double gamma) {
 	int feature_minzoom = 0;
+	unsigned xx, yy;
+	decode(ix->index, &xx, &yy);
 
 	if (gamma >= 0 && (ix->t == VT_POINT ||
 			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
 			   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
 		for (ssize_t i = maxzoom; i >= 0; i--) {
+			// XXX This resets the feature counter at the start of each tile,
+			// which makes the feature count come out close to what it is if
+			// feature dropping happens during tiling. It means that the low
+			// zooms are heavier than they legitimately should be though.
+			{
+				unsigned xxx = 0, yyy = 0;
+				if (i != 0) {
+					xxx = xx >> (32 - i);
+					yyy = yy >> (32 - i);
+				}
+				if (ds[i].x != xxx || ds[i].y != yyy) {
+					ds[i].seq = 0;
+					ds[i].gap = 0;
+					ds[i].previndex = 0;
+				}
+				ds[i].x = xxx;
+				ds[i].y = yyy;
+			}
+
 			ds[i].seq++;
 		}
 		for (ssize_t i = maxzoom; i >= 0; i--) {
@@ -836,6 +859,8 @@ void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double d
 		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
 		ds[i].seq = 0;
 		ds[i].included = 0;
+		ds[i].x = 0;
+		ds[i].y = 0;
 	}
 }
 

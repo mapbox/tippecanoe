@@ -596,7 +596,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		double accum_area = 0;
 
 		double interval = 0;
-		double seq = 0;
 		if (z < basezoom) {
 			interval = std::exp(std::log(droprate) * (basezoom - z));
 		}
