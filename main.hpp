@@ -3,7 +3,7 @@ struct index {
 	long long end;
 	unsigned long long index;
 	short segment;
-	short t : 2;
+	unsigned short t : 2;
 	unsigned long long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
 };
 
