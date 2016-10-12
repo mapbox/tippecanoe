@@ -258,7 +258,7 @@ static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FIL
 		long long pos = *geompos;
 		fwrite_check(geom_map + ix.start, 1, ix.end - ix.start, geom_out, "merge geometry");
 		*geompos += ix.end - ix.start;
-		double feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
+		int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
 		serialize_byte(geom_out, feature_minzoom, geompos, "merge geometry");
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
@@ -769,7 +769,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
-					double feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
+					int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
 					serialize_byte(geomfile, feature_minzoom, geompos_out, "merge geometry");
 
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
@@ -819,6 +819,23 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 			*availfiles += 2;
 		}
+	}
+}
+
+void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double droprate) {
+	// Needs to be signed for interval calculation
+	for (ssize_t i = 0; i <= maxzoom; i++) {
+		ds[i].gap = 0;
+		ds[i].previndex = 0;
+		ds[i].interval = 0;
+
+		if (i < basezoom) {
+			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
+		}
+
+		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
+		ds[i].seq = 0;
+		ds[i].included = 0;
 	}
 }
 
@@ -887,21 +904,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 
 	struct drop_state ds[maxzoom + 1];
-
-	// Needs to be signed for interval calculation
-	for (ssize_t i = 0; i <= maxzoom; i++) {
-		ds[i].gap = 0;
-		ds[i].previndex = 0;
-		ds[i].interval = 0;
-
-		if (i < basezoom) {
-			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
-		}
-
-		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
-		ds[i].seq = 0;
-		ds[i].included = 0;
-	}
+	prep_drop_states(ds, maxzoom, basezoom, droprate);
 
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
 	long long availfiles_before = availfiles;
@@ -1640,6 +1643,34 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 			}
 		}
 
+		// Fix up the minzooms for features, now that we really know the base zoom
+		// and drop rate.
+
+		struct stat geomst;
+		if (fstat(geomfd, &geomst) != 0) {
+			perror("stat sorted geom\n");
+			exit(EXIT_FAILURE);
+		}
+		char *geom = (char *) mmap(NULL, geomst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, geomfd, 0);
+		if (geom == MAP_FAILED) {
+			perror("mmap geom for fixup");
+			exit(EXIT_FAILURE);
+		}
+		madvise(geom, indexpos, MADV_SEQUENTIAL);
+		madvise(geom, indexpos, MADV_WILLNEED);
+
+		struct drop_state ds[maxzoom + 1];
+		prep_drop_states(ds, maxzoom, basezoom, droprate);
+
+		for (ip = 0; ip < indices; ip++) {
+			if (ip > 0 && map[ip].start != map[ip - 1].end) {
+				fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+			}
+			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, basezoom, droprate, gamma);
+			geom[map[ip].end - 1] = feature_minzoom;
+		}
+
+		munmap(geom, geomst.st_size);
 		madvise(map, indexpos, MADV_DONTNEED);
 		munmap(map, indexpos);
 	}
