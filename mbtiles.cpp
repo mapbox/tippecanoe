@@ -219,9 +219,18 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 		sqlite3_free(sql);
 	}
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", "pbf");
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", "application/vnd.mapbox-vector-tile");
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set format: %s\n", err);
+		if (!forcetable) {
+			exit(EXIT_FAILURE);
+		}
+	}
+	sqlite3_free(sql);
+
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('compression', %Q);", "gzip");
+	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "set compression: %s\n", err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}
@@ -245,7 +254,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 		auto fk = layermap.find(lnames[i]);
 		aprintf(&buf, "{ \"id\": \"");
 		quote(&buf, lnames[i].c_str());
-		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
+		aprintf(&buf, "\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
 		std::set<type_and_string>::iterator j;
 		bool first = true;
