@@ -629,23 +629,22 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 }
 
 void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
-#ifdef PERF
-	clock_t then = clock();
-#endif
+	printf("initial condition with %d %d %f %d\n", z, line_detail, simplification, maxzoom);
+	for (size_t i = 0; i < partials.size(); i++) {
+		printf("type %d\n", partials[i].t);
+		for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+			printf("partial %lu:\n", j);
+			for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
+				printf("%d %lld,%lld %d\n", partials[i].geoms[j][k].op, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y, partials[i].geoms[j][k].necessary);
+			}
+		}
+	}
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
 				drawvec &g = partials[i].geoms[j];
 				drawvec out;
-
-#if 0
-				int shift = 32 - line_detail - z;
-				for (size_t k = 0; k < g.size(); k++) {
-					g[k].x >>= shift;
-					g[k].y >>= shift;
-				}
-#endif
 
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_LINETO && k > 0 && g[k - 1] == g[k]) {
@@ -655,23 +654,21 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 					}
 				}
 
-#if 0
-				for (size_t k = 0; k < out.size(); k++) {
-					out[k].x <<= shift;
-					out[k].y <<= shift;
-				}
-#endif
-
 				partials[i].geoms[j] = out;
 			}
 		}
 	}
 
-#ifdef PERF
-	clock_t now = clock();
-	printf("1: %lld\n", (long long) (now - then));
-	then = now;
-#endif
+	printf("closed rings\n");
+	for (size_t i = 0; i < partials.size(); i++) {
+		printf("type %d\n", partials[i].t);
+		for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+			printf("partial %lu:\n", j);
+			for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
+				printf("%d %lld,%lld %d\n", partials[i].geoms[j][k].op, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y, partials[i].geoms[j][k].necessary);
+			}
+		}
+	}
 
 	// Construct a mapping from all polygon edges to the set of rings
 	// that each edge appears in. (The ring number is across all polygons;
@@ -706,13 +703,11 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 	std::sort(edges.begin(), edges.end());
 
-#ifdef PERF
-	now = clock();
-	printf("2: %lld\n", (long long) (now - then));
-	then = now;
-#endif
+	printf("edges:\n");
+	for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
+		printf("%u,%u %u,%u %u\n", ei->x1, ei->y1, ei->x2, ei->y2, ei->ring);
+	}
 
-	std::map<drawvec, size_t> arcs;
 	std::set<draw> necessaries;
 
 	// Now mark all the points where the set of rings using the edge on one side
@@ -792,13 +787,13 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
-	edges.clear();
+	printf("necessaries:\n");
+	for (auto ni = necessaries.begin(); ni != necessaries.end(); ++ni) {
+		printf("%d %lld,%lld %d\n", ni->op, ni->x, ni->y, ni->necessary);
+	}
 
-#ifdef PERF
-	now = clock();
-	printf("3: %lld\n", (long long) (now - then));
-	then = now;
-#endif
+	edges.clear();
+	std::map<drawvec, size_t> arcs;
 
 	// Roll rings that include a necessary point around so they start at one
 
@@ -868,6 +863,11 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							}
 						}
 
+						printf("rolled %lu %lu at %lu to %lu\n", i, j, k, l);
+						for (size_t m = k; m < l; m++) {
+							printf("%d %llu,%llu %d\n", g[m].op, g[m].x, g[m].y, g[m].necessary);
+						}
+
 						// Now peel off each set of segments from one necessary point to the next
 						// into an "arc" as in TopoJSON
 
@@ -915,12 +915,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
-#ifdef PERF
-	now = clock();
-	printf("4: %lld\n", (long long) (now - then));
-	then = now;
-#endif
-
 	std::vector<drawvec> simplified_arcs;
 
 	size_t count = 0;
@@ -944,12 +938,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 		count++;
 	}
-
-#ifdef PERF
-	now = clock();
-	printf("5: %lld\n", (long long) (now - then));
-	then = now;
-#endif
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
@@ -991,12 +979,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
-
-#ifdef PERF
-	now = clock();
-	printf("6: %lld\n", (long long) (now - then));
-	then = now;
-#endif
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
