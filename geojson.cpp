@@ -30,7 +30,6 @@ extern "C" {
 
 #include "pool.hpp"
 #include "projection.hpp"
-#include "version.hpp"
 #include "memfile.hpp"
 #include "main.hpp"
 #include "mbtiles.hpp"
