@@ -24,9 +24,14 @@ struct draw {
 		this->op = nop;
 		this->x = nx;
 		this->y = ny;
+		this->necessary = 0;
 	}
 
 	draw() {
+		this->op = 0;
+		this->x = 0;
+		this->y = 0;
+		this->necessary = 0;
 	}
 
 	bool operator<(draw const &s) const {
