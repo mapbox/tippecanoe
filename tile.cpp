@@ -648,17 +648,6 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 }
 
 void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
-	printf("initial condition with %d %d %f %d\n", z, line_detail, simplification, maxzoom);
-	for (size_t i = 0; i < partials.size(); i++) {
-		printf("type %d\n", partials[i].t);
-		for (size_t j = 0; j < partials[i].geoms.size(); j++) {
-			printf("partial %lu:\n", j);
-			for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-				printf("%d %lld,%lld %d\n", partials[i].geoms[j][k].op, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y, partials[i].geoms[j][k].necessary);
-			}
-		}
-	}
-
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
@@ -674,17 +663,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 				}
 
 				partials[i].geoms[j] = out;
-			}
-		}
-	}
-
-	printf("closed rings\n");
-	for (size_t i = 0; i < partials.size(); i++) {
-		printf("type %d\n", partials[i].t);
-		for (size_t j = 0; j < partials[i].geoms.size(); j++) {
-			printf("partial %lu:\n", j);
-			for (size_t k = 0; k < partials[i].geoms[j].size(); k++) {
-				printf("%d %lld,%lld %d\n", partials[i].geoms[j][k].op, partials[i].geoms[j][k].x, partials[i].geoms[j][k].y, partials[i].geoms[j][k].necessary);
 			}
 		}
 	}
@@ -721,12 +699,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	}
 
 	std::sort(edges.begin(), edges.end(), edgecmp_ring);
-
-	printf("edges:\n");
-	for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
-		printf("%u,%u %u,%u %u\n", ei->x1, ei->y1, ei->x2, ei->y2, ei->ring);
-	}
-
 	std::set<draw> necessaries;
 
 	// Now mark all the points where the set of rings using the edge on one side
@@ -806,11 +778,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
-	printf("necessaries:\n");
-	for (auto ni = necessaries.begin(); ni != necessaries.end(); ++ni) {
-		printf("%d %lld,%lld %d\n", ni->op, ni->x, ni->y, ni->necessary);
-	}
-
 	edges.clear();
 	std::map<drawvec, size_t> arcs;
 
@@ -880,11 +847,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 								g[k + m] = tmp[m];
 							}
-						}
-
-						printf("rolled %lu %lu at %lu to %lu\n", i, j, k, l);
-						for (size_t m = k; m < l; m++) {
-							printf("%d %llu,%llu %d\n", g[m].op, g[m].x, g[m].y, g[m].necessary);
 						}
 
 						// Now peel off each set of segments from one necessary point to the next
