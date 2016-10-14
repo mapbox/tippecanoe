@@ -24,9 +24,30 @@ struct draw {
 		this->op = nop;
 		this->x = nx;
 		this->y = ny;
+		this->necessary = 0;
 	}
 
 	draw() {
+		this->op = 0;
+		this->x = 0;
+		this->y = 0;
+		this->necessary = 0;
+	}
+
+	bool operator<(draw const &s) const {
+		if (y < s.y || (y == s.y && x < s.x)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool operator==(draw const &s) const {
+		return y == s.y && x == s.x;
+	}
+
+	bool operator!=(draw const &s) const {
+		return y != s.y || x != s.x;
 	}
 };
 
@@ -43,7 +64,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer);
 bool point_within_tile(long long x, long long y, int z, int detail, long long buffer);
 int quick_check(long long *bbox, int z, int detail, long long buffer);
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification);
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, bool already_marked);
 drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);

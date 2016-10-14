@@ -19,6 +19,7 @@
 #include <sqlite3.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
@@ -372,6 +373,7 @@ struct partial {
 	std::vector<drawvec> geoms;
 	std::vector<long long> keys;
 	std::vector<long long> values;
+	std::vector<ssize_t> arc_polygon;
 	char *meta;
 	long long layer;
 	long long original_seq;
@@ -460,10 +462,17 @@ void *partial_feature_worker(void *v) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
-				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification);
+				bool already_marked = false;
+				if (additional[A_DETECT_SHARED_BORDERS] && t == VT_POLYGON) {
+					already_marked = true;
+				}
 
-				if (t != VT_POLYGON || ngeom.size() >= 3) {
-					geom = ngeom;
+				if (!already_marked) {
+					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, already_marked);
+
+					if (t != VT_POLYGON || ngeom.size() >= 3) {
+						geom = ngeom;
+					}
 				}
 			}
 		}
@@ -559,6 +568,398 @@ int manage_gap(unsigned long long index, unsigned long long *previndex, double s
 	}
 
 	return 0;
+}
+
+// Does not fix up moveto/lineto
+static drawvec reverse_subring(drawvec const &dv) {
+	drawvec out;
+
+	for (size_t i = dv.size(); i > 0; i--) {
+		out.push_back(dv[i - 1]);
+	}
+
+	return out;
+}
+
+struct edge {
+	unsigned x1;
+	unsigned y1;
+	unsigned x2;
+	unsigned y2;
+	unsigned ring;
+
+	edge(unsigned _x1, unsigned _y1, unsigned _x2, unsigned _y2, unsigned _ring) {
+		x1 = _x1;
+		y1 = _y1;
+		x2 = _x2;
+		y2 = _y2;
+		ring = _ring;
+	}
+
+	bool operator<(const edge &s) const {
+		long long cmp = (long long) y1 - s.y1;
+		if (cmp == 0) {
+			cmp = (long long) x1 - s.x1;
+		}
+		if (cmp == 0) {
+			cmp = (long long) y2 - s.y2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) x2 - s.x2;
+		}
+		return cmp < 0;
+	}
+};
+
+struct edgecmp_ring {
+	bool operator()(const edge &a, const edge &b) {
+		long long cmp = (long long) a.y1 - b.y1;
+		if (cmp == 0) {
+			cmp = (long long) a.x1 - b.x1;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.y2 - b.y2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.x2 - b.x2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.ring - b.ring;
+		}
+		return cmp < 0;
+	}
+} edgecmp_ring;
+
+bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1, std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2) {
+	if ((e2.second - e2.first) != (e1.second - e1.first)) {
+		return false;
+	}
+
+	while (e1.first != e1.second) {
+		if (e1.first->ring != e2.first->ring) {
+			return false;
+		}
+
+		++e1.first;
+		++e2.first;
+	}
+
+	return true;
+}
+
+void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				drawvec &g = partials[i].geoms[j];
+				drawvec out;
+
+				for (size_t k = 0; k < g.size(); k++) {
+					if (g[k].op == VT_LINETO && k > 0 && g[k - 1] == g[k]) {
+						;
+					} else {
+						out.push_back(g[k]);
+					}
+				}
+
+				partials[i].geoms[j] = out;
+			}
+		}
+	}
+
+	// Construct a mapping from all polygon edges to the set of rings
+	// that each edge appears in. (The ring number is across all polygons;
+	// we don't need to look it back up, just to tell where it changes.)
+
+	std::vector<edge> edges;
+	size_t ring = 0;
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				for (size_t k = 0; k + 1 < partials[i].geoms[j].size(); k++) {
+					if (partials[i].geoms[j][k].op == VT_MOVETO) {
+						ring++;
+					}
+
+					if (partials[i].geoms[j][k + 1].op == VT_LINETO) {
+						drawvec dv;
+						if (partials[i].geoms[j][k] < partials[i].geoms[j][k + 1]) {
+							dv.push_back(partials[i].geoms[j][k]);
+							dv.push_back(partials[i].geoms[j][k + 1]);
+						} else {
+							dv.push_back(partials[i].geoms[j][k + 1]);
+							dv.push_back(partials[i].geoms[j][k]);
+						}
+
+						edges.push_back(edge(dv[0].x, dv[0].y, dv[1].x, dv[1].y, ring));
+					}
+				}
+			}
+		}
+	}
+
+	std::sort(edges.begin(), edges.end(), edgecmp_ring);
+	std::set<draw> necessaries;
+
+	// Now mark all the points where the set of rings using the edge on one side
+	// is not the same as the set of rings using the edge on the other side.
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				drawvec &g = partials[i].geoms[j];
+
+				for (size_t k = 0; k < g.size(); k++) {
+					g[k].necessary = 0;
+				}
+
+				for (size_t a = 0; a < g.size(); a++) {
+					if (g[a].op == VT_MOVETO) {
+						size_t b;
+
+						for (b = a + 1; b < g.size(); b++) {
+							if (g[b].op != VT_LINETO) {
+								break;
+							}
+						}
+
+						// -1 because of duplication at the end
+						size_t s = b - a - 1;
+
+						if (s > 0) {
+							drawvec left;
+							if (g[a + (0 - 1 + s) % s] < g[a + 0]) {
+								left.push_back(g[a + (0 - 1 + s) % s]);
+								left.push_back(g[a + 0]);
+							} else {
+								left.push_back(g[a + 0]);
+								left.push_back(g[a + (0 - 1 + s) % s]);
+							}
+							if (left[1] < left[0]) {
+								fprintf(stderr, "left misordered\n");
+							}
+							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge(left[0].x, left[0].y, left[1].x, left[1].y, 0));
+
+							for (size_t k = 0; k < s; k++) {
+								drawvec right;
+
+								if (g[a + k] < g[a + k + 1]) {
+									right.push_back(g[a + k]);
+									right.push_back(g[a + k + 1]);
+								} else {
+									right.push_back(g[a + k + 1]);
+									right.push_back(g[a + k]);
+								}
+
+								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge(right[0].x, right[0].y, right[1].x, right[1].y, 0));
+
+								if (right[1] < right[0]) {
+									fprintf(stderr, "left misordered\n");
+								}
+
+								if (e1.first == e1.second || e2.first == e2.second) {
+									fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+									exit(EXIT_FAILURE);
+								}
+
+								if (!edges_same(e1, e2)) {
+									g[a + k].necessary = 1;
+									necessaries.insert(g[a + k]);
+								}
+
+								e1 = e2;
+							}
+						}
+
+						a = b - 1;
+					}
+				}
+			}
+		}
+	}
+
+	edges.clear();
+	std::map<drawvec, size_t> arcs;
+
+	// Roll rings that include a necessary point around so they start at one
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
+				drawvec &g = partials[i].geoms[j];
+
+				for (size_t k = 0; k < g.size(); k++) {
+					if (necessaries.count(g[k]) != 0) {
+						g[k].necessary = 1;
+					}
+				}
+
+				for (size_t k = 0; k < g.size(); k++) {
+					if (g[k].op == VT_MOVETO) {
+						ssize_t necessary = -1;
+						ssize_t lowest = k;
+						size_t l;
+						for (l = k + 1; l < g.size(); l++) {
+							if (g[l].op != VT_LINETO) {
+								break;
+							}
+
+							if (g[l].necessary) {
+								necessary = l;
+							}
+							if (g[l] < g[lowest]) {
+								lowest = l;
+							}
+						}
+
+						if (necessary < 0) {
+							necessary = lowest;
+							// Add a necessary marker if there was none in the ring,
+							// so the arc code below can find it.
+							g[lowest].necessary = 1;
+						}
+
+						{
+							drawvec tmp;
+
+							// l - 1 because the endpoint is duplicated
+							for (size_t m = necessary; m < l - 1; m++) {
+								tmp.push_back(g[m]);
+							}
+							for (size_t m = k; m < necessary; m++) {
+								tmp.push_back(g[m]);
+							}
+
+							// replace the endpoint
+							tmp.push_back(g[necessary]);
+
+							if (tmp.size() != l - k) {
+								fprintf(stderr, "internal error shifting ring\n");
+								exit(EXIT_FAILURE);
+							}
+
+							for (size_t m = 0; m < tmp.size(); m++) {
+								if (m == 0) {
+									tmp[m].op = VT_MOVETO;
+								} else {
+									tmp[m].op = VT_LINETO;
+								}
+
+								g[k + m] = tmp[m];
+							}
+						}
+
+						// Now peel off each set of segments from one necessary point to the next
+						// into an "arc" as in TopoJSON
+
+						for (size_t m = k; m < l; m++) {
+							if (!g[m].necessary) {
+								fprintf(stderr, "internal error in arc building\n");
+								exit(EXIT_FAILURE);
+							}
+
+							drawvec arc;
+							size_t n;
+							for (n = m; n < l; n++) {
+								arc.push_back(g[n]);
+								if (n > m && g[n].necessary) {
+									break;
+								}
+							}
+
+							auto f = arcs.find(arc);
+							if (f == arcs.end()) {
+								drawvec arc2 = reverse_subring(arc);
+
+								auto f2 = arcs.find(arc2);
+								if (f2 == arcs.end()) {
+									// Add new arc
+									size_t added = arcs.size() + 1;
+									arcs.insert(std::pair<drawvec, size_t>(arc, added));
+									partials[i].arc_polygon.push_back(added);
+								} else {
+									partials[i].arc_polygon.push_back(-f2->second);
+								}
+							} else {
+								partials[i].arc_polygon.push_back(f->second);
+							}
+
+							m = n - 1;
+						}
+
+						partials[i].arc_polygon.push_back(0);
+
+						k = l - 1;
+					}
+				}
+			}
+		}
+	}
+
+	std::vector<drawvec> simplified_arcs;
+
+	size_t count = 0;
+	for (auto ai = arcs.begin(); ai != arcs.end(); ++ai) {
+		if (simplified_arcs.size() < ai->second + 1) {
+			simplified_arcs.resize(ai->second + 1);
+		}
+
+		drawvec dv = ai->first;
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (i == 0) {
+				dv[i].op = VT_MOVETO;
+			} else {
+				dv[i].op = VT_LINETO;
+			}
+		}
+		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
+			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
+		} else {
+			simplified_arcs[ai->second] = dv;
+		}
+		count++;
+	}
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		if (partials[i].t == VT_POLYGON) {
+			partials[i].geoms.resize(0);
+			partials[i].geoms.push_back(drawvec());
+			bool at_start = true;
+			draw first(-1, 0, 0);
+
+			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
+				ssize_t p = partials[i].arc_polygon[j];
+
+				if (p == 0) {
+					if (first.op >= 0) {
+						partials[i].geoms[0].push_back(first);
+						first = draw(-1, 0, 0);
+					}
+					at_start = true;
+				} else if (p > 0) {
+					for (size_t k = 0; k + 1 < simplified_arcs[p].size(); k++) {
+						if (at_start) {
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+							first = draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y);
+						} else {
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+						}
+						at_start = 0;
+					}
+				} else { /* p < 0 */
+					for (ssize_t k = simplified_arcs[-p].size() - 1; k > 0; k--) {
+						if (at_start) {
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+							first = draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y);
+						} else {
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+						}
+						at_start = 0;
+					}
+				}
+			}
+		}
+	}
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
@@ -852,6 +1253,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
+		if (additional[A_DETECT_SHARED_BORDERS]) {
+			find_common_edges(partials, z, line_detail, simplification, maxzoom);
+		}
+
 		int tasks = ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
@@ -971,7 +1376,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
 					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
 					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
-										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification);
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, false);
 				}
 
 				if (layer_features[x].type == VT_POLYGON) {
