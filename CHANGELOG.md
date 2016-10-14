@@ -1,3 +1,7 @@
+## 1.14.3
+
+* Add --detect-shared-borders option for better polygon simplification
+
 ## 1.14.2
 
 * Enforce that string feature attributes must be encoded as UTF-8
