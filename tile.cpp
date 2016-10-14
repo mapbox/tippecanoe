@@ -611,6 +611,25 @@ struct edge {
 	}
 };
 
+struct edgecmp_ring {
+	bool operator()(const edge &a, const edge &b) {
+		long long cmp = (long long) a.y1 - b.y1;
+		if (cmp == 0) {
+			cmp = (long long) a.x1 - b.x1;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.y2 - b.y2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.x2 - b.x2;
+		}
+		if (cmp == 0) {
+			cmp = (long long) a.ring - b.ring;
+		}
+		return cmp < 0;
+	}
+} edgecmp_ring;
+
 bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1, std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2) {
 	if ((e2.second - e2.first) != (e1.second - e1.first)) {
 		return false;
@@ -701,7 +720,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
-	std::sort(edges.begin(), edges.end());
+	std::sort(edges.begin(), edges.end(), edgecmp_ring);
 
 	printf("edges:\n");
 	for (auto ei = edges.begin(); ei != edges.end(); ++ei) {
