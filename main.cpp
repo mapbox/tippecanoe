@@ -67,8 +67,8 @@ struct source {
 	std::string file;
 };
 
-int CPUS;
-int TEMP_FILES;
+size_t CPUS;
+size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
 
@@ -267,7 +267,7 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, i
 	return feature_minzoom;
 }
 
-static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *indexfile, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
+static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
 	for (size_t i = 0; i < nmerges; i++) {
@@ -312,7 +312,7 @@ struct sort_arg {
 	long long indexpos;
 	struct mergelist *merges;
 	int indexfd;
-	int nmerges;
+	size_t nmerges;
 	long long unit;
 	int bytes;
 };
@@ -367,8 +367,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	segs[0] = 0;
 	segs[CPUS] = len;
 
-	int i;
-	for (i = 1; i < CPUS; i++) {
+	for (size_t i = 1; i < CPUS; i++) {
 		segs[i] = len * i / CPUS;
 
 		while (segs[i] < len && map[segs[i]] != '\n') {
@@ -377,7 +376,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	volatile long long layer_seq[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
 		layer_seq[i] = segs[i] + initial_offset;
@@ -387,11 +386,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	pthread_t pthreads[CPUS];
 	std::vector<std::set<type_and_string> > file_subkeys;
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		file_subkeys.push_back(std::set<type_and_string>());
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].reading = reading;
 		pja[i].layer_seq = &layer_seq[i];
@@ -427,7 +426,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		}
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
@@ -706,18 +705,17 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				unit = ((unit + page - 1) / page) * page;
 
-				int nmerges = (indexpos + unit - 1) / unit;
+				size_t nmerges = (indexpos + unit - 1) / unit;
 				struct mergelist merges[nmerges];
 
-				int a;
-				for (a = 0; a < nmerges; a++) {
+				for (size_t a = 0; a < nmerges; a++) {
 					merges[a].start = merges[a].end = 0;
 				}
 
 				pthread_t pthreads[CPUS];
 				struct sort_arg args[CPUS];
 
-				for (a = 0; a < CPUS; a++) {
+				for (size_t a = 0; a < CPUS; a++) {
 					args[a].task = a;
 					args[a].cpus = CPUS;
 					args[a].indexpos = indexpos;
@@ -733,7 +731,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					}
 				}
 
-				for (a = 0; a < CPUS; a++) {
+				for (size_t a = 0; a < CPUS; a++) {
 					void *retval;
 
 					if (pthread_join(pthreads[a], &retval) != 0) {
@@ -945,8 +943,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
-	int i;
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
 		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -1045,7 +1042,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	int initialized[CPUS];
 	unsigned initial_x[CPUS], initial_y[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
@@ -1298,7 +1295,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		if (fclose(reader[i].metafile) != 0) {
 			perror("fclose meta");
 			exit(EXIT_FAILURE);
@@ -1367,7 +1364,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	long long metapos = 0;
 	long long poolpos = 0;
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
@@ -1718,8 +1715,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	fd[0] = geomfd;
 	size[0] = geomst.st_size;
 
-	int j;
-	for (j = 1; j < TEMP_FILES; j++) {
+	for (size_t j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
 	}
@@ -1760,7 +1756,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	midlon = (maxlon + minlon) / 2;
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		if (reader[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = reader[i].file_bbox[0];
 		}

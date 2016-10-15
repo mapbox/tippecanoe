@@ -12,5 +12,5 @@ void checkdisk(struct reader *r, int nreader);
 extern int geometry_scale;
 extern int quiet;
 
-extern int CPUS;
-extern int TEMP_FILES;
+extern size_t CPUS;
+extern size_t TEMP_FILES;

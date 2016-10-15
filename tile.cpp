@@ -826,7 +826,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							for (size_t m = necessary; m < l - 1; m++) {
 								tmp.push_back(g[m]);
 							}
-							for (size_t m = k; m < necessary; m++) {
+							for (ssize_t m = k; m < necessary; m++) {
 								tmp.push_back(g[m]);
 							}
 
@@ -1667,10 +1667,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		FILE *sub[TEMP_FILES];
 		int subfd[TEMP_FILES];
-		int j;
-		for (j = 0; j < TEMP_FILES; j++) {
+		for (size_t j = 0; j < TEMP_FILES; j++) {
 			char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX" XSTRINGIFY(INT_MAX)) + 1];
-			sprintf(geomname, "%s/geom%d.XXXXXXXX", tmpdir, j);
+			sprintf(geomname, "%s/geom%zu.XXXXXXXX", tmpdir, j);
 			subfd[j] = mkstemp(geomname);
 			// printf("%s\n", geomname);
 			if (subfd[j] < 0) {
@@ -1685,17 +1684,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			unlink(geomname);
 		}
 
-		int useful_threads = 0;
+		size_t useful_threads = 0;
 		long long todo = 0;
 		long long along = 0;
-		for (j = 0; j < TEMP_FILES; j++) {
+		for (size_t j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
 			if (geom_size[j] > 0) {
 				useful_threads++;
 			}
 		}
 
-		int threads = CPUS;
+		size_t threads = CPUS;
 		if (threads > TEMP_FILES / 4) {
 			threads = TEMP_FILES / 4;
 		}
@@ -1726,7 +1725,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			struct dispatch *next;
 		} dispatches[threads];
 		struct dispatch *dispatch_head = &dispatches[0];
-		for (j = 0; j < threads; j++) {
+		for (size_t j = 0; j < threads; j++) {
 			dispatches[j].tasks = NULL;
 			dispatches[j].todo = 0;
 			if (j + 1 < threads) {
@@ -1736,7 +1735,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 		}
 
-		for (j = 0; j < TEMP_FILES; j++) {
+		for (size_t j = 0; j < TEMP_FILES; j++) {
 			if (geom_size[j] == 0) {
 				continue;
 			}
@@ -1764,8 +1763,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		write_tile_args args[threads];
 		int running = threads;
 
-		int thread;
-		for (thread = 0; thread < threads; thread++) {
+		for (size_t thread = 0; thread < threads; thread++) {
 			args[thread].metabase = metabase;
 			args[thread].stringpool = stringpool;
 			args[thread].min_detail = min_detail;
@@ -1808,7 +1806,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		int err = INT_MAX;
 
-		for (thread = 0; thread < threads; thread++) {
+		for (size_t thread = 0; thread < threads; thread++) {
 			void *retval;
 
 			if (pthread_join(pthreads[thread], &retval) != 0) {
@@ -1820,7 +1818,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 		}
 
-		for (j = 0; j < TEMP_FILES; j++) {
+		for (size_t j = 0; j < TEMP_FILES; j++) {
 			// Can be < 0 if there is only one source file, at z0
 			if (geomfd[j] >= 0) {
 				if (close(geomfd[j]) != 0) {
@@ -1848,8 +1846,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 	}
 
-	int j;
-	for (j = 0; j < TEMP_FILES; j++) {
+	for (size_t j = 0; j < TEMP_FILES; j++) {
 		// Can be < 0 if there is only one source file, at z0
 		if (geomfd[j] >= 0) {
 			if (close(geomfd[j]) != 0) {
