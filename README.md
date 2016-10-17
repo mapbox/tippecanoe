@@ -104,7 +104,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Point simplification
 
- * -r _rate_ or --drop_rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+ * -r _rate_ or --drop-rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
    If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with -rg*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
@@ -125,6 +125,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
  * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
  * -ag or --calculate-feature-density: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+ * -ab or --detect-shared-borders: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
 
 ### Doing less
 
@@ -253,12 +254,12 @@ lower resolutions before failing if it still doesn't fit.
 Development
 -----------
 
-Requires sqlite3 (should already be installed on MacOS). Rebuilding the manpage
+Requires sqlite3 and zlib (should already be installed on MacOS). Rebuilding the manpage
 uses md2man (`gem install md2man`).
 
 Linux:
 
-    sudo apt-get install libsqlite3-dev
+    sudo apt-get install libsqlite3-dev zlib1g-dev
 
 Then build:
 
@@ -285,6 +286,10 @@ Tile-join is a tool for joining new attributes from a CSV file to features that
 have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
 file, matches them against the records of the CSV, and writes out a new tileset.
 
+If you specify multiple source mbtiles files, they are all read and their combined
+contents are written to the new mbtiles output. If they define the same layers or
+the same tiles, the layers or tiles are merged.
+
 The options are:
 
  * -o *out.mbtiles*: Write the new tiles to the specified .mbtiles file
@@ -292,10 +297,12 @@ The options are:
  * -c *match.csv*: Use *match.csv* as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
  * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * -i: Only include features that matched the CSV.
+ * -pk: Don't skip tiles larger than 500K.
 
-Because tile-join just copies the geometries to the new .mbtiles without processing them,
+Because tile-join just copies the geometries to the new .mbtiles without processing them
+(except to rescale the extents if necessary),
 it doesn't have any of tippecanoe's recourses if the new tiles are bigger than the 500K tile limit.
-If a tile is too big, it is just left out of the new tileset.
+If a tile is too big and you haven't specified `-pk`, it is just left out of the new tileset.
 
 Example
 -------

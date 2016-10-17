@@ -1,3 +1,19 @@
+## 1.14.3
+
+* Add --detect-shared-borders option for better polygon simplification
+
+## 1.14.2
+
+* Enforce that string feature attributes must be encoded as UTF-8
+
+## 1.14.1
+
+* Whitespace after commas in tile-join .csv input is no longer significant
+
+## 1.14.0
+
+* Tile-join is multithreaded and can merge multiple vector mbtiles files together
+
 ## 1.13.0
 
 * Add the ability to specify layer names within the GeoJSON input
