@@ -656,7 +656,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
 
 	mapbox::geometry::geometry<long long> g = from_drawvec(VT_POLYGON, geom);
-	mapbox::geometry::wagyu::clipper<long long> wagyu;
+	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
 	printf("[");
 
@@ -729,7 +729,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 	}
 
-	std::vector<mapbox::geometry::polygon<long long>> result;
+	mapbox::geometry::multi_polygon<long long> result;
 	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
 
 	drawvec ret;
