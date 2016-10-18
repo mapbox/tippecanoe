@@ -7,7 +7,7 @@
  */
 std::string check_utf8(std::string s) {
 	for (size_t i = 0; i < s.size(); i++) {
-		int fail = 0;
+		size_t fail = 0;
 
 		if ((s[i] & 0x80) == 0x80) {
 			if ((s[i] & 0xE0) == 0xC0) {

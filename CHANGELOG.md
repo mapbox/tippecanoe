@@ -1,3 +1,7 @@
+## 1.14.4
+
+* Make -B/-r feature-dropping consistent between tiles and zoom levels
+
 ## 1.14.3
 
 * Add --detect-shared-borders option for better polygon simplification
