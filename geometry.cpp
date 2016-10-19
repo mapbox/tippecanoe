@@ -221,7 +221,10 @@ drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsi
 	while (1) {
 		draw d;
 
-		deserialize_byte_io(meta, &d.op, geompos);
+		if (!deserialize_byte_io(meta, &d.op, geompos)) {
+			fprintf(stderr, "Internal error: Unexpected end of file in geometry\n");
+			exit(EXIT_FAILURE);
+		}
 		if (d.op == VT_END) {
 			break;
 		}
@@ -1117,36 +1120,25 @@ static bool inside(draw const &d, int edge, long long minx, long long miny, long
 	exit(EXIT_FAILURE);
 }
 
-// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
-static draw get_line_intersection(draw p0, draw p1, draw p2, draw p3) {
-	double s1_x = p1.x - p0.x;
-	double s1_y = p1.y - p0.y;
-	double s2_x = p3.x - p2.x;
-	double s2_y = p3.y - p2.y;
-
-	double t;
-	// s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
-	t = (s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-	return draw(VT_LINETO, p0.x + (t * s1_x), p0.y + (t * s1_y));
-}
-
 static draw intersect(draw a, draw b, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	// The casts to double are because the product of coordinates
+	// can overflow a long long if the tile buffer is large.
+
 	switch (edge) {
 	case 0:  // top
-		return get_line_intersection(a, b, draw(VT_MOVETO, minx, miny), draw(VT_MOVETO, maxx, miny));
+		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (miny - a.y) / (b.y - a.y), miny);
 		break;
 
 	case 1:  // right
-		return get_line_intersection(a, b, draw(VT_MOVETO, maxx, miny), draw(VT_MOVETO, maxx, maxy));
+		return draw(VT_LINETO, maxx, a.y + (double) (b.y - a.y) * (maxx - a.x) / (b.x - a.x));
 		break;
 
 	case 2:  // bottom
-		return get_line_intersection(a, b, draw(VT_MOVETO, maxx, maxy), draw(VT_MOVETO, minx, maxy));
+		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (maxy - a.y) / (b.y - a.y), maxy);
 		break;
 
 	case 3:  // left
-		return get_line_intersection(a, b, draw(VT_MOVETO, minx, maxy), draw(VT_MOVETO, minx, miny));
+		return draw(VT_LINETO, minx, a.y + (double) (b.y - a.y) * (minx - a.x) / (b.x - a.x));
 		break;
 	}
 
@@ -1529,17 +1521,19 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, bool already_marked) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
-	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_MOVETO) {
-			geom[i].necessary = 1;
-		} else if (geom[i].op == VT_LINETO) {
-			geom[i].necessary = 0;
-		} else {
-			geom[i].necessary = 1;
+	if (!already_marked) {
+		for (size_t i = 0; i < geom.size(); i++) {
+			if (geom[i].op == VT_MOVETO) {
+				geom[i].necessary = 1;
+			} else if (geom[i].op == VT_LINETO) {
+				geom[i].necessary = 0;
+			} else {
+				geom[i].necessary = 1;
+			}
 		}
 	}
 
@@ -1560,7 +1554,19 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds) 
 			geom[j - 1].necessary = 1;
 
 			if (j - i > 1) {
-				douglas_peucker(geom, i, j - i, res);
+				if (already_marked && geom[j - 1] < geom[i]) {
+					drawvec dv;
+					for (size_t k = j; k > i; k--) {
+						dv.push_back(geom[k - 1]);
+					}
+					douglas_peucker(dv, 0, j - i, res * simplification);
+					size_t l = 0;
+					for (size_t k = j; k > i; k--) {
+						geom[k - 1] = dv[l++];
+					}
+				} else {
+					douglas_peucker(geom, i, j - i, res * simplification);
+				}
 			}
 			i = j - 1;
 		}

@@ -1,3 +1,69 @@
+## 1.14.4
+
+* Make -B/-r feature-dropping consistent between tiles and zoom levels
+
+## 1.14.3
+
+* Add --detect-shared-borders option for better polygon simplification
+
+## 1.14.2
+
+* Enforce that string feature attributes must be encoded as UTF-8
+
+## 1.14.1
+
+* Whitespace after commas in tile-join .csv input is no longer significant
+
+## 1.14.0
+
+* Tile-join is multithreaded and can merge multiple vector mbtiles files together
+
+## 1.13.0
+
+* Add the ability to specify layer names within the GeoJSON input
+
+## 1.12.11
+
+* Don't try to revive a placeholder for a degenerate polygon that had negative area
+
+## 1.12.10
+
+* Pass feature IDs through in tile-join
+
+## 1.12.9
+
+* Clean up parsing and serialization. Provide some context with parsing errors.
+
+## 1.12.8
+
+* Fix the spelling of the --preserve-input-order option
+
+## 1.12.7
+
+* Support the "id" field of GeoJSON objects and vector tile features
+
+## 1.12.6
+
+* Fix error reports when reading from an empty file with parallel input
+
+## 1.12.5
+
+* Add an option to vary the level of line and polygon simplification
+* Be careful not to produce an empty tile if there was a feature with
+  empty geometry.
+
+## 1.12.4
+
+* Be even more careful not to produce features with empty geometry
+
+## 1.12.3
+
+* Fix double-counted progress in the progress indicator
+
+## 1.12.2
+
+* Add ability to specify a projection to tippecanoe-decode
+
 ## 1.12.1
 
 * Fix incorrect tile layer version numbers in tile-join output

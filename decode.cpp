@@ -129,6 +129,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	if (describe) {
 		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+
+		if (projection != projections) {
+			printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
+			printq(projection->alias);
+			printf(" } }");
+		}
 	}
 
 	printf(", \"features\": [\n");
@@ -161,6 +167,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			within = 1;
 
 			printf("{ \"type\": \"Feature\"");
+
+			if (feat.has_id) {
+				printf(", \"id\": %llu", feat.id);
+			}
+
 			printf(", \"properties\": { ");
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
@@ -197,7 +208,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 					long long wy = scale * y + (scale / extent) * py;
 
 					double lat, lon;
-					tile2lonlat(wx, wy, 32, &lon, &lat);
+					projection->unproject(wx, wy, 32, &lon, &lat);
 
 					ops.emplace_back(op, lon, lat, px, py);
 				} else {
@@ -487,17 +498,24 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s file.mbtiles zoom x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t projection] file.mbtiles zoom x y\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv) {
 	extern int optind;
-	// extern char *optarg;
+	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "")) != -1) {
-		usage(argv);
+	while ((i = getopt(argc, argv, "t:")) != -1) {
+		switch (i) {
+		case 't':
+			set_projection_or_exit(optarg);
+			break;
+
+		default:
+			usage(argv);
+		}
 	}
 
 	if (argc == optind + 4) {

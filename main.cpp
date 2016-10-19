@@ -23,6 +23,8 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <map>
+#include <cmath>
 
 #ifdef __APPLE__
 #include <sys/types.h>
@@ -37,16 +39,16 @@ extern "C" {
 #include "jsonpull/jsonpull.h"
 }
 
+#include "mbtiles.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
 #include "projection.hpp"
 #include "version.hpp"
 #include "memfile.hpp"
-#include "serial.hpp"
-#include "mbtiles.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geometry.hpp"
+#include "serial.hpp"
 #include "options.hpp"
 
 static int low_detail = 12;
@@ -55,6 +57,7 @@ static int min_detail = 7;
 
 int quiet = 0;
 int geometry_scale = 0;
+double simplification = 1;
 
 int prevent[256];
 int additional[256];
@@ -64,8 +67,8 @@ struct source {
 	std::string file;
 };
 
-int CPUS;
-int TEMP_FILES;
+size_t CPUS;
+size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
 
@@ -208,29 +211,90 @@ static void insert(struct mergelist *m, struct mergelist **head, unsigned char *
 	*head = m;
 }
 
-static void merge(struct mergelist *merges, int nmerges, unsigned char *map, FILE *f, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported) {
-	int i;
+struct drop_state {
+	double gap;
+	unsigned long long previndex;
+	double interval;
+	double scale;
+	double seq;
+	long long included;
+	unsigned x;
+	unsigned y;
+};
+
+int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, int basezoom, double droprate, double gamma) {
+	int feature_minzoom = 0;
+	unsigned xx, yy;
+	decode(ix->index, &xx, &yy);
+
+	if (gamma >= 0 && (ix->t == VT_POINT ||
+			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
+			   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
+		for (ssize_t i = maxzoom; i >= 0; i--) {
+			// XXX This resets the feature counter at the start of each tile,
+			// which makes the feature count come out close to what it is if
+			// feature dropping happens during tiling. It means that the low
+			// zooms are heavier than they legitimately should be though.
+			{
+				unsigned xxx = 0, yyy = 0;
+				if (i != 0) {
+					xxx = xx >> (32 - i);
+					yyy = yy >> (32 - i);
+				}
+				if (ds[i].x != xxx || ds[i].y != yyy) {
+					ds[i].seq = 0;
+					ds[i].gap = 0;
+					ds[i].previndex = 0;
+				}
+				ds[i].x = xxx;
+				ds[i].y = yyy;
+			}
+
+			ds[i].seq++;
+		}
+		for (ssize_t i = maxzoom; i >= 0; i--) {
+			if (ds[i].seq >= 0) {
+				ds[i].seq -= ds[i].interval;
+				ds[i].included++;
+			} else {
+				feature_minzoom = i + 1;
+				break;
+			}
+		}
+
+		// XXX manage_gap
+	}
+
+	return feature_minzoom;
+}
+
+static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, int bytes, long long nrec, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
-	for (i = 0; i < nmerges; i++) {
+	for (size_t i = 0; i < nmerges; i++) {
 		if (merges[i].start < merges[i].end) {
 			insert(&(merges[i]), &head, map);
 		}
 	}
 
 	while (head != NULL) {
-		struct index *ix = (struct index *) (map + head->start);
-		fwrite_check(geom_map + ix->start, 1, ix->end - ix->start, geom_out, "merge geometry");
-		*geompos += ix->end - ix->start;
+		struct index ix = *((struct index *) (map + head->start));
+		long long pos = *geompos;
+		fwrite_check(geom_map + ix.start, 1, ix.end - ix.start, geom_out, "merge geometry");
+		*geompos += ix.end - ix.start;
+		int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
+		serialize_byte(geom_out, feature_minzoom, geompos, "merge geometry");
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
-		*progress += (ix->end - ix->start) * 3 / 4;
+		*progress += (ix.end - ix.start) * 3 / 4;
 		if (!quiet && 100 * *progress / *progress_max != *progress_reported) {
 			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
 		}
 
-		fwrite_check(map + head->start, bytes, 1, f, "merge temporary");
+		ix.start = pos;
+		ix.end = *geompos;
+		fwrite_check(&ix, bytes, 1, indexfile, "merge temporary");
 		head->start += bytes;
 
 		struct mergelist *m = head;
@@ -249,7 +313,7 @@ struct sort_arg {
 	long long indexpos;
 	struct mergelist *merges;
 	int indexfd;
-	int nmerges;
+	size_t nmerges;
 	long long unit;
 	int bytes;
 };
@@ -299,13 +363,12 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys, int maxzoom) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
 
-	int i;
-	for (i = 1; i < CPUS; i++) {
+	for (size_t i = 1; i < CPUS; i++) {
 		segs[i] = len * i / CPUS;
 
 		while (segs[i] < len && map[segs[i]] != '\n') {
@@ -314,7 +377,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	volatile long long layer_seq[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
 		layer_seq[i] = segs[i] + initial_offset;
@@ -324,11 +387,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	pthread_t pthreads[CPUS];
 	std::vector<std::set<type_and_string> > file_subkeys;
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		file_subkeys.push_back(std::set<type_and_string>());
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].reading = reading;
 		pja[i].layer_seq = &layer_seq[i];
@@ -354,8 +417,9 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].initial_x = &initial_x[i];
 		pja[i].initial_y = &initial_y[i];
 		pja[i].readers = reader;
-		pja[i].file_keys = &file_subkeys[i];
 		pja[i].maxzoom = maxzoom;
+		pja[i].layermap = &(*layermaps)[i];
+		pja[i].layername = &layername;
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -363,20 +427,14 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		}
 	}
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
-			perror("pthread_join");
+			perror("pthread_join 370");
 		}
 
-		std::set<type_and_string>::iterator j;
-		for (j = file_subkeys[i].begin(); j != file_subkeys[i].end(); ++j) {
-			file_keys->insert(*j);
-		}
-
-		free(pja[i].jp->source);
-		json_end(pja[i].jp);
+		json_end_map(pja[i].jp);
 	}
 }
 
@@ -398,57 +456,58 @@ struct read_parallel_arg {
 	int basezoom;
 	int source;
 	int nlayers;
+	std::vector<std::map<std::string, layermap_entry> > *layermaps;
 	double droprate;
 	int *initialized;
 	unsigned *initial_x;
 	unsigned *initial_y;
-	std::set<type_and_string> *file_keys;
+	std::string layername;
 };
 
 void *run_read_parallel(void *v) {
-	struct read_parallel_arg *a = (struct read_parallel_arg *) v;
+	struct read_parallel_arg *rpa = (struct read_parallel_arg *) v;
 
 	struct stat st;
-	if (fstat(a->fd, &st) != 0) {
+	if (fstat(rpa->fd, &st) != 0) {
 		perror("stat read temp");
 	}
-	if (a->len != st.st_size) {
-		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", a->len, (long long) st.st_size);
+	if (rpa->len != st.st_size) {
+		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", rpa->len, (long long) st.st_size);
 	}
-	a->len = st.st_size;
+	rpa->len = st.st_size;
 
-	char *map = (char *) mmap(NULL, a->len, PROT_READ, MAP_PRIVATE, a->fd, 0);
+	char *map = (char *) mmap(NULL, rpa->len, PROT_READ, MAP_PRIVATE, rpa->fd, 0);
 	if (map == NULL || map == MAP_FAILED) {
 		perror("map intermediate input");
 		exit(EXIT_FAILURE);
 	}
-	madvise(map, a->len, MADV_RANDOM);  // sequential, but from several pointers at once
+	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, a->len, a->offset, a->reading, a->reader, a->progress_seq, a->exclude, a->include, a->exclude_all, a->fname, a->basezoom, a->source, a->nlayers, a->droprate, a->initialized, a->initial_x, a->initial_y, a->file_keys, a->maxzoom);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername);
 
-	madvise(map, a->len, MADV_DONTNEED);
-	if (munmap(map, a->len) != 0) {
+	madvise(map, rpa->len, MADV_DONTNEED);
+	if (munmap(map, rpa->len) != 0) {
 		perror("munmap source file");
 	}
-	if (fclose(a->fp) != 0) {
+	if (fclose(rpa->fp) != 0) {
 		perror("close source file");
 		exit(EXIT_FAILURE);
 	}
 
-	*(a->is_parsing) = 0;
-	free(a);
+	*(rpa->is_parsing) = 0;
+	delete rpa;
 
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, std::set<type_and_string> *file_keys, int maxzoom) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
 
 	*is_parsing = 1;
 
-	struct read_parallel_arg *rpa = (struct read_parallel_arg *) malloc(sizeof(struct read_parallel_arg));
+	struct read_parallel_arg *rpa = new struct read_parallel_arg;
 	if (rpa == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -470,20 +529,22 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->basezoom = basezoom;
 	rpa->source = source;
 	rpa->nlayers = nlayers;
+	rpa->layermaps = &layermaps;
 	rpa->droprate = droprate;
 	rpa->initialized = initialized;
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
-	rpa->file_keys = file_keys;
 	rpa->maxzoom = maxzoom;
+	rpa->layername = layername;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
 		exit(EXIT_FAILURE);
 	}
+	parser_created = true;
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -645,18 +706,17 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 				unit = ((unit + page - 1) / page) * page;
 
-				int nmerges = (indexpos + unit - 1) / unit;
+				size_t nmerges = (indexpos + unit - 1) / unit;
 				struct mergelist merges[nmerges];
 
-				int a;
-				for (a = 0; a < nmerges; a++) {
+				for (size_t a = 0; a < nmerges; a++) {
 					merges[a].start = merges[a].end = 0;
 				}
 
 				pthread_t pthreads[CPUS];
 				struct sort_arg args[CPUS];
 
-				for (a = 0; a < CPUS; a++) {
+				for (size_t a = 0; a < CPUS; a++) {
 					args[a].task = a;
 					args[a].cpus = CPUS;
 					args[a].indexpos = indexpos;
@@ -672,11 +732,11 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					}
 				}
 
-				for (a = 0; a < CPUS; a++) {
+				for (size_t a = 0; a < CPUS; a++) {
 					void *retval;
 
 					if (pthread_join(pthreads[a], &retval) != 0) {
-						perror("pthread_join");
+						perror("pthread_join 679");
 					}
 				}
 
@@ -696,7 +756,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				madvise(geommap, geomst.st_size, MADV_RANDOM);
 				madvise(geommap, geomst.st_size, MADV_WILLNEED);
 
-				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported);
+				merge(merges, nmerges, (unsigned char *) indexmap, indexfile, bytes, indexpos / bytes, geommap, geomfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 
 				madvise(indexmap, indexst.st_size, MADV_DONTNEED);
 				if (munmap(indexmap, indexst.st_size) < 0) {
@@ -731,6 +791,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
+					int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, basezoom, droprate, gamma);
+					serialize_byte(geomfile, feature_minzoom, geompos_out, "merge geometry");
 
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
 					*progress += (ix.end - ix.start) * 3 / 4;
@@ -762,7 +824,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// counter backward but will be an honest estimate of the work remaining.
 				*progress_max += geomst.st_size / 4;
 
-				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported);
+				radix1(&geomfds[i], &indexfds[i], 1, prefix + splitbits, *availfiles / 4, mem, tmpdir, availfiles, geomfile, indexfile, geompos_out, progress, progress_max, progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 				already_closed = 1;
 			}
 		}
@@ -782,7 +844,26 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	}
 }
 
-void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE *indexfile, int indexfd, const char *tmpdir, long long *geompos) {
+void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double droprate) {
+	// Needs to be signed for interval calculation
+	for (ssize_t i = 0; i <= maxzoom; i++) {
+		ds[i].gap = 0;
+		ds[i].previndex = 0;
+		ds[i].interval = 0;
+
+		if (i < basezoom) {
+			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
+		}
+
+		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
+		ds[i].seq = 0;
+		ds[i].included = 0;
+		ds[i].x = 0;
+		ds[i].y = 0;
+	}
+}
+
+void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE *indexfile, int indexfd, const char *tmpdir, long long *geompos, int maxzoom, int basezoom, double droprate, double gamma) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -834,8 +915,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	long long geom_total = 0;
 	int geomfds[nreaders];
 	int indexfds[nreaders];
-	int i;
-	for (i = 0; i < nreaders; i++) {
+	for (int i = 0; i < nreaders; i++) {
 		geomfds[i] = reader[i].geomfd;
 		indexfds[i] = reader[i].indexfd;
 
@@ -847,9 +927,12 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 		geom_total += geomst.st_size;
 	}
 
+	struct drop_state ds[maxzoom + 1];
+	prep_drop_states(ds, maxzoom, basezoom, droprate);
+
 	long long progress = 0, progress_max = geom_total, progress_reported = -1;
 	long long availfiles_before = availfiles;
-	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported);
+	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 
 	if (availfiles - 2 * nreaders != availfiles_before) {
 		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
@@ -861,8 +944,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
-	int i;
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		struct reader *r = reader + i;
 
 		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -961,7 +1043,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	int initialized[CPUS];
 	unsigned initial_x[CPUS], initial_y[CPUS];
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
@@ -972,215 +1054,6 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		nlayers = sources.size();
 		if (nlayers == 0) {
 			nlayers = 1;
-		}
-	}
-
-	size_t nsources = sources.size();
-	if (nsources == 0) {
-		nsources = 1;
-	}
-
-	std::vector<std::set<type_and_string> > file_keys;
-	long overall_offset = 0;
-
-	for (size_t source = 0; source < nsources; source++) {
-		file_keys.push_back(std::set<type_and_string>());
-		std::string reading;
-		int fd;
-
-		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-			type_and_string tas;
-			tas.type = VT_NUMBER;
-			tas.string = "tippecanoe_feature_density";
-			file_keys[source].insert(tas);
-		}
-
-		if (source >= sources.size()) {
-			reading = "standard input";
-			fd = 0;
-		} else {
-			reading = sources[source].file;
-			fd = open(sources[source].file.c_str(), O_RDONLY);
-			if (fd < 0) {
-				perror(sources[source].file.c_str());
-				continue;
-			}
-		}
-
-		struct stat st;
-		char *map = NULL;
-		off_t off = 0;
-
-		if (read_parallel) {
-			if (fstat(fd, &st) == 0) {
-				off = lseek(fd, 0, SEEK_CUR);
-				if (off >= 0) {
-					map = (char *) mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
-					// No error if MAP_FAILED because check is below
-					if (map != MAP_FAILED) {
-						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
-					}
-				}
-			}
-		}
-
-		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
-			overall_offset += st.st_size - off;
-			checkdisk(reader, CPUS);
-
-			if (munmap(map, st.st_size - off) != 0) {
-				madvise(map, st.st_size, MADV_DONTNEED);
-				perror("munmap source file");
-			}
-		} else {
-			FILE *fp = fdopen(fd, "r");
-			if (fp == NULL) {
-				perror(sources[source].file.c_str());
-				if (close(fd) != 0) {
-					perror("close source file");
-					exit(EXIT_FAILURE);
-				}
-				continue;
-			}
-
-			if (read_parallel) {
-				// Serial reading of chunks that are then parsed in parallel
-
-				char readname[strlen(tmpdir) + strlen("/read.XXXXXXXX") + 1];
-				sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-				int readfd = mkstemp(readname);
-				if (readfd < 0) {
-					perror(readname);
-					exit(EXIT_FAILURE);
-				}
-				FILE *readfp = fdopen(readfd, "w");
-				if (readfp == NULL) {
-					perror(readname);
-					exit(EXIT_FAILURE);
-				}
-				unlink(readname);
-
-				volatile int is_parsing = 0;
-				long long ahead = 0;
-				long long initial_offset = overall_offset;
-				pthread_t parallel_parser;
-
-#define READ_BUF 2000
-#define PARSE_MIN 10000000
-#define PARSE_MAX (1LL * 1024 * 1024 * 1024)
-
-				char buf[READ_BUF];
-				int n;
-
-				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
-					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
-					ahead += n;
-
-					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
-						// Don't let the streaming reader get too far ahead of the parsers.
-						// If the buffered input gets huge, even if the parsers are still running,
-						// wait for the parser thread instead of continuing to stream input.
-
-						if (is_parsing == 0 || ahead >= PARSE_MAX) {
-							if (initial_offset != 0) {
-								if (pthread_join(parallel_parser, NULL) != 0) {
-									perror("pthread_join");
-									exit(EXIT_FAILURE);
-								}
-							}
-
-							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
-
-							initial_offset += ahead;
-							overall_offset += ahead;
-							checkdisk(reader, CPUS);
-							ahead = 0;
-
-							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-							readfd = mkstemp(readname);
-							if (readfd < 0) {
-								perror(readname);
-								exit(EXIT_FAILURE);
-							}
-							readfp = fdopen(readfd, "w");
-							if (readfp == NULL) {
-								perror(readname);
-								exit(EXIT_FAILURE);
-							}
-							unlink(readname);
-						}
-					}
-				}
-				if (n < 0) {
-					perror(reading.c_str());
-				}
-
-				if (initial_offset != 0) {
-					if (pthread_join(parallel_parser, NULL) != 0) {
-						perror("pthread_join");
-						exit(EXIT_FAILURE);
-					}
-				}
-
-				fflush(readfp);
-
-				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, droprate, initialized, initial_x, initial_y, &file_keys[source < nlayers ? source : 0], maxzoom);
-
-					if (pthread_join(parallel_parser, NULL) != 0) {
-						perror("pthread_join");
-					}
-
-					overall_offset += ahead;
-					checkdisk(reader, CPUS);
-				}
-			} else {
-				// Plain serial reading
-
-				long long layer_seq = overall_offset;
-				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, &file_keys[source < nlayers ? source : 0], maxzoom);
-				json_end(jp);
-				overall_offset = layer_seq;
-				checkdisk(reader, CPUS);
-			}
-
-			if (fclose(fp) != 0) {
-				perror("fclose input");
-				exit(EXIT_FAILURE);
-			}
-		}
-	}
-
-	if (!quiet) {
-		fprintf(stderr, "                              \r");
-		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
-	}
-
-	for (i = 0; i < CPUS; i++) {
-		if (fclose(reader[i].metafile) != 0) {
-			perror("fclose meta");
-			exit(EXIT_FAILURE);
-		}
-		if (fclose(reader[i].geomfile) != 0) {
-			perror("fclose geom");
-			exit(EXIT_FAILURE);
-		}
-		if (fclose(reader[i].indexfile) != 0) {
-			perror("fclose index");
-			exit(EXIT_FAILURE);
-		}
-		memfile_close(reader[i].treefile);
-
-		if (fstat(reader[i].geomfd, &reader[i].geomst) != 0) {
-			perror("stat geom\n");
-			exit(EXIT_FAILURE);
-		}
-		if (fstat(reader[i].metafd, &reader[i].metast) != 0) {
-			perror("stat meta\n");
-			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -1233,6 +1106,221 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 	}
 
+	std::map<std::string, layermap_entry> layermap;
+	for (size_t l = 0; l < nlayers; l++) {
+		layermap.insert(std::pair<std::string, layermap_entry>(layernames[l], layermap_entry(l)));
+	}
+	std::vector<std::map<std::string, layermap_entry> > layermaps;
+	for (size_t l = 0; l < CPUS; l++) {
+		layermaps.push_back(layermap);
+	}
+
+	size_t nsources = sources.size();
+	if (nsources == 0) {
+		nsources = 1;
+	}
+
+	long overall_offset = 0;
+
+	for (size_t source = 0; source < nsources; source++) {
+		std::string reading;
+		int fd;
+
+		if (source >= sources.size()) {
+			reading = "standard input";
+			fd = 0;
+		} else {
+			reading = sources[source].file;
+			fd = open(sources[source].file.c_str(), O_RDONLY);
+			if (fd < 0) {
+				perror(sources[source].file.c_str());
+				continue;
+			}
+		}
+
+		struct stat st;
+		char *map = NULL;
+		off_t off = 0;
+
+		if (read_parallel) {
+			if (fstat(fd, &st) == 0) {
+				off = lseek(fd, 0, SEEK_CUR);
+				if (off >= 0) {
+					map = (char *) mmap(NULL, st.st_size - off, PROT_READ, MAP_PRIVATE, fd, off);
+					// No error if MAP_FAILED because check is below
+					if (map != MAP_FAILED) {
+						madvise(map, st.st_size - off, MADV_RANDOM);  // sequential, but from several pointers at once
+					}
+				}
+			}
+		}
+
+		if (map != NULL && map != MAP_FAILED) {
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0]);
+			overall_offset += st.st_size - off;
+			checkdisk(reader, CPUS);
+
+			if (munmap(map, st.st_size - off) != 0) {
+				madvise(map, st.st_size, MADV_DONTNEED);
+				perror("munmap source file");
+			}
+		} else {
+			FILE *fp = fdopen(fd, "r");
+			if (fp == NULL) {
+				perror(sources[source].file.c_str());
+				if (close(fd) != 0) {
+					perror("close source file");
+					exit(EXIT_FAILURE);
+				}
+				continue;
+			}
+
+			if (read_parallel) {
+				// Serial reading of chunks that are then parsed in parallel
+
+				char readname[strlen(tmpdir) + strlen("/read.XXXXXXXX") + 1];
+				sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
+				int readfd = mkstemp(readname);
+				if (readfd < 0) {
+					perror(readname);
+					exit(EXIT_FAILURE);
+				}
+				FILE *readfp = fdopen(readfd, "w");
+				if (readfp == NULL) {
+					perror(readname);
+					exit(EXIT_FAILURE);
+				}
+				unlink(readname);
+
+				volatile int is_parsing = 0;
+				long long ahead = 0;
+				long long initial_offset = overall_offset;
+				pthread_t parallel_parser;
+				bool parser_created = false;
+
+#define READ_BUF 2000
+#define PARSE_MIN 10000000
+#define PARSE_MAX (1LL * 1024 * 1024 * 1024)
+
+				char buf[READ_BUF];
+				int n;
+
+				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
+					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
+					ahead += n;
+
+					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
+						// Don't let the streaming reader get too far ahead of the parsers.
+						// If the buffered input gets huge, even if the parsers are still running,
+						// wait for the parser thread instead of continuing to stream input.
+
+						if (is_parsing == 0 || ahead >= PARSE_MAX) {
+							if (parser_created) {
+								if (pthread_join(parallel_parser, NULL) != 0) {
+									perror("pthread_join 1088");
+									exit(EXIT_FAILURE);
+								}
+								parser_created = false;
+							}
+
+							fflush(readfp);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0]);
+
+							initial_offset += ahead;
+							overall_offset += ahead;
+							checkdisk(reader, CPUS);
+							ahead = 0;
+
+							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
+							readfd = mkstemp(readname);
+							if (readfd < 0) {
+								perror(readname);
+								exit(EXIT_FAILURE);
+							}
+							readfp = fdopen(readfd, "w");
+							if (readfp == NULL) {
+								perror(readname);
+								exit(EXIT_FAILURE);
+							}
+							unlink(readname);
+						}
+					}
+				}
+				if (n < 0) {
+					perror(reading.c_str());
+				}
+
+				if (parser_created) {
+					if (pthread_join(parallel_parser, NULL) != 0) {
+						perror("pthread_join 1122");
+						exit(EXIT_FAILURE);
+					}
+					parser_created = false;
+				}
+
+				fflush(readfp);
+
+				if (ahead > 0) {
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0]);
+
+					if (parser_created) {
+						if (pthread_join(parallel_parser, NULL) != 0) {
+							perror("pthread_join 1133");
+						}
+						parser_created = false;
+					}
+
+					overall_offset += ahead;
+					checkdisk(reader, CPUS);
+				}
+			} else {
+				// Plain serial reading
+
+				long long layer_seq = overall_offset;
+				json_pull *jp = json_begin_file(fp);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], layernames[source < nlayers ? source : 0]);
+				json_end(jp);
+				overall_offset = layer_seq;
+				checkdisk(reader, CPUS);
+			}
+
+			if (fclose(fp) != 0) {
+				perror("fclose input");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+
+	if (!quiet) {
+		fprintf(stderr, "                              \r");
+		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
+	}
+
+	for (size_t i = 0; i < CPUS; i++) {
+		if (fclose(reader[i].metafile) != 0) {
+			perror("fclose meta");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].geomfile) != 0) {
+			perror("fclose geom");
+			exit(EXIT_FAILURE);
+		}
+		if (fclose(reader[i].indexfile) != 0) {
+			perror("fclose index");
+			exit(EXIT_FAILURE);
+		}
+		memfile_close(reader[i].treefile);
+
+		if (fstat(reader[i].geomfd, &reader[i].geomst) != 0) {
+			perror("stat geom\n");
+			exit(EXIT_FAILURE);
+		}
+		if (fstat(reader[i].metafd, &reader[i].metast) != 0) {
+			perror("stat meta\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	// Create a combined string pool and a combined metadata file
 	// but keep track of the offsets into it since we still need
 	// segment+offset to find the data.
@@ -1277,7 +1365,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	long long metapos = 0;
 	long long poolpos = 0;
 
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
@@ -1378,7 +1466,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	serialize_uint(geomfile, 0, &geompos, fname);
 	serialize_uint(geomfile, 0, &geompos, fname);
 
-	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos);
+	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos, maxzoom, basezoom, droprate, gamma);
 
 	/* end of tile */
 	serialize_byte(geomfile, -2, &geompos, fname);
@@ -1578,6 +1666,34 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 			}
 		}
 
+		// Fix up the minzooms for features, now that we really know the base zoom
+		// and drop rate.
+
+		struct stat geomst;
+		if (fstat(geomfd, &geomst) != 0) {
+			perror("stat sorted geom\n");
+			exit(EXIT_FAILURE);
+		}
+		char *geom = (char *) mmap(NULL, geomst.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, geomfd, 0);
+		if (geom == MAP_FAILED) {
+			perror("mmap geom for fixup");
+			exit(EXIT_FAILURE);
+		}
+		madvise(geom, indexpos, MADV_SEQUENTIAL);
+		madvise(geom, indexpos, MADV_WILLNEED);
+
+		struct drop_state ds[maxzoom + 1];
+		prep_drop_states(ds, maxzoom, basezoom, droprate);
+
+		for (ip = 0; ip < indices; ip++) {
+			if (ip > 0 && map[ip].start != map[ip - 1].end) {
+				fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+			}
+			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, basezoom, droprate, gamma);
+			geom[map[ip].end - 1] = feature_minzoom;
+		}
+
+		munmap(geom, geomst.st_size);
 		madvise(map, indexpos, MADV_DONTNEED);
 		munmap(map, indexpos);
 	}
@@ -1600,14 +1716,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	fd[0] = geomfd;
 	size[0] = geomst.st_size;
 
-	int j;
-	for (j = 1; j < TEMP_FILES; j++) {
+	for (size_t j = 1; j < TEMP_FILES; j++) {
 		fd[j] = -1;
 		size[j] = 0;
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, layernames, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, nlayers, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1642,7 +1757,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	midlon = (maxlon + minlon) / 2;
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
-	for (i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < CPUS; i++) {
 		if (reader[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = reader[i].file_bbox[0];
 		}
@@ -1691,7 +1806,21 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		midlon = maxlon;
 	}
 
-	mbtiles_write_metadata(outdb, fname, layernames, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, file_keys, nlayers, forcetable, attribution);
+	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
+	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
+			type_and_string tas;
+			tas.type = VT_NUMBER;
+			tas.string = "tippecanoe_feature_density";
+			ai->second.file_keys.insert(tas);
+		}
+	}
+
+	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
+		ai->second.minzoom = minzoom;
+		ai->second.maxzoom = maxzoom;
+	}
+	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm);
 
 	return ret;
 }
@@ -1705,14 +1834,6 @@ static bool has_name(struct option *long_options, int *pl) {
 
 	return false;
 }
-
-struct projection projections[] = {
-	{"EPSG:4326", lonlat2tile, "urn:ogc:def:crs:OGC:1.3:CRS84"},
-	{"EPSG:3857", epsg3857totile, "urn:ogc:def:crs:EPSG::3857"},
-	{NULL, NULL},
-};
-
-struct projection *projection = &projections[0];
 
 int main(int argc, char **argv) {
 #ifdef MTRACE
@@ -1773,6 +1894,7 @@ int main(int argc, char **argv) {
 		{"prevent", required_argument, 0, 'p'},
 		{"additional", required_argument, 0, 'a'},
 		{"projection", required_argument, 0, 's'},
+		{"simplification", required_argument, 0, 'S'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1789,13 +1911,14 @@ int main(int argc, char **argv) {
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
+		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
-		{"preseve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
+		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
@@ -1821,7 +1944,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -1988,23 +2111,17 @@ int main(int argc, char **argv) {
 			read_parallel = 1;
 			break;
 
-		case 's': {
-			struct projection *p;
-			for (p = projections; p->name != NULL; p++) {
-				if (strcmp(p->name, optarg) == 0) {
-					projection = p;
-					break;
-				}
-				if (strcmp(p->alias, optarg) == 0) {
-					projection = p;
-					break;
-				}
-			}
-			if (p->name == NULL) {
-				fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
+		case 's':
+			set_projection_or_exit(optarg);
+			break;
+
+		case 'S':
+			simplification = atof(optarg);
+			if (simplification <= 0) {
+				fprintf(stderr, "%s: --simplification must be > 0\n", argv[0]);
 				exit(EXIT_FAILURE);
 			}
-		} break;
+			break;
 
 		default: {
 			int width = 7 + strlen(argv[0]);
