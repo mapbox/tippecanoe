@@ -9,6 +9,8 @@
 #include <cmath>
 #include <limits.h>
 #include <sqlite3.h>
+#include <mapbox/geometry.hpp>
+#include <mapbox/geometry/wagyu/wagyu.hpp>
 #include "geometry.hpp"
 #include "clipper/clipper.hpp"
 #include "projection.hpp"
@@ -217,159 +219,35 @@ double get_area(drawvec &geom, size_t i, size_t j) {
 	return area;
 }
 
-void reverse_ring(drawvec &geom, size_t start, size_t end) {
-	drawvec tmp;
+static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawvec &out) {
+	out.clear();
 
-	for (size_t i = start; i < end; i++) {
-		tmp.push_back(geom[i]);
-	}
+	for (size_t i = 0; i < t.size(); i++) {
+		for (size_t j = 0; j < t[i].size(); j++) {
+			drawvec ring;
 
-	for (unsigned i = start; i < end; i++) {
-		geom[i] = tmp[end - 1 - i];
-		if (i == start) {
-			geom[i].op = VT_MOVETO;
-		} else if (i == end - 1) {
-			geom[i].op = VT_LINETO;
-		}
-	}
-}
-
-struct ring {
-	drawvec data;
-	long double area;
-	long long parent;
-	std::vector<size_t> children;
-
-	ring(drawvec &_data) {
-		data = _data;
-		area = get_area(_data, 0, _data.size());
-		parent = -1;
-	}
-
-	bool operator<(const ring &o) const {
-		if (std::fabs(this->area) < std::fabs(o.area)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-};
-
-static void decode_rings(ClipperLib::PolyNode *t, std::vector<ring> &out) {
-	// Supposedly outer ring
-
-	ClipperLib::Path p = t->Contour;
-	drawvec dv;
-	for (size_t i = 0; i < p.size(); i++) {
-		dv.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, p[i].X, p[i].Y));
-	}
-	if (p.size() > 0) {
-		dv.push_back(draw(VT_LINETO, p[0].X, p[0].Y));
-	}
-	out.push_back(dv);
-
-	// Supposedly inner rings
-
-	for (int n = 0; n < t->ChildCount(); n++) {
-		ClipperLib::Path cp = t->Childs[n]->Contour;
-		drawvec ring;
-		for (size_t i = 0; i < cp.size(); i++) {
-			ring.push_back(draw((i == 0) ? VT_MOVETO : VT_LINETO, cp[i].X, cp[i].Y));
-		}
-		if (cp.size() > 0) {
-			ring.push_back(draw(VT_LINETO, cp[0].X, cp[0].Y));
-		}
-		out.push_back(ring);
-	}
-
-	// Recurse to supposedly outer rings (children of the children)
-
-	for (int n = 0; n < t->ChildCount(); n++) {
-		for (int m = 0; m < t->Childs[n]->ChildCount(); m++) {
-			decode_rings(t->Childs[n]->Childs[m], out);
-		}
-	}
-}
-
-static void decode_clipped(ClipperLib::PolyNode *t, drawvec &out) {
-	// The output of Clipper supposedly produces the outer rings
-	// as top level objects, with links to any inner-ring children
-	// they may have, each of which then has links to any outer rings
-	// that it has, and so on. This doesn't actually work.
-
-	// So instead, we pull out all the rings, sort them by absolute area,
-	// and go through them, looking for the
-	// smallest parent that contains a point from it, since we are
-	// guaranteed that at least one point in the polygon is strictly
-	// inside its parent (not on one of its boundary lines).
-
-	std::vector<ring> rings;
-	decode_rings(t, rings);
-	std::sort(rings.begin(), rings.end());
-
-	for (size_t i = 0; i < rings.size(); i++) {
-		for (size_t j = i + 1; j < rings.size(); j++) {
-			for (size_t k = 0; k < rings[i].data.size(); k++) {
-				if (pnpoly(rings[j].data, 0, rings[j].data.size(), rings[i].data[k].x, rings[i].data[k].y)) {
-					rings[i].parent = j;
-					rings[j].children.push_back(i);
-					goto nextring;
-				}
-			}
-		}
-	nextring:;
-	}
-
-	// Then reverse the winding order of any rings that turned out
-	// to actually be inner when they are outer, or vice versa.
-	// (A ring is outer if it has no parent or if its parent is
-	// an inner ring.)
-
-	for (size_t ii = rings.size(); ii > 0; ii--) {
-		size_t i = ii - 1;
-
-		if (rings[i].parent < 0) {
-			if (rings[i].area < 0) {
-				rings[i].area = -rings[i].area;
-				reverse_ring(rings[i].data, 0, rings[i].data.size());
-			}
-		} else {
-			if ((rings[i].area > 0) == (rings[rings[i].parent].area > 0)) {
-				rings[i].area = -rings[i].area;
-				reverse_ring(rings[i].data, 0, rings[i].data.size());
-			}
-		}
-	}
-
-	// Then run through the rings again, outputting each outer ring
-	// followed by its direct children, and checking to make sure
-	// there are no child rings whose parents weren't identified.
-
-	for (size_t ii = rings.size(); ii > 0; ii--) {
-		size_t i = ii - 1;
-
-		if (rings[i].area > 0) {
-#if 0
-			fprintf(stderr, "ring area %Lf at %lld\n", rings[i].area, (long long) out.size());
-#endif
-
-			for (size_t j = 0; j < rings[i].data.size(); j++) {
-				out.push_back(rings[i].data[j]);
+			// The coordinate system is swapped, so wagyu ring winding is
+			// backwards from internal ring winding.
+			ssize_t start = t[i][j].size() - 1;
+			for (ssize_t k = start; k >= 0; --k) {
+				ring.push_back(draw((k == start) ? VT_MOVETO : VT_LINETO, t[i][j][k].x, t[i][j][k].y));
 			}
 
-			for (size_t j = 0; j < rings[i].children.size(); j++) {
-#if 0
-				fprintf(stderr, "ring area %Lf at %lld\n", rings[rings[i].children[j]].area, (long long) out.size());
-#endif
-
-				for (size_t k = 0; k < rings[rings[i].children[j]].data.size(); k++) {
-					out.push_back(rings[rings[i].children[j]].data[k]);
-				}
-
-				rings[rings[i].children[j]].parent = -2;
+			if (ring.size() > 0 && ring[ring.size() - 1] != ring[0]) {
+				fprintf(stderr, "Had to close ring\n");
+				ring.push_back(draw(VT_LINETO, ring[0].x, ring[0].y));
 			}
-		} else if (rings[i].parent != -2) {
-			fprintf(stderr, "Found ring with child area but no parent %lld\n", (long long) i);
+
+			double area = get_area(ring, 0, ring.size());
+
+			if ((j == 0 && area < 0) || (j != 0 && area > 0)) {
+				fprintf(stderr, "Ring area has wrong sign: %f for %zu\n", area, j);
+				exit(EXIT_FAILURE);
+			}
+
+			for (size_t k = 0; k < ring.size(); k++) {
+				out.push_back(ring[k]);
+			}
 		}
 	}
 }
@@ -409,9 +287,10 @@ static void dump(drawvec &geom) {
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
-	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
+	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
-	bool has_area = false;
+#if 0
+	printf("[");
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -422,77 +301,69 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				}
 			}
 
-			double area = get_area(geom, i, j);
-			if (area != 0) {
-				has_area = true;
-			}
+			if (j >= i + 4) {
+				mapbox::geometry::linear_ring<long long> lr;
 
-			ClipperLib::Path path;
-
-			drawvec tmp;
-			for (size_t k = i; k < j; k++) {
-				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
-			}
-
-			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
-#if 0
-				fprintf(stderr, "Couldn't add polygon for clipping:");
-				for (size_t k = i; k < j; k++) {
-					fprintf(stderr, " %lld,%lld", geom[k].x, geom[k].y);
+				if (i != 0) {
+					printf(",");
 				}
-				fprintf(stderr, "\n");
-#endif
+				printf("[");
+
+				for (size_t k = i; k < j; k++) {
+					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+					if (k != i) {
+						printf(",");
+					}
+					printf("[%lld,%lld]", geom[k].x, geom[k].y);
+				}
+
+				printf("]");
+
+				if (lr.size() >= 3) {
+				}
 			}
 
 			i = j - 1;
-		} else {
-			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
-			exit(EXIT_FAILURE);
 		}
 	}
 
-	if (clip) {
-		long long area = 1LL << (32 - z);
-		long long clip_buffer = buffer * area / 256;
+	printf("]");
+	printf("\n\n\n\n\n");
 
-		ClipperLib::Path edge;
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, -clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(area + clip_buffer, area + clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, area + clip_buffer));
-		edge.push_back(ClipperLib::IntPoint(-clip_buffer, -clip_buffer));
+	fflush(stdout);
+#endif
 
-		clipper.AddPath(edge, ClipperLib::ptClip, true);
-	}
-
-	ClipperLib::PolyTree clipped;
-	if (clip) {
-		if (!clipper.Execute(ClipperLib::ctIntersection, clipped)) {
-			fprintf(stderr, "Polygon clip failed\n");
-		}
-	} else {
-		if (!has_area) {
-			drawvec out;
-			return out;
-		}
-
-		if (!clipper.Execute(ClipperLib::ctUnion, clipped)) {
-			static bool complained = false;
-
-			if (!complained) {
-				fprintf(stderr, "Polygon clean failed\n");
-				complained = true;
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
 			}
+
+			if (j >= i + 4) {
+				mapbox::geometry::linear_ring<long long> lr;
+
+				for (size_t k = i; k < j; k++) {
+					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+				}
+
+				if (lr.size() >= 3) {
+					wagyu.add_ring(lr);
+				}
+			}
+
+			i = j - 1;
 		}
 	}
 
-	drawvec out;
+	mapbox::geometry::multi_polygon<long long> result;
+	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
 
-	for (int i = 0; i < clipped.ChildCount(); i++) {
-		decode_clipped(clipped.Childs[i], out);
-	}
-
-	return out;
+	drawvec ret;
+	decode_clipped(result, ret);
+	return ret;
 }
 
 /* pnpoly:

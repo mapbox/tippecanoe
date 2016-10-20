@@ -7,7 +7,7 @@ SHELL = /bin/bash
 CC := $(CC)
 CXX := $(CXX)
 CFLAGS := $(CFLAGS)
-CXXFLAGS := $(CXXFLAGS) -std=c++11
+CXXFLAGS := $(CXXFLAGS) -std=c++14
 LDFLAGS := $(LDFLAGS)
 WARNING_FLAGS := -Wall -Wshadow -Wsign-compare
 RELEASE_FLAGS := -O3 -DNDEBUG
@@ -40,7 +40,7 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
+INCLUDES = -I/usr/local/include -I. -I../geometry.hpp/include -I../variant/include -I../wagyu/include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o clipper/clipper.o mvt.o serial.o main.o text.o
