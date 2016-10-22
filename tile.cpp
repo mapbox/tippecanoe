@@ -780,6 +780,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 	edges.clear();
 	std::map<drawvec, size_t> arcs;
+	std::multimap<ssize_t, size_t> merge_candidates;  // from arc to partial
 
 	// Roll rings that include a necessary point around so they start at one
 
@@ -877,11 +878,14 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									size_t added = arcs.size() + 1;
 									arcs.insert(std::pair<drawvec, size_t>(arc, added));
 									partials[i].arc_polygon.push_back(added);
+									merge_candidates.insert(std::pair<ssize_t, size_t>(added, i));
 								} else {
 									partials[i].arc_polygon.push_back(-f2->second);
+									merge_candidates.insert(std::pair<ssize_t, size_t>(-f2->second, i));
 								}
 							} else {
 								partials[i].arc_polygon.push_back(f->second);
+								merge_candidates.insert(std::pair<ssize_t, size_t>(f->second, i));
 							}
 
 							m = n - 1;
@@ -890,6 +894,70 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 						partials[i].arc_polygon.push_back(0);
 
 						k = l - 1;
+					}
+				}
+			}
+		}
+	}
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
+			if (merge_candidates.count(-partials[i].arc_polygon[j]) > 0) {
+				auto r = merge_candidates.equal_range(-partials[i].arc_polygon[j]);
+				for (auto a = r.first; a != r.second; ++a) {
+					if (a->second != i && partials[a->second].arc_polygon.size() > 0) {
+						// This has to merge the ring that contains the anti-arc to this arc
+						// into the current ring, and then add whatever other rings were in
+						// that feature on to the end.
+						//
+						// This can't be good for keeping parent-child relationships among
+						// the rings in order, but Wagyu should sort that out later
+
+						std::vector<ssize_t> additions;
+						std::vector<ssize_t> &here = partials[i].arc_polygon;
+						std::vector<ssize_t> &other = partials[a->second].arc_polygon;
+						for (size_t k = 0; k < other.size(); k++) {
+							size_t l;
+							for (l = k; l < other.size(); l++) {
+								if (other[l] == 0) {
+									break;
+								}
+							}
+
+							size_t m;
+							for (m = k; m <= l; m++) {
+								if (other[m] == -partials[i].arc_polygon[j]) {
+									break;
+								}
+							}
+
+							if (m <= k) {
+								// Found the shared arc
+
+								here.erase(here.begin() + j);
+
+								for (size_t n = m + 1; n < l; n++) {
+									here.insert(here.begin() + j, other[n]);
+								}
+								for (size_t n = k; n < m; n++) {
+									here.insert(here.begin() + j, other[n]);
+								}
+							} else {
+								// Looking at some other ring
+
+								for (size_t n = k; n <= l; n++) {
+									additions.push_back(other[n]);
+								}
+							}
+
+							k = l;
+						}
+
+						partials[a->second].arc_polygon.clear();
+
+						for (size_t k = 0; k < additions.size(); k++) {
+							partials[i].arc_polygon.push_back(additions[k]);
+						}
 					}
 				}
 			}
