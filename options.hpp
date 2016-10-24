@@ -7,6 +7,7 @@
 #define A_DETECT_SHARED_BORDERS ((int) 'b')
 #define A_PREFER_RADIX_SORT ((int) 'R')
 #define A_CALCULATE_FEATURE_DENSITY ((int) 'g')
+#define A_INCREASE_GAMMA_AS_NEEDED ((int) 'G')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')

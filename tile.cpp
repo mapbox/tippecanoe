@@ -990,6 +990,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 	static volatile double oprogress = 0;
 
+	bool first_time = true;
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
@@ -1177,7 +1178,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				unclipped_features++;
 			}
 
-			if (line_detail == detail && fraction == 1) { /* only write out the next zoom once, even if we retry */
+			if (first_time) { /* only write out the next zoom once, even if we retry */
 				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id);
 			}
 
@@ -1252,6 +1253,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				partials.push_back(p);
 			}
 		}
+
+		first_time = false;
 
 		if (additional[A_DETECT_SHARED_BORDERS]) {
 			find_common_edges(partials, z, line_detail, simplification, maxzoom);
@@ -1473,8 +1476,30 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		if (totalsize > 0 && tile.layers.size() > 0) {
 			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
-				fprintf(stderr, "Try using -B to set a higher base zoom level.\n");
-				return -1;
+
+				if (prevent[P_DYNAMIC_DROP]) {
+					fraction = fraction * 200000 / totalsize * 0.95;
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					}
+					line_detail++;  // to keep it the same when the loop decrements it
+					continue;
+				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+					if (gamma < 1) {
+						gamma = 1;
+					} else {
+						gamma = gamma * 1.25;
+					}
+
+					if (!quiet) {
+						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
+					}
+					line_detail++;  // to keep it the same when the loop decrements it
+					continue;
+				} else {
+					fprintf(stderr, "Try using -B (and --drop-lines or --drop-polygons if needed) to set a higher base zoom level.\n");
+					return -1;
+				}
 			}
 
 			std::string compressed = tile.encode();
@@ -1491,6 +1516,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					fraction = fraction * 500000 / compressed.size() * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					}
+					line_detail++;  // to keep it the same when the loop decrements it
+				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+					if (gamma < 1) {
+						gamma = 1;
+					} else {
+						gamma = gamma * 1.25;
+					}
+
+					if (!quiet) {
+						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
