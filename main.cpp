@@ -58,6 +58,7 @@ static int min_detail = 7;
 int quiet = 0;
 int geometry_scale = 0;
 double simplification = 1;
+size_t max_tile_size = 500000;
 
 int prevent[256];
 int additional[256];
@@ -1894,6 +1895,7 @@ int main(int argc, char **argv) {
 		{"additional", required_argument, 0, 'a'},
 		{"projection", required_argument, 0, 's'},
 		{"simplification", required_argument, 0, 'S'},
+		{"maximum-tile-bytes", required_argument, 0, 'k'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1944,7 +1946,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:k:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2121,6 +2123,10 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: --simplification must be > 0\n", argv[0]);
 				exit(EXIT_FAILURE);
 			}
+			break;
+
+		case 'k':
+			max_tile_size = atoll(optarg);
 			break;
 
 		default: {

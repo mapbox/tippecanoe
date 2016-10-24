@@ -900,6 +900,8 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 	}
 
+	// Simplify each arc
+
 	std::vector<drawvec> simplified_arcs;
 
 	size_t count = 0;
@@ -924,6 +926,9 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		count++;
 	}
 
+	// If necessary, merge some adjacent polygons into some other polygons
+
+#if 0
 	for (size_t i = 0; i < partials.size(); i++) {
 		for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
 			if (merge_candidates.count(-partials[i].arc_polygon[j]) > 0) {
@@ -1033,7 +1038,9 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
+#endif
 
+	// Turn the arc representations of the polygons back into standard polygon geometries
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
@@ -1599,7 +1606,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
@@ -1619,21 +1626,21 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			std::string compressed = tile.encode();
 
-			if (compressed.size() > 500000 && !prevent[P_KILOBYTE_LIMIT]) {
+			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
-					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >500000    \n", z, tx, ty, (long long) compressed.size(), line_detail);
+					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
 				}
 
 				if (prevent[P_DYNAMIC_DROP]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
-					fraction = fraction * 500000 / compressed.size() * 0.95;
+					fraction = fraction * max_tile_size / compressed.size() * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
