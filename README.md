@@ -128,6 +128,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ag or --calculate-feature-density: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
  * -ab or --detect-shared-borders: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
  * -aG or --increase-gamma-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the `-g` gamma
+ * -am or --merge-polygons-as-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
 
 ### Doing less
 

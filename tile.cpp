@@ -647,7 +647,9 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 	return true;
 }
 
-void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
+bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom, double merge_fraction) {
+	size_t merge_count = ceil((1 - merge_fraction) * partials.size());
+
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
@@ -928,9 +930,17 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 	// If necessary, merge some adjacent polygons into some other polygons
 
-#if 0
+	size_t merged = 0;
+	std::map<unsigned long long, size_t> merge_order;
 	for (size_t i = 0; i < partials.size(); i++) {
-		for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
+		merge_order.insert(std::pair<unsigned long long, size_t>(partials[i].index - partials[i].index2, i));
+	}
+	for (auto mo = merge_order.begin(); mo != merge_order.end(); ++mo) {
+		if (merged >= merge_count) {
+			break;
+		}
+		size_t i = mo->second;
+		for (size_t j = 0; j < partials[i].arc_polygon.size() && merged < merge_count; j++) {
 			if (merge_candidates.count(-partials[i].arc_polygon[j]) > 0) {
 				auto r = merge_candidates.equal_range(-partials[i].arc_polygon[j]);
 				for (auto a = r.first; a != r.second; ++a) {
@@ -1011,6 +1021,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 						}
 
 						partials[a->second].arc_polygon.clear();
+						merged++;
 
 						for (size_t k = 0; k < additions.size(); k++) {
 							partials[i].arc_polygon.push_back(additions[k]);
@@ -1038,7 +1049,6 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
-#endif
 
 	// Turn the arc representations of the polygons back into standard polygon geometries
 
@@ -1082,11 +1092,18 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
+
+	if (merged >= merge_count) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
 	int line_detail;
 	double fraction = 1;
+	double merge_fraction = 1;
 
 	long long og = *geompos_in;
 
@@ -1126,7 +1143,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		double fraction_accum = 0;
 
-		unsigned long long previndex = 0, density_previndex = 0;
+		unsigned long long previndex = 0, density_previndex = 0, merge_previndex = 0;
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
 		double gap = 0, density_gap = 0;
 		double spacing = 0;
@@ -1320,7 +1337,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			unsigned long long index = 0;
-			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0) {
+			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0 || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
 				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 			}
 
@@ -1372,14 +1389,19 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.simplification = simplification;
 				p.id = id;
 				p.has_id = has_id;
+				p.index2 = merge_previndex;
+				p.index = index;
 				partials.push_back(p);
 			}
+
+			merge_previndex = index;
 		}
 
 		first_time = false;
+		bool merge_successful = true;
 
-		if (additional[A_DETECT_SHARED_BORDERS]) {
-			find_common_edges(partials, z, line_detail, simplification, maxzoom);
+		if (additional[A_DETECT_SHARED_BORDERS] || (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction < 1)) {
+			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
 		}
 
 		int tasks = ceil((double) CPUS / *running);
@@ -1649,6 +1671,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
+					}
+					line_detail++;  // to keep it the same when the loop decrements it
+				} else if (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
+					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
+					if (!quiet) {
+						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				}

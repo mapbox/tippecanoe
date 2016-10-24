@@ -154,6 +154,8 @@ which may not be what you want.
 \-ab or \-\-detect\-shared\-borders: In the manner of TopoJSON \[la]https://github.com/mbostock/topojson/wiki/Introduction\[ra], detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
 .IP \(bu 2
 \-aG or \-\-increase\-gamma\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma
+.IP \(bu 2
+\-am or \-\-merge\-polygons\-as\-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
 .RE
 .SS Doing less
 .RS
