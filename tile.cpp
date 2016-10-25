@@ -390,6 +390,7 @@ struct partial {
 	signed char t;
 	unsigned long long id;
 	bool has_id;
+	ssize_t renamed;
 };
 
 struct partial_arg {
@@ -971,7 +972,13 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		}
 
 		size_t i = order[o].p1;
-		// XXX snap links
+		while (partials[i].renamed >= 0) {
+			i = partials[i].renamed;
+		}
+		size_t i2 = order[o].p2;
+		while (partials[i2].renamed >= 0) {
+			i2 = partials[i2].renamed;
+		}
 
 		for (size_t j = 0; j < partials[i].arc_polygon.size() && merged < merge_count; j++) {
 			if (partials[i].arc_polygon[j] == order[o].edge) {
@@ -987,7 +994,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 						std::vector<ssize_t> additions;
 						std::vector<ssize_t> &here = partials[i].arc_polygon;
-						std::vector<ssize_t> &other = partials[order[o].p2].arc_polygon;
+						std::vector<ssize_t> &other = partials[i2].arc_polygon;
 
 #if 0
 						printf("seeking %zd\n", partials[i].arc_polygon[j]);
@@ -1053,7 +1060,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							k = l;
 						}
 
-						partials[order[o].p2].arc_polygon.clear();
+						partials[i2].arc_polygon.clear();
+						partials[i2].renamed = i;
 						merged++;
 
 						for (size_t k = 0; k < additions.size(); k++) {
@@ -1424,6 +1432,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.has_id = has_id;
 				p.index2 = merge_previndex;
 				p.index = index;
+				p.renamed = -1;
 				partials.push_back(p);
 			}
 
