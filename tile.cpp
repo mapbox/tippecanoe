@@ -930,21 +930,54 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 	// If necessary, merge some adjacent polygons into some other polygons
 
-	size_t merged = 0;
-	std::map<unsigned long long, size_t> merge_order;
-	for (size_t i = 0; i < partials.size(); i++) {
-		merge_order.insert(std::pair<unsigned long long, size_t>(partials[i].index - partials[i].index2, i));
+	struct merge_order {
+		size_t edge;
+		unsigned long long gap;
+		size_t p1;
+		size_t p2;
+
+		bool operator<(const merge_order &m) const {
+			return gap < m.gap;
+		}
+	};
+	std::vector<merge_order> order;
+
+	for (ssize_t i = 0; i < simplified_arcs.size(); i++) {
+		auto r1 = merge_candidates.equal_range(i);
+		for (auto r1i = r1.first; r1i != r1.second; ++r1i) {
+			auto r2 = merge_candidates.equal_range(-i);
+			for (auto r2i = r2.first; r2i != r2.second; ++r2i) {
+				if (r1i->second != r2i->second) {
+					merge_order mo;
+					mo.edge = i;
+					if (partials[r1i->second].index > partials[r2i->second].index) {
+						mo.gap = partials[r1i->second].index - partials[r2i->second].index;
+					} else {
+						mo.gap = partials[r2i->second].index - partials[r1i->second].index;
+					}
+					mo.p1 = r1i->second;
+					mo.p2 = r2i->second;
+					order.push_back(mo);
+				}
+			}
+		}
 	}
-	for (auto mo = merge_order.begin(); mo != merge_order.end(); ++mo) {
+	std::sort(order.begin(), order.end());
+
+	size_t merged = 0;
+	for (size_t o = 0; o < order.size(); o++) {
 		if (merged >= merge_count) {
 			break;
 		}
-		size_t i = mo->second;
+
+		size_t i = order[o].p1;
+		// XXX snap links
+
 		for (size_t j = 0; j < partials[i].arc_polygon.size() && merged < merge_count; j++) {
-			if (merge_candidates.count(-partials[i].arc_polygon[j]) > 0) {
-				auto r = merge_candidates.equal_range(-partials[i].arc_polygon[j]);
-				for (auto a = r.first; a != r.second; ++a) {
-					if (a->second != i && partials[a->second].arc_polygon.size() > 0) {
+			if (partials[i].arc_polygon[j] == order[o].edge) {
+				{
+					// XXX snap links
+					if (partials[order[o].p2].arc_polygon.size() > 0) {
 						// This has to merge the ring that contains the anti-arc to this arc
 						// into the current ring, and then add whatever other rings were in
 						// that feature on to the end.
@@ -954,7 +987,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 						std::vector<ssize_t> additions;
 						std::vector<ssize_t> &here = partials[i].arc_polygon;
-						std::vector<ssize_t> &other = partials[a->second].arc_polygon;
+						std::vector<ssize_t> &other = partials[order[o].p2].arc_polygon;
 
 #if 0
 						printf("seeking %zd\n", partials[i].arc_polygon[j]);
@@ -1020,7 +1053,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							k = l;
 						}
 
-						partials[a->second].arc_polygon.clear();
+						partials[order[o].p2].arc_polygon.clear();
 						merged++;
 
 						for (size_t k = 0; k < additions.size(); k++) {
