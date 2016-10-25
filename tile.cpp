@@ -932,7 +932,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	// If necessary, merge some adjacent polygons into some other polygons
 
 	struct merge_order {
-		size_t edge;
+		ssize_t edge;
 		unsigned long long gap;
 		size_t p1;
 		size_t p2;
@@ -943,7 +943,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	};
 	std::vector<merge_order> order;
 
-	for (ssize_t i = 0; i < simplified_arcs.size(); i++) {
+	for (ssize_t i = 0; i < (ssize_t) simplified_arcs.size(); i++) {
 		auto r1 = merge_candidates.equal_range(i);
 		for (auto r1i = r1.first; r1i != r1.second; ++r1i) {
 			auto r2 = merge_candidates.equal_range(-i);
@@ -1141,7 +1141,43 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	}
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps) {
+struct write_tile_args {
+	struct task *tasks;
+	char *metabase;
+	char *stringpool;
+	int min_detail;
+	int basezoom;
+	sqlite3 *outdb;
+	double droprate;
+	int buffer;
+	const char *fname;
+	FILE **geomfile;
+	double todo;
+	volatile long long *along;
+	double gamma;
+	int child_shards;
+	int *geomfd;
+	off_t *geom_size;
+	volatile unsigned *midx;
+	volatile unsigned *midy;
+	int maxzoom;
+	int minzoom;
+	int full_detail;
+	int low_detail;
+	double simplification;
+	volatile long long *most;
+	long long *meta_off;
+	long long *pool_off;
+	unsigned *initial_x;
+	unsigned *initial_y;
+	volatile int *running;
+	int err;
+	std::vector<std::map<std::string, layermap_entry>> *layermaps;
+	std::vector<std::vector<std::string>> *layer_unmaps;
+	size_t pass;
+};
+
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, write_tile_args *arg) {
 	int line_detail;
 	double fraction = 1;
 	double merge_fraction = 1;
@@ -1358,7 +1394,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				unclipped_features++;
 			}
 
-			if (first_time) { /* only write out the next zoom once, even if we retry */
+			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id);
 			}
 
@@ -1677,6 +1713,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						gamma = gamma * 1.25;
 					}
 
+					arg->gamma = gamma;
+
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
@@ -1711,6 +1749,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						gamma = gamma * 1.25;
 					}
 
+					arg->gamma = gamma;
+
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
@@ -1723,16 +1763,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
-				if (pthread_mutex_lock(&db_lock) != 0) {
-					perror("pthread_mutex_lock");
-					exit(EXIT_FAILURE);
-				}
+				if (pass == 1) {
+					if (pthread_mutex_lock(&db_lock) != 0) {
+						perror("pthread_mutex_lock");
+						exit(EXIT_FAILURE);
+					}
 
-				mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 
-				if (pthread_mutex_unlock(&db_lock) != 0) {
-					perror("pthread_mutex_unlock");
-					exit(EXIT_FAILURE);
+					if (pthread_mutex_unlock(&db_lock) != 0) {
+						perror("pthread_mutex_unlock");
+						exit(EXIT_FAILURE);
+					}
 				}
 
 				return count;
@@ -1749,41 +1791,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 struct task {
 	int fileno;
 	struct task *next;
-};
-
-struct write_tile_args {
-	struct task *tasks;
-	char *metabase;
-	char *stringpool;
-	int min_detail;
-	int basezoom;
-	sqlite3 *outdb;
-	double droprate;
-	int buffer;
-	const char *fname;
-	FILE **geomfile;
-	double todo;
-	volatile long long *along;
-	double gamma;
-	int child_shards;
-	int *geomfd;
-	off_t *geom_size;
-	volatile unsigned *midx;
-	volatile unsigned *midy;
-	int maxzoom;
-	int minzoom;
-	int full_detail;
-	int low_detail;
-	double simplification;
-	volatile long long *most;
-	long long *meta_off;
-	long long *pool_off;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	volatile int *running;
-	int err;
-	std::vector<std::map<std::string, layermap_entry>> *layermaps;
-	std::vector<std::vector<std::string>> *layer_unmaps;
 };
 
 void *run_thread(void *vargs) {
@@ -1824,7 +1831,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -1863,12 +1870,26 @@ void *run_thread(void *vargs) {
 			}
 		}
 
+		if (arg->pass == 1) {
+			// Since the fclose() has closed the underlying file descriptor
+			arg->geomfd[j] = -1;
+		} else {
+			int newfd = dup(arg->geomfd[j]);
+			if (newfd < 0) {
+				perror("dup geometry");
+				exit(EXIT_FAILURE);
+			}
+			if (lseek(newfd, 0, SEEK_SET) < 0) {
+				perror("lseek geometry");
+				exit(EXIT_FAILURE);
+			}
+			arg->geomfd[j] = newfd;
+		}
+
 		if (fclose(geom) != 0) {
 			perror("close geom");
 			exit(EXIT_FAILURE);
 		}
-		// Since the fclose() has closed the underlying file descriptor
-		arg->geomfd[j] = -1;
 	}
 
 	arg->running--;
@@ -1987,62 +2008,76 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			*d = here;
 		}
 
-		pthread_t pthreads[threads];
-		write_tile_args args[threads];
-		int running = threads;
-
-		for (size_t thread = 0; thread < threads; thread++) {
-			args[thread].metabase = metabase;
-			args[thread].stringpool = stringpool;
-			args[thread].min_detail = min_detail;
-			args[thread].basezoom = basezoom;
-			args[thread].outdb = outdb;  // locked with db_lock
-			args[thread].droprate = droprate;
-			args[thread].buffer = buffer;
-			args[thread].fname = fname;
-			args[thread].geomfile = sub + thread * (TEMP_FILES / threads);
-			args[thread].todo = todo;
-			args[thread].along = &along;  // locked with var_lock
-			args[thread].gamma = gamma;
-			args[thread].child_shards = TEMP_FILES / threads;
-			args[thread].simplification = simplification;
-
-			args[thread].geomfd = geomfd;
-			args[thread].geom_size = geom_size;
-			args[thread].midx = midx;  // locked with var_lock
-			args[thread].midy = midy;  // locked with var_lock
-			args[thread].maxzoom = maxzoom;
-			args[thread].minzoom = minzoom;
-			args[thread].full_detail = full_detail;
-			args[thread].low_detail = low_detail;
-			args[thread].most = &most;  // locked with var_lock
-			args[thread].meta_off = meta_off;
-			args[thread].pool_off = pool_off;
-			args[thread].initial_x = initial_x;
-			args[thread].initial_y = initial_y;
-			args[thread].layermaps = &layermaps;
-			args[thread].layer_unmaps = &layer_unmaps;
-
-			args[thread].tasks = dispatches[thread].tasks;
-			args[thread].running = &running;
-
-			if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
-				perror("pthread_create");
-				exit(EXIT_FAILURE);
-			}
-		}
-
 		int err = INT_MAX;
 
-		for (size_t thread = 0; thread < threads; thread++) {
-			void *retval;
+		size_t start = 1;
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+			start = 0;
+		}
 
-			if (pthread_join(pthreads[thread], &retval) != 0) {
-				perror("pthread_join");
+		double zoom_gamma = gamma;
+
+		for (size_t pass = start; pass < 2; pass++) {
+			pthread_t pthreads[threads];
+			write_tile_args args[threads];
+			int running = threads;
+
+			for (size_t thread = 0; thread < threads; thread++) {
+				args[thread].metabase = metabase;
+				args[thread].stringpool = stringpool;
+				args[thread].min_detail = min_detail;
+				args[thread].basezoom = basezoom;
+				args[thread].outdb = outdb;  // locked with db_lock
+				args[thread].droprate = droprate;
+				args[thread].buffer = buffer;
+				args[thread].fname = fname;
+				args[thread].geomfile = sub + thread * (TEMP_FILES / threads);
+				args[thread].todo = todo;
+				args[thread].along = &along;  // locked with var_lock
+				args[thread].gamma = zoom_gamma;
+				args[thread].child_shards = TEMP_FILES / threads;
+				args[thread].simplification = simplification;
+
+				args[thread].geomfd = geomfd;
+				args[thread].geom_size = geom_size;
+				args[thread].midx = midx;  // locked with var_lock
+				args[thread].midy = midy;  // locked with var_lock
+				args[thread].maxzoom = maxzoom;
+				args[thread].minzoom = minzoom;
+				args[thread].full_detail = full_detail;
+				args[thread].low_detail = low_detail;
+				args[thread].most = &most;  // locked with var_lock
+				args[thread].meta_off = meta_off;
+				args[thread].pool_off = pool_off;
+				args[thread].initial_x = initial_x;
+				args[thread].initial_y = initial_y;
+				args[thread].layermaps = &layermaps;
+				args[thread].layer_unmaps = &layer_unmaps;
+
+				args[thread].tasks = dispatches[thread].tasks;
+				args[thread].running = &running;
+				args[thread].pass = pass;
+
+				if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
+					perror("pthread_create");
+					exit(EXIT_FAILURE);
+				}
 			}
 
-			if (retval != NULL) {
-				err = *((int *) retval);
+			for (size_t thread = 0; thread < threads; thread++) {
+				void *retval;
+
+				if (pthread_join(pthreads[thread], &retval) != 0) {
+					perror("pthread_join");
+				}
+
+				if (retval != NULL) {
+					err = *((int *) retval);
+				}
+
+				if (args[thread].gamma > zoom_gamma) {
+					zoom_gamma = args[thread].gamma;
+				}
 			}
 		}
 
