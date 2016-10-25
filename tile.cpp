@@ -1205,6 +1205,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 	}
 
 	static volatile double oprogress = 0;
+	bool has_polygons = false;
 
 	bool first_time = true;
 	// This only loops if the tile data didn't fit, in which case the detail
@@ -1445,6 +1446,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			bool reduced = false;
 			if (t == VT_POLYGON) {
 				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
+				has_polygons = true;
 			}
 
 			if (geom.size() > 0) {
@@ -1699,10 +1701,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 
-				if (prevent[P_DYNAMIC_DROP]) {
-					fraction = fraction * 200000 / totalsize * 0.95;
+				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
+					merge_fraction = merge_fraction * 200000 / tile.layers.size() * 0.95;
 					if (!quiet) {
-						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
@@ -1717,6 +1719,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
+					}
+					line_detail++;  // to keep it the same when the loop decrements it
+					continue;
+				} else if (prevent[P_DYNAMIC_DROP]) {
+					fraction = fraction * 200000 / totalsize * 0.95;
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
@@ -1733,13 +1742,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
 				}
 
-				if (prevent[P_DYNAMIC_DROP]) {
-					// The 95% is a guess to avoid too many retries
-					// and probably actually varies based on how much duplicated metadata there is
-
-					fraction = fraction * max_tile_size / compressed.size() * 0.95;
+				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
+					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
 					if (!quiet) {
-						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
@@ -1755,10 +1761,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
+				} else if (prevent[P_DYNAMIC_DROP]) {
+					// The 95% is a guess to avoid too many retries
+					// and probably actually varies based on how much duplicated metadata there is
+
+					fraction = fraction * max_tile_size / compressed.size() * 0.95;
 					if (!quiet) {
-						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
+						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
