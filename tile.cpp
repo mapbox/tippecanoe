@@ -1175,12 +1175,14 @@ struct write_tile_args {
 	std::vector<std::map<std::string, layermap_entry>> *layermaps;
 	std::vector<std::vector<std::string>> *layer_unmaps;
 	size_t pass;
+	unsigned long long mingap;
 };
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, write_tile_args *arg) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, unsigned long long mingap, write_tile_args *arg) {
 	int line_detail;
 	double fraction = 1;
 	double merge_fraction = 1;
+	double mingap_fraction = 1;
 
 	long long og = *geompos_in;
 
@@ -1231,6 +1233,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		std::vector<struct partial> partials;
 		std::map<std::string, std::vector<coalesce>> layers;
+		std::vector<unsigned long long> indices;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1415,12 +1418,21 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			unsigned long long index = 0;
-			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0 || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
+			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0 || additional[A_MERGE_POLYGONS_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED]) {
 				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 			}
 
 			if (gamma > 0) {
 				if (manage_gap(index, &previndex, scale, gamma, &gap)) {
+					continue;
+				}
+			}
+
+			if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				if (index > merge_previndex) {
+					indices.push_back(index - merge_previndex);
+				}
+				if (index - merge_previndex < mingap) {
 					continue;
 				}
 			}
@@ -1722,6 +1734,19 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
+				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+					std::sort(indices.begin(), indices.end());
+					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.95;
+					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
+					if (n < indices.size() && mingap < indices[n]) {
+						mingap = indices[n];
+						arg->mingap = mingap;
+						if (!quiet) {
+							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
+						}
+						line_detail++;
+						continue;
+					}
 				} else if (prevent[P_DYNAMIC_DROP]) {
 					fraction = fraction * 200000 / totalsize * 0.95;
 					if (!quiet) {
@@ -1761,6 +1786,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
+				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+					std::sort(indices.begin(), indices.end());
+					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.95;
+					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
+					if (n < indices.size() && mingap < indices[n]) {
+						mingap = indices[n];
+						arg->mingap = mingap;
+						if (!quiet) {
+							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
+						}
+						line_detail++;
+					}
 				} else if (prevent[P_DYNAMIC_DROP]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
@@ -1840,7 +1877,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg->mingap, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2020,11 +2057,12 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED]) {
 			start = 0;
 		}
 
 		double zoom_gamma = gamma;
+		double zoom_mingap = 0;
 
 		for (size_t pass = start; pass < 2; pass++) {
 			pthread_t pthreads[threads];
@@ -2044,6 +2082,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].todo = todo;
 				args[thread].along = &along;  // locked with var_lock
 				args[thread].gamma = zoom_gamma;
+				args[thread].mingap = zoom_mingap;
 				args[thread].child_shards = TEMP_FILES / threads;
 				args[thread].simplification = simplification;
 
@@ -2086,6 +2125,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 				if (args[thread].gamma > zoom_gamma) {
 					zoom_gamma = args[thread].gamma;
+				}
+				if (args[thread].mingap > zoom_mingap) {
+					zoom_mingap = args[thread].mingap;
 				}
 			}
 		}

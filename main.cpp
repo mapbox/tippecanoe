@@ -1915,6 +1915,7 @@ int main(int argc, char **argv) {
 		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
 		{"increase-gamma-as-needed", no_argument, &additional[A_INCREASE_GAMMA_AS_NEEDED], 1},
 		{"merge-polygons-as-needed", no_argument, &additional[A_MERGE_POLYGONS_AS_NEEDED], 1},
+		{"increase-spacing-as-needed", no_argument, &additional[A_INCREASE_SPACING_AS_NEEDED], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},

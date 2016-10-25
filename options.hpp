@@ -9,6 +9,7 @@
 #define A_CALCULATE_FEATURE_DENSITY ((int) 'g')
 #define A_INCREASE_GAMMA_AS_NEEDED ((int) 'G')
 #define A_MERGE_POLYGONS_AS_NEEDED ((int) 'm')
+#define A_INCREASE_SPACING_AS_NEEDED ((int) 's')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')
