@@ -245,24 +245,6 @@ static int is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-struct sll {
-	char *name;
-	long long val;
-
-	bool operator<(const sll &o) const {
-		if (this->val < o.val) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	sll(char *nname, long long nval) {
-		this->name = nname;
-		this->val = nval;
-	}
-};
-
 void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
