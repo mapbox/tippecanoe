@@ -1155,6 +1155,7 @@ struct write_tile_args {
 	double todo;
 	volatile long long *along;
 	double gamma;
+	double gamma_out;
 	int child_shards;
 	int *geomfd;
 	off_t *geom_size;
@@ -1176,6 +1177,7 @@ struct write_tile_args {
 	std::vector<std::vector<std::string>> *layer_unmaps;
 	size_t pass;
 	unsigned long long mingap;
+	unsigned long long mingap_out;
 };
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, unsigned long long mingap, write_tile_args *arg) {
@@ -1727,7 +1729,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						gamma = gamma * 1.25;
 					}
 
-					arg->gamma = gamma;
+					if (gamma > arg->gamma_out) {
+						arg->gamma_out = gamma;
+					}
 
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
@@ -1740,7 +1744,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
 					if (n < indices.size() && mingap < indices[n]) {
 						mingap = indices[n];
-						arg->mingap = mingap;
+						if (mingap > arg->mingap_out) {
+							arg->mingap_out = mingap;
+						}
 						if (!quiet) {
 							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 						}
@@ -1780,7 +1786,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						gamma = gamma * 1.25;
 					}
 
-					arg->gamma = gamma;
+					if (gamma > arg->gamma_out) {
+						arg->gamma_out = gamma;
+					}
 
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
@@ -1792,7 +1800,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
 					if (n < indices.size() && mingap < indices[n]) {
 						mingap = indices[n];
-						arg->mingap = mingap;
+						if (mingap > arg->mingap_out) {
+							arg->mingap_out = mingap;
+						}
 						if (!quiet) {
 							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 						}
@@ -2082,7 +2092,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].todo = todo;
 				args[thread].along = &along;  // locked with var_lock
 				args[thread].gamma = zoom_gamma;
+				args[thread].gamma_out = zoom_gamma;
 				args[thread].mingap = zoom_mingap;
+				args[thread].mingap_out = zoom_mingap;
 				args[thread].child_shards = TEMP_FILES / threads;
 				args[thread].simplification = simplification;
 
@@ -2123,11 +2135,11 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 					err = *((int *) retval);
 				}
 
-				if (args[thread].gamma > zoom_gamma) {
-					zoom_gamma = args[thread].gamma;
+				if (args[thread].gamma_out > zoom_gamma) {
+					zoom_gamma = args[thread].gamma_out;
 				}
-				if (args[thread].mingap > zoom_mingap) {
-					zoom_mingap = args[thread].mingap;
+				if (args[thread].mingap_out > zoom_mingap) {
+					zoom_mingap = args[thread].mingap_out;
 				}
 			}
 		}
