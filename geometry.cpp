@@ -1038,19 +1038,17 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, bool already_marked) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
-	if (!already_marked) {
-		for (size_t i = 0; i < geom.size(); i++) {
-			if (geom[i].op == VT_MOVETO) {
-				geom[i].necessary = 1;
-			} else if (geom[i].op == VT_LINETO) {
-				geom[i].necessary = 0;
-			} else {
-				geom[i].necessary = 1;
-			}
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			geom[i].necessary = 1;
+		} else if (geom[i].op == VT_LINETO) {
+			geom[i].necessary = 0;
+		} else {
+			geom[i].necessary = 1;
 		}
 	}
 
@@ -1071,19 +1069,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 			geom[j - 1].necessary = 1;
 
 			if (j - i > 1) {
-				if (already_marked && geom[j - 1] < geom[i]) {
-					drawvec dv;
-					for (size_t k = j; k > i; k--) {
-						dv.push_back(geom[k - 1]);
-					}
-					douglas_peucker(dv, 0, j - i, res * simplification);
-					size_t l = 0;
-					for (size_t k = j; k > i; k--) {
-						geom[k - 1] = dv[l++];
-					}
-				} else {
-					douglas_peucker(geom, i, j - i, res * simplification);
-				}
+				douglas_peucker(geom, i, j - i, res * simplification);
 			}
 			i = j - 1;
 		}
