@@ -350,34 +350,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
-	/*
-	 * Note that feature_minzoom for lines is the dimension
-	 * of the geometry in world coordinates, but
-	 * for points is the lowest zoom level (in tiles,
-	 * not in pixels) at which it should be drawn.
-	 *
-	 * So a line that is too small for, say, z8
-	 * will have feature_minzoom of 18 (if tile detail is 10),
-	 * not 8.
-	 */
-	int feature_minzoom = 0;
-	if (mb_geometry[t] == VT_LINE) {
-		// Skip z0 check because everything is always in the one z0 tile
-		for (feature_minzoom = 1; feature_minzoom < 31; feature_minzoom++) {
-			unsigned mask = 1 << (32 - (feature_minzoom + 1));
-
-			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
-				break;
-			}
-		}
-	} else if (mb_geometry[t] == VT_POINT) {
-		double r = ((double) rand()) / RAND_MAX;
-		if (r == 0) {
-			r = .00000001;
-		}
-		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
-	}
-
 	if (tippecanoe_layername.size() != 0) {
 		if (layermap->count(tippecanoe_layername) == 0) {
 			layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
@@ -407,7 +379,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 	sf.geometry = dv;
 	sf.m = m;
-	sf.feature_minzoom = feature_minzoom;
+	sf.feature_minzoom = 0; // Will be filled in during index merging
 
 	if (inline_meta) {
 		sf.metapos = -1;

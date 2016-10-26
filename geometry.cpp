@@ -648,19 +648,15 @@ static draw intersect(draw a, draw b, int edge, long long minx, long long miny, 
 	switch (edge) {
 	case 0:  // top
 		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (miny - a.y) / (b.y - a.y), miny);
-		break;
 
 	case 1:  // right
 		return draw(VT_LINETO, maxx, a.y + (double) (b.y - a.y) * (maxx - a.x) / (b.x - a.x));
-		break;
 
 	case 2:  // bottom
 		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (maxy - a.y) / (b.y - a.y), maxy);
-		break;
 
 	case 3:  // left
 		return draw(VT_LINETO, minx, a.y + (double) (b.y - a.y) * (minx - a.x) / (b.x - a.x));
-		break;
 	}
 
 	fprintf(stderr, "internal error intersecting\n");
