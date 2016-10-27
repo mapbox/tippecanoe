@@ -146,8 +146,15 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 				tv.numeric_value.sint_value = v;
 			}
 		} else {
-			tv.type = mvt_double;
-			tv.numeric_value.double_value = atof(s);
+			double d = atof(s);
+
+			if (d == (float) d) {
+				tv.type = mvt_float;
+				tv.numeric_value.float_value = d;
+			} else {
+				tv.type = mvt_double;
+				tv.numeric_value.double_value = d;
+			}
 		}
 	} else if (type == VT_BOOLEAN) {
 		tv.type = mvt_bool;
