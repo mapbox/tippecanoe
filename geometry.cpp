@@ -153,60 +153,6 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 	return out;
 }
 
-/* XXX */
-#if 0
-drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here, double droprate) {
-	long long res = 200LL << (32 - 8 - z);
-	long long portion = res / exp(log(sqrt(droprate)) * (basezoom - z));
-
-	drawvec out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
-			double dx = (geom[i].x - geom[i - 1].x);
-			double dy = (geom[i].y - geom[i - 1].y);
-			long long d = sqrt(dx * dx + dy * dy);
-
-			long long n;
-			long long next = LLONG_MAX;
-			for (n = *here; n < *here + d; n = next) {
-				int within;
-
-				if (n % res < portion) {
-					next = (n / res) * res + portion;
-					within = 1;
-				} else {
-					next = (n / res + 1) * res;
-					within = 0;
-				}
-
-				if (next > *here + d) {
-					next = *here + d;
-				}
-
-				//printf("drawing from %lld to %lld in %lld\n", n - *here, next - *here, d);
-
-				double f1 = (n - *here) / (double) d;
-				double f2 = (next - *here) / (double) d;
-
-				if (within) {
-					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f1 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f1 * (geom[i].y - geom[i - 1].y)));
-					out.push_back(draw(VT_LINETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
-				} else {
-					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
-				}
-			}
-
-			*here += d;
-		} else {
-			out.push_back(geom[i]);
-		}
-	}
-
-	return out;
-}
-#endif
-
 double get_area(drawvec &geom, size_t i, size_t j) {
 	double area = 0;
 	for (size_t k = i; k < j; k++) {
