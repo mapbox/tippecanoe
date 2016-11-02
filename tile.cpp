@@ -1148,12 +1148,14 @@ unsigned long long choose_mingap(std::vector<unsigned long long> const &indices,
 
 	size_t want = indices.size() * f;
 	while (top - bot > 2) {
-		long long guess = bot / 2 + top / 2;
+		unsigned long long guess = bot / 2 + top / 2;
 		size_t count = 0;
+		unsigned long long prev = 0;
 
 		for (size_t i = 0; i < indices.size(); i++) {
-			if (i == 0 || indices[i] < indices[i - 1] || (long long) (indices[i] - indices[i - 1]) > guess) {
+			if (indices[i] - prev >= guess) {
 				count++;
+				prev = indices[i];
 			}
 		}
 
@@ -1762,7 +1764,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
 				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
-					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.95;
+					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
 					arg->mingap_out = mingap = choose_mingap(indices, mingap_fraction);
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
@@ -1811,7 +1813,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
-					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.95;
+					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					arg->mingap_out = mingap = choose_mingap(indices, mingap_fraction);
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
