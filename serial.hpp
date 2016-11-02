@@ -37,6 +37,7 @@ struct serial_feature {
 	int tippecanoe_maxzoom;
 
 	drawvec geometry;
+	unsigned long long index;
 
 	size_t m;
 	std::vector<long long> keys;

@@ -381,6 +381,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.m = m;
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 
+	// Calculate the center even if off the edge of the plane,
+	// and then mask to bring it back into the addressable area
+	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
+	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
+	sf.index = encode(midx, midy);
+
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < m; i++) {
@@ -403,12 +409,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	index.segment = segment;
 	index.seq = *layer_seq;
 	index.t = sf.t;
-
-	// Calculate the center even if off the edge of the plane,
-	// and then mask to bring it back into the addressable area
-	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
-	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
-	index.index = encode(midx, midy);
+	index.index = sf.index;
 
 	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 	*indexpos += sizeof(struct index);

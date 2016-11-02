@@ -193,6 +193,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 
 	write_geometry(sf->geometry, geompos, geomfile, fname, wx, wy);
 	serialize_byte(geomfile, VT_END, geompos, fname);
+	serialize_ulong_long(geomfile, sf->index, geompos, fname);
 
 	serialize_int(geomfile, sf->m, geompos, fname);
 	serialize_long_long(geomfile, sf->metapos, geompos, fname);

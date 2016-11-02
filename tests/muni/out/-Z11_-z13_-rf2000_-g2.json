@@ -3168,8 +3168,6 @@
 ,
 { "type": "Feature", "properties": { "name": "California St & Powell St" }, "geometry": { "type": "Point", "coordinates": [ -122.409368, 37.791982 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "POWELL ST & CALIFORNIA ST" }, "geometry": { "type": "Point", "coordinates": [ -122.409110, 37.792151 ] } }
-,
 { "type": "Feature", "properties": { "name": "Powell St & Pine St" }, "geometry": { "type": "Point", "coordinates": [ -122.408938, 37.791100 ] } }
 ,
 { "type": "Feature", "properties": { "name": "California St & Stockton St" }, "geometry": { "type": "Point", "coordinates": [ -122.407565, 37.792321 ] } }
@@ -15327,6 +15325,8 @@
 { "type": "Feature", "properties": { "name": "9th Ave & Irving St" }, "geometry": { "type": "Point", "coordinates": [ -122.466391, 37.763803 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Irving St & 9th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.466166, 37.764108 ] } }
+,
+{ "type": "Feature", "properties": { "name": "9th Ave. & Irving St." }, "geometry": { "type": "Point", "coordinates": [ -122.466241, 37.763947 ] } }
 ,
 { "type": "Feature", "properties": { "name": "9th Ave & Irving St" }, "geometry": { "type": "Point", "coordinates": [ -122.466241, 37.763921 ] } }
 ,

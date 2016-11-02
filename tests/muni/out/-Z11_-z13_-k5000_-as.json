@@ -744,7 +744,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Mission St & Guttenberg St" }, "geometry": { "type": "Point", "coordinates": [ -122.444751, 37.712514 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Mission St & Oliver St" }, "geometry": { "type": "Point", "coordinates": [ -122.450073, 37.709628 ] } }
+{ "type": "Feature", "properties": { "name": "Mission St & Sickles Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.453334, 37.708660 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Alemany Blvd & Geneva Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.442391, 37.717674 ] } }
 ,
@@ -838,7 +838,9 @@
 ,
 { "type": "Feature", "properties": { "name": "California St & 22nd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.481680, 37.784113 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Clement St & 22nd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.481787, 37.782095 ] } }
+{ "type": "Feature", "properties": { "name": "25th Ave & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.484620, 37.779941 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Geary Blvd & 22nd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.481401, 37.780348 ] } }
 ,
 { "type": "Feature", "properties": { "name": "California St & 19th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.478461, 37.784249 ] } }
 ,
@@ -1752,6 +1754,8 @@
 ,
 { "type": "Feature", "properties": { "name": "24th St & Dolores St" }, "geometry": { "type": "Point", "coordinates": [ -122.425332, 37.751919 ] } }
 ,
+{ "type": "Feature", "properties": { "name": "24th St & Guerrero St" }, "geometry": { "type": "Point", "coordinates": [ -122.422993, 37.751919 ] } }
+,
 { "type": "Feature", "properties": { "name": "Noe St & 29th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431190, 37.743554 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Church St & 29th St" }, "geometry": { "type": "Point", "coordinates": [ -122.426598, 37.743605 ] } }
@@ -1874,7 +1878,7 @@
 ,
 { "type": "Feature", "properties": { "name": "San Bruno Ave & Thornton Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.404625, 37.730267 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Silver Ave&Santa Fe Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.401600, 37.734781 ] } }
+{ "type": "Feature", "properties": { "name": "Silver Ave & Augusta St" }, "geometry": { "type": "Point", "coordinates": [ -122.402201, 37.734595 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Bridge View Dr & Scotia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.399411, 37.731845 ] } }
 ,

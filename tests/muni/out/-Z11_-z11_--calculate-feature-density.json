@@ -76,21 +76,21 @@
 ,
 { "type": "Feature", "properties": { "name": "HOLLOWAY AVE & 19TH AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Avenue & Holloway St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721204 ] } }
+{ "type": "Feature", "properties": { "name": "19th Avenue & Holloway St", "tippecanoe_feature_density": 61 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.475243, 37.721102 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 61 }, "geometry": { "type": "Point", "coordinates": [ -122.475243, 37.721102 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
+{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE & Holloway Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.475028, 37.720967 ] } }
+{ "type": "Feature", "properties": { "name": "19TH AVE & Holloway Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.475028, 37.720967 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Crespi Dr & 19th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.720220 ] } }
 ,
@@ -186,11 +186,11 @@
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720865 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720831 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720831 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.446489, 37.720831 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.446489, 37.720831 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.446232, 37.721238 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.446232, 37.721238 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Niagra Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.447562, 37.719711 ] } }
 ,
@@ -216,21 +216,21 @@
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
+{ "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "GENEVA AVE & SAN JOSE AVE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
+{ "type": "Feature", "properties": { "name": "GENEVA AVE & SAN JOSE AVE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "GENEVA AVE & SANA JOSE AVE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
+{ "type": "Feature", "properties": { "name": "GENEVA AVE & SANA JOSE AVE", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720525 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720525 ] } }
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446575, 37.720627 ] } }
 ,
 { "type": "Feature", "properties": { "name": "CAMERON BEACH YARD", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446575, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
 ,
@@ -292,9 +292,9 @@
 ,
 { "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719371 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719337 ] } }
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719337 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE", "tippecanoe_feature_density": 13 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mansell St & John F Shelley Dr", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.418809, 37.718930 ] } }
 ,
@@ -338,9 +338,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third St & Le Conte Ave", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
+{ "type": "Feature", "properties": { "name": "Third St & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Key St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.396750, 37.719778 ] } }
 ,
@@ -352,9 +352,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Hawes St & Gilman Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.390013, 37.719201 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "655 John Muir Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.497773, 37.717029 ] } }
+{ "type": "Feature", "properties": { "name": "655 John Muir Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.497773, 37.717029 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "655 John Muir Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.497687, 37.716791 ] } }
+{ "type": "Feature", "properties": { "name": "655 John Muir Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.497687, 37.716791 ] } }
 ,
 { "type": "Feature", "properties": { "name": "555 John Muir Dr", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.496572, 37.716553 ] } }
 ,
@@ -564,7 +564,7 @@
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Sadowa St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.455931, 37.713226 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Broad St & Plymouth Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.455931, 37.713226 ] } }
+{ "type": "Feature", "properties": { "name": "Broad St & Plymouth Ave", "tippecanoe_feature_density": 10 }, "geometry": { "type": "Point", "coordinates": [ -122.455931, 37.713226 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Plymouth Ave & Sagamore St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.456102, 37.711563 ] } }
 ,
@@ -618,7 +618,7 @@
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Farallones St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.452154, 37.714177 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Farallones St", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.452111, 37.714075 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Farallones St", "tippecanoe_feature_density": 10 }, "geometry": { "type": "Point", "coordinates": [ -122.452111, 37.714075 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mission St & Whittier St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.448378, 37.710510 ] } }
 ,
@@ -814,7 +814,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Santos St & Brookdale Ave", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.418895, 37.711699 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Santos St & Brookdale Ave", "tippecanoe_feature_density": 42 }, "geometry": { "type": "Point", "coordinates": [ -122.418852, 37.711733 ] } }
+{ "type": "Feature", "properties": { "name": "Santos St & Brookdale Ave", "tippecanoe_feature_density": 43 }, "geometry": { "type": "Point", "coordinates": [ -122.418852, 37.711733 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Santos St & Blythdale Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.418809, 37.710646 ] } }
 ,
@@ -1006,23 +1006,23 @@
 ,
 { "type": "Feature", "properties": { "name": "Arleta Ave & Bay Shore Blvd", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.712242 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Alemany Blvd", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.712174 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Alemany Blvd", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.712174 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "SAN BRUNO AVE & BAYSHORE BLVD", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.402415, 37.712378 ] } }
+{ "type": "Feature", "properties": { "name": "SAN BRUNO AVE & BAYSHORE BLVD", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.402415, 37.712378 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Arleta Ave", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712480 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Arleta Ave", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712480 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Bruno Ave & Arleta Ave", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.402458, 37.712310 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.402372, 37.712242 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.402372, 37.712242 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712276 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712276 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712276 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd/Arleta/Blanken", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.402329, 37.712276 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Blanken Ave", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.402201, 37.712242 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Blanken Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.402201, 37.712242 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Blanken Ave", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.402158, 37.712276 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Blanken Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.402158, 37.712276 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Leland Ave@Bay Shore Blvd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.403831, 37.711156 ] } }
 ,
@@ -1412,7 +1412,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Chestnut St & Fillmore St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.436190, 37.800934 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Chestnut St & Fillmore St", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.436404, 37.800765 ] } }
+{ "type": "Feature", "properties": { "name": "Chestnut St & Fillmore St", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.436404, 37.800765 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Lombard St & Fillmore St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.436147, 37.799713 ] } }
 ,
@@ -1562,7 +1562,7 @@
 ,
 { "type": "Feature", "properties": { "name": "La Playa St & Cabrillo St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.510090, 37.773225 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "La Playa St & Cabrillo St", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.510004, 37.773225 ] } }
+{ "type": "Feature", "properties": { "name": "La Playa St & Cabrillo St", "tippecanoe_feature_density": 20 }, "geometry": { "type": "Point", "coordinates": [ -122.510004, 37.773225 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Cabrillo St & La Playa St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.509832, 37.773666 ] } }
 ,
@@ -1894,9 +1894,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Geary Blvd & 25th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.484641, 37.780247 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Geary Blvd & 25th Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.484856, 37.780009 ] } }
+{ "type": "Feature", "properties": { "name": "Geary Blvd & 25th Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.484856, 37.780009 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "25th Ave & Geary Blvd", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.484641, 37.779941 ] } }
+{ "type": "Feature", "properties": { "name": "25th Ave & Geary Blvd", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.484641, 37.779941 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Clement St & 24th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.483697, 37.782146 ] } }
 ,
@@ -2094,15 +2094,15 @@
 ,
 { "type": "Feature", "properties": { "name": "LINC. WAY &  19TH AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.477431, 37.765389 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Lincoln Way", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.477431, 37.765389 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Lincoln Way", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.477431, 37.765389 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Cross Over Dr&Lincoln St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.477260, 37.765558 ] } }
+{ "type": "Feature", "properties": { "name": "Cross Over Dr&Lincoln St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.477260, 37.765558 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "LINCOLN WAY &  19TH AVE", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
+{ "type": "Feature", "properties": { "name": "LINCOLN WAY &  19TH AVE", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE &  LINCOLN WAY", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
+{ "type": "Feature", "properties": { "name": "19TH AVE &  LINCOLN WAY", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Lincoln Way & 19TH AVE", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
+{ "type": "Feature", "properties": { "name": "Lincoln Way & 19TH AVE", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765389 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Lincoln Way", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.477217, 37.765219 ] } }
 ,
@@ -2870,7 +2870,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Clement St & 2nd Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.783265 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Arguello Blvd & Clement St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.783096 ] } }
+{ "type": "Feature", "properties": { "name": "Arguello Blvd & Clement St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.783096 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Arguello Blvd & Geary Blvd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.458806, 37.781875 ] } }
 ,
@@ -2912,9 +2912,9 @@
 ,
 { "type": "Feature", "properties": { "name": "6th Ave & Fulton", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.463870, 37.773768 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "6th Ave & Fulton St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.463741, 37.773971 ] } }
+{ "type": "Feature", "properties": { "name": "6th Ave & Fulton St", "tippecanoe_feature_density": 25 }, "geometry": { "type": "Point", "coordinates": [ -122.463741, 37.773971 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Fulton St & 6th Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.463870, 37.773564 ] } }
+{ "type": "Feature", "properties": { "name": "Fulton St & 6th Ave", "tippecanoe_feature_density": 25 }, "geometry": { "type": "Point", "coordinates": [ -122.463870, 37.773564 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fulton St & 4th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.461982, 37.773971 ] } }
 ,
@@ -3008,9 +3008,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Judah St & 9th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.466316, 37.762132 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "9th Ave & Judah St", "tippecanoe_feature_density": 36 }, "geometry": { "type": "Point", "coordinates": [ -122.466273, 37.762064 ] } }
+{ "type": "Feature", "properties": { "name": "9th Ave & Judah St", "tippecanoe_feature_density": 33 }, "geometry": { "type": "Point", "coordinates": [ -122.466273, 37.762064 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "9th Ave & Judah St", "tippecanoe_feature_density": 36 }, "geometry": { "type": "Point", "coordinates": [ -122.466102, 37.762098 ] } }
+{ "type": "Feature", "properties": { "name": "9th Ave & Judah St", "tippecanoe_feature_density": 33 }, "geometry": { "type": "Point", "coordinates": [ -122.466102, 37.762098 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Judah St & 16th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.473783, 37.761928 ] } }
 ,
@@ -3886,7 +3886,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 18th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.435074, 37.760775 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "18th St & Castro St", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.434859, 37.760876 ] } }
+{ "type": "Feature", "properties": { "name": "18th St & Castro St", "tippecanoe_feature_density": 10 }, "geometry": { "type": "Point", "coordinates": [ -122.434859, 37.760876 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 19th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.434945, 37.759417 ] } }
 ,
@@ -4030,17 +4030,17 @@
 ,
 { "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.465973, 37.740890 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Ave & Ulloa St", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.465887, 37.740924 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Ave & Ulloa St", "tippecanoe_feature_density": 16 }, "geometry": { "type": "Point", "coordinates": [ -122.465887, 37.740924 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.465801, 37.740958 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 16 }, "geometry": { "type": "Point", "coordinates": [ -122.465801, 37.740958 ] } }
 ,
 { "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.465758, 37.740958 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Ulloa St & West portal t", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.465801, 37.740890 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Ulloa St & West Portal Ave Arrive", "tippecanoe_feature_density": 64 }, "geometry": { "type": "Point", "coordinates": [ -122.465758, 37.740890 ] } }
+{ "type": "Feature", "properties": { "name": "Ulloa St & West Portal Ave Arrive", "tippecanoe_feature_density": 54 }, "geometry": { "type": "Point", "coordinates": [ -122.465758, 37.740890 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 64 }, "geometry": { "type": "Point", "coordinates": [ -122.465672, 37.740958 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Station", "tippecanoe_feature_density": 54 }, "geometry": { "type": "Point", "coordinates": [ -122.465672, 37.740958 ] } }
 ,
 { "type": "Feature", "properties": { "name": "West Portal Station Inbound", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.465544, 37.741162 ] } }
 ,
@@ -4056,9 +4056,9 @@
 ,
 { "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.469063, 37.738107 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.469020, 37.738073 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 45 }, "geometry": { "type": "Point", "coordinates": [ -122.469020, 37.738073 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.469063, 37.737870 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 45 }, "geometry": { "type": "Point", "coordinates": [ -122.469063, 37.737870 ] } }
 ,
 { "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.469063, 37.737870 ] } }
 ,
@@ -4292,21 +4292,21 @@
 ,
 { "type": "Feature", "properties": { "name": "HOLLOWAY AVE & 19TH AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Avenue & Holloway St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721204 ] } }
+{ "type": "Feature", "properties": { "name": "19th Avenue & Holloway St", "tippecanoe_feature_density": 61 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.475243, 37.721102 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave", "tippecanoe_feature_density": 61 }, "geometry": { "type": "Point", "coordinates": [ -122.475243, 37.721102 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
+{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE & Holloway Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.475028, 37.720967 ] } }
+{ "type": "Feature", "properties": { "name": "19TH AVE & Holloway Ave", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.475028, 37.720967 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Holloway Ave & Denslowe Dr", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.474341, 37.721340 ] } }
 ,
@@ -4432,9 +4432,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Ocean Ave & Lee St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.454214, 37.723445 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Ocean Ave&Lee Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.454214, 37.723445 ] } }
+{ "type": "Feature", "properties": { "name": "Ocean Ave&Lee Ave", "tippecanoe_feature_density": 39 }, "geometry": { "type": "Point", "coordinates": [ -122.454214, 37.723445 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Ocean Ave & Lee St", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.454000, 37.723479 ] } }
+{ "type": "Feature", "properties": { "name": "Ocean Ave & Lee St", "tippecanoe_feature_density": 39 }, "geometry": { "type": "Point", "coordinates": [ -122.454000, 37.723479 ] } }
 ,
 { "type": "Feature", "properties": { "name": "GRAFTON AVE & Capitol AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.720118 ] } }
 ,
@@ -4928,11 +4928,11 @@
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720865 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720831 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720831 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.446489, 37.720831 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.446489, 37.720831 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.446232, 37.721238 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.446232, 37.721238 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Niagra Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.447562, 37.719711 ] } }
 ,
@@ -4958,21 +4958,21 @@
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
+{ "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "GENEVA AVE & SAN JOSE AVE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
+{ "type": "Feature", "properties": { "name": "GENEVA AVE & SAN JOSE AVE", "tippecanoe_feature_density": 23 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "GENEVA AVE & SANA JOSE AVE", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
+{ "type": "Feature", "properties": { "name": "GENEVA AVE & SANA JOSE AVE", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.446618, 37.720593 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720525 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.446661, 37.720525 ] } }
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446575, 37.720627 ] } }
 ,
 { "type": "Feature", "properties": { "name": "CAMERON BEACH YARD", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446575, 37.720627 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Geneva Ave", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
 ,
 { "type": "Feature", "properties": { "name": "SAN JOSE AVE & GENEVA AVE", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.446704, 37.720491 ] } }
 ,
@@ -5070,9 +5070,9 @@
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & Santa Ynez Ave", "tippecanoe_feature_density": 16 }, "geometry": { "type": "Point", "coordinates": [ -122.442455, 37.725685 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Santa Ynez Ave", "tippecanoe_feature_density": 18 }, "geometry": { "type": "Point", "coordinates": [ -122.442412, 37.725685 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Santa Ynez Ave", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.442412, 37.725685 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Santa Ynez Ave", "tippecanoe_feature_density": 18 }, "geometry": { "type": "Point", "coordinates": [ -122.442112, 37.725990 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Santa Ynez Ave", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.442112, 37.725990 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Jose Ave & San Juan Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.441211, 37.727178 ] } }
 ,
@@ -5278,9 +5278,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Chestnut St & Van Ness Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.424903, 37.802358 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Van Ness Ave & Chestnut St", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.424860, 37.802358 ] } }
+{ "type": "Feature", "properties": { "name": "Van Ness Ave & Chestnut St", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.424860, 37.802358 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Chestnut St & Van Ness Ave", "tippecanoe_feature_density": 19 }, "geometry": { "type": "Point", "coordinates": [ -122.424903, 37.802223 ] } }
+{ "type": "Feature", "properties": { "name": "Chestnut St & Van Ness Ave", "tippecanoe_feature_density": 21 }, "geometry": { "type": "Point", "coordinates": [ -122.424903, 37.802223 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Chestnut St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.424645, 37.802596 ] } }
 ,
@@ -5966,7 +5966,7 @@
 ,
 { "type": "Feature", "properties": { "name": "POWELL ST & CALIFORNIA ST", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.409110, 37.792151 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "POWELL ST & CALIFORNIA ST", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.409110, 37.792151 ] } }
+{ "type": "Feature", "properties": { "name": "POWELL ST & CALIFORNIA ST", "tippecanoe_feature_density": 20 }, "geometry": { "type": "Point", "coordinates": [ -122.409110, 37.792151 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Powell St & Pine St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.409067, 37.791100 ] } }
 ,
@@ -6154,7 +6154,7 @@
 ,
 { "type": "Feature", "properties": { "name": "MARKET ST & DRUMM ST", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793202 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & Drumm St", "tippecanoe_feature_density": 85 }, "geometry": { "type": "Point", "coordinates": [ -122.396193, 37.793474 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & Drumm St", "tippecanoe_feature_density": 89 }, "geometry": { "type": "Point", "coordinates": [ -122.396193, 37.793474 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Drumm St", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.396150, 37.793508 ] } }
 ,
@@ -6288,7 +6288,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Beale St. & Howard St.", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.394261, 37.789845 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Beale St. & Howard St.", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.394176, 37.789743 ] } }
+{ "type": "Feature", "properties": { "name": "Beale St. & Howard St.", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.394176, 37.789743 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fremont St & Folsom St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.393789, 37.788217 ] } }
 ,
@@ -6490,7 +6490,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & O'Farrell St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.421169, 37.784825 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "VAN NESS AVE & OFARRELL ST", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.421212, 37.784520 ] } }
+{ "type": "Feature", "properties": { "name": "VAN NESS AVE & OFARRELL ST", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.421212, 37.784520 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Eddy St & Gough St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.424302, 37.782519 ] } }
 ,
@@ -6798,7 +6798,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Oak St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.419496, 37.775532 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & Van Ness Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.419410, 37.775226 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & Van Ness Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.419410, 37.775226 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Market St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775328 ] } }
 ,
@@ -6838,7 +6838,7 @@
 ,
 { "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St.", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774989 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St.", "tippecanoe_feature_density": 51 }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774955 ] } }
+{ "type": "Feature", "properties": { "name": "S. Van Ness Ave. & Market St.", "tippecanoe_feature_density": 55 }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.774955 ] } }
 ,
 { "type": "Feature", "properties": { "name": "South Van Ness Ave & Mission St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.418637, 37.773327 ] } }
 ,
@@ -7216,7 +7216,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Folsom St & 20th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.414646, 37.759010 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Folsom St & 20th St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.414646, 37.758841 ] } }
+{ "type": "Feature", "properties": { "name": "Folsom St & 20th St", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.414646, 37.758841 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Folsom St & 20St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.414818, 37.758773 ] } }
 ,
@@ -7260,7 +7260,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Cyril Magnin St & Eddy St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.408595, 37.784317 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Eddy St", "tippecanoe_feature_density": 13 }, "geometry": { "type": "Point", "coordinates": [ -122.408423, 37.784520 ] } }
+{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Eddy St", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.408423, 37.784520 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Ellis street & Powell street", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.407994, 37.785436 ] } }
 ,
@@ -7276,23 +7276,23 @@
 ,
 { "type": "Feature", "properties": { "name": "Powell St & Market St", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.407694, 37.784825 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784792 ] } }
+{ "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB", "tippecanoe_feature_density": 77 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784792 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784792 ] } }
+{ "type": "Feature", "properties": { "name": "POWELL STREET TURNABLE IN IB", "tippecanoe_feature_density": 77 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784792 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Powell/Market", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784486 ] } }
+{ "type": "Feature", "properties": { "name": "Powell/Market", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.407651, 37.784486 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.408209, 37.784181 ] } }
+{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.408209, 37.784181 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & 5th  St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.407994, 37.784113 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & 5th  St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.407994, 37.784113 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.408252, 37.784011 ] } }
+{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.408252, 37.784011 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & 5th St", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.408166, 37.783910 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & 5th St", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.408166, 37.783910 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.408080, 37.784011 ] } }
+{ "type": "Feature", "properties": { "name": "Cyril Magnin St & Market St", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.408080, 37.784011 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & Powell St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.407351, 37.784690 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & Powell St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.407351, 37.784690 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Stockton St & Geary Blvd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.406707, 37.787742 ] } }
 ,
@@ -7354,7 +7354,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & Kearny St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.403445, 37.787640 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & 3rd St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.403231, 37.787742 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & 3rd St", "tippecanoe_feature_density": 9 }, "geometry": { "type": "Point", "coordinates": [ -122.403231, 37.787742 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mission St & 3rd St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.402501, 37.785979 ] } }
 ,
@@ -7362,9 +7362,9 @@
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Stevenson St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.402115, 37.786386 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Mission St", "tippecanoe_feature_density": 15 }, "geometry": { "type": "Point", "coordinates": [ -122.402115, 37.786352 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Mission St", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.402115, 37.786352 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Minna St", "tippecanoe_feature_density": 15 }, "geometry": { "type": "Point", "coordinates": [ -122.401643, 37.786046 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Minna St", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.401643, 37.786046 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mission St & 4th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.403960, 37.784656 ] } }
 ,
@@ -7386,7 +7386,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Folsom St & Third St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.398810, 37.783978 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Folsom St & 3rd St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.398767, 37.784011 ] } }
+{ "type": "Feature", "properties": { "name": "Folsom St & 3rd St", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.398767, 37.784011 ] } }
 ,
 { "type": "Feature", "properties": { "name": "4th St & Howard St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.402587, 37.783062 ] } }
 ,
@@ -7582,9 +7582,9 @@
 ,
 { "type": "Feature", "properties": { "name": "4th St & King St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.393918, 37.776346 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "4th St & King St", "tippecanoe_feature_density": 36 }, "geometry": { "type": "Point", "coordinates": [ -122.394047, 37.776278 ] } }
+{ "type": "Feature", "properties": { "name": "4th St & King St", "tippecanoe_feature_density": 34 }, "geometry": { "type": "Point", "coordinates": [ -122.394047, 37.776278 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "4TH ST & BERRY ST", "tippecanoe_feature_density": 36 }, "geometry": { "type": "Point", "coordinates": [ -122.393961, 37.776176 ] } }
+{ "type": "Feature", "properties": { "name": "4TH ST & BERRY ST", "tippecanoe_feature_density": 34 }, "geometry": { "type": "Point", "coordinates": [ -122.393961, 37.776176 ] } }
 ,
 { "type": "Feature", "properties": { "name": "4th St & King St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.393875, 37.776312 ] } }
 ,
@@ -7812,7 +7812,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Kansas St & 23rd St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.402501, 37.754464 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "KANSAS ST & 23RD ST", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.402501, 37.754464 ] } }
+{ "type": "Feature", "properties": { "name": "KANSAS ST & 23RD ST", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.402501, 37.754464 ] } }
 ,
 { "type": "Feature", "properties": { "name": "23rd St & Rhode Island St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.401729, 37.754532 ] } }
 ,
@@ -7894,9 +7894,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Third St & Mariposa St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.388768, 37.764439 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street & Mariposa St", "tippecanoe_feature_density": 18 }, "geometry": { "type": "Point", "coordinates": [ -122.388897, 37.764269 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street & Mariposa St", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.388897, 37.764269 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3RD ST & MARIPOSA ST", "tippecanoe_feature_density": 18 }, "geometry": { "type": "Point", "coordinates": [ -122.388854, 37.764269 ] } }
+{ "type": "Feature", "properties": { "name": "3RD ST & MARIPOSA ST", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.388854, 37.764269 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Tennessee St & 18th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.389669, 37.762912 ] } }
 ,
@@ -7948,7 +7948,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Wisconsin St & Connecticut St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.398682, 37.753480 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Wisconsin St & Coral Rd", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.398682, 37.753480 ] } }
+{ "type": "Feature", "properties": { "name": "Wisconsin St & Coral Rd", "tippecanoe_feature_density": 50 }, "geometry": { "type": "Point", "coordinates": [ -122.398682, 37.753480 ] } }
 ,
 { "type": "Feature", "properties": { "name": "1095 CONNECTICUT ST", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397351, 37.753921 ] } }
 ,
@@ -7998,7 +7998,7 @@
 ,
 { "type": "Feature", "properties": { "name": "3RD ST & 22ND ST", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.388468, 37.758060 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "22nd St & 3rd St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.388511, 37.757891 ] } }
+{ "type": "Feature", "properties": { "name": "22nd St & 3rd St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.388511, 37.757891 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd ST & 22nd St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.388253, 37.758094 ] } }
 ,
@@ -8090,9 +8090,9 @@
 ,
 { "type": "Feature", "properties": { "name": "30th St & Church St", "tippecanoe_feature_density": 9 }, "geometry": { "type": "Point", "coordinates": [ -122.426534, 37.742112 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Church St & 30th St", "tippecanoe_feature_density": 9 }, "geometry": { "type": "Point", "coordinates": [ -122.426491, 37.742248 ] } }
+{ "type": "Feature", "properties": { "name": "Church St & 30th St", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.426491, 37.742248 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "30th St & Church St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.426405, 37.742180 ] } }
+{ "type": "Feature", "properties": { "name": "30th St & Church St", "tippecanoe_feature_density": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.426405, 37.742180 ] } }
 ,
 { "type": "Feature", "properties": { "name": "46 Addison St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.431040, 37.737768 ] } }
 ,
@@ -8138,7 +8138,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Mission St & 30th St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.421899, 37.742451 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Mission St & 30th St", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.421856, 37.742451 ] } }
+{ "type": "Feature", "properties": { "name": "Mission St & 30th St", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.421856, 37.742451 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Chenery St & Randall St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.425718, 37.739940 ] } }
 ,
@@ -8406,7 +8406,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Silver Ave & Lisbon St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.428637, 37.728604 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Silver Ave & Lisbon St", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.428594, 37.728638 ] } }
+{ "type": "Feature", "properties": { "name": "Silver Ave & Lisbon St", "tippecanoe_feature_density": 13 }, "geometry": { "type": "Point", "coordinates": [ -122.428594, 37.728638 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Silver Ave & Craut St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.428122, 37.728570 ] } }
 ,
@@ -8512,9 +8512,9 @@
 ,
 { "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719371 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719337 ] } }
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719337 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE", "tippecanoe_feature_density": 13 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE", "tippecanoe_feature_density": 93 }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Richland Ave & Murray St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.420096, 37.735800 ] } }
 ,
@@ -8850,9 +8850,9 @@
 ,
 { "type": "Feature", "properties": { "name": "3RD ST & EVANS AVE", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.387953, 37.742723 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Evans Ave", "tippecanoe_feature_density": 42 }, "geometry": { "type": "Point", "coordinates": [ -122.387910, 37.742689 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Evans Ave", "tippecanoe_feature_density": 50 }, "geometry": { "type": "Point", "coordinates": [ -122.387910, 37.742689 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Evans Ave & 3rd St", "tippecanoe_feature_density": 42 }, "geometry": { "type": "Point", "coordinates": [ -122.387867, 37.742655 ] } }
+{ "type": "Feature", "properties": { "name": "Evans Ave & 3rd St", "tippecanoe_feature_density": 50 }, "geometry": { "type": "Point", "coordinates": [ -122.387867, 37.742655 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3RD ST & EVANS AVE", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.387867, 37.742621 ] } }
 ,
@@ -8906,9 +8906,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street/Kirkwood/La Salle", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.389712, 37.737666 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Kirkwood/La Salle", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.389712, 37.737666 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Kirkwood/La Salle", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.389712, 37.737666 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Kirkwood/La Salle", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.389712, 37.737666 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Kirkwood/La Salle", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.389712, 37.737666 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Bay Shore Blvd & Boutwell St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.405891, 37.734883 ] } }
 ,
@@ -8924,9 +8924,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Bay Shore Blvd & Silver Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.404733, 37.733220 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Silver Ave", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.404819, 37.733016 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Silver Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.404819, 37.733016 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Silver Ave", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.404819, 37.732983 ] } }
+{ "type": "Feature", "properties": { "name": "Bay Shore Blvd & Silver Ave", "tippecanoe_feature_density": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.404819, 37.732983 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Silver Ave & Bay Shore Blvd", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.404389, 37.733084 ] } }
 ,
@@ -9110,9 +9110,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street/Oakdale/Palou", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.734374 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Oakdale/Palou", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.734374 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Oakdale/Palou", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.734374 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Oakdale Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.390742, 37.734815 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Oakdale Ave", "tippecanoe_feature_density": 255 }, "geometry": { "type": "Point", "coordinates": [ -122.390742, 37.734815 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Palou Ave", "tippecanoe_feature_density": 1 }, "geometry": { "type": "Point", "coordinates": [ -122.390957, 37.734103 ] } }
 ,
@@ -9122,21 +9122,21 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street at Palou Ave SE", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.390914, 37.733899 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Palou Ave & 3rd St", "tippecanoe_feature_density": 15 }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.733865 ] } }
+{ "type": "Feature", "properties": { "name": "Palou Ave & 3rd St", "tippecanoe_feature_density": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.733865 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Bayview St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.391601, 37.732304 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Third Street/Revere/Shafter", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.391558, 37.732304 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Revere/Shafter", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.391515, 37.732270 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Revere/Shafter", "tippecanoe_feature_density": 31 }, "geometry": { "type": "Point", "coordinates": [ -122.391515, 37.732270 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Revere/Shafter", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.391515, 37.732270 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Revere/Shafter", "tippecanoe_feature_density": 31 }, "geometry": { "type": "Point", "coordinates": [ -122.391515, 37.732270 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Revere Ave & 3rd St", "tippecanoe_feature_density": 28 }, "geometry": { "type": "Point", "coordinates": [ -122.391386, 37.732439 ] } }
+{ "type": "Feature", "properties": { "name": "Revere Ave & 3rd St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.391386, 37.732439 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Revere Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.391472, 37.732270 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Revere Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.391472, 37.732270 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Revere Ave & 3rd St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.391257, 37.732202 ] } }
+{ "type": "Feature", "properties": { "name": "Revere Ave & 3rd St", "tippecanoe_feature_density": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.391257, 37.732202 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Newcomb Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.390356, 37.735426 ] } }
 ,
@@ -9214,9 +9214,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third St & Le Conte Ave", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
+{ "type": "Feature", "properties": { "name": "Third St & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 11 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street & Le Conte Ave", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.718828 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Key St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.396750, 37.719778 ] } }
 ,
@@ -9224,15 +9224,15 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street/Gilman/Paul", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.395678, 37.722426 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Third Street/Gilman/Paul", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722460 ] } }
+{ "type": "Feature", "properties": { "name": "Third Street/Gilman/Paul", "tippecanoe_feature_density": 202 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722460 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Gilman Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.395420, 37.722664 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Gilman Ave", "tippecanoe_feature_density": 202 }, "geometry": { "type": "Point", "coordinates": [ -122.395420, 37.722664 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Gilman Ave & 3rd St", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.395420, 37.722460 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Gilman Ave", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722392 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Gilman Ave", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722392 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Gilman St & 3rd St", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722358 ] } }
+{ "type": "Feature", "properties": { "name": "Gilman St & 3rd St", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.395635, 37.722358 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fitzgerald Ave & Keith St", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.394862, 37.722901 ] } }
 ,
@@ -9256,9 +9256,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Not a public stop", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.386880, 37.755414 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 51 }, "geometry": { "type": "Point", "coordinates": [ -122.386966, 37.755380 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 54 }, "geometry": { "type": "Point", "coordinates": [ -122.386966, 37.755380 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Not a public stop", "tippecanoe_feature_density": 51 }, "geometry": { "type": "Point", "coordinates": [ -122.386837, 37.755414 ] } }
+{ "type": "Feature", "properties": { "name": "Not a public stop", "tippecanoe_feature_density": 54 }, "geometry": { "type": "Point", "coordinates": [ -122.386837, 37.755414 ] } }
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "tippecanoe_feature_density": 12 }, "geometry": { "type": "Point", "coordinates": [ -122.386794, 37.755414 ] } }
 ,
@@ -9680,7 +9680,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762641 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown", "tippecanoe_feature_density": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.402158, 37.788794 ] } }
 ,
@@ -9690,7 +9690,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Metro Embarcadero Station", "tippecanoe_feature_density": 17 }, "geometry": { "type": "Point", "coordinates": [ -122.396450, 37.793168 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station", "tippecanoe_feature_density": 85 }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793168 ] } }
+{ "type": "Feature", "properties": { "name": "Metro Embarcadero Station", "tippecanoe_feature_density": 89 }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793168 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.412543, 37.780348 ] } }
 ,
@@ -9710,9 +9710,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Metro Church Station/Downtown", "tippecanoe_feature_density": 0 }, "geometry": { "type": "Point", "coordinates": [ -122.429194, 37.767221 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound", "tippecanoe_feature_density": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound", "tippecanoe_feature_density": 77 }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown", "tippecanoe_feature_density": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.407737, 37.784215 ] } }
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown", "tippecanoe_feature_density": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.407737, 37.784215 ] } }
 ] }
 ] }
 ,

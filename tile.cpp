@@ -252,7 +252,7 @@ static int is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -341,6 +341,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 					sf.metapos = metastart;
 					sf.geometry = geom2;
+					sf.index = index;
 					sf.m = m;
 					sf.feature_minzoom = feature_minzoom;
 
@@ -1308,8 +1309,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			deserialize_int_io(geoms, &segment, geompos_in);
 
 			long long bbox[4];
+			unsigned long long index;
 
 			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
+			deserialize_ulong_long_io(geoms, &index, geompos_in);
 
 			long long metastart;
 			int m;
@@ -1428,7 +1431,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index);
 			}
 
 			if (z < minzoom) {
@@ -1444,11 +1447,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (z < feature_minzoom) {
 				continue;
-			}
-
-			unsigned long long index = 0;
-			if (additional[A_CALCULATE_FEATURE_DENSITY] || gamma > 0 || additional[A_MERGE_POLYGONS_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED]) {
-				index = encode(bbox[0] / 2 + bbox[2] / 2, bbox[1] / 2 + bbox[3] / 2);
 			}
 
 			if (gamma > 0) {
@@ -2151,7 +2149,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				}
 				if (args[thread].mingap_out > zoom_mingap) {
 					zoom_mingap = args[thread].mingap_out;
-					fprintf(stderr, "bump mingap to %llu\n", zoom_mingap);
 				}
 			}
 		}
