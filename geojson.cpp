@@ -379,7 +379,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 	sf.geometry = dv;
 	sf.m = m;
-	sf.feature_minzoom = 0; // Will be filled in during index merging
+	sf.feature_minzoom = 0;  // Will be filled in during index merging
 
 	if (inline_meta) {
 		sf.metapos = -1;

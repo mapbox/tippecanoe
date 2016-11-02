@@ -1130,6 +1130,44 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	}
 }
 
+unsigned long long choose_mingap(std::vector<unsigned long long> const &indices, double f) {
+	unsigned long long bot = ULLONG_MAX;
+	unsigned long long top = 0;
+
+	for (size_t i = 0; i < indices.size(); i++) {
+		if (i > 0 && indices[i] >= indices[i - 1]) {
+			if (indices[i] - indices[i - 1] > top) {
+				top = indices[i] - indices[i - 1];
+			}
+			if (indices[i] - indices[i - 1] < bot) {
+				bot = indices[i] - indices[i - 1];
+			}
+		}
+	}
+
+	size_t want = indices.size() * f;
+	while (top - bot > 2) {
+		long long guess = bot / 2 + top / 2;
+		size_t count = 0;
+
+		for (size_t i = 0; i < indices.size(); i++) {
+			if (i == 0 || indices[i] < indices[i - 1] || (long long) (indices[i] - indices[i - 1]) > guess) {
+				count++;
+			}
+		}
+
+		if (count > want) {
+			bot = guess;
+		} else if (count < want) {
+			top = guess;
+		} else {
+			return guess;
+		}
+	}
+
+	return top;
+}
+
 struct write_tile_args {
 	struct task *tasks;
 	char *metabase;
@@ -1420,9 +1458,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
-				if (index > merge_previndex) {
-					indices.push_back(index - merge_previndex);
-				}
+				indices.push_back(index);
 				if (index - merge_previndex < mingap) {
 					continue;
 				}
@@ -1728,20 +1764,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
 				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
-					std::sort(indices.begin(), indices.end());
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.95;
-					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
-					if (n < indices.size() && mingap < indices[n]) {
-						mingap = indices[n];
-						if (mingap > arg->mingap_out) {
-							arg->mingap_out = mingap;
-						}
-						if (!quiet) {
-							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
-						}
-						line_detail++;
-						continue;
+					arg->mingap_out = mingap = choose_mingap(indices, mingap_fraction);
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 					}
+					line_detail++;
+					continue;
 				} else if (prevent[P_DYNAMIC_DROP]) {
 					fraction = fraction * 200000 / totalsize * 0.95;
 					if (!quiet) {
@@ -1784,19 +1813,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
-					std::sort(indices.begin(), indices.end());
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.95;
-					size_t n = (indices.size() - 1) * (1 - mingap_fraction);
-					if (n < indices.size() && mingap < indices[n]) {
-						mingap = indices[n];
-						if (mingap > arg->mingap_out) {
-							arg->mingap_out = mingap;
-						}
-						if (!quiet) {
-							fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
-						}
-						line_detail++;
+					arg->mingap_out = mingap = choose_mingap(indices, mingap_fraction);
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 					}
+					line_detail++;
 				} else if (prevent[P_DYNAMIC_DROP]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
@@ -2061,7 +2083,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		double zoom_gamma = gamma;
-		double zoom_mingap = 0;
+		unsigned long long zoom_mingap = 0;
 
 		for (size_t pass = start; pass < 2; pass++) {
 			pthread_t pthreads[threads];
@@ -2129,6 +2151,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				}
 				if (args[thread].mingap_out > zoom_mingap) {
 					zoom_mingap = args[thread].mingap_out;
+					fprintf(stderr, "bump mingap to %llu\n", zoom_mingap);
 				}
 			}
 		}
