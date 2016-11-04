@@ -2,7 +2,7 @@
 #define A_REVERSE ((int) 'r')
 #define A_REORDER ((int) 'o')
 #define A_LINE_DROP ((int) 'l')
-#define A_DEBUG_POLYGON ((int) 'd')
+#define A_DEBUG_POLYGON ((int) 'D')
 #define A_POLYGON_DROP ((int) 'p')
 #define A_DETECT_SHARED_BORDERS ((int) 'b')
 #define A_PREFER_RADIX_SORT ((int) 'R')
@@ -10,6 +10,7 @@
 #define A_INCREASE_GAMMA_AS_NEEDED ((int) 'G')
 #define A_MERGE_POLYGONS_AS_NEEDED ((int) 'm')
 #define A_INCREASE_SPACING_AS_NEEDED ((int) 's')
+#define A_DROP_FRACTION_AS_NEEDED ((int) 'd')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')

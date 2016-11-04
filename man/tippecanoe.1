@@ -158,6 +158,8 @@ which may not be what you want.
 \-am or \-\-merge\-polygons\-as\-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
 .IP \(bu 2
 \-as or \-\-increase\-spacing\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+.IP \(bu 2
+\-ad or \-\-drop\-fraction\-as\-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like \fB\fC\-pd\fR but applies to the entire zoom level, not to each tile.)
 .RE
 .SS Doing less
 .RS
@@ -170,7 +172,7 @@ which may not be what you want.
 .IP \(bu 2
 \-pk or \-\-no\-tile\-size\-limit: Don't limit tiles to 500K bytes
 .IP \(bu 2
-\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.)
 .IP \(bu 2
 \-pi or \-\-preserve\-input\-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2

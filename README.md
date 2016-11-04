@@ -130,6 +130,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -aG or --increase-gamma-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the `-g` gamma. The discovered gamma applies to the entire zoom level.
  * -am or --merge-polygons-as-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
  * -as or --increase-spacing-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+ * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
 
 ### Doing less
 
@@ -137,7 +138,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pS or --simplify-only-low-zooms: Don't simplify lines at maxzoom (but do simplify at lower zooms)
  * -pf or --no-feature-limit: Don't limit tiles to 200,000 features
  * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
- * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+ * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.)
  * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
  * -pp or --no-polygon-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
  * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
