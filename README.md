@@ -91,7 +91,7 @@ Options
  * -m _detail_ or --minimum-detail=_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_ or --buffer=_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
  * -s _projection_ or --projection=_projection_: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
- * -k _bytes_ or --maximum-tile-bytes=_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
+ * -M _bytes_ or --maximum-tile-bytes=_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional

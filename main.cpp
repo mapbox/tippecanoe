@@ -1895,7 +1895,7 @@ int main(int argc, char **argv) {
 		{"additional", required_argument, 0, 'a'},
 		{"projection", required_argument, 0, 's'},
 		{"simplification", required_argument, 0, 'S'},
-		{"maximum-tile-bytes", required_argument, 0, 'k'},
+		{"maximum-tile-bytes", required_argument, 0, 'M'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1948,7 +1948,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:k:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2127,12 +2127,13 @@ int main(int argc, char **argv) {
 			}
 			break;
 
-		case 'k':
+		case 'M':
 			max_tile_size = atoll(optarg);
 			break;
 
 		default: {
 			int width = 7 + strlen(argv[0]);
+			fprintf(stderr, "Unknown option -%c\n", i);
 			fprintf(stderr, "Usage: %s", argv[0]);
 			for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
 				if (width + strlen(long_options[lo].name) + 9 >= 80) {
