@@ -30,7 +30,6 @@ extern "C" {
 
 #include "pool.hpp"
 #include "projection.hpp"
-#include "version.hpp"
 #include "memfile.hpp"
 #include "main.hpp"
 #include "mbtiles.hpp"
@@ -424,13 +423,14 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
-	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
+	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale, false);
 
 	struct index index;
 	index.start = geomstart;
 	index.end = *geompos;
 	index.segment = segment;
 	index.seq = *layer_seq;
+	index.t = sf.t;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area

@@ -27,7 +27,7 @@ void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
 }
 
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	unsigned long long zigzag = protozero::encode_zigzag32(n);
+	unsigned long long zigzag = protozero::encode_zigzag64(n);
 
 	serialize_ulong_long(out, zigzag, fpos, fname);
 }
@@ -73,7 +73,7 @@ void deserialize_int(char **f, int *n) {
 void deserialize_long_long(char **f, long long *n) {
 	unsigned long long zigzag = 0;
 	deserialize_ulong_long(f, &zigzag);
-	*n = protozero::decode_zigzag32(zigzag);
+	*n = protozero::decode_zigzag64(zigzag);
 }
 
 void deserialize_ulong_long(char **f, unsigned long long *zigzag) {
@@ -107,7 +107,7 @@ void deserialize_byte(char **f, signed char *n) {
 int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 	unsigned long long zigzag = 0;
 	int ret = deserialize_ulong_long_io(f, &zigzag, geompos);
-	*n = protozero::decode_zigzag32(zigzag);
+	*n = protozero::decode_zigzag64(zigzag);
 	return ret;
 }
 
@@ -174,7 +174,7 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 	}
 }
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy) {
+void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 	serialize_long_long(geomfile, sf->seq, geompos, fname);
 
@@ -207,5 +207,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_long_long(geomfile, sf->values[i], geompos, fname);
 	}
 
-	serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	if (include_minzoom) {
+		serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	}
 }

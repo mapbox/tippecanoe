@@ -284,7 +284,7 @@ Any polygons that have over 700 vertices after line simplification will be split
 multiple features so they can be rendered efficiently, unless you use \-pp to prevent this.
 .PP
 Features in the same tile that share the same type and attributes are coalesced
-together into a single geometry. You are strongly encouraged to use \-x to exclude
+together into a single geometry if you use \fB\fC\-\-coalesce\fR\&. You are strongly encouraged to use \-x to exclude
 any unnecessary properties to reduce wasted file size.
 .PP
 If a tile is larger than 500K, it will try encoding that tile at progressively

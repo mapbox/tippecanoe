@@ -236,8 +236,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 		lnames.push_back(ai->first);
 	}
 
-	int i;
-	for (i = 0; i < lnames.size(); i++) {
+	for (size_t i = 0; i < lnames.size(); i++) {
 		if (i != 0) {
 			aprintf(&buf, ", ");
 		}
