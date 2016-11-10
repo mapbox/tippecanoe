@@ -495,7 +495,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	mapbox::geometry::geometry<long long> g = from_drawvec(VT_POLYGON, geom);
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
-	// printf("[");
+	printf("[");
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -510,19 +510,19 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				mapbox::geometry::linear_ring<long long> lr;
 
 				if (i != 0) {
-					// printf(",");
+					printf(",");
 				}
-				// printf("[");
+				printf("[");
 
 				for (size_t k = i; k < j; k++) {
 					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
 					if (k != i) {
-						// printf(",");
+						printf(",");
 					}
-					// printf("[%lld,%lld]", geom[k].x, geom[k].y);
+					printf("[%lld,%lld]", geom[k].x, geom[k].y);
 				}
 
-				// printf("]");
+				printf("]");
 
 				if (lr.size() >= 3) {
 				}
@@ -532,8 +532,8 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 	}
 
-	// printf("]");
-	// printf("\n\n\n\n\n");
+	printf("]");
+	printf("\n\n\n\n\n");
 	fflush(stdout);
 
 	for (size_t i = 0; i < geom.size(); i++) {
