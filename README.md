@@ -131,6 +131,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -am or --merge-polygons-as-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
  * -as or --increase-spacing-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
  * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
+ * -an or --drop-smallest-as-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 
 ### Doing less
 

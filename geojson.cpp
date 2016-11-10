@@ -350,6 +350,33 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
+	double extent = 0;
+	if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (mb_geometry[t] == VT_POLYGON) {
+			for (size_t i = 0; i < dv.size(); i++) {
+				if (dv[i].op == VT_MOVETO) {
+					size_t j;
+					for (j = i + 1; j < dv.size(); j++) {
+						if (dv[j].op != VT_LINETO) {
+							break;
+						}
+					}
+
+					extent += get_area(dv, i, j);
+					i = j - 1;
+				}
+			}
+		} else if (mb_geometry[t] == VT_LINE) {
+			for (size_t i = 1; i < dv.size(); i++) {
+				if (dv[i].op == VT_LINETO) {
+					double xd = dv[i].x - dv[i - 1].x;
+					double yd = dv[i].y - dv[i - 1].y;
+					extent += sqrt(xd * xd + yd * yd);
+				}
+			}
+		}
+	}
+
 	if (tippecanoe_layername.size() != 0) {
 		if (layermap->count(tippecanoe_layername) == 0) {
 			layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
@@ -380,6 +407,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.geometry = dv;
 	sf.m = m;
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
+	sf.extent = (long long) extent;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area

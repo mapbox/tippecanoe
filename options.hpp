@@ -11,6 +11,7 @@
 #define A_MERGE_POLYGONS_AS_NEEDED ((int) 'm')
 #define A_INCREASE_SPACING_AS_NEEDED ((int) 's')
 #define A_DROP_FRACTION_AS_NEEDED ((int) 'd')
+#define A_DROP_SMALLEST_AS_NEEDED ((int) 'n')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')

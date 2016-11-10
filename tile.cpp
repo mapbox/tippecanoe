@@ -252,7 +252,7 @@ static int is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
 	if (geom.size() > 0 && nextzoom <= maxzoom) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -342,6 +342,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.metapos = metastart;
 					sf.geometry = geom2;
 					sf.index = index;
+					sf.extent = extent;
 					sf.m = m;
 					sf.feature_minzoom = feature_minzoom;
 
@@ -1171,6 +1172,11 @@ unsigned long long choose_mingap(std::vector<unsigned long long> const &indices,
 	return top;
 }
 
+long long choose_minextent(std::vector<long long> &extents, double f) {
+	std::sort(extents.begin(), extents.end());
+	return extents[(extents.size() - 1) * (1 - f)];
+}
+
 struct write_tile_args {
 	struct task *tasks;
 	char *metabase;
@@ -1209,14 +1215,17 @@ struct write_tile_args {
 	size_t passes;
 	unsigned long long mingap;
 	unsigned long long mingap_out;
+	long long minextent;
+	long long minextent_out;
 	double fraction;
 	double fraction_out;
 };
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, size_t passes, unsigned long long mingap, double fraction, write_tile_args *arg) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
+	double minextent_fraction = 1;
 
 	long long og = *geompos_in;
 
@@ -1268,6 +1277,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::vector<struct partial> partials;
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
+		std::vector<long long> extents;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1314,9 +1324,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			long long bbox[4];
 			unsigned long long index;
+			long long extent;
 
 			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
 			deserialize_ulong_long_io(geoms, &index, geompos_in);
+			deserialize_long_long_io(geoms, &extent, geompos_in);
 
 			long long metastart;
 			int m;
@@ -1435,7 +1447,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index);
+				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
 			}
 
 			if (z < minzoom) {
@@ -1462,6 +1474,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
 				indices.push_back(index);
 				if (index - merge_previndex < mingap) {
+					continue;
+				}
+			}
+			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+				extents.push_back(extent);
+				if (extent <= minextent) {
 					continue;
 				}
 			}
@@ -1776,6 +1794,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;
 					continue;
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+					minextent_fraction = minextent_fraction * 200000.0 / totalsize * 0.90;
+					minextent = choose_minextent(extents, minextent_fraction);
+					if (minextent > arg->minextent_out) {
+						arg->minextent_out = minextent;
+					}
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
+					}
+					line_detail++;
+					continue;
 				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
 					fraction = fraction * 200000 / totalsize * 0.95;
 					if (!quiet) {
@@ -1830,6 +1859,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 					}
 					line_detail++;
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
+					minextent = choose_minextent(extents, minextent_fraction);
+					if (minextent > arg->minextent_out) {
+						arg->minextent_out = minextent;
+					}
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
+					}
+					line_detail++;
+					continue;
 				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
@@ -1912,7 +1952,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg->passes, arg->mingap, arg->fraction, arg);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2091,12 +2131,13 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
 		double zoom_gamma = gamma;
 		unsigned long long zoom_mingap = 0;
+		long long zoom_minextent = 0;
 		double zoom_fraction = 1;
 
 		for (size_t pass = start; pass < 2; pass++) {
@@ -2121,6 +2162,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].gamma_out = zoom_gamma;
 				args[thread].mingap = zoom_mingap;
 				args[thread].mingap_out = zoom_mingap;
+				args[thread].minextent = zoom_minextent;
+				args[thread].minextent_out = zoom_minextent;
 				args[thread].fraction = zoom_fraction;
 				args[thread].fraction_out = zoom_fraction;
 				args[thread].child_shards = TEMP_FILES / threads;
@@ -2169,6 +2212,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				}
 				if (args[thread].mingap_out > zoom_mingap) {
 					zoom_mingap = args[thread].mingap_out;
+				}
+				if (args[thread].minextent_out > zoom_minextent) {
+					zoom_minextent = args[thread].minextent_out;
 				}
 				if (args[thread].fraction_out < zoom_fraction) {
 					zoom_fraction = args[thread].fraction_out;

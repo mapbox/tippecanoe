@@ -38,6 +38,7 @@ struct serial_feature {
 
 	drawvec geometry;
 	unsigned long long index;
+	long long extent;
 
 	size_t m;
 	std::vector<long long> keys;
