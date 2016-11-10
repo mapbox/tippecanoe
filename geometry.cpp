@@ -289,50 +289,6 @@ static void dump(drawvec &geom) {
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
-#if 0
-	printf("[");
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_MOVETO) {
-			size_t j;
-			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op != VT_LINETO) {
-					break;
-				}
-			}
-
-			if (j >= i + 4) {
-				mapbox::geometry::linear_ring<long long> lr;
-
-				if (i != 0) {
-					printf(",");
-				}
-				printf("[");
-
-				for (size_t k = i; k < j; k++) {
-					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
-					if (k != i) {
-						printf(",");
-					}
-					printf("[%lld,%lld]", geom[k].x, geom[k].y);
-				}
-
-				printf("]");
-
-				if (lr.size() >= 3) {
-				}
-			}
-
-			i = j - 1;
-		}
-	}
-
-	printf("]");
-	printf("\n\n\n\n\n");
-
-	fflush(stdout);
-#endif
-
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
@@ -359,7 +315,56 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	}
 
 	mapbox::geometry::multi_polygon<long long> result;
-	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
+	try {
+		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
+	} catch (std::runtime_error e) {
+		FILE *f = fopen("wagyu.log", "a");
+		fprintf(f, "%s\n", e.what());
+		fprintf(stderr, "%s\n", e.what());
+		fprintf(f, "[");
+
+		for (size_t i = 0; i < geom.size(); i++) {
+			if (geom[i].op == VT_MOVETO) {
+				size_t j;
+				for (j = i + 1; j < geom.size(); j++) {
+					if (geom[j].op != VT_LINETO) {
+						break;
+					}
+				}
+
+				if (j >= i + 4) {
+					mapbox::geometry::linear_ring<long long> lr;
+
+					if (i != 0) {
+						fprintf(f, ",");
+					}
+					fprintf(f, "[");
+
+					for (size_t k = i; k < j; k++) {
+						lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+						if (k != i) {
+							fprintf(f, ",");
+						}
+						fprintf(f, "[%lld,%lld]", geom[k].x, geom[k].y);
+					}
+
+					fprintf(f, "]");
+
+					if (lr.size() >= 3) {
+					}
+				}
+
+				i = j - 1;
+			}
+		}
+
+		fprintf(f, "]");
+		fprintf(f, "\n\n\n\n\n");
+
+		fflush(stdout);
+
+		fclose(f);
+	}
 
 	drawvec ret;
 	decode_clipped(result, ret);
