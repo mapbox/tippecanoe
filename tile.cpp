@@ -1302,33 +1302,37 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			long long original_seq;
 			deserialize_long_long_io(geoms, &original_seq, geompos_in);
 
-			long long layer;
-			deserialize_long_long_io(geoms, &layer, geompos_in);
+			long long xlayer;
+			deserialize_long_long_io(geoms, &xlayer, geompos_in);
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
 			unsigned long long id = 0;
 			bool has_id = false;
-			if (layer & 2) {
+			if (xlayer & (1 << 1)) {
 				deserialize_int_io(geoms, &tippecanoe_minzoom, geompos_in);
 			}
-			if (layer & 1) {
+			if (xlayer & (1 << 0)) {
 				deserialize_int_io(geoms, &tippecanoe_maxzoom, geompos_in);
 			}
-			if (layer & 4) {
+			if (xlayer & (1 << 2)) {
 				has_id = true;
 				deserialize_ulong_long_io(geoms, &id, geompos_in);
 			}
-			layer >>= 3;
+			long long layer = xlayer >> 5;
 
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);
 
 			long long bbox[4];
-			unsigned long long index;
-			long long extent;
+			unsigned long long index = 0;
+			long long extent = 0;
 
 			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
-			deserialize_ulong_long_io(geoms, &index, geompos_in);
-			deserialize_long_long_io(geoms, &extent, geompos_in);
+			if (xlayer & (1 << 4)) {
+				deserialize_ulong_long_io(geoms, &index, geompos_in);
+			}
+			if (xlayer & (1 << 3)) {
+				deserialize_long_long_io(geoms, &extent, geompos_in);
+			}
 
 			long long metastart;
 			int m;
