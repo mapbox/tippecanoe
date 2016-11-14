@@ -893,7 +893,7 @@ static double square_distance_from_line(long long point_x, long long point_y, lo
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n, double e) {
+static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t kept, size_t retain) {
 	e = e * e;
 	std::stack<int> recursion_stack;
 
@@ -928,15 +928,16 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 
 			double distance = std::fabs(temp_dist);
 
-			if (distance > e && distance > max_distance) {
+			if ((distance > e || kept < retain) && distance > max_distance) {
 				farthest_element_index = i;
 				max_distance = distance;
 			}
 		}
 
-		if (max_distance > e) {
+		if (max_distance >= 0) {
 			// mark idx as necessary
 			geom[start + farthest_element_index].necessary = 1;
+			kept++;
 
 			if (1 < farthest_element_index - first) {
 				recursion_stack.push(first);
@@ -984,7 +985,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
@@ -1015,7 +1016,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 			geom[j - 1].necessary = 1;
 
 			if (j - i > 1) {
-				douglas_peucker(geom, i, j - i, res * simplification);
+				douglas_peucker(geom, i, j - i, res * simplification, 2, retain);
 			}
 			i = j - 1;
 		}
