@@ -314,6 +314,24 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 	}
 
+	if (clip) {
+		long long area = 0xFFFFFFFF;
+		if (z != 0) {
+			area = 1LL << (32 - z);
+		}
+		long long clip_buffer = buffer * area / 256;
+
+		mapbox::geometry::linear_ring<long long> lr;
+
+		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, -clip_buffer));
+		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, area + clip_buffer));
+		lr.push_back(mapbox::geometry::point<long long>(area + clip_buffer, area + clip_buffer));
+		lr.push_back(mapbox::geometry::point<long long>(area + clip_buffer, -clip_buffer));
+		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, -clip_buffer));
+
+		wagyu.add_ring(lr, mapbox::geometry::wagyu::polygon_type_clip);
+	}
+
 	mapbox::geometry::multi_polygon<long long> result;
 	try {
 		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
