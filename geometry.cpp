@@ -316,7 +316,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 
 	mapbox::geometry::multi_polygon<long long> result;
 	try {
-		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_even_odd, mapbox::geometry::wagyu::fill_type_even_odd);
+		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
 	} catch (std::runtime_error e) {
 		FILE *f = fopen("wagyu.log", "a");
 		fprintf(f, "%s\n", e.what());
