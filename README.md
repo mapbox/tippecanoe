@@ -91,6 +91,7 @@ Options
  * -m _detail_ or --minimum-detail=_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
  * -b _pixels_ or --buffer=_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
  * -s _projection_ or --projection=_projection_: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+ * -M _bytes_ or --maximum-tile-bytes=_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
@@ -126,6 +127,11 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
  * -ag or --calculate-feature-density: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
  * -ab or --detect-shared-borders: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+ * -aG or --increase-gamma-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the `-g` gamma. The discovered gamma applies to the entire zoom level.
+ * -am or --merge-polygons-as-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
+ * -as or --increase-spacing-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+ * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
+ * -an or --drop-smallest-as-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 
 ### Doing less
 
@@ -133,7 +139,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pS or --simplify-only-low-zooms: Don't simplify lines at maxzoom (but do simplify at lower zooms)
  * -pf or --no-feature-limit: Don't limit tiles to 200,000 features
  * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
- * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+ * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.)
  * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
  * -pp or --no-polygon-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
  * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.

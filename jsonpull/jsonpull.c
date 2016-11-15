@@ -49,14 +49,14 @@ static inline int peek(json_pull *j) {
 
 static inline int next(json_pull *j) {
 	if (j->buffer_head < j->buffer_tail) {
-		return j->buffer[j->buffer_head++];
+		return (unsigned char) j->buffer[j->buffer_head++];
 	} else {
 		j->buffer_head = 0;
 		j->buffer_tail = j->read(j, j->buffer, BUFFER);
 		if (j->buffer_head >= j->buffer_tail) {
 			return EOF;
 		}
-		return j->buffer[j->buffer_head++];
+		return (unsigned char) j->buffer[j->buffer_head++];
 	}
 }
 
@@ -70,7 +70,7 @@ json_pull *json_begin_file(FILE *f) {
 
 static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
 	char *cp = j->source;
-	int out = 0;
+	size_t out = 0;
 
 	while (out < n && cp[out] != '\0') {
 		buffer[out] = cp[out];
@@ -478,6 +478,11 @@ again:
 			string_append(&val, read_wrap(j));
 
 			c = peek(j);
+			if (c < '0' || c > '9') {
+				j->error = "Decimal point without digits";
+				string_free(&val);
+				return NULL;
+			}
 			while (c >= '0' && c <= '9') {
 				string_append(&val, read_wrap(j));
 				c = peek(j);
@@ -549,6 +554,11 @@ again:
 					int i;
 					for (i = 0; i < 4; i++) {
 						hex[i] = read_wrap(j);
+						if (hex[i] < '0' || (hex[i] > '9' && hex[i] < 'A') || (hex[i] > 'F' && hex[i] < 'a') || hex[i] > 'f') {
+							j->error = "Invalid \\u hex character";
+							string_free(&val);
+							return NULL;
+						}
 					}
 					unsigned long ch = strtoul(hex, NULL, 16);
 					if (ch <= 0x7F) {
@@ -566,9 +576,18 @@ again:
 					string_free(&val);
 					return NULL;
 				}
+			} else if (c < ' ') {
+				j->error = "Found control character in string";
+				string_free(&val);
+				return NULL;
 			} else {
 				string_append(&val, c);
 			}
+		}
+		if (c == EOF) {
+			j->error = "String without closing quote mark";
+			string_free(&val);
+			return NULL;
 		}
 
 		json_object *s = add_object(j, JSON_STRING);

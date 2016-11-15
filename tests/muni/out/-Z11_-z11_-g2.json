@@ -68,7 +68,7 @@
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE & HOLLOWAY AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY" }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
 ,
@@ -185,6 +185,8 @@
 { "type": "Feature", "properties": { "name": "Brazil Ave & Prague St" }, "geometry": { "type": "Point", "coordinates": [ -122.425890, 37.720525 ] } }
 ,
 { "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719371 ] } }
+,
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mansell St & John F Shelley Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.418809, 37.718930 ] } }
 ,
@@ -661,6 +663,8 @@
 { "type": "Feature", "properties": { "name": "San Bruno Ave & Arleta Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.712480 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Bay Shore Blvd & Arleta Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.712242 ] } }
+,
+{ "type": "Feature", "properties": { "name": "SAN BRUNO AVE & BAYSHORE BLVD" }, "geometry": { "type": "Point", "coordinates": [ -122.402415, 37.712378 ] } }
 ,
 { "type": "Feature", "properties": { "name": "San Bruno Ave & Arleta Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.402458, 37.712310 ] } }
 ,
@@ -1936,6 +1940,8 @@
 ,
 { "type": "Feature", "properties": { "name": "ARGUELLO BLVD & EUCLID AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.783265 ] } }
 ,
+{ "type": "Feature", "properties": { "name": "Arguello Blvd & Clement St" }, "geometry": { "type": "Point", "coordinates": [ -122.459106, 37.783096 ] } }
+,
 { "type": "Feature", "properties": { "name": "Arguello Blvd & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.458806, 37.781875 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Arguello Blvd & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.458978, 37.781434 ] } }
@@ -1962,7 +1968,7 @@
 ,
 { "type": "Feature", "properties": { "name": "6th Ave & Fulton" }, "geometry": { "type": "Point", "coordinates": [ -122.463870, 37.773768 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Fulton St & 6th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.463870, 37.773564 ] } }
+{ "type": "Feature", "properties": { "name": "6th Ave & Fulton St" }, "geometry": { "type": "Point", "coordinates": [ -122.463741, 37.773971 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fulton St & 4th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.461982, 37.773971 ] } }
 ,
@@ -2586,9 +2592,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Market St & 17th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435417, 37.762641 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435417, 37.762471 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Castro St & 17th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435117, 37.762403 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435460, 37.762471 ] } }
 ,
 { "type": "Feature", "properties": { "name": "17th St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.434902, 37.762539 ] } }
 ,
@@ -2631,8 +2635,6 @@
 { "type": "Feature", "properties": { "name": "18th St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.435160, 37.760978 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 18th St" }, "geometry": { "type": "Point", "coordinates": [ -122.434945, 37.760842 ] } }
-,
-{ "type": "Feature", "properties": { "name": "18th St & Castro St" }, "geometry": { "type": "Point", "coordinates": [ -122.434859, 37.760876 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Castro St & 19th St" }, "geometry": { "type": "Point", "coordinates": [ -122.434945, 37.759417 ] } }
 ,
@@ -2876,7 +2878,7 @@
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE & HOLLOWAY AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721204 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721272 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Holloway Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475328, 37.721136 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19TH AVE &  HOLLOWAY" }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721001 ] } }
 ,
@@ -3630,7 +3632,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Union St & Hyde St" }, "geometry": { "type": "Point", "coordinates": [ -122.418981, 37.799273 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Union St & Hyde St" }, "geometry": { "type": "Point", "coordinates": [ -122.419152, 37.799137 ] } }
+{ "type": "Feature", "properties": { "name": "Hyde St & Union St" }, "geometry": { "type": "Point", "coordinates": [ -122.419152, 37.799205 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Hyde St & Green St" }, "geometry": { "type": "Point", "coordinates": [ -122.418981, 37.798357 ] } }
 ,
@@ -4512,6 +4514,8 @@
 ,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Oak St" }, "geometry": { "type": "Point", "coordinates": [ -122.419496, 37.775532 ] } }
 ,
+{ "type": "Feature", "properties": { "name": "Market St & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.419410, 37.775226 ] } }
+,
 { "type": "Feature", "properties": { "name": "Van Ness Ave & Market St" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775328 ] } }
 ,
 { "type": "Feature", "properties": { "name": "11th St/btw Market & Mission" }, "geometry": { "type": "Point", "coordinates": [ -122.418680, 37.775532 ] } }
@@ -5258,6 +5262,8 @@
 ,
 { "type": "Feature", "properties": { "name": "3rd St & 22nd St" }, "geometry": { "type": "Point", "coordinates": [ -122.388468, 37.758060 ] } }
 ,
+{ "type": "Feature", "properties": { "name": "22nd St & 3rd St" }, "geometry": { "type": "Point", "coordinates": [ -122.388511, 37.757891 ] } }
+,
 { "type": "Feature", "properties": { "name": "3rd ST & 22nd St" }, "geometry": { "type": "Point", "coordinates": [ -122.388253, 37.758094 ] } }
 ,
 { "type": "Feature", "properties": { "name": "22nd St & Pennsylvania Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.393060, 37.757585 ] } }
@@ -5583,6 +5589,8 @@
 { "type": "Feature", "properties": { "name": "Brazil Ave & Prague St" }, "geometry": { "type": "Point", "coordinates": [ -122.425890, 37.720525 ] } }
 ,
 { "type": "Feature", "properties": { "name": "DUBLIN ST & BRAZIL AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719371 ] } }
+,
+{ "type": "Feature", "properties": { "name": "DUBLIN ST & LAGRANDE AVE" }, "geometry": { "type": "Point", "coordinates": [ -122.425804, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Richland Ave & Murray St" }, "geometry": { "type": "Point", "coordinates": [ -122.420096, 37.735800 ] } }
 ,
@@ -5986,13 +5994,15 @@
 ,
 { "type": "Feature", "properties": { "name": "Third Street/Oakdale/Palou" }, "geometry": { "type": "Point", "coordinates": [ -122.390871, 37.734374 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Palou Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.390957, 37.734103 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & Oakdale Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.390742, 37.734815 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Palou Ave & 3rd St" }, "geometry": { "type": "Point", "coordinates": [ -122.390828, 37.734035 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Bayview St" }, "geometry": { "type": "Point", "coordinates": [ -122.391601, 37.732304 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Revere Ave & 3rd St" }, "geometry": { "type": "Point", "coordinates": [ -122.391386, 37.732439 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Revere Ave & 3rd St" }, "geometry": { "type": "Point", "coordinates": [ -122.391257, 37.732202 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Newcomb Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.390356, 37.735426 ] } }
 ,
@@ -6362,8 +6372,6 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762641 ] } }
-,
 { "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788726 ] } }

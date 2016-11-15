@@ -102,6 +102,8 @@ compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber
 \-b \fIpixels\fP or \-\-buffer=\fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
 .IP \(bu 2
 \-s \fIprojection\fP or \-\-projection=\fIprojection\fP: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+.IP \(bu 2
+\-M \fIbytes\fP or \-\-maximum\-tile\-bytes=\fIbytes\fP: Use the specified number of \fIbytes\fP as the maximum compressed tile size instead of 500K.
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
@@ -150,6 +152,16 @@ which may not be what you want.
 \-ag or \-\-calculate\-feature\-density: Add a new attribute, \fB\fCtippecanoe_feature_density\fR, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
 .IP \(bu 2
 \-ab or \-\-detect\-shared\-borders: In the manner of TopoJSON \[la]https://github.com/mbostock/topojson/wiki/Introduction\[ra], detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+.IP \(bu 2
+\-aG or \-\-increase\-gamma\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma. The discovered gamma applies to the entire zoom level.
+.IP \(bu 2
+\-am or \-\-merge\-polygons\-as\-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
+.IP \(bu 2
+\-as or \-\-increase\-spacing\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+.IP \(bu 2
+\-ad or \-\-drop\-fraction\-as\-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like \fB\fC\-pd\fR but applies to the entire zoom level, not to each tile.)
+.IP \(bu 2
+\-an or \-\-drop\-smallest\-as\-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .RE
 .SS Doing less
 .RS
@@ -162,7 +174,7 @@ which may not be what you want.
 .IP \(bu 2
 \-pk or \-\-no\-tile\-size\-limit: Don't limit tiles to 500K bytes
 .IP \(bu 2
-\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.)
 .IP \(bu 2
 \-pi or \-\-preserve\-input\-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
