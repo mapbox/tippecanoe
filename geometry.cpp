@@ -12,7 +12,6 @@
 #include <mapbox/geometry.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 #include "geometry.hpp"
-#include "clipper/clipper.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
@@ -253,8 +252,6 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 }
 
 static void dump(drawvec &geom) {
-	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
-
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
@@ -264,17 +261,13 @@ static void dump(drawvec &geom) {
 				}
 			}
 
-			ClipperLib::Path path;
 			printf("{ ClipperLib::Path path; ");
 
 			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
 				printf("path.push_back(IntPoint(%lld,%lld)); ", geom[k].x, geom[k].y);
-				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
 			}
 
-			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
-			}
 			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); }\n");
 
 			i = j - 1;
@@ -283,7 +276,6 @@ static void dump(drawvec &geom) {
 			exit(EXIT_FAILURE);
 		}
 	}
-	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
 }
 
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
