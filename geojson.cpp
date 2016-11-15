@@ -416,7 +416,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
 	bbox_index = encode(midx, midy);
 
-	if (additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || uses_gamma) {
+	if (additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_MERGE_POLYGONS_AS_NEEDED] || uses_gamma) {
 		sf.index = bbox_index;
 	}
 
