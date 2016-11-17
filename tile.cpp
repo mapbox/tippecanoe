@@ -1299,11 +1299,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				break;
 			}
 
-			long long original_seq;
-			deserialize_long_long_io(geoms, &original_seq, geompos_in);
-
 			long long xlayer;
 			deserialize_long_long_io(geoms, &xlayer, geompos_in);
+
+			long long original_seq = 0;
+			if (xlayer & (1 << 5)) {
+				deserialize_long_long_io(geoms, &original_seq, geompos_in);
+			}
+
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
 			unsigned long long id = 0;
 			bool has_id = false;
@@ -1317,7 +1320,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				has_id = true;
 				deserialize_ulong_long_io(geoms, &id, geompos_in);
 			}
-			long long layer = xlayer >> 5;
+			long long layer = xlayer >> 6;
 
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);

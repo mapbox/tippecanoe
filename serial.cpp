@@ -176,10 +176,10 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
-	serialize_long_long(geomfile, sf->seq, geompos, fname);
 
 	long long layer = 0;
-	layer |= sf->layer << 5;
+	layer |= sf->layer << 6;
+	layer |= (sf->seq != 0) << 5;
 	layer |= (sf->index != 0) << 4;
 	layer |= (sf->extent != 0) << 3;
 	layer |= sf->has_id << 2;
@@ -187,6 +187,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	layer |= sf->has_tippecanoe_maxzoom << 0;
 
 	serialize_long_long(geomfile, layer, geompos, fname);
+	if (sf->seq != 0) {
+		serialize_long_long(geomfile, sf->seq, geompos, fname);
+	}
 	if (sf->has_tippecanoe_minzoom) {
 		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
 	}

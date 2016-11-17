@@ -397,7 +397,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	serial_feature sf;
 	sf.layer = layer;
 	sf.segment = segment;
-	sf.seq = *layer_seq;
 	sf.t = mb_geometry[t];
 	sf.has_id = has_id;
 	sf.id = id_value;
@@ -409,6 +408,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.m = m;
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.extent = (long long) extent;
+
+	if (prevent[P_INPUT_ORDER]) {
+		sf.seq = *layer_seq;
+	} else {
+		sf.seq = 0;
+	}
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
