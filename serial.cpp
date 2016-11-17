@@ -212,7 +212,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 
 	serialize_int(geomfile, sf->m, geompos, fname);
-	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	if (sf->m != 0) {
+		serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
 		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());

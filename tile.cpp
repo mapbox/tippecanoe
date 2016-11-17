@@ -1337,10 +1337,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				deserialize_long_long_io(geoms, &extent, geompos_in);
 			}
 
-			long long metastart;
+			long long metastart = 0;
 			int m;
 			deserialize_int_io(geoms, &m, geompos_in);
-			deserialize_long_long_io(geoms, &metastart, geompos_in);
+			if (m != 0) {
+				deserialize_long_long_io(geoms, &metastart, geompos_in);
+			}
 			char *meta = NULL;
 			std::vector<long long> metakeys, metavals;
 
