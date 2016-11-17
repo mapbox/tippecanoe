@@ -1918,7 +1918,7 @@ int main(int argc, char **argv) {
 		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
 		{"increase-gamma-as-needed", no_argument, &additional[A_INCREASE_GAMMA_AS_NEEDED], 1},
 		{"merge-polygons-as-needed", no_argument, &additional[A_MERGE_POLYGONS_AS_NEEDED], 1},
-		{"increase-spacing-as-needed", no_argument, &additional[A_INCREASE_SPACING_AS_NEEDED], 1},
+		{"drop-densest-as-needed", no_argument, &additional[A_DROP_DENSEST_AS_NEEDED], 1},
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
 

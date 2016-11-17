@@ -1480,7 +1480,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(index);
 				if (index - merge_previndex < mingap) {
 					continue;
@@ -1792,7 +1792,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
 					mingap = choose_mingap(indices, mingap_fraction);
 					if (mingap > arg->mingap_out) {
@@ -1858,7 +1858,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					mingap = choose_mingap(indices, mingap_fraction);
 					if (mingap > arg->mingap_out) {
@@ -2140,7 +2140,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
