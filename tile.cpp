@@ -480,6 +480,7 @@ void *partial_feature_worker(void *v) {
 		}
 
 		to_tile_scale(geom, z, line_detail);
+		geom = remove_noop(geom, t, 0);
 
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
