@@ -1127,11 +1127,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				break;
 			}
 
-			long long original_seq;
-			deserialize_long_long_io(geoms, &original_seq, geompos_in);
-
 			long long xlayer;
 			deserialize_long_long_io(geoms, &xlayer, geompos_in);
+
+			long long original_seq = 0;
+			if (xlayer & (1 << 5)) {
+				deserialize_long_long_io(geoms, &original_seq, geompos_in);
+			}
+
 			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
 			unsigned long long id = 0;
 			bool has_id = false;
@@ -1145,7 +1148,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				has_id = true;
 				deserialize_ulong_long_io(geoms, &id, geompos_in);
 			}
-			long long layer = xlayer >> 5;
+			long long layer = xlayer >> 6;
 
 			int segment;
 			deserialize_int_io(geoms, &segment, geompos_in);
@@ -1162,10 +1165,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				deserialize_long_long_io(geoms, &extent, geompos_in);
 			}
 
-			long long metastart;
+			long long metastart = 0;
 			int m;
 			deserialize_int_io(geoms, &m, geompos_in);
-			deserialize_long_long_io(geoms, &metastart, geompos_in);
+			if (m != 0) {
+				deserialize_long_long_io(geoms, &metastart, geompos_in);
+			}
 			char *meta = NULL;
 			std::vector<long long> metakeys, metavals;
 
@@ -1303,9 +1308,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			if (additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
+			if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
 				indices.push_back(index);
-				if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					if (index - merge_previndex < mingap) {
 						continue;
 					}
@@ -1632,7 +1637,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
 					mingap = choose_mingap(indices, mingap_fraction);
 					if (mingap > arg->mingap_out) {
@@ -1709,7 +1714,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
 				}
-				if (additional[A_INCREASE_SPACING_AS_NEEDED]) {
+				if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					mingap = choose_mingap(indices, mingap_fraction);
 					if (mingap > arg->mingap_out) {
@@ -1995,7 +2000,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_INCREASE_SPACING_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
