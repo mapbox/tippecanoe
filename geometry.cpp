@@ -224,8 +224,57 @@ static void dump(drawvec &geom) {
 	}
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+static void divide_and_merge(std::vector<std::vector<mapbox::geometry::linear_ring<long long>>> &polys, size_t start, size_t end) {
+	if (end <= start) {
+		return;
+	}
+
+	size_t mid = (start + end) / 2;
+
+	if (mid > start + 1) {
+		divide_and_merge(polys, start, mid);
+	}
+	if (end > mid + 1) {
+		divide_and_merge(polys, mid, end);
+	}
+
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
+
+	// printf("going to merge rings %zu to %zu\n", start, end);
+
+	size_t in = 0;
+	for (size_t i = start; i < end; i++) {
+		for (size_t j = 0; j < polys[i].size(); j++) {
+			wagyu.add_ring(polys[i][j]);
+			in++;
+		}
+
+		polys[i].clear();
+	}
+
+	// printf("%zu rings in\n", in);
+
+	mapbox::geometry::multi_polygon<long long> result;
+	wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
+
+	size_t out = 0;
+	for (size_t i = 0; i < result.size(); i++) {
+		for (size_t j = 0; j < result[i].size(); j++) {
+			// XXX Why do the rings come back reversed?
+			mapbox::geometry::linear_ring<long long> rev;
+			for (ssize_t k = result[i][j].size() - 1; k >= 0; k--) {
+				rev.push_back(result[i][j][k]);
+			}
+
+			polys[start].push_back(rev);
+			out++;
+		}
+	}
+	// printf("%zu rings out\n", out);
+}
+
+drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+	std::vector<std::vector<mapbox::geometry::linear_ring<long long>>> polys;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -244,13 +293,33 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 				}
 
 				if (lr.size() >= 3) {
-					wagyu.add_ring(lr);
+					if (get_area(geom, i, j) >= 0 || polys.size() == 0) {
+						std::vector<mapbox::geometry::linear_ring<long long>> p;
+						p.push_back(lr);
+						polys.push_back(p);
+					} else {
+						polys[polys.size() - 1].push_back(lr);
+					}
 				}
 			}
 
 			i = j - 1;
 		}
 	}
+
+	divide_and_merge(polys, 0, polys.size());
+
+	mapbox::geometry::wagyu::wagyu<long long> wagyu;
+
+	size_t in = 0;
+	for (size_t i = 0; i < polys.size(); i++) {
+		for (size_t j = 0; j < polys[i].size(); j++) {
+			wagyu.add_ring(polys[i][j]);
+			in++;
+		}
+	}
+
+	// printf("out here: %zu rings\n", in);
 
 	if (clip) {
 		long long area = 0xFFFFFFFF;
