@@ -1513,7 +1513,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			bool reduced = false;
 			if (t == VT_POLYGON) {
-				geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
+				if (!prevent[P_TINY_POLYGON_REDUCTION]) {
+					geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
+				}
 				has_polygons = true;
 			}
 
