@@ -1,0 +1,444 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"center": "-95.625000,44.951199,5",
+"description": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 5, \"fields\": {\"adm0_a3\": \"String\", \"adm0_name\": \"String\", \"featurecla\": \"String\", \"mapcolor13\": \"Number\", \"mapcolor9\": \"Number\", \"scalerank\": \"Number\"} } ] }",
+"maxzoom": "5",
+"minzoom": "0",
+"name": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -124.013672, 46.316584 ], [ -123.486328, 46.316584 ], [ -122.958984, 46.134170 ], [ -122.695312, 45.644768 ], [ -122.431641, 45.644768 ], [ -121.640625, 45.767523 ], [ -121.113281, 45.644768 ], [ -120.673828, 45.767523 ], [ -120.234375, 45.767523 ], [ -119.619141, 45.951150 ], [ -119.355469, 45.890008 ], [ -119.003906, 46.012224 ], [ -116.982422, 46.012224 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.527843 ], [ -111.445312, 44.777936 ], [ -111.621094, 44.590467 ], [ -112.412109, 44.590467 ], [ -112.412109, 44.465151 ], [ -112.763672, 44.527843 ], [ -112.939453, 44.402392 ], [ -113.203125, 44.777936 ], [ -113.466797, 44.902578 ], [ -113.994141, 45.706179 ], [ -114.082031, 45.767523 ], [ -114.345703, 45.521744 ], [ -114.521484, 45.583290 ], [ -114.609375, 45.828799 ], [ -114.433594, 45.890008 ], [ -114.521484, 46.195042 ], [ -114.345703, 46.679594 ], [ -114.609375, 46.679594 ], [ -114.873047, 46.800059 ], [ -115.751953, 47.517201 ], [ -115.751953, 47.694974 ], [ -116.015625, 47.989922 ], [ -116.103516, 49.037868 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -116.982422, 46.012224 ], [ -116.542969, 45.583290 ], [ -117.246094, 44.465151 ], [ -117.246094, 44.339565 ], [ -116.982422, 44.087585 ], [ -117.070312, 42.032974 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.527843 ], [ -111.093750, 45.089036 ], [ -104.150391, 45.089036 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.062500, 46.012224 ], [ -96.591797, 46.073231 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.503906, 42.553080 ], [ -97.294922, 42.875964 ], [ -97.998047, 42.811522 ], [ -98.613281, 43.004647 ], [ -104.062500, 43.004647 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.516689 ], [ -91.318359, 43.961191 ], [ -92.812500, 44.777936 ], [ -92.724609, 45.521744 ], [ -92.900391, 45.706179 ], [ -92.812500, 45.890008 ], [ -92.285156, 46.134170 ], [ -92.285156, 46.679594 ], [ -92.021484, 46.739861 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.058594, 42.032974 ], [ -120.058594, 39.027719 ], [ -114.697266, 35.101934 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.082031, 37.020098 ], [ -114.082031, 42.032974 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.072266, 37.020098 ], [ -109.072266, 31.353637 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 37.020098 ], [ -109.072266, 37.020098 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 36.527295 ], [ -103.007812, 32.026706 ], [ -106.699219, 32.026706 ], [ -106.523438, 31.802893 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.361328, 40.044438 ], [ -102.128906, 40.044438 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.658203, 37.020098 ], [ -102.128906, 37.020098 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.651208 ], [ -95.273438, 33.943360 ], [ -96.328125, 33.797409 ], [ -96.855469, 33.797409 ], [ -97.031250, 33.943360 ], [ -97.119141, 33.797409 ], [ -97.734375, 34.016242 ], [ -97.998047, 33.943360 ], [ -98.173828, 34.161818 ], [ -99.228516, 34.307144 ], [ -99.404297, 34.452218 ], [ -99.667969, 34.379713 ], [ -100.019531, 34.597042 ], [ -100.019531, 36.527295 ], [ -103.007812, 36.527295 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.707031, 41.376809 ], [ -75.058594, 41.508577 ], [ -75.058594, 41.771312 ], [ -75.410156, 42.032974 ], [ -79.804688, 42.032974 ], [ -79.804688, 42.293564 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.759766, 36.668419 ], [ -88.154297, 36.668419 ], [ -88.154297, 36.527295 ], [ -89.560547, 36.527295 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.783203, 39.368279 ], [ -77.871094, 39.164141 ], [ -78.398438, 39.436193 ], [ -78.486328, 39.164141 ], [ -79.013672, 38.822591 ], [ -79.277344, 38.479395 ], [ -79.453125, 38.479395 ], [ -79.716797, 38.616870 ], [ -80.332031, 37.788081 ], [ -80.332031, 37.579413 ], [ -80.507812, 37.509726 ], [ -81.738281, 37.230328 ], [ -82.001953, 37.370157 ], [ -82.001953, 37.579413 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -124.013672, 46.286224 ], [ -123.486328, 46.286224 ], [ -122.958984, 46.134170 ], [ -122.783203, 45.951150 ], [ -122.695312, 45.644768 ], [ -122.431641, 45.614037 ], [ -122.211914, 45.614037 ], [ -121.596680, 45.736860 ], [ -121.069336, 45.644768 ], [ -120.629883, 45.767523 ], [ -120.190430, 45.767523 ], [ -119.619141, 45.951150 ], [ -119.355469, 45.890008 ], [ -119.003906, 46.012224 ], [ -116.938477, 46.012224 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.527843 ], [ -111.313477, 44.715514 ], [ -111.401367, 44.746733 ], [ -111.577148, 44.559163 ], [ -111.796875, 44.527843 ], [ -112.368164, 44.590467 ], [ -112.368164, 44.465151 ], [ -112.719727, 44.527843 ], [ -112.895508, 44.370987 ], [ -113.203125, 44.777936 ], [ -113.378906, 44.809122 ], [ -113.466797, 44.871443 ], [ -113.510742, 45.151053 ], [ -113.686523, 45.274886 ], [ -113.818359, 45.583290 ], [ -113.950195, 45.706179 ], [ -114.038086, 45.736860 ], [ -114.169922, 45.614037 ], [ -114.345703, 45.490946 ], [ -114.521484, 45.583290 ], [ -114.565430, 45.828799 ], [ -114.433594, 45.890008 ], [ -114.521484, 46.164614 ], [ -114.301758, 46.649436 ], [ -114.609375, 46.649436 ], [ -114.873047, 46.800059 ], [ -115.312500, 47.279229 ], [ -115.532227, 47.368594 ], [ -115.708008, 47.517201 ], [ -115.708008, 47.694974 ], [ -115.971680, 47.960502 ], [ -116.059570, 49.009051 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.527843 ], [ -111.093750, 45.058001 ], [ -104.106445, 45.058001 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.062500, 45.981695 ], [ -98.481445, 45.981695 ], [ -96.547852, 46.042736 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.459961, 42.520700 ], [ -96.635742, 42.520700 ], [ -96.767578, 42.650122 ], [ -97.294922, 42.875964 ], [ -97.910156, 42.843751 ], [ -97.998047, 42.811522 ], [ -98.349609, 42.875964 ], [ -98.613281, 43.004647 ], [ -104.062500, 43.004647 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.014648, 42.000325 ], [ -120.014648, 39.027719 ], [ -114.653320, 35.065973 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.038086, 37.020098 ], [ -114.038086, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.072266, 37.020098 ], [ -109.072266, 31.353637 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 36.527295 ], [ -103.007812, 32.026706 ], [ -106.655273, 32.026706 ], [ -106.523438, 31.765537 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.361328, 40.010787 ], [ -102.084961, 40.010787 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.658203, 37.020098 ], [ -102.084961, 37.020098 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.651208 ], [ -95.229492, 33.943360 ], [ -95.449219, 33.870416 ], [ -96.020508, 33.906896 ], [ -96.328125, 33.760882 ], [ -96.503906, 33.833920 ], [ -96.811523, 33.760882 ], [ -96.987305, 33.943360 ], [ -97.119141, 33.797409 ], [ -97.382812, 33.870416 ], [ -97.690430, 34.016242 ], [ -97.998047, 33.906896 ], [ -98.129883, 34.161818 ], [ -98.569336, 34.125448 ], [ -99.228516, 34.270836 ], [ -99.360352, 34.452218 ], [ -99.624023, 34.379713 ], [ -100.019531, 34.597042 ], [ -100.019531, 36.527295 ], [ -103.007812, 36.527295 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.739258, 39.334297 ], [ -77.871094, 39.164141 ], [ -78.354492, 39.436193 ], [ -78.442383, 39.164141 ], [ -78.925781, 38.788345 ], [ -78.969727, 38.822591 ], [ -79.233398, 38.479395 ], [ -79.409180, 38.444985 ], [ -79.672852, 38.582526 ], [ -79.980469, 38.065392 ], [ -80.332031, 37.753344 ], [ -80.332031, 37.544577 ], [ -80.463867, 37.474858 ], [ -80.639648, 37.474858 ], [ -80.727539, 37.405074 ], [ -80.859375, 37.439974 ], [ -80.859375, 37.335224 ], [ -81.254883, 37.265310 ], [ -81.386719, 37.335224 ], [ -81.694336, 37.195331 ], [ -81.958008, 37.370157 ], [ -82.001953, 37.544577 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 2, "x": 0, "y": 1 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -123.991699, 46.271037 ], [ -123.486328, 46.286224 ], [ -123.244629, 46.195042 ], [ -122.958984, 46.134170 ], [ -122.761230, 45.951150 ], [ -122.739258, 45.782848 ], [ -122.673340, 45.644768 ], [ -122.431641, 45.598666 ], [ -122.189941, 45.598666 ], [ -121.794434, 45.706179 ], [ -121.574707, 45.736860 ], [ -121.223145, 45.690833 ], [ -121.047363, 45.644768 ], [ -120.849609, 45.675482 ], [ -120.629883, 45.767523 ], [ -120.168457, 45.752193 ], [ -119.597168, 45.935871 ], [ -119.355469, 45.890008 ], [ -118.981934, 45.996962 ], [ -116.916504, 46.012224 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.512176 ], [ -111.203613, 44.574817 ], [ -111.313477, 44.715514 ], [ -111.401367, 44.731126 ], [ -111.555176, 44.543505 ], [ -111.774902, 44.512176 ], [ -112.346191, 44.574817 ], [ -112.368164, 44.465151 ], [ -112.697754, 44.512176 ], [ -112.895508, 44.370987 ], [ -113.181152, 44.777936 ], [ -113.378906, 44.793531 ], [ -113.444824, 44.871443 ], [ -113.510742, 45.135555 ], [ -113.686523, 45.259422 ], [ -113.796387, 45.567910 ], [ -113.928223, 45.706179 ], [ -114.038086, 45.736860 ], [ -114.147949, 45.598666 ], [ -114.345703, 45.475540 ], [ -114.521484, 45.583290 ], [ -114.543457, 45.828799 ], [ -114.411621, 45.890008 ], [ -114.499512, 46.149394 ], [ -114.301758, 46.634351 ], [ -114.587402, 46.649436 ], [ -114.851074, 46.800059 ], [ -115.290527, 47.264320 ], [ -115.532227, 47.353711 ], [ -115.708008, 47.517201 ], [ -115.708008, 47.694974 ], [ -115.971680, 47.960502 ], [ -116.059570, 49.009051 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.512176 ], [ -111.071777, 45.058001 ], [ -104.084473, 45.042478 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.040527, 45.966425 ], [ -98.459473, 45.966425 ], [ -96.547852, 46.027482 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.459961, 42.504503 ], [ -96.635742, 42.504503 ], [ -96.723633, 42.553080 ], [ -96.767578, 42.650122 ], [ -97.031250, 42.730874 ], [ -97.294922, 42.859860 ], [ -97.888184, 42.843751 ], [ -97.976074, 42.795401 ], [ -98.349609, 42.875964 ], [ -98.613281, 43.004647 ], [ -104.062500, 43.004647 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.014648, 42.000325 ], [ -120.014648, 39.010648 ], [ -114.653320, 35.065973 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.038086, 37.002553 ], [ -114.038086, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.050293, 37.002553 ], [ -109.050293, 31.353637 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 36.509636 ], [ -103.007812, 32.008076 ], [ -106.633301, 32.008076 ], [ -106.633301, 31.914868 ], [ -106.523438, 31.765537 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.339355, 40.010787 ], [ -102.062988, 40.010787 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.636230, 37.002553 ], [ -102.062988, 37.002553 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.651208 ], [ -95.207520, 33.943360 ], [ -95.427246, 33.870416 ], [ -95.998535, 33.888658 ], [ -96.328125, 33.760882 ], [ -96.481934, 33.815666 ], [ -96.811523, 33.760882 ], [ -96.965332, 33.925130 ], [ -97.119141, 33.779147 ], [ -97.382812, 33.852170 ], [ -97.668457, 33.998027 ], [ -97.976074, 33.906896 ], [ -98.107910, 34.143635 ], [ -98.569336, 34.125448 ], [ -99.206543, 34.252676 ], [ -99.338379, 34.452218 ], [ -99.602051, 34.379713 ], [ -100.019531, 34.578952 ], [ -100.019531, 36.509636 ], [ -103.007812, 36.509636 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 2, "x": 1, "y": 1 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.739258, 39.334297 ], [ -77.849121, 39.147103 ], [ -78.354492, 39.419221 ], [ -78.442383, 39.147103 ], [ -78.903809, 38.788345 ], [ -78.969727, 38.822591 ], [ -79.233398, 38.479395 ], [ -79.387207, 38.427774 ], [ -79.650879, 38.582526 ], [ -79.760742, 38.358888 ], [ -79.936523, 38.186387 ], [ -79.980469, 38.048091 ], [ -80.178223, 37.909534 ], [ -80.310059, 37.735969 ], [ -80.310059, 37.527154 ], [ -80.463867, 37.457418 ], [ -80.617676, 37.457418 ], [ -80.727539, 37.387617 ], [ -80.837402, 37.422526 ], [ -80.859375, 37.335224 ], [ -81.232910, 37.247821 ], [ -81.364746, 37.317752 ], [ -81.672363, 37.195331 ], [ -81.936035, 37.370157 ], [ -81.979980, 37.544577 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 1, "y": 3 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.003662, 41.640078 ], [ -120.003662, 40.979898 ], [ -120.003662, 39.002110 ], [ -114.642334, 35.056980 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.038086, 37.002553 ], [ -114.038086, 40.979898 ], [ -114.038086, 41.640078 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.050293, 37.002553 ], [ -109.050293, 31.344254 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 37.002553 ], [ -109.050293, 37.002553 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 36.500805 ], [ -103.007812, 32.008076 ], [ -106.633301, 32.008076 ], [ -106.622314, 31.914868 ], [ -106.512451, 31.756196 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.328369, 40.002372 ], [ -102.052002, 40.002372 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.625244, 37.002553 ], [ -102.052002, 36.993778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.642063 ], [ -94.910889, 33.833920 ], [ -95.196533, 33.943360 ], [ -95.427246, 33.870416 ], [ -95.987549, 33.879537 ], [ -96.152344, 33.806538 ], [ -96.317139, 33.760882 ], [ -96.470947, 33.806538 ], [ -96.800537, 33.751748 ], [ -96.954346, 33.925130 ], [ -97.108154, 33.779147 ], [ -97.382812, 33.843045 ], [ -97.657471, 33.998027 ], [ -97.965088, 33.897777 ], [ -98.096924, 34.134542 ], [ -98.558350, 34.116352 ], [ -99.195557, 34.243595 ], [ -99.338379, 34.443159 ], [ -99.602051, 34.379713 ], [ -100.008545, 34.569906 ], [ -100.008545, 36.500805 ], [ -103.007812, 36.500805 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.439209, 40.371659 ], [ -91.527100, 40.120090 ], [ -91.428223, 39.825413 ], [ -91.263428, 39.622615 ], [ -91.076660, 39.453161 ], [ -90.758057, 39.266284 ], [ -90.670166, 39.078908 ], [ -90.659180, 38.908133 ], [ -90.538330, 38.873929 ], [ -90.351562, 38.933776 ], [ -90.164795, 38.771216 ], [ -90.219727, 38.591114 ], [ -90.307617, 38.444985 ], [ -90.373535, 38.264063 ], [ -90.230713, 38.117272 ], [ -90.032959, 37.978845 ], [ -90.000000, 37.978845 ], [ -89.923096, 37.970185 ], [ -89.659424, 37.753344 ], [ -89.560547, 37.727280 ], [ -89.483643, 37.483577 ], [ -89.516602, 37.335224 ], [ -89.395752, 37.081476 ], [ -89.285889, 37.107765 ], [ -89.121094, 36.976227 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.636230, 36.544949 ], [ -93.416748, 36.527295 ], [ -91.252441, 36.527295 ], [ -90.120850, 36.465472 ], [ -90.032959, 36.341678 ], [ -90.263672, 36.129002 ], [ -90.318604, 36.031332 ], [ -90.000000, 36.031332 ], [ -89.670410, 36.031332 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.164551, 33.017876 ], [ -91.087646, 32.953368 ], [ -91.186523, 32.814978 ], [ -91.032715, 32.611616 ], [ -91.076660, 32.481963 ], [ -90.944824, 32.314991 ], [ -91.087646, 32.212801 ], [ -91.131592, 32.017392 ], [ -91.329346, 31.868228 ], [ -91.505127, 31.409912 ], [ -91.625977, 31.297328 ], [ -91.593018, 31.052934 ], [ -90.703125, 31.024694 ], [ -90.000000, 31.024694 ], [ -89.769287, 31.015279 ], [ -89.791260, 30.855079 ], [ -89.857178, 30.685164 ], [ -89.791260, 30.562261 ], [ -89.659424, 30.448674 ], [ -89.615479, 30.183122 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -89.121094, 36.509636 ], [ -89.505615, 36.509636 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 1, "y": 2 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -123.991699, 46.271037 ], [ -123.782959, 46.286224 ], [ -123.475342, 46.278631 ], [ -123.233643, 46.187437 ], [ -122.947998, 46.134170 ], [ -122.761230, 45.943511 ], [ -122.728271, 45.775186 ], [ -122.662354, 45.637087 ], [ -122.420654, 45.598666 ], [ -122.178955, 45.598666 ], [ -121.794434, 45.706179 ], [ -121.563721, 45.736860 ], [ -121.212158, 45.690833 ], [ -121.047363, 45.644768 ], [ -120.838623, 45.675482 ], [ -120.618896, 45.759859 ], [ -120.168457, 45.744527 ], [ -119.794922, 45.851760 ], [ -119.597168, 45.935871 ], [ -119.344482, 45.890008 ], [ -118.981934, 45.996962 ], [ -116.916504, 46.004593 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.512176 ], [ -111.203613, 44.566991 ], [ -111.302490, 44.707706 ], [ -111.401367, 44.731126 ], [ -111.544189, 44.535675 ], [ -111.774902, 44.504341 ], [ -112.346191, 44.566991 ], [ -112.368164, 44.465151 ], [ -112.697754, 44.504341 ], [ -112.884521, 44.363133 ], [ -113.060303, 44.621754 ], [ -113.181152, 44.770137 ], [ -113.378906, 44.793531 ], [ -113.444824, 44.863656 ], [ -113.510742, 45.127805 ], [ -113.686523, 45.251688 ], [ -113.796387, 45.567910 ], [ -113.917236, 45.706179 ], [ -114.038086, 45.736860 ], [ -114.147949, 45.590978 ], [ -114.345703, 45.475540 ], [ -114.521484, 45.575600 ], [ -114.532471, 45.828799 ], [ -114.411621, 45.890008 ], [ -114.499512, 46.149394 ], [ -114.400635, 46.415139 ], [ -114.290771, 46.634351 ], [ -114.587402, 46.641894 ], [ -114.851074, 46.792538 ], [ -115.125732, 47.100045 ], [ -115.290527, 47.256864 ], [ -115.521240, 47.346267 ], [ -115.708008, 47.509780 ], [ -115.708008, 47.687579 ], [ -115.971680, 47.953145 ], [ -116.048584, 49.001844 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -116.916504, 46.004593 ], [ -116.685791, 45.813486 ], [ -116.520996, 45.729191 ], [ -116.466064, 45.575600 ], [ -116.564941, 45.444717 ], [ -116.839600, 44.871443 ], [ -117.059326, 44.668653 ], [ -117.202148, 44.441624 ], [ -117.202148, 44.284537 ], [ -117.015381, 44.213710 ], [ -116.927490, 44.087585 ], [ -117.015381, 43.802819 ], [ -117.037354, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.093750, 44.512176 ], [ -111.071777, 44.543505 ], [ -111.071777, 45.050240 ], [ -109.105225, 45.058001 ], [ -104.084473, 45.042478 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.029541, 45.958788 ], [ -98.448486, 45.966425 ], [ -96.547852, 46.019853 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.459961, 42.496403 ], [ -96.624756, 42.504503 ], [ -96.712646, 42.553080 ], [ -96.756592, 42.642041 ], [ -97.031250, 42.722804 ], [ -97.294922, 42.851806 ], [ -97.888184, 42.843751 ], [ -97.976074, 42.795401 ], [ -98.338623, 42.875964 ], [ -98.602295, 43.004647 ], [ -104.062500, 43.004647 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.508721 ], [ -91.263428, 43.620171 ], [ -91.263428, 43.858297 ], [ -91.296387, 43.937462 ], [ -91.636963, 44.087585 ], [ -91.889648, 44.260937 ], [ -91.955566, 44.370987 ], [ -92.065430, 44.433780 ], [ -92.395020, 44.582643 ], [ -92.515869, 44.590467 ], [ -92.801514, 44.777936 ], [ -92.768555, 45.003651 ], [ -92.768555, 45.267155 ], [ -92.691650, 45.521744 ], [ -92.900391, 45.706179 ], [ -92.757568, 45.890008 ], [ -92.307129, 46.103709 ], [ -92.274170, 46.096091 ], [ -92.285156, 46.656977 ], [ -92.021484, 46.717269 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.003662, 42.000325 ], [ -120.003662, 40.979898 ], [ -120.003662, 40.313043 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.038086, 40.313043 ], [ -114.038086, 40.979898 ], [ -114.038086, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.439209, 40.371659 ], [ -91.461182, 40.313043 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 2, "y": 3 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.878906, 39.334297 ], [ -90.758057, 39.266284 ], [ -90.670166, 39.078908 ], [ -90.659180, 38.908133 ], [ -90.538330, 38.873929 ], [ -90.351562, 38.933776 ], [ -90.164795, 38.771216 ], [ -90.219727, 38.591114 ], [ -90.307617, 38.444985 ], [ -90.373535, 38.264063 ], [ -90.230713, 38.117272 ], [ -90.032959, 37.978845 ], [ -90.000000, 37.978845 ], [ -89.923096, 37.970185 ], [ -89.659424, 37.753344 ], [ -89.560547, 37.727280 ], [ -89.483643, 37.483577 ], [ -89.516602, 37.335224 ], [ -89.395752, 37.081476 ], [ -89.285889, 37.107765 ], [ -89.110107, 36.958671 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.878906, 36.509636 ], [ -90.120850, 36.465472 ], [ -90.032959, 36.341678 ], [ -90.263672, 36.129002 ], [ -90.318604, 36.031332 ], [ -90.000000, 36.031332 ], [ -89.670410, 36.031332 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.878906, 31.024694 ], [ -90.000000, 31.024694 ], [ -89.769287, 31.015279 ], [ -89.791260, 30.855079 ], [ -89.857178, 30.685164 ], [ -89.791260, 30.562261 ], [ -89.659424, 30.448674 ], [ -89.615479, 30.183122 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.685059, 41.360319 ], [ -75.014648, 41.500350 ], [ -75.080566, 41.640078 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -87.528076, 41.640078 ], [ -87.528076, 40.979898 ], [ -87.539062, 39.393755 ], [ -87.648926, 39.121537 ], [ -87.561035, 39.044786 ], [ -87.517090, 38.873929 ], [ -87.517090, 38.736946 ], [ -87.604980, 38.676933 ], [ -87.681885, 38.513788 ], [ -87.879639, 38.298559 ], [ -88.022461, 38.022131 ], [ -88.055420, 37.822802 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -88.176270, 35.003003 ], [ -88.099365, 34.813803 ], [ -88.275146, 33.513919 ], [ -88.450928, 31.914868 ], [ -88.417969, 30.391830 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.682861, 36.606709 ], [ -84.353027, 36.571424 ], [ -85.231934, 36.615528 ], [ -85.528564, 36.597889 ], [ -86.099854, 36.633162 ], [ -86.682129, 36.641978 ], [ -87.220459, 36.641978 ], [ -87.846680, 36.615528 ], [ -87.879639, 36.659606 ], [ -88.077393, 36.659606 ], [ -88.077393, 36.500805 ], [ -89.505615, 36.509636 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.728271, 39.325799 ], [ -77.838135, 39.138582 ], [ -78.354492, 39.410733 ], [ -78.431396, 39.147103 ], [ -78.552246, 39.044786 ], [ -78.750000, 38.916682 ], [ -78.892822, 38.788345 ], [ -78.969727, 38.822591 ], [ -79.178467, 38.556757 ], [ -79.233398, 38.470794 ], [ -79.376221, 38.427774 ], [ -79.650879, 38.582526 ], [ -79.749756, 38.358888 ], [ -79.925537, 38.186387 ], [ -79.969482, 38.039439 ], [ -80.167236, 37.909534 ], [ -80.299072, 37.735969 ], [ -80.277100, 37.614231 ], [ -80.299072, 37.527154 ], [ -80.463867, 37.448697 ], [ -80.606689, 37.457418 ], [ -80.727539, 37.387617 ], [ -80.837402, 37.422526 ], [ -80.859375, 37.335224 ], [ -81.232910, 37.247821 ], [ -81.353760, 37.317752 ], [ -81.672363, 37.195331 ], [ -81.826172, 37.282795 ], [ -81.936035, 37.370157 ], [ -81.979980, 37.544577 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.078613, 34.985003 ], [ -82.441406, 35.182788 ], [ -81.518555, 35.173808 ], [ -81.046143, 35.128894 ], [ -81.046143, 35.038992 ], [ -80.947266, 35.110922 ], [ -80.782471, 34.939985 ], [ -80.793457, 34.822823 ], [ -79.672852, 34.813803 ], [ -78.563232, 33.870416 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -81.683350, 36.589068 ], [ -80.002441, 36.544949 ], [ -75.871582, 36.553775 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 2, "y": 2 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.685059, 41.360319 ], [ -75.014648, 41.500350 ], [ -75.080566, 41.648288 ], [ -75.058594, 41.754922 ], [ -75.388184, 42.000325 ], [ -79.760742, 42.000325 ], [ -79.760742, 42.244785 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -87.528076, 41.713930 ], [ -87.528076, 40.979898 ], [ -87.539062, 40.313043 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 2, "y": 6 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.003662, 41.310824 ], [ -120.003662, 40.979898 ], [ -120.003662, 38.997841 ], [ -118.119507, 37.644685 ], [ -114.642334, 35.056980 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.032593, 36.998166 ], [ -114.038086, 40.979898 ], [ -114.038086, 41.310824 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 2, "y": 5 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -123.986206, 46.271037 ], [ -123.777466, 46.282428 ], [ -123.475342, 46.278631 ], [ -123.233643, 46.187437 ], [ -122.942505, 46.130363 ], [ -122.755737, 45.939691 ], [ -122.728271, 45.771355 ], [ -122.656860, 45.633246 ], [ -122.420654, 45.594822 ], [ -122.178955, 45.598666 ], [ -121.788940, 45.702343 ], [ -121.563721, 45.733025 ], [ -121.206665, 45.690833 ], [ -121.047363, 45.640928 ], [ -120.838623, 45.675482 ], [ -120.613403, 45.756026 ], [ -120.162964, 45.740693 ], [ -119.789429, 45.851760 ], [ -119.597168, 45.935871 ], [ -119.338989, 45.890008 ], [ -118.981934, 45.993145 ], [ -116.916504, 46.000778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -112.060547, 44.531759 ], [ -112.340698, 44.563077 ], [ -112.362671, 44.465151 ], [ -112.500000, 44.480830 ], [ -112.692261, 44.500423 ], [ -112.879028, 44.363133 ], [ -113.054810, 44.621754 ], [ -113.175659, 44.766237 ], [ -113.378906, 44.793531 ], [ -113.444824, 44.863656 ], [ -113.505249, 45.127805 ], [ -113.681030, 45.251688 ], [ -113.796387, 45.567910 ], [ -113.917236, 45.706179 ], [ -114.038086, 45.733025 ], [ -114.142456, 45.590978 ], [ -114.340210, 45.471688 ], [ -114.515991, 45.571755 ], [ -114.526978, 45.828799 ], [ -114.411621, 45.890008 ], [ -114.494019, 46.149394 ], [ -114.395142, 46.411352 ], [ -114.285278, 46.634351 ], [ -114.587402, 46.641894 ], [ -114.845581, 46.788777 ], [ -115.125732, 47.096305 ], [ -115.290527, 47.253136 ], [ -115.521240, 47.346267 ], [ -115.708008, 47.506070 ], [ -115.708008, 47.687579 ], [ -115.971680, 47.953145 ], [ -116.048584, 49.001844 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -116.916504, 46.000778 ], [ -116.680298, 45.809658 ], [ -116.515503, 45.729191 ], [ -116.460571, 45.575600 ], [ -116.559448, 45.444717 ], [ -116.696777, 45.189780 ], [ -116.839600, 44.867550 ], [ -117.053833, 44.668653 ], [ -117.196655, 44.441624 ], [ -117.196655, 44.280604 ], [ -117.009888, 44.213710 ], [ -116.927490, 44.083639 ], [ -117.015381, 43.798854 ], [ -117.031860, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.003662, 41.996243 ], [ -120.003662, 40.979898 ], [ -120.003662, 40.647304 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.038086, 40.647304 ], [ -114.038086, 40.979898 ], [ -114.038086, 41.996243 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 3, "y": 6 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.050293, 37.002553 ], [ -109.044800, 31.344254 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.007812, 36.998166 ], [ -109.050293, 37.002553 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.002319, 36.500805 ], [ -103.002319, 32.003418 ], [ -106.633301, 32.003418 ], [ -106.622314, 31.914868 ], [ -106.512451, 31.756196 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.328369, 40.002372 ], [ -102.052002, 40.002372 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.625244, 37.002553 ], [ -102.046509, 36.993778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.637489 ], [ -94.910889, 33.833920 ], [ -95.191040, 33.938803 ], [ -95.421753, 33.870416 ], [ -95.773315, 33.884097 ], [ -95.982056, 33.879537 ], [ -96.152344, 33.801974 ], [ -96.317139, 33.756315 ], [ -96.465454, 33.806538 ], [ -96.800537, 33.751748 ], [ -96.948853, 33.920572 ], [ -97.108154, 33.774581 ], [ -97.377319, 33.838483 ], [ -97.657471, 33.998027 ], [ -97.959595, 33.897777 ], [ -98.091431, 34.134542 ], [ -98.558350, 34.111805 ], [ -99.190063, 34.239054 ], [ -99.338379, 34.443159 ], [ -99.602051, 34.379713 ], [ -100.003052, 34.565383 ], [ -100.003052, 36.500805 ], [ -103.002319, 36.500805 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.433716, 40.371659 ], [ -91.521606, 40.120090 ], [ -91.428223, 39.821194 ], [ -91.263428, 39.618384 ], [ -91.076660, 39.448919 ], [ -90.845947, 39.313050 ], [ -90.752563, 39.266284 ], [ -90.670166, 39.078908 ], [ -90.653687, 38.908133 ], [ -90.538330, 38.869652 ], [ -90.351562, 38.933776 ], [ -90.159302, 38.771216 ], [ -90.214233, 38.586820 ], [ -90.307617, 38.440682 ], [ -90.373535, 38.264063 ], [ -90.230713, 38.117272 ], [ -90.032959, 37.974515 ], [ -90.000000, 37.974515 ], [ -89.917603, 37.970185 ], [ -89.659424, 37.749001 ], [ -89.560547, 37.722935 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.630737, 36.544949 ], [ -93.416748, 36.527295 ], [ -91.252441, 36.527295 ], [ -90.115356, 36.465472 ], [ -90.032959, 36.341678 ], [ -90.258179, 36.124565 ], [ -90.318604, 36.026889 ], [ -90.000000, 36.026889 ], [ -89.664917, 36.026889 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.159058, 33.013270 ], [ -91.087646, 32.953368 ], [ -91.181030, 32.810362 ], [ -91.032715, 32.606989 ], [ -91.076660, 32.481963 ], [ -90.944824, 32.310349 ], [ -91.082153, 32.208153 ], [ -91.131592, 32.017392 ], [ -91.323853, 31.863563 ], [ -91.505127, 31.409912 ], [ -91.625977, 31.297328 ], [ -91.587524, 31.048228 ], [ -90.703125, 31.019987 ], [ -90.000000, 31.019987 ], [ -89.763794, 31.015279 ], [ -89.791260, 30.850363 ], [ -89.857178, 30.685164 ], [ -89.791260, 30.557531 ], [ -89.659424, 30.443938 ], [ -89.609985, 30.178373 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 3, "y": 5 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.088257, 44.508259 ], [ -111.198120, 44.563077 ], [ -111.296997, 44.703802 ], [ -111.401367, 44.731126 ], [ -111.544189, 44.531759 ], [ -111.774902, 44.500423 ], [ -112.340698, 44.563077 ], [ -112.362671, 44.465151 ], [ -112.500000, 44.480830 ], [ -112.692261, 44.500423 ], [ -112.879028, 44.363133 ], [ -112.939453, 44.457310 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.088257, 44.508259 ], [ -111.071777, 44.543505 ], [ -111.071777, 45.050240 ], [ -109.105225, 45.058001 ], [ -107.550659, 45.046359 ], [ -105.748901, 45.054121 ], [ -104.078979, 45.042478 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.029541, 45.958788 ], [ -100.068970, 45.966425 ], [ -98.442993, 45.966425 ], [ -96.542358, 46.019853 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.459961, 42.492353 ], [ -96.624756, 42.504503 ], [ -96.712646, 42.553080 ], [ -96.756592, 42.638000 ], [ -97.031250, 42.718768 ], [ -97.289429, 42.847779 ], [ -97.646484, 42.839724 ], [ -97.882690, 42.843751 ], [ -97.970581, 42.795401 ], [ -98.338623, 42.875964 ], [ -98.596802, 43.000630 ], [ -104.057007, 43.000630 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.504737 ], [ -91.257935, 43.616194 ], [ -91.257935, 43.858297 ], [ -91.290894, 43.937462 ], [ -91.631470, 44.087585 ], [ -91.884155, 44.260937 ], [ -91.950073, 44.367060 ], [ -92.065430, 44.433780 ], [ -92.389526, 44.578730 ], [ -92.510376, 44.586555 ], [ -92.801514, 44.777936 ], [ -92.768555, 44.999767 ], [ -92.768555, 45.267155 ], [ -92.691650, 45.521744 ], [ -92.900391, 45.706179 ], [ -92.757568, 45.890008 ], [ -92.301636, 46.099900 ], [ -92.268677, 46.096091 ], [ -92.279663, 46.656977 ], [ -92.015991, 46.713502 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 4, "y": 6 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.439453, 38.903858 ], [ -90.351562, 38.933776 ], [ -90.159302, 38.771216 ], [ -90.214233, 38.586820 ], [ -90.307617, 38.440682 ], [ -90.373535, 38.264063 ], [ -90.230713, 38.117272 ], [ -90.032959, 37.974515 ], [ -90.000000, 37.974515 ], [ -89.917603, 37.970185 ], [ -89.659424, 37.749001 ], [ -89.555054, 37.722935 ], [ -89.483643, 37.479217 ], [ -89.516602, 37.330857 ], [ -89.390259, 37.081476 ], [ -89.280396, 37.107765 ], [ -89.104614, 36.954282 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.439453, 36.483141 ], [ -90.115356, 36.465472 ], [ -90.032959, 36.341678 ], [ -90.258179, 36.124565 ], [ -90.318604, 36.026889 ], [ -90.000000, 36.026889 ], [ -89.664917, 36.026889 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.439453, 31.019987 ], [ -90.000000, 31.019987 ], [ -89.763794, 31.015279 ], [ -89.791260, 30.850363 ], [ -89.857178, 30.685164 ], [ -89.791260, 30.557531 ], [ -89.659424, 30.443938 ], [ -89.609985, 30.178373 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -88.170776, 35.003003 ], [ -88.099365, 34.809293 ], [ -88.275146, 33.513919 ], [ -88.450928, 31.914868 ], [ -88.417969, 30.387092 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.677368, 36.602299 ], [ -84.353027, 36.571424 ], [ -85.231934, 36.611118 ], [ -85.523071, 36.597889 ], [ -86.094360, 36.628754 ], [ -86.682129, 36.637570 ], [ -87.220459, 36.641978 ], [ -87.846680, 36.611118 ], [ -87.879639, 36.659606 ], [ -88.077393, 36.655200 ], [ -88.071899, 36.500805 ], [ -89.500122, 36.509636 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.728271, 39.325799 ], [ -77.838135, 39.138582 ], [ -78.348999, 39.406489 ], [ -78.425903, 39.142842 ], [ -78.552246, 39.040520 ], [ -78.750000, 38.912407 ], [ -78.892822, 38.784063 ], [ -78.969727, 38.822591 ], [ -79.178467, 38.556757 ], [ -79.227905, 38.466493 ], [ -79.370728, 38.427774 ], [ -79.519043, 38.500893 ], [ -79.650879, 38.578232 ], [ -79.744263, 38.358888 ], [ -79.920044, 38.182069 ], [ -79.969482, 38.035112 ], [ -80.161743, 37.905199 ], [ -80.293579, 37.731625 ], [ -80.277100, 37.614231 ], [ -80.299072, 37.522797 ], [ -80.458374, 37.444335 ], [ -80.601196, 37.457418 ], [ -80.722046, 37.383253 ], [ -80.837402, 37.422526 ], [ -80.859375, 37.330857 ], [ -81.232910, 37.247821 ], [ -81.348267, 37.317752 ], [ -81.666870, 37.195331 ], [ -81.820679, 37.278424 ], [ -81.930542, 37.370157 ], [ -81.974487, 37.540222 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.078613, 34.980502 ], [ -82.441406, 35.182788 ], [ -81.518555, 35.173808 ], [ -81.046143, 35.128894 ], [ -81.040649, 35.038992 ], [ -80.941772, 35.106428 ], [ -80.782471, 34.935482 ], [ -80.787964, 34.818313 ], [ -79.672852, 34.809293 ], [ -78.557739, 33.865854 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -81.683350, 36.589068 ], [ -79.996948, 36.544949 ], [ -78.002930, 36.540536 ], [ -75.871582, 36.553775 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 4, "y": 5 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.679565, 41.356196 ], [ -75.014648, 41.496235 ], [ -75.080566, 41.644183 ], [ -75.053101, 41.754922 ], [ -75.388184, 42.000325 ], [ -79.760742, 42.000325 ], [ -79.760742, 42.240719 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 4, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -123.986206, 46.269139 ], [ -123.750000, 46.282428 ], [ -123.530273, 46.280529 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 5, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.000916, 41.145570 ], [ -120.000916, 40.979898 ], [ -120.000916, 38.995707 ], [ -118.116760, 37.644685 ], [ -116.323242, 36.323977 ], [ -114.642334, 35.054732 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.032593, 36.995972 ], [ -114.035339, 40.979898 ], [ -114.035339, 41.145570 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 5, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -123.969727, 46.271037 ], [ -123.750000, 46.282428 ], [ -123.472595, 46.278631 ], [ -123.230896, 46.187437 ], [ -122.939758, 46.130363 ], [ -122.752991, 45.939691 ], [ -122.728271, 45.771355 ], [ -122.654114, 45.631326 ], [ -122.420654, 45.592900 ], [ -122.176208, 45.596744 ], [ -121.788940, 45.702343 ], [ -121.563721, 45.733025 ], [ -121.203918, 45.690833 ], [ -121.047363, 45.639007 ], [ -120.838623, 45.673563 ], [ -120.610657, 45.754110 ], [ -120.160217, 45.740693 ], [ -119.789429, 45.851760 ], [ -119.594421, 45.933960 ], [ -119.338989, 45.890008 ], [ -118.979187, 45.993145 ], [ -116.916504, 46.000778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -112.280273, 44.555249 ], [ -112.337952, 44.561120 ], [ -112.362671, 44.463191 ], [ -112.500000, 44.478871 ], [ -112.692261, 44.500423 ], [ -112.876282, 44.361169 ], [ -113.054810, 44.621754 ], [ -113.175659, 44.766237 ], [ -113.378906, 44.791582 ], [ -113.442078, 44.863656 ], [ -113.505249, 45.125867 ], [ -113.681030, 45.249755 ], [ -113.796387, 45.565987 ], [ -113.914490, 45.704261 ], [ -114.038086, 45.731108 ], [ -114.139709, 45.590978 ], [ -114.337463, 45.471688 ], [ -114.515991, 45.569832 ], [ -114.524231, 45.826885 ], [ -114.408875, 45.890008 ], [ -114.494019, 46.147492 ], [ -114.395142, 46.411352 ], [ -114.285278, 46.632465 ], [ -114.587402, 46.641894 ], [ -114.845581, 46.786897 ], [ -115.122986, 47.096305 ], [ -115.290527, 47.251271 ], [ -115.521240, 47.346267 ], [ -115.705261, 47.506070 ], [ -115.705261, 47.685730 ], [ -115.968933, 47.951305 ], [ -116.043091, 48.922499 ], [ -116.048584, 49.001844 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -116.916504, 46.000778 ], [ -116.680298, 45.807743 ], [ -116.512756, 45.727274 ], [ -116.457825, 45.575600 ], [ -116.559448, 45.444717 ], [ -116.694031, 45.187844 ], [ -116.836853, 44.865603 ], [ -117.053833, 44.666700 ], [ -117.193909, 44.439663 ], [ -117.196655, 44.280604 ], [ -117.009888, 44.211741 ], [ -116.927490, 44.081666 ], [ -117.015381, 43.798854 ], [ -117.029114, 42.000325 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.000916, 41.994202 ], [ -120.000916, 40.979898 ], [ -120.000916, 40.813809 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.035339, 40.813809 ], [ -114.035339, 40.979898 ], [ -114.035339, 41.994202 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 5, "y": 10 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -116.032104, 48.777913 ], [ -116.043091, 48.922499 ], [ -116.048584, 49.001844 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 6, "y": 13 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.047546, 32.138409 ], [ -109.047546, 31.952162 ], [ -109.044800, 31.341909 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.002319, 32.138409 ], [ -103.002319, 32.001089 ], [ -106.630554, 32.001089 ], [ -106.625061, 31.952162 ], [ -106.619568, 31.914868 ], [ -106.509705, 31.756196 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 6, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.047546, 37.000359 ], [ -109.055786, 40.979898 ], [ -109.055786, 41.002703 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.047546, 37.000359 ], [ -109.047546, 31.952162 ], [ -109.047546, 31.765537 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.005066, 36.995972 ], [ -109.047546, 37.000359 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -103.002319, 36.500805 ], [ -103.002319, 32.001089 ], [ -106.630554, 32.001089 ], [ -106.625061, 31.952162 ], [ -106.619568, 31.914868 ], [ -106.517944, 31.765537 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -101.030273, 40.002372 ], [ -101.250000, 40.002372 ], [ -102.052002, 40.002372 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -101.030273, 36.995972 ], [ -101.250000, 36.993778 ], [ -102.043762, 36.993778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -101.030273, 36.500805 ], [ -101.250000, 36.500805 ], [ -103.002319, 36.500805 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 6, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.085510, 44.506300 ], [ -111.195374, 44.563077 ], [ -111.294250, 44.701850 ], [ -111.401367, 44.729174 ], [ -111.544189, 44.531759 ], [ -111.772156, 44.498464 ], [ -112.337952, 44.561120 ], [ -112.362671, 44.463191 ], [ -112.500000, 44.478871 ], [ -112.692261, 44.500423 ], [ -112.719727, 44.480830 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -111.085510, 44.506300 ], [ -111.069031, 44.543505 ], [ -111.071777, 45.050240 ], [ -109.102478, 45.058001 ], [ -107.547913, 45.046359 ], [ -105.746155, 45.052181 ], [ -104.078979, 45.042478 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -104.026794, 45.956878 ], [ -101.250000, 45.964515 ], [ -101.030273, 45.966425 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -101.030273, 43.000630 ], [ -101.250000, 43.000630 ], [ -104.054260, 43.000630 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.055786, 40.813809 ], [ -109.055786, 40.979898 ], [ -109.055786, 41.002703 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 7, "y": 13 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -91.101379, 32.138409 ], [ -91.128845, 32.017392 ], [ -91.211243, 31.952162 ], [ -91.323853, 31.861230 ], [ -91.411743, 31.651043 ], [ -91.502380, 31.409912 ], [ -91.625977, 31.297328 ], [ -91.584778, 31.048228 ], [ -90.703125, 31.017633 ], [ -90.000000, 31.017633 ], [ -89.780273, 31.017633 ] ], [ [ -89.780273, 30.899868 ], [ -89.788513, 30.848005 ], [ -89.854431, 30.685164 ], [ -89.791260, 30.557531 ], [ -89.780273, 30.548070 ] ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 7, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -95.325623, 40.002372 ], [ -101.250000, 40.002372 ], [ -101.469727, 40.002372 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.625244, 37.000359 ], [ -101.250000, 36.993778 ], [ -101.469727, 36.993778 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.637489 ], [ -94.910889, 33.833920 ], [ -95.191040, 33.938803 ], [ -95.419006, 33.870416 ], [ -95.770569, 33.881817 ], [ -95.979309, 33.879537 ], [ -96.149597, 33.799691 ], [ -96.317139, 33.756315 ], [ -96.465454, 33.806538 ], [ -96.797791, 33.751748 ], [ -96.948853, 33.918292 ], [ -97.105408, 33.774581 ], [ -97.377319, 33.838483 ], [ -97.657471, 33.995750 ], [ -97.959595, 33.895497 ], [ -98.088684, 34.134542 ], [ -98.555603, 34.111805 ], [ -98.852234, 34.166363 ], [ -99.190063, 34.236783 ], [ -99.338379, 34.443159 ], [ -99.599304, 34.377446 ], [ -99.764099, 34.459013 ], [ -100.000305, 34.565383 ], [ -100.000305, 36.500805 ], [ -101.250000, 36.500805 ], [ -101.469727, 36.500805 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.430969, 40.369566 ], [ -91.518860, 40.120090 ], [ -91.428223, 39.821194 ], [ -91.263428, 39.616268 ], [ -91.073914, 39.446799 ], [ -90.843201, 39.310925 ], [ -90.749817, 39.266284 ], [ -90.667419, 39.076776 ], [ -90.650940, 38.908133 ], [ -90.535583, 38.867513 ], [ -90.348816, 38.931639 ], [ -90.156555, 38.771216 ], [ -90.214233, 38.586820 ], [ -90.307617, 38.440682 ], [ -90.370789, 38.264063 ], [ -90.230713, 38.115111 ], [ -90.030212, 37.972350 ], [ -90.000000, 37.972350 ], [ -89.917603, 37.970185 ], [ -89.780273, 37.855339 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.630737, 36.542743 ], [ -93.414001, 36.527295 ], [ -91.252441, 36.525088 ], [ -90.112610, 36.463263 ], [ -90.030212, 36.339466 ], [ -90.255432, 36.124565 ], [ -90.315857, 36.024668 ], [ -90.000000, 36.024668 ], [ -89.780273, 36.024668 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.156311, 33.010967 ], [ -91.084900, 32.953368 ], [ -91.178284, 32.810362 ], [ -91.032715, 32.604675 ], [ -91.073914, 32.479646 ], [ -90.944824, 32.308027 ], [ -91.082153, 32.205829 ], [ -91.128845, 32.017392 ], [ -91.211243, 31.952162 ], [ -91.323853, 31.861230 ], [ -91.365051, 31.765537 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 7, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -101.469727, 45.964515 ], [ -101.250000, 45.964515 ], [ -100.068970, 45.966425 ], [ -98.442993, 45.964515 ], [ -96.539612, 46.019853 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.457214, 42.490327 ], [ -96.624756, 42.504503 ], [ -96.709900, 42.551057 ], [ -96.756592, 42.635979 ], [ -97.028503, 42.718768 ], [ -97.289429, 42.847779 ], [ -97.646484, 42.837710 ], [ -97.882690, 42.841737 ], [ -97.970581, 42.795401 ], [ -98.338623, 42.873951 ], [ -98.596802, 43.000630 ], [ -101.250000, 43.000630 ], [ -101.469727, 43.000630 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.502745 ], [ -91.255188, 43.614205 ], [ -91.257935, 43.856316 ], [ -91.290894, 43.937462 ], [ -91.628723, 44.085612 ], [ -91.881409, 44.258970 ], [ -91.950073, 44.365097 ], [ -92.062683, 44.433780 ], [ -92.386780, 44.576774 ], [ -92.507629, 44.584599 ], [ -92.798767, 44.777936 ], [ -92.768555, 44.997825 ], [ -92.765808, 45.267155 ], [ -92.691650, 45.519820 ], [ -92.900391, 45.706179 ], [ -92.757568, 45.890008 ], [ -92.298889, 46.097995 ], [ -92.265930, 46.096091 ], [ -92.276917, 46.656977 ], [ -92.013245, 46.713502 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.502745 ], [ -92.540588, 43.520672 ], [ -94.001770, 43.514697 ], [ -95.361328, 43.500752 ], [ -96.454468, 43.502745 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 8, "y": 13 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -90.219727, 31.017633 ], [ -90.000000, 31.017633 ], [ -89.761047, 31.015279 ], [ -89.788513, 30.848005 ], [ -89.854431, 30.685164 ], [ -89.791260, 30.557531 ], [ -89.659424, 30.441570 ], [ -89.623718, 30.275672 ], [ -89.607239, 30.178373 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -88.428955, 32.138409 ], [ -88.448181, 31.952162 ], [ -88.450928, 31.912536 ], [ -88.417969, 30.387092 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 8, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -90.219727, 38.824731 ], [ -90.156555, 38.771216 ], [ -90.219727, 38.578232 ] ], [ [ -90.219727, 38.108628 ], [ -90.030212, 37.972350 ], [ -90.000000, 37.972350 ], [ -89.917603, 37.970185 ], [ -89.656677, 37.749001 ], [ -89.555054, 37.720763 ], [ -89.480896, 37.479217 ], [ -89.516602, 37.328673 ], [ -89.390259, 37.081476 ], [ -89.280396, 37.107765 ], [ -89.104614, 36.954282 ] ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -90.219727, 36.469889 ], [ -90.112610, 36.463263 ], [ -90.030212, 36.339466 ], [ -90.219727, 36.160053 ] ], [ [ -90.219727, 36.024668 ], [ -90.000000, 36.024668 ], [ -89.664917, 36.024668 ] ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -87.528076, 41.145570 ], [ -87.528076, 40.979898 ], [ -87.530823, 39.393755 ], [ -87.643433, 39.115145 ], [ -87.561035, 39.040520 ], [ -87.508850, 38.869652 ], [ -87.517090, 38.736946 ], [ -87.599487, 38.674789 ], [ -87.673645, 38.509490 ], [ -87.879639, 38.292092 ], [ -88.019714, 38.022131 ], [ -88.052673, 37.820633 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -88.168030, 35.000754 ], [ -88.096619, 34.807038 ], [ -88.275146, 33.511629 ], [ -88.448181, 31.952162 ], [ -88.450928, 31.912536 ], [ -88.448181, 31.765537 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.674622, 36.600094 ], [ -84.350281, 36.569218 ], [ -85.231934, 36.611118 ], [ -85.520325, 36.597889 ], [ -86.094360, 36.626550 ], [ -86.679382, 36.635366 ], [ -87.217712, 36.639774 ], [ -87.843933, 36.611118 ], [ -87.876892, 36.657403 ], [ -88.074646, 36.655200 ], [ -88.071899, 36.498597 ], [ -89.500122, 36.507429 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -78.530273, 39.057584 ], [ -78.750000, 38.908133 ], [ -78.892822, 38.781922 ], [ -78.966980, 38.822591 ], [ -79.175720, 38.556757 ], [ -79.225159, 38.466493 ], [ -79.367981, 38.427774 ], [ -79.516296, 38.498743 ], [ -79.648132, 38.576085 ], [ -79.744263, 38.358888 ], [ -79.917297, 38.179910 ], [ -79.966736, 38.032949 ], [ -80.158997, 37.903032 ], [ -80.293579, 37.729453 ], [ -80.277100, 37.612056 ], [ -80.299072, 37.520619 ], [ -80.458374, 37.442155 ], [ -80.598450, 37.457418 ], [ -80.722046, 37.383253 ], [ -80.834656, 37.420345 ], [ -80.856628, 37.330857 ], [ -81.230164, 37.245635 ], [ -81.348267, 37.317752 ], [ -81.664124, 37.195331 ], [ -81.817932, 37.276238 ], [ -81.930542, 37.367974 ], [ -81.974487, 37.538044 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.078613, 34.980502 ], [ -82.976990, 35.009752 ], [ -82.438660, 35.180543 ], [ -81.515808, 35.173808 ], [ -81.046143, 35.126648 ], [ -81.040649, 35.038992 ], [ -80.939026, 35.104181 ], [ -80.782471, 34.935482 ], [ -80.785217, 34.818313 ], [ -79.672852, 34.809293 ], [ -78.750000, 34.029900 ], [ -78.554993, 33.863574 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -81.680603, 36.586863 ], [ -79.994202, 36.542743 ], [ -78.750000, 36.540536 ], [ -78.530273, 36.540536 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 8, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -78.530273, 42.000325 ], [ -78.750000, 42.000325 ], [ -79.760742, 42.000325 ], [ -79.760742, 42.238685 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -87.522583, 41.709829 ], [ -87.528076, 41.709829 ], [ -87.528076, 40.979898 ], [ -87.528076, 40.813809 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 9, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -77.725525, 39.323675 ], [ -77.835388, 39.136452 ], [ -78.346252, 39.406489 ], [ -78.425903, 39.140712 ], [ -78.549500, 39.040520 ], [ -78.750000, 38.908133 ], [ -78.892822, 38.781922 ], [ -78.966980, 38.822591 ], [ -78.969727, 38.820451 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -78.969727, 34.216345 ], [ -78.750000, 34.029900 ], [ -78.554993, 33.863574 ] ] } }
+,
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -78.969727, 36.540536 ], [ -78.750000, 36.540536 ], [ -78.000183, 36.538329 ], [ -76.942749, 36.547156 ], [ -75.868835, 36.551569 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 9, "y": 11 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.679565, 41.356196 ], [ -74.841614, 41.428313 ], [ -75.011902, 41.496235 ], [ -75.077820, 41.642131 ], [ -75.050354, 41.752873 ], [ -75.168457, 41.842967 ], [ -75.388184, 42.000325 ], [ -78.750000, 42.000325 ], [ -78.969727, 42.000325 ] ] } }
+] }
+] }
+] }

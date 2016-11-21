@@ -5,26 +5,27 @@
 #include "memfile.hpp"
 
 #define INCREMENT 131072
+#define INITIAL 256
 
 struct memfile *memfile_open(int fd) {
-	if (ftruncate(fd, INCREMENT) != 0) {
+	if (ftruncate(fd, INITIAL) != 0) {
 		return NULL;
 	}
 
-	char *map = (char *) mmap(NULL, INCREMENT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	char *map = (char *) mmap(NULL, INITIAL, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (map == MAP_FAILED) {
 		return NULL;
 	}
 
 	struct memfile *mf = new memfile;
 	if (mf == NULL) {
-		munmap(map, INCREMENT);
+		munmap(map, INITIAL);
 		return NULL;
 	}
 
 	mf->fd = fd;
 	mf->map = map;
-	mf->len = INCREMENT;
+	mf->len = INITIAL;
 	mf->off = 0;
 	mf->tree = 0;
 
