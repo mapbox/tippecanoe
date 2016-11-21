@@ -494,7 +494,7 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before = geoms[g];
-				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, 0, false);
+				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, 0, false, false);
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g], before);
 				}
@@ -1102,6 +1102,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		long long original_features = 0;
 		long long unclipped_features = 0;
+		bool merged_polys = false;
 
 		std::vector<struct partial> partials;
 		std::map<std::string, std::vector<coalesce>> layers;
@@ -1321,6 +1322,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 							for (size_t i = 0; i < geom.size(); i++) {
 								partials[partials.size() - 1].geoms[0].push_back(geom[i]);
 							}
+							merged_polys = true;
 						}
 						continue;
 					}
@@ -1517,7 +1519,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 				if (layer_features[x].type == VT_POLYGON) {
 					if (layer_features[x].coalesced) {
-						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, 0, false);
+						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, 0, false, merged_polys);
 					}
 
 					layer_features[x].geom = close_poly(layer_features[x].geom);

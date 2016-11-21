@@ -273,7 +273,7 @@ static void divide_and_merge(std::vector<std::vector<mapbox::geometry::linear_ri
 	// printf("%zu rings out\n", out);
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip, bool merge) {
 	std::vector<std::vector<mapbox::geometry::linear_ring<long long>>> polys;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -307,7 +307,9 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		}
 	}
 
-	divide_and_merge(polys, 0, polys.size());
+	if (merge) {
+		divide_and_merge(polys, 0, polys.size());
+	}
 
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
