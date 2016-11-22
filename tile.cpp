@@ -1613,7 +1613,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED]) {
-					merge_mingap_fraction = merge_mingap_fraction * 200000.0 / totalsize * 0.90;
+					merge_mingap_fraction = exp(log(exp(log(merge_mingap_fraction) * .3) * 200000.0 / totalsize * 0.90) / .3);
 					unsigned long long m = choose_mingap(indices, merge_mingap_fraction);
 					if (m != merge_mingap) {
 						merge_mingap = m;
@@ -1688,7 +1688,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED]) {
-					merge_mingap_fraction = merge_mingap_fraction * max_tile_size / compressed.size() * 0.90;
+					merge_mingap_fraction = exp(log(exp(log(merge_mingap_fraction) * .3) * max_tile_size / compressed.size() * 0.90) / .3);
 					unsigned long long m = choose_mingap(indices, merge_mingap_fraction);
 					if (m != merge_mingap) {
 						merge_mingap = m;
