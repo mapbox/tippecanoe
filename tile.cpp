@@ -2005,7 +2005,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_MERGE_POLYGONS_AS_NEEDED]) {
 			start = 0;
 		}
 
