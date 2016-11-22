@@ -155,6 +155,8 @@ which may not be what you want.
 .IP \(bu 2
 \-aG or \-\-increase\-gamma\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma. The discovered gamma applies to the entire zoom level.
 .IP \(bu 2
+\-am or \-\-merge\-polygons\-as\-needed: If a tile is too large, try to reduce it to under 500K by merging adjacent polygons together
+.IP \(bu 2
 \-as or \-\-drop\-densest\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
 .IP \(bu 2
 \-ad or \-\-drop\-fraction\-as\-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like \fB\fC\-pd\fR but applies to the entire zoom level, not to each tile.)

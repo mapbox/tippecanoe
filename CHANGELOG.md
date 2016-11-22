@@ -1,13 +1,3 @@
-## 1.15.0
-
-* New strategies for making tiles smaller, with uniform behavior across
-  the whole zoom level: --increase-gamma-as-needed,
-  --drop-densest-as-needed, --drop-fraction-as-needed,
-  --drop-smallest-as-needed.
-* Option to specify the maximum tile size in bytes
-* Option to turn off tiny polygon reduction
-* Better error checking in JSON parsing
-
 ## 1.14.4
 
 * Make -B/-r feature-dropping consistent between tiles and zoom levels
