@@ -1488,7 +1488,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(extent);
-				if (extent <= minextent) {
+				if (extent <= minextent && t != VT_POINT) {
 					continue;
 				}
 			}
@@ -1807,15 +1807,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					continue;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * 200000.0 / totalsize * 0.90;
-					minextent = choose_minextent(extents, minextent_fraction);
-					if (minextent > arg->minextent_out) {
-						arg->minextent_out = minextent;
+					long long m = choose_minextent(extents, minextent_fraction);
+					if (m != minextent) {
+						minextent = m;
+						if (minextent > arg->minextent_out) {
+							arg->minextent_out = minextent;
+						}
+						if (!quiet) {
+							fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
+						}
+						line_detail++;
+						continue;
 					}
-					if (!quiet) {
-						fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
-					}
-					line_detail++;
-					continue;
 				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
 					fraction = fraction * 200000 / totalsize * 0.95;
 					if (!quiet) {
@@ -1872,15 +1875,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
-					minextent = choose_minextent(extents, minextent_fraction);
-					if (minextent > arg->minextent_out) {
-						arg->minextent_out = minextent;
+					long long m = choose_minextent(extents, minextent_fraction);
+					if (m != minextent) {
+						minextent = m;
+						if (minextent > arg->minextent_out) {
+							arg->minextent_out = minextent;
+						}
+						if (!quiet) {
+							fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
+						}
+						line_detail++;
+						continue;
 					}
-					if (!quiet) {
-						fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
-					}
-					line_detail++;
-					continue;
 				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is

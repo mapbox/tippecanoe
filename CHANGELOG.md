@@ -1,3 +1,7 @@
+## 1.15.1
+
+* Stop --drop-smallest-as-needed from always dropping all points
+
 ## 1.15.0
 
 * New strategies for making tiles smaller, with uniform behavior across
