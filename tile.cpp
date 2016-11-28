@@ -443,12 +443,16 @@ void *partial_feature_worker(void *v) {
 		int line_detail = (*partials)[i].line_detail;
 		int maxzoom = (*partials)[i].maxzoom;
 
+		if (additional[A_GRID_LOW_ZOOMS] && z < maxzoom) {
+			geom = stairstep(geom, z, line_detail);
+		}
+
 		double area = 0;
 		if (t == VT_POLYGON) {
 			area = get_area(geom, 0, geom.size());
 		}
 
-		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
+		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
 			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
@@ -912,7 +916,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 				dv[i].op = VT_LINETO;
 			}
 		}
-		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]))) {
+		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
 			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 3);
 		} else {
 			simplified_arcs[ai->second] = dv;
@@ -1513,7 +1517,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			bool reduced = false;
 			if (t == VT_POLYGON) {
-				if (!prevent[P_TINY_POLYGON_REDUCTION]) {
+				if (!prevent[P_TINY_POLYGON_REDUCTION] && !additional[A_GRID_LOW_ZOOMS]) {
 					geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
 				}
 				has_polygons = true;
