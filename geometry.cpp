@@ -1299,3 +1299,85 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 		return changed + 1;
 	}
 }
+
+drawvec stairstep(drawvec &geom, int z, int detail) {
+	drawvec out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		geom[i].x >>= (32 - detail - z);
+		geom[i].y >>= (32 - detail - z);
+	}
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			out.push_back(geom[i]);
+		} else {
+			long long x0 = out[out.size() - 1].x;
+			long long y0 = out[out.size() - 1].y;
+			long long x1 = geom[i].x;
+			long long y1 = geom[i].y;
+			bool swap = false;
+
+			if (y0 < y1) {
+				swap = true;
+				std::swap(x0, x1);
+				std::swap(y0, y1);
+			}
+
+			long long xx = x0, yy = y0;
+			long long dx = std::abs(x1 - x0);
+			long long sx = (x0 < x1) ? 1 : -1;
+			long long dy = std::abs(y1 - y0);
+			long long sy = (y0 < y1) ? 1 : -1;
+			long long err = ((dx > dy) ? dx : -dy) / 2;
+			int last = -1;
+
+			drawvec tmp;
+			tmp.push_back(draw(VT_LINETO, xx, yy));
+
+			while (xx != x1 || yy != y1) {
+				long long e2 = err;
+
+				if (e2 > -dx) {
+					err -= dy;
+					xx += sx;
+					if (last == 1) {
+						tmp[tmp.size() - 1] = draw(VT_LINETO, xx, yy);
+					} else {
+						tmp.push_back(draw(VT_LINETO, xx, yy));
+					}
+					last = 1;
+				}
+				if (e2 < dy) {
+					err += dx;
+					yy += sy;
+					if (last == 2) {
+						tmp[tmp.size() - 1] = draw(VT_LINETO, xx, yy);
+					} else {
+						tmp.push_back(draw(VT_LINETO, xx, yy));
+					}
+					last = 2;
+				}
+			}
+
+			if (swap) {
+				for (size_t j = tmp.size(); j > 0; j--) {
+					out.push_back(tmp[j - 1]);
+				}
+			} else {
+				for (size_t j = 0; j < tmp.size(); j++) {
+					out.push_back(tmp[j]);
+				}
+			}
+
+			// out.push_back(draw(VT_LINETO, xx, yy));
+		}
+	}
+
+	for (size_t i = 0; i < out.size(); i++) {
+		out[i].x <<= (32 - detail - z);
+		out[i].y <<= (32 - detail - z);
+	}
+
+	return out;
+}
