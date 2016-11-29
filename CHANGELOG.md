@@ -1,3 +1,7 @@
+## 1.15.2
+
+* Add --grid-low-zooms option to snap low-zoom features to the tile grid
+
 ## 1.15.1
 
 * Stop --drop-smallest-as-needed from always dropping all points
