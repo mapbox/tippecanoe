@@ -1,3 +1,7 @@
+## 1.15.3
+
+* Round coordinates in low-zoom grid math instead of truncating
+
 ## 1.15.2
 
 * Add --grid-low-zooms option to snap low-zoom features to the tile grid
