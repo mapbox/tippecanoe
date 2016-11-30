@@ -1302,10 +1302,11 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 
 drawvec stairstep(drawvec &geom, int z, int detail) {
 	drawvec out;
+	double scale = 1 << (32 - detail - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		geom[i].x >>= (32 - detail - z);
-		geom[i].y >>= (32 - detail - z);
+		geom[i].x = std::round(geom[i].x / scale);
+		geom[i].y = std::round(geom[i].y / scale);
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {
