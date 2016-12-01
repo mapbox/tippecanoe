@@ -2167,7 +2167,14 @@ int main(int argc, char **argv) {
 	}
 
 	files_open_at_start = open("/dev/null", O_RDONLY);
-	close(files_open_at_start);
+	if (files_open_at_start < 0) {
+		perror("open /dev/null");
+		exit(EXIT_FAILURE);
+	}
+	if (close(files_open_at_start) != 0) {
+		perror("close");
+		exit(EXIT_FAILURE);
+	}
 
 	if (full_detail <= 0) {
 		full_detail = 12;

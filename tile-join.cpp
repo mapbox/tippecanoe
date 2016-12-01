@@ -617,7 +617,10 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 		}
 	}
 
-	fclose(f);
+	if (fclose(f) != 0) {
+		perror("fclose");
+		exit(EXIT_FAILURE);
+	}
 }
 
 int main(int argc, char **argv) {

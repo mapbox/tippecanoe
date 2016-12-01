@@ -102,7 +102,10 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 		} else {
 			perror("fstat");
 		}
-		close(fd);
+		if (close(fd) != 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		perror(fname);
 	}
