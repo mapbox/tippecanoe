@@ -29,6 +29,7 @@
 #include "serial.hpp"
 #include "options.hpp"
 #include "main.hpp"
+#include "plugin.hpp"
 
 #define CMD_BITS 3
 
