@@ -38,42 +38,7 @@ extern "C" {
 #include "options.hpp"
 #include "serial.hpp"
 #include "text.hpp"
-
-#define GEOM_POINT 0	   /* array of positions */
-#define GEOM_MULTIPOINT 1      /* array of arrays of positions */
-#define GEOM_LINESTRING 2      /* array of arrays of positions */
-#define GEOM_MULTILINESTRING 3 /* array of arrays of arrays of positions */
-#define GEOM_POLYGON 4	 /* array of arrays of arrays of positions */
-#define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
-#define GEOM_TYPES 6
-
-static const char *geometry_names[GEOM_TYPES] = {
-	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
-};
-
-static int geometry_within[GEOM_TYPES] = {
-	-1,		 /* point */
-	GEOM_POINT,      /* multipoint */
-	GEOM_POINT,      /* linestring */
-	GEOM_LINESTRING, /* multilinestring */
-	GEOM_LINESTRING, /* polygon */
-	GEOM_POLYGON,    /* multipolygon */
-};
-
-static int mb_geometry[GEOM_TYPES] = {
-	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
-};
-
-void json_context(json_object *j) {
-	char *s = json_stringify(j);
-
-	if (strlen(s) >= 500) {
-		sprintf(s + 497, "...");
-	}
-
-	fprintf(stderr, "In JSON object %s\n", s);
-	free(s);  // stringify
-}
+#include "read_json.hpp"
 
 long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
 	long long g = 0;

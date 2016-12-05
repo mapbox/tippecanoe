@@ -7,13 +7,15 @@
 #include <unistd.h>
 #include "mvt.hpp"
 #include "plugin.hpp"
-#include "write_json.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
 }
+
+#include "write_json.hpp"
+#include "read_json.hpp"
 
 struct writer_arg {
 	int *pipe_orig;
@@ -42,17 +44,6 @@ void *run_writer(void *a) {
 	}
 
 	return NULL;
-}
-
-static void json_context(json_object *j) {  // XXX share with geojson.cpp
-	char *s = json_stringify(j);
-
-	if (strlen(s) >= 500) {
-		sprintf(s + 497, "...");
-	}
-
-	fprintf(stderr, "In JSON object %s\n", s);
-	free(s);  // stringify
 }
 
 mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
@@ -124,7 +115,6 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
 			exit(EXIT_FAILURE);
 		}
 
-#if 0
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
 			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
@@ -136,7 +126,6 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
-#endif
 
 		json_free(j);
 	}
