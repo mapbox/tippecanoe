@@ -7,8 +7,13 @@
 #include <unistd.h>
 #include "mvt.hpp"
 #include "plugin.hpp"
+#include "write_json.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
+
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
 
 struct writer_arg {
 	int *pipe_orig;
@@ -37,6 +42,107 @@ void *run_writer(void *a) {
 	}
 
 	return NULL;
+}
+
+static void json_context(json_object *j) {  // XXX share with geojson.cpp
+	char *s = json_stringify(j);
+
+	if (strlen(s) >= 500) {
+		sprintf(s + 497, "...");
+	}
+
+	fprintf(stderr, "In JSON object %s\n", s);
+	free(s);  // stringify
+}
+
+mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
+	mvt_layer ret;
+
+	FILE *f = fdopen(fd, "r");
+	if (f == NULL) {
+		perror("fdopen filter output");
+		exit(EXIT_FAILURE);
+	}
+	json_pull *jp = json_begin_file(f);
+
+	while (1) {
+		json_object *j = json_read(jp);
+		if (j == NULL) {
+			if (jp->error != NULL) {
+				fprintf(stderr, "Filter output:%d: %s\n", jp->line, jp->error);
+				if (jp->root != NULL) {
+					json_context(jp->root);
+				}
+				exit(EXIT_FAILURE);
+			}
+
+			json_free(jp->root);
+			break;
+		}
+
+		json_object *type = json_hash_get(j, "type");
+		if (type == NULL || type->type != JSON_STRING) {
+			continue;
+		}
+		if (strcmp(type->string, "Feature") != 0) {
+			continue;
+		}
+
+		json_object *geometry = json_hash_get(j, "geometry");
+		if (geometry == NULL) {
+			fprintf(stderr, "Filter output:%d: filtered feature with no geometry\n", jp->line);
+			json_context(j);
+			json_free(j);
+			exit(EXIT_FAILURE);
+		}
+
+		json_object *properties = json_hash_get(j, "properties");
+		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
+			fprintf(stderr, "Filter output:%d: feature without properties hash\n", jp->line);
+			json_context(j);
+			json_free(j);
+			exit(EXIT_FAILURE);
+		}
+
+		json_object *geometry_type = json_hash_get(geometry, "type");
+		if (geometry_type == NULL) {
+			fprintf(stderr, "Filter output:%d: null geometry (additional not reported)\n", jp->line);
+			json_context(j);
+			exit(EXIT_FAILURE);
+		}
+
+		if (geometry_type->type != JSON_STRING) {
+			fprintf(stderr, "Filter output:%d: geometry type is not a string\n", jp->line);
+			json_context(j);
+			exit(EXIT_FAILURE);
+		}
+
+		json_object *coordinates = json_hash_get(geometry, "coordinates");
+		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
+			fprintf(stderr, "Filter output:%d: feature without coordinates array\n", jp->line);
+			json_context(j);
+			exit(EXIT_FAILURE);
+		}
+
+#if 0
+		int t;
+		for (t = 0; t < GEOM_TYPES; t++) {
+			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+				break;
+			}
+		}
+		if (t >= GEOM_TYPES) {
+			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			json_context(j);
+			exit(EXIT_FAILURE);
+		}
+#endif
+
+		json_free(j);
+	}
+
+	json_end(jp);
+	return ret;
 }
 
 mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y) {
@@ -112,11 +218,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 			exit(EXIT_FAILURE);
 		}
 
-		char buf[200];
-		size_t count;
-		while ((count = read(pipe_filtered[0], buf, 200)) != 0) {
-			write(1, buf, count);
-		}
+		layer = parse_layer(pipe_filtered[0], z, x, y);
 
 		int stat_loc;
 		if (waitpid(pid, &stat_loc, 0) < 0) {
@@ -137,264 +239,4 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 	}
 
 	return layer;
-}
-
-struct lonlat {
-	int op;
-	double lon;
-	double lat;
-	int x;
-	int y;
-
-	lonlat(int nop, double nlon, double nlat, int nx, int ny) {
-		this->op = nop;
-		this->lon = nlon;
-		this->lat = nlat;
-		this->x = nx;
-		this->y = ny;
-	}
-};
-
-void layer_to_geojson(FILE *fp, mvt_layer &layer, unsigned z, unsigned x, unsigned y) {
-	for (size_t f = 0; f < layer.features.size(); f++) {
-		mvt_feature &feat = layer.features[f];
-
-		if (f != 0) {
-			fprintf(fp, ",\n");
-		}
-
-		fprintf(fp, "{ \"type\": \"Feature\"");
-
-		if (feat.has_id) {
-			fprintf(fp, ", \"id\": %llu", feat.id);
-		}
-
-		fprintf(fp, ", \"properties\": { ");
-
-		for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
-			if (t != 0) {
-				fprintf(fp, ", ");
-			}
-
-			if (feat.tags[t] >= layer.keys.size()) {
-				fprintf(stderr, "Error: out of bounds feature key\n");
-				exit(EXIT_FAILURE);
-			}
-			if (feat.tags[t + 1] >= layer.values.size()) {
-				fprintf(stderr, "Error: out of bounds feature value\n");
-				exit(EXIT_FAILURE);
-			}
-
-			const char *key = layer.keys[feat.tags[t]].c_str();
-			mvt_value const &val = layer.values[feat.tags[t + 1]];
-
-			if (val.type == mvt_string) {
-				fprintq(fp, key);
-				fprintf(fp, ": ");
-				fprintq(fp, val.string_value.c_str());
-			} else if (val.type == mvt_int) {
-				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.int_value);
-			} else if (val.type == mvt_double) {
-				fprintq(fp, key);
-				double v = val.numeric_value.double_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
-				} else {
-					fprintf(fp, ": %g", v);
-				}
-			} else if (val.type == mvt_float) {
-				fprintq(fp, key);
-				double v = val.numeric_value.float_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
-				} else {
-					fprintf(fp, ": %g", v);
-				}
-			} else if (val.type == mvt_sint) {
-				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.sint_value);
-			} else if (val.type == mvt_uint) {
-				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.uint_value);
-			} else if (val.type == mvt_bool) {
-				fprintq(fp, key);
-				fprintf(fp, ": %s", val.numeric_value.bool_value ? "true" : "false");
-			}
-		}
-
-		fprintf(fp, " }, \"geometry\": { ");
-
-		std::vector<lonlat> ops;
-
-		for (size_t g = 0; g < feat.geometry.size(); g++) {
-			int op = feat.geometry[g].op;
-			long long px = feat.geometry[g].x;
-			long long py = feat.geometry[g].y;
-
-			if (op == VT_MOVETO || op == VT_LINETO) {
-				long long scale = 1LL << (32 - z);
-				long long wx = scale * x + (scale / layer.extent) * px;
-				long long wy = scale * y + (scale / layer.extent) * py;
-
-				double lat, lon;
-				projection->unproject(wx, wy, 32, &lon, &lat);
-
-				ops.push_back(lonlat(op, lon, lat, px, py));
-			} else {
-				ops.push_back(lonlat(op, 0, 0, 0, 0));
-			}
-		}
-
-		if (feat.type == VT_POINT) {
-			if (ops.size() == 1) {
-				fprintf(fp, "\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
-			} else {
-				fprintf(fp, "\"type\": \"MultiPoint\", \"coordinates\": [ ");
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (i != 0) {
-						fprintf(fp, ", ");
-					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-				}
-				fprintf(fp, " ]");
-			}
-		} else if (feat.type == VT_LINE) {
-			int movetos = 0;
-			for (size_t i = 0; i < ops.size(); i++) {
-				if (ops[i].op == VT_MOVETO) {
-					movetos++;
-				}
-			}
-
-			if (movetos < 2) {
-				fprintf(fp, "\"type\": \"LineString\", \"coordinates\": [ ");
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (i != 0) {
-						fprintf(fp, ", ");
-					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-				}
-				fprintf(fp, " ]");
-			} else {
-				fprintf(fp, "\"type\": \"MultiLineString\", \"coordinates\": [ [ ");
-				int state = 0;
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (ops[i].op == VT_MOVETO) {
-						if (state == 0) {
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-							state = 1;
-						} else {
-							fprintf(fp, " ], [ ");
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-							state = 1;
-						}
-					} else {
-						fprintf(fp, ", [ %f, %f ]", ops[i].lon, ops[i].lat);
-					}
-				}
-				fprintf(fp, " ] ]");
-			}
-		} else if (feat.type == VT_POLYGON) {
-			std::vector<std::vector<lonlat> > rings;
-			std::vector<double> areas;
-
-			for (size_t i = 0; i < ops.size(); i++) {
-				if (ops[i].op == VT_MOVETO) {
-					rings.push_back(std::vector<lonlat>());
-					areas.push_back(0);
-				}
-
-				int n = rings.size() - 1;
-				if (n >= 0) {
-					if (ops[i].op == VT_CLOSEPATH) {
-						rings[n].push_back(rings[n][0]);
-					} else {
-						rings[n].push_back(ops[i]);
-					}
-				}
-			}
-
-			int outer = 0;
-
-			for (size_t i = 0; i < rings.size(); i++) {
-				long double area = 0;
-				for (size_t k = 0; k < rings[i].size(); k++) {
-					if (rings[i][k].op != VT_CLOSEPATH) {
-						area += rings[i][k].x * rings[i][(k + 1) % rings[i].size()].y;
-						area -= rings[i][k].y * rings[i][(k + 1) % rings[i].size()].x;
-					}
-				}
-
-				areas[i] = area;
-				if (areas[i] >= 0 || i == 0) {
-					outer++;
-				}
-
-				// fprintf(fp, "area %f\n", area / .00000274 / .00000274);
-			}
-
-			if (outer > 1) {
-				fprintf(fp, "\"type\": \"MultiPolygon\", \"coordinates\": [ [ [ ");
-			} else {
-				fprintf(fp, "\"type\": \"Polygon\", \"coordinates\": [ [ ");
-			}
-
-			int state = 0;
-			for (size_t i = 0; i < rings.size(); i++) {
-				if (areas[i] >= 0) {
-					if (state != 0) {
-						// new multipolygon
-						fprintf(fp, " ] ], [ [ ");
-					}
-					state = 1;
-				}
-
-				if (state == 2) {
-					// new ring in the same polygon
-					fprintf(fp, " ], [ ");
-				}
-
-				for (size_t j = 0; j < rings[i].size(); j++) {
-					if (rings[i][j].op != VT_CLOSEPATH) {
-						if (j != 0) {
-							fprintf(fp, ", ");
-						}
-
-						fprintf(fp, "[ %f, %f ]", rings[i][j].lon, rings[i][j].lat);
-					} else {
-						if (j != 0) {
-							fprintf(fp, ", ");
-						}
-
-						fprintf(fp, "[ %f, %f ]", rings[i][0].lon, rings[i][0].lat);
-					}
-				}
-
-				state = 2;
-			}
-
-			if (outer > 1) {
-				fprintf(fp, " ] ] ]");
-			} else {
-				fprintf(fp, " ] ]");
-			}
-		}
-
-		fprintf(fp, " } }\n");
-	}
-}
-
-void fprintq(FILE *fp, const char *s) {
-	fputc('"', fp);
-	for (; *s; s++) {
-		if (*s == '\\' || *s == '"') {
-			fprintf(fp, "\\%c", *s);
-		} else if (*s >= 0 && *s < ' ') {
-			fprintf(fp, "\\u%04x", *s);
-		} else {
-			fputc(*s, fp);
-		}
-	}
-	fputc('"', fp);
 }

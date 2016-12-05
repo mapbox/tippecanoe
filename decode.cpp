@@ -15,7 +15,7 @@
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
-#include "plugin.hpp"
+#include "write_json.hpp"
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	int within = 0;
