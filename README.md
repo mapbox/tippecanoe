@@ -179,7 +179,9 @@ If you have a feature like this:
 
 with a `tippecanoe` object specifiying a `maxzoom` of 9 and a `minzoom` of 4, the feature
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the `tippecanoe`
-object belongs to the Feature, not to its `properties`.
+object belongs to the Feature, not to its `properties`. If you specify a `minzoom` for a feature,
+it will be preserved down to that zoom level even if dot-dropping with `-r` would otherwise have
+dropped it.
 
 You can also specify a layer name in the `tippecanoe` object, which will take precedence over
 the filename or name specified using `--layer`, like this:

@@ -1,3 +1,7 @@
+## 1.15.4
+
+* Dot-dropping with -r/-B doesn't apply if there is a per-feature minzoom tag
+
 ## 1.15.3
 
 * Round coordinates in low-zoom grid math instead of truncating
