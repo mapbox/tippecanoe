@@ -40,46 +40,13 @@ extern "C" {
 #include "text.hpp"
 #include "read_json.hpp"
 
-long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
-	long long g = 0;
+static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
+	parse_geometry(t, j, geom, op, fname, line, feature);
 
-	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
-		json_context(feature);
-		return g;
-	}
-
-	int within = geometry_within[t];
-	if (within >= 0) {
-		size_t i;
-		for (i = 0; i < j->length; i++) {
-			if (within == GEOM_POINT) {
-				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
-					op = VT_MOVETO;
-				} else {
-					op = VT_LINETO;
-				}
-			}
-
-			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, initialized, initial_x, initial_y, feature);
-		}
-	} else {
-		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			long long x, y;
-			double lon = j->array[0]->number;
-			double lat = j->array[1]->number;
-			projection->project(lon, lat, 32, &x, &y);
-
-			if (j->length > 2) {
-				static int warned = 0;
-
-				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
-					json_context(j);
-					json_context(feature);
-					warned = 1;
-				}
-			}
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
+			long long x = geom[i].x;
+			long long y = geom[i].y;
 
 			if (x < bbox[0]) {
 				bbox[0] = x;
@@ -106,30 +73,12 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 				*initialized = 1;
 			}
 
-			draw d(op, (x >> geometry_scale), (y >> geometry_scale));
-			out.push_back(d);
-			g++;
-		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
-			json_context(j);
-			json_context(feature);
+			geom[i].x = x >> geometry_scale;
+			geom[i].y = y >> geometry_scale;
 		}
 	}
 
-	if (t == GEOM_POLYGON) {
-		// Note that this is not using the correct meaning of closepath.
-		//
-		// We are using it here to close an entire Polygon, to distinguish
-		// the Polygons within a MultiPolygon from each other.
-		//
-		// This will be undone in fix_polygon(), which needs to know which
-		// rings come from which Polygons so that it can make the winding order
-		// of the outer ring be the opposite of the order of the inner rings.
-
-		out.push_back(draw(VT_CLOSEPATH, 0, 0));
-	}
-
-	return g;
+	return geom.size();
 }
 
 int serialize_geometry(json_object *geometry, json_object *properties, json_object *id, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string const &layername, bool uses_gamma) {
@@ -287,7 +236,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	}
 
 	drawvec dv;
-	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature);
+	long long g = parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
 	}
