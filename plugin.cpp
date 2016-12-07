@@ -5,6 +5,7 @@
 #include <map>
 #include <pthread.h>
 #include <unistd.h>
+#include <cmath>
 #include "mvt.hpp"
 #include "plugin.hpp"
 #include "projection.hpp"
@@ -150,8 +151,8 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
 			long long scale = 1LL << (32 - z);
-			dv[i].x = (dv[i].x - scale * x) * olayer.extent / scale;
-			dv[i].y = (dv[i].y - scale * y) * olayer.extent / scale;
+			dv[i].x = std::round((dv[i].x - scale * x) * olayer.extent / (double) scale);
+			dv[i].y = std::round((dv[i].y - scale * y) * olayer.extent / (double) scale);
 		}
 
 		if (mb_geometry[t] == VT_POLYGON) {
