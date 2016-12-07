@@ -12,7 +12,6 @@
 #include <mapbox/geometry.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 #include "geometry.hpp"
-#include "clipper/clipper.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
@@ -249,40 +248,6 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 	}
 }
 
-static void dump(drawvec &geom) {
-	ClipperLib::Clipper clipper(ClipperLib::ioStrictlySimple);
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_MOVETO) {
-			size_t j;
-			for (j = i + 1; j < geom.size(); j++) {
-				if (geom[j].op != VT_LINETO) {
-					break;
-				}
-			}
-
-			ClipperLib::Path path;
-			printf("{ ClipperLib::Path path; ");
-
-			drawvec tmp;
-			for (size_t k = i; k < j; k++) {
-				printf("path.push_back(IntPoint(%lld,%lld)); ", geom[k].x, geom[k].y);
-				path.push_back(ClipperLib::IntPoint(geom[k].x, geom[k].y));
-			}
-
-			if (!clipper.AddPath(path, ClipperLib::ptSubject, true)) {
-			}
-			printf("clipper.AddPath(path, ClipperLib::ptSubject, true); }\n");
-
-			i = j - 1;
-		} else {
-			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
-			exit(EXIT_FAILURE);
-		}
-	}
-	printf("clipper.Execute(ClipperLib::ctUnion, clipped));\n");
-}
-
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
@@ -333,7 +298,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 	try {
 		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
 	} catch (std::runtime_error e) {
-		FILE *f = fopen("wagyu.log", "a");
+		FILE *f = fopen("/tmp/wagyu.log", "w");
 		fprintf(f, "%s\n", e.what());
 		fprintf(stderr, "%s\n", e.what());
 		fprintf(f, "[");
@@ -376,9 +341,9 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool cl
 		fprintf(f, "]");
 		fprintf(f, "\n\n\n\n\n");
 
-		fflush(stdout);
-
 		fclose(f);
+		fprintf(stderr, "Internal error: Polygon cleaning failed. Log in /tmp/wagyu.log\n");
+		exit(EXIT_FAILURE);
 	}
 
 	drawvec ret;
@@ -427,7 +392,6 @@ void check_polygon(drawvec &geom, drawvec &before) {
 					       geom[i + 1].x, geom[i + 1].y,
 					       geom[j + 0].x, geom[j + 0].y,
 					       geom[j + 1].x, geom[j + 1].y);
-					dump(before);
 				}
 			}
 		}
@@ -469,7 +433,6 @@ void check_polygon(drawvec &geom, drawvec &before) {
 						if (!on_edge) {
 							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
 
-							dump(before);
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
 								fprintf(stderr, " %lld,%lld", geom[l].x, geom[l].y);
