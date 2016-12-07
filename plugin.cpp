@@ -232,6 +232,10 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		exit(EXIT_FAILURE);
 	}
 
+	std::string z_str = std::to_string(z);
+	std::string x_str = std::to_string(x);
+	std::string y_str = std::to_string(y);
+
 	pid_t pid = fork();
 	if (pid < 0) {
 		perror("fork");
@@ -266,8 +270,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 
 		// XXX close other fds?
 
-		// XXX add zyx args
-		if (execlp("sh", "sh", "-c", filter, NULL) != 0) {
+		if (execlp("sh", "sh", "-c", filter, "sh", z_str.c_str(), x_str.c_str(), y_str.c_str(), NULL) != 0) {
 			perror("exec");
 			exit(EXIT_FAILURE);
 		}
