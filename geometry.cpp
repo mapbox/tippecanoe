@@ -154,60 +154,6 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 	return out;
 }
 
-/* XXX */
-#if 0
-drawvec shrink_lines(drawvec &geom, int z, int detail, int basezoom, long long *here, double droprate) {
-	long long res = 200LL << (32 - 8 - z);
-	long long portion = res / exp(log(sqrt(droprate)) * (basezoom - z));
-
-	drawvec out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
-			double dx = (geom[i].x - geom[i - 1].x);
-			double dy = (geom[i].y - geom[i - 1].y);
-			long long d = sqrt(dx * dx + dy * dy);
-
-			long long n;
-			long long next = LLONG_MAX;
-			for (n = *here; n < *here + d; n = next) {
-				int within;
-
-				if (n % res < portion) {
-					next = (n / res) * res + portion;
-					within = 1;
-				} else {
-					next = (n / res + 1) * res;
-					within = 0;
-				}
-
-				if (next > *here + d) {
-					next = *here + d;
-				}
-
-				//printf("drawing from %lld to %lld in %lld\n", n - *here, next - *here, d);
-
-				double f1 = (n - *here) / (double) d;
-				double f2 = (next - *here) / (double) d;
-
-				if (within) {
-					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f1 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f1 * (geom[i].y - geom[i - 1].y)));
-					out.push_back(draw(VT_LINETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
-				} else {
-					out.push_back(draw(VT_MOVETO, geom[i - 1].x + f2 * (geom[i].x - geom[i - 1].x), geom[i - 1].y + f2 * (geom[i].y - geom[i - 1].y)));
-				}
-			}
-
-			*here += d;
-		} else {
-			out.push_back(geom[i]);
-		}
-	}
-
-	return out;
-}
-#endif
-
 double get_area(drawvec &geom, size_t i, size_t j) {
 	double area = 0;
 	for (size_t k = i; k < j; k++) {
@@ -502,19 +448,15 @@ static draw intersect(draw a, draw b, int edge, long long minx, long long miny, 
 	switch (edge) {
 	case 0:  // top
 		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (miny - a.y) / (b.y - a.y), miny);
-		break;
 
 	case 1:  // right
 		return draw(VT_LINETO, maxx, a.y + (double) (b.y - a.y) * (maxx - a.x) / (b.x - a.x));
-		break;
 
 	case 2:  // bottom
 		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (maxy - a.y) / (b.y - a.y), maxy);
-		break;
 
 	case 3:  // left
 		return draw(VT_LINETO, minx, a.y + (double) (b.y - a.y) * (minx - a.x) / (b.x - a.x));
-		break;
 	}
 
 	fprintf(stderr, "internal error intersecting\n");
@@ -805,7 +747,7 @@ static double square_distance_from_line(long long point_x, long long point_y, lo
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n, double e) {
+static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t kept, size_t retain) {
 	e = e * e;
 	std::stack<int> recursion_stack;
 
@@ -840,15 +782,16 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e) {
 
 			double distance = std::fabs(temp_dist);
 
-			if (distance > e && distance > max_distance) {
+			if ((distance > e || kept < retain) && distance > max_distance) {
 				farthest_element_index = i;
 				max_distance = distance;
 			}
 		}
 
-		if (max_distance > e) {
+		if (max_distance >= 0) {
 			// mark idx as necessary
 			geom[start + farthest_element_index].necessary = 1;
+			kept++;
 
 			if (1 < farthest_element_index - first) {
 				recursion_stack.push(first);
@@ -896,19 +839,17 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, bool already_marked) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
-	if (!already_marked) {
-		for (size_t i = 0; i < geom.size(); i++) {
-			if (geom[i].op == VT_MOVETO) {
-				geom[i].necessary = 1;
-			} else if (geom[i].op == VT_LINETO) {
-				geom[i].necessary = 0;
-			} else {
-				geom[i].necessary = 1;
-			}
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			geom[i].necessary = 1;
+		} else if (geom[i].op == VT_LINETO) {
+			geom[i].necessary = 0;
+		} else {
+			geom[i].necessary = 1;
 		}
 	}
 
@@ -929,19 +870,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 			geom[j - 1].necessary = 1;
 
 			if (j - i > 1) {
-				if (already_marked && geom[j - 1] < geom[i]) {
-					drawvec dv;
-					for (size_t k = j; k > i; k--) {
-						dv.push_back(geom[k - 1]);
-					}
-					douglas_peucker(dv, 0, j - i, res * simplification);
-					size_t l = 0;
-					for (size_t k = j; k > i; k--) {
-						geom[k - 1] = dv[l++];
-					}
-				} else {
-					douglas_peucker(geom, i, j - i, res * simplification);
-				}
+				douglas_peucker(geom, i, j - i, res * simplification, 2, retain);
 			}
 			i = j - 1;
 		}
@@ -1223,4 +1152,87 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 	} else {
 		return changed + 1;
 	}
+}
+
+drawvec stairstep(drawvec &geom, int z, int detail) {
+	drawvec out;
+	double scale = 1 << (32 - detail - z);
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		geom[i].x = std::round(geom[i].x / scale);
+		geom[i].y = std::round(geom[i].y / scale);
+	}
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			out.push_back(geom[i]);
+		} else {
+			long long x0 = out[out.size() - 1].x;
+			long long y0 = out[out.size() - 1].y;
+			long long x1 = geom[i].x;
+			long long y1 = geom[i].y;
+			bool swap = false;
+
+			if (y0 < y1) {
+				swap = true;
+				std::swap(x0, x1);
+				std::swap(y0, y1);
+			}
+
+			long long xx = x0, yy = y0;
+			long long dx = std::abs(x1 - x0);
+			long long sx = (x0 < x1) ? 1 : -1;
+			long long dy = std::abs(y1 - y0);
+			long long sy = (y0 < y1) ? 1 : -1;
+			long long err = ((dx > dy) ? dx : -dy) / 2;
+			int last = -1;
+
+			drawvec tmp;
+			tmp.push_back(draw(VT_LINETO, xx, yy));
+
+			while (xx != x1 || yy != y1) {
+				long long e2 = err;
+
+				if (e2 > -dx) {
+					err -= dy;
+					xx += sx;
+					if (last == 1) {
+						tmp[tmp.size() - 1] = draw(VT_LINETO, xx, yy);
+					} else {
+						tmp.push_back(draw(VT_LINETO, xx, yy));
+					}
+					last = 1;
+				}
+				if (e2 < dy) {
+					err += dx;
+					yy += sy;
+					if (last == 2) {
+						tmp[tmp.size() - 1] = draw(VT_LINETO, xx, yy);
+					} else {
+						tmp.push_back(draw(VT_LINETO, xx, yy));
+					}
+					last = 2;
+				}
+			}
+
+			if (swap) {
+				for (size_t j = tmp.size(); j > 0; j--) {
+					out.push_back(tmp[j - 1]);
+				}
+			} else {
+				for (size_t j = 0; j < tmp.size(); j++) {
+					out.push_back(tmp[j]);
+				}
+			}
+
+			// out.push_back(draw(VT_LINETO, xx, yy));
+		}
+	}
+
+	for (size_t i = 0; i < out.size(); i++) {
+		out[i].x <<= (32 - detail - z);
+		out[i].y <<= (32 - detail - z);
+	}
+
+	return out;
 }

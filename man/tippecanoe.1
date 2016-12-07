@@ -102,6 +102,8 @@ compensate for the larger marker, or \-Bf\fInumber\fP to allow at most \fInumber
 \-b \fIpixels\fP or \-\-buffer=\fIpixels\fP: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"\-\-1/256th of the tile width or height. (default 5)
 .IP \(bu 2
 \-s \fIprojection\fP or \-\-projection=\fIprojection\fP: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+.IP \(bu 2
+\-M \fIbytes\fP or \-\-maximum\-tile\-bytes=\fIbytes\fP: Use the specified number of \fIbytes\fP as the maximum compressed tile size instead of 500K.
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
@@ -150,6 +152,16 @@ which may not be what you want.
 \-ag or \-\-calculate\-feature\-density: Add a new attribute, \fB\fCtippecanoe_feature_density\fR, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
 .IP \(bu 2
 \-ab or \-\-detect\-shared\-borders: In the manner of TopoJSON \[la]https://github.com/mbostock/topojson/wiki/Introduction\[ra], detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+.IP \(bu 2
+\-aG or \-\-increase\-gamma\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma. The discovered gamma applies to the entire zoom level.
+.IP \(bu 2
+\-as or \-\-drop\-densest\-as\-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+.IP \(bu 2
+\-ad or \-\-drop\-fraction\-as\-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like \fB\fC\-pd\fR but applies to the entire zoom level, not to each tile.)
+.IP \(bu 2
+\-an or \-\-drop\-smallest\-as\-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
+.IP \(bu 2
+\-aL or \-\-grid\-low\-zooms: At all zoom levels below \fImaxzoom\fP, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably \fB\fC\-D8\fR\&. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data.
 .RE
 .SS Doing less
 .RS
@@ -162,7 +174,7 @@ which may not be what you want.
 .IP \(bu 2
 \-pk or \-\-no\-tile\-size\-limit: Don't limit tiles to 500K bytes
 .IP \(bu 2
-\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries.
+\-pd or \-\-force\-feature\-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.)
 .IP \(bu 2
 \-pi or \-\-preserve\-input\-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
@@ -171,6 +183,8 @@ which may not be what you want.
 \-pc or \-\-no\-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
 .IP \(bu 2
 \-pD or \-\-no\-duplication: As with \-\-no\-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
+.IP \(bu 2
+\-pt or \-\-no\-tiny\-polygon\-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
 .IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
@@ -209,7 +223,9 @@ If you have a feature like this:
 .PP
 with a \fB\fCtippecanoe\fR object specifiying a \fB\fCmaxzoom\fR of 9 and a \fB\fCminzoom\fR of 4, the feature
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the \fB\fCtippecanoe\fR
-object belongs to the Feature, not to its \fB\fCproperties\fR\&.
+object belongs to the Feature, not to its \fB\fCproperties\fR\&. If you specify a \fB\fCminzoom\fR for a feature,
+it will be preserved down to that zoom level even if dot\-dropping with \fB\fC\-r\fR would otherwise have
+dropped it.
 .PP
 You can also specify a layer name in the \fB\fCtippecanoe\fR object, which will take precedence over
 the filename or name specified using \fB\fC\-\-layer\fR, like this:
@@ -275,7 +291,8 @@ For line features, it drops any features that are too small to draw at all.
 This still leaves the lower zooms too dark (and too dense for the 500K tile limit,
 in some places), so I need to figure out an equitable way to throw features away.
 .PP
-Any polygons that are smaller than a minimum area (currently 4 square subpixels) will
+Unless you specify \fB\fC\-\-no\-tiny\-polygon\-reduction\fR,
+any polygons that are smaller than a minimum area (currently 4 square subpixels) will
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.

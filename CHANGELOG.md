@@ -1,3 +1,29 @@
+## 1.15.4
+
+* Dot-dropping with -r/-B doesn't apply if there is a per-feature minzoom tag
+
+## 1.15.3
+
+* Round coordinates in low-zoom grid math instead of truncating
+
+## 1.15.2
+
+* Add --grid-low-zooms option to snap low-zoom features to the tile grid
+
+## 1.15.1
+
+* Stop --drop-smallest-as-needed from always dropping all points
+
+## 1.15.0
+
+* New strategies for making tiles smaller, with uniform behavior across
+  the whole zoom level: --increase-gamma-as-needed,
+  --drop-densest-as-needed, --drop-fraction-as-needed,
+  --drop-smallest-as-needed.
+* Option to specify the maximum tile size in bytes
+* Option to turn off tiny polygon reduction
+* Better error checking in JSON parsing
+
 ## 1.14.4
 
 * Make -B/-r feature-dropping consistent between tiles and zoom levels

@@ -176,9 +176,20 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
-	serialize_long_long(geomfile, sf->seq, geompos, fname);
 
-	serialize_long_long(geomfile, (sf->layer << 3) | (sf->has_id ? 4 : 0) | (sf->has_tippecanoe_minzoom ? 2 : 0) | (sf->has_tippecanoe_maxzoom ? 1 : 0), geompos, fname);
+	long long layer = 0;
+	layer |= sf->layer << 6;
+	layer |= (sf->seq != 0) << 5;
+	layer |= (sf->index != 0) << 4;
+	layer |= (sf->extent != 0) << 3;
+	layer |= sf->has_id << 2;
+	layer |= sf->has_tippecanoe_minzoom << 1;
+	layer |= sf->has_tippecanoe_maxzoom << 0;
+
+	serialize_long_long(geomfile, layer, geompos, fname);
+	if (sf->seq != 0) {
+		serialize_long_long(geomfile, sf->seq, geompos, fname);
+	}
 	if (sf->has_tippecanoe_minzoom) {
 		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
 	}
@@ -193,9 +204,17 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 
 	write_geometry(sf->geometry, geompos, geomfile, fname, wx, wy);
 	serialize_byte(geomfile, VT_END, geompos, fname);
+	if (sf->index != 0) {
+		serialize_ulong_long(geomfile, sf->index, geompos, fname);
+	}
+	if (sf->extent != 0) {
+		serialize_long_long(geomfile, sf->extent, geompos, fname);
+	}
 
 	serialize_int(geomfile, sf->m, geompos, fname);
-	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	if (sf->m != 0) {
+		serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
 		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());
