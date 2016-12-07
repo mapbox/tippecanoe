@@ -207,12 +207,19 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 	return ret;
 }
 
+static pthread_mutex_t pipe_lock = PTHREAD_MUTEX_INITIALIZER;
+
 mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y) {
 	// This will create two pipes, a new thread, and a new process.
 	//
 	// The new process will read from one pipe and write to the other, and execute the filter.
 	// The new thread will write the GeoJSON to the pipe that leads to the filter.
 	// The original thread will read the GeoJSON from the filter and convert it back into vector tiles.
+
+	if (pthread_mutex_lock(&pipe_lock) != 0) {
+		perror("pthread_mutex_lock (pipe)");
+		exit(EXIT_FAILURE);
+	}
 
 	int pipe_orig[2], pipe_filtered[2];
 	if (pipe(pipe_orig) < 0) {
@@ -247,6 +254,14 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 			perror("close input from filter");
 			exit(EXIT_FAILURE);
 		}
+		if (close(pipe_orig[0]) != 0) {
+			perror("close dup input of filter");
+			exit(EXIT_FAILURE);
+		}
+		if (close(pipe_filtered[1]) != 0) {
+			perror("close dup output of filter");
+			exit(EXIT_FAILURE);
+		}
 
 		// XXX close other fds?
 
@@ -264,6 +279,11 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		}
 		if (close(pipe_filtered[1]) != 0) {
 			perror("close filter-side writer");
+			exit(EXIT_FAILURE);
+		}
+
+		if (pthread_mutex_unlock(&pipe_lock) != 0) {
+			perror("pthread_mutex_unlock (pipe_lock)");
 			exit(EXIT_FAILURE);
 		}
 
