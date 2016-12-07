@@ -223,7 +223,9 @@ If you have a feature like this:
 .PP
 with a \fB\fCtippecanoe\fR object specifiying a \fB\fCmaxzoom\fR of 9 and a \fB\fCminzoom\fR of 4, the feature
 will only appear in the vector tiles for zoom levels 4 through 9. Note that the \fB\fCtippecanoe\fR
-object belongs to the Feature, not to its \fB\fCproperties\fR\&.
+object belongs to the Feature, not to its \fB\fCproperties\fR\&. If you specify a \fB\fCminzoom\fR for a feature,
+it will be preserved down to that zoom level even if dot\-dropping with \fB\fC\-r\fR would otherwise have
+dropped it.
 .PP
 You can also specify a layer name in the \fB\fCtippecanoe\fR object, which will take precedence over
 the filename or name specified using \fB\fC\-\-layer\fR, like this:

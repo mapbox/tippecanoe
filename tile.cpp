@@ -1473,8 +1473,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (tippecanoe_maxzoom != -1 && z > tippecanoe_maxzoom) {
 				continue;
 			}
-
-			if (z < feature_minzoom) {
+			if (tippecanoe_minzoom == -1 && z < feature_minzoom) {
 				continue;
 			}
 
