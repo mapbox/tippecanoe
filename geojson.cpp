@@ -194,41 +194,20 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				continue;
 			}
 
-			type_and_string tas;
-			tas.string = s;
-			tas.type = -1;
+			int type = -1;
+			std::string val;
+			stringify_value(properties->values[i], type, val, reading, line, feature);
 
-			metakey[m] = properties->keys[i]->string;
+			if (type >= 0) {
+				metakey[m] = properties->keys[i]->string;
+				metatype[m] = type;
+				metaval[m] = val;
+				m++;
 
-			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-				tas.type = metatype[m] = VT_STRING;
-				metaval[m] = std::string(properties->values[i]->string);
-				std::string err = check_utf8(metaval[m]);
-				if (err != "") {
-					fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
-					json_context(feature);
-					exit(EXIT_FAILURE);
-				}
-				m++;
-			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-				tas.type = metatype[m] = VT_NUMBER;
-				metaval[m] = std::string(properties->values[i]->string);
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-				tas.type = metatype[m] = VT_BOOLEAN;
-				metaval[m] = std::string(properties->values[i]->type == JSON_TRUE ? "true" : "false");
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
-				;
-			} else {
-				tas.type = metatype[m] = VT_STRING;
-				const char *v = json_stringify(properties->values[i]);
-				metaval[m] = std::string(v);
-				free((void *) v);  // stringify
-				m++;
-			}
+				type_and_string tas;
+				tas.string = s;
+				tas.type = type;
 
-			if (tas.type >= 0) {
 				auto fk = layermap->find(layername);
 				fk->second.file_keys.insert(tas);
 			}

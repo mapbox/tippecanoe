@@ -62,7 +62,6 @@ bool draws_something(drawvec &geom) {
 
 int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
-static int is_integer(const char *s, long long *v);
 
 struct coalesce {
 	char *meta;
@@ -136,37 +135,7 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 		*otype = type;
 	}
 
-	mvt_value tv;
-	if (type == VT_NUMBER) {
-		long long v;
-		if (is_integer(s, &v)) {
-			if (v >= 0) {
-				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
-			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
-			}
-		} else {
-			double d = atof(s);
-
-			if (d == (float) d) {
-				tv.type = mvt_float;
-				tv.numeric_value.float_value = d;
-			} else {
-				tv.type = mvt_double;
-				tv.numeric_value.double_value = d;
-			}
-		}
-	} else if (type == VT_BOOLEAN) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = (s[0] == 't');
-	} else {
-		tv.type = mvt_string;
-		tv.string_value = s;
-	}
-
-	return tv;
+	return stringified_to_mvt_value(type, s);
 }
 
 void decode_meta(int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
@@ -221,37 +190,6 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 	} else {
 		return 0;
 	}
-}
-
-static int is_integer(const char *s, long long *v) {
-	errno = 0;
-	char *endptr;
-
-	*v = strtoll(s, &endptr, 0);
-	if (*v == 0 && errno != 0) {
-		return 0;
-	}
-	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE)) {
-		return 0;
-	}
-	if (*endptr != '\0') {
-		// Special case: If it is an integer followed by .0000 or similar,
-		// it is still an integer
-
-		if (*endptr != '.') {
-			return 0;
-		}
-		endptr++;
-		for (; *endptr != '\0'; endptr++) {
-			if (*endptr != '0') {
-				return 0;
-			}
-		}
-
-		return 1;
-	}
-
-	return 1;
 }
 
 void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {

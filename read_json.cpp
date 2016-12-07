@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <string>
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
@@ -10,6 +11,7 @@ extern "C" {
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "read_json.hpp"
+#include "text.hpp"
 
 const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
@@ -98,5 +100,31 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 		// of the outer ring be the opposite of the order of the inner rings.
 
 		out.push_back(draw(VT_CLOSEPATH, 0, 0));
+	}
+}
+
+void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature) {
+	if (value != NULL && value->type == JSON_STRING) {
+		type = VT_STRING;
+		stringified = std::string(value->string);
+		std::string err = check_utf8(stringified);
+		if (err != "") {
+			fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
+			json_context(feature);
+			exit(EXIT_FAILURE);
+		}
+	} else if (value != NULL && value->type == JSON_NUMBER) {
+		type = VT_NUMBER;
+		stringified = std::string(value->string);
+	} else if (value != NULL && (value->type == JSON_TRUE || value->type == JSON_FALSE)) {
+		type = VT_BOOLEAN;
+		stringified = std::string(value->type == JSON_TRUE ? "true" : "false");
+	} else if (value != NULL && (value->type == JSON_NULL)) {
+		;
+	} else {
+		type = VT_STRING;
+		const char *v = json_stringify(value);
+		stringified = std::string(v);
+		free((void *) v);  // stringify
 	}
 }
