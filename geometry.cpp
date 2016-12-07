@@ -226,11 +226,8 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 		for (size_t j = 0; j < t[i].size(); j++) {
 			drawvec ring;
 
-			// The coordinate system is swapped, so wagyu ring winding is
-			// backwards from internal ring winding.
-			ssize_t start = t[i][j].size() - 1;
-			for (ssize_t k = start; k >= 0; --k) {
-				ring.push_back(draw((k == start) ? VT_MOVETO : VT_LINETO, t[i][j][k].x, t[i][j][k].y));
+			for (size_t k = 0; k < t[i][j].size(); k++) {
+				ring.push_back(draw((k == 0) ? VT_MOVETO : VT_LINETO, t[i][j][k].x, t[i][j][k].y));
 			}
 
 			if (ring.size() > 0 && ring[ring.size() - 1] != ring[0]) {
