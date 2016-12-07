@@ -78,7 +78,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	int oz = z;
 	unsigned ox = x, oy = y;
 
-	int fd = open(fname, O_RDONLY);
+	int fd = open(fname, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		struct stat st;
 		if (fstat(fd, &st) == 0) {

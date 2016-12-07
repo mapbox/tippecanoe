@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
@@ -2067,7 +2068,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				perror(geomname);
 				exit(EXIT_FAILURE);
 			}
-			sub[j] = fopen(geomname, "wb");
+			sub[j] = fopen_oflag(geomname, "wb", O_WRONLY | O_CLOEXEC);
 			if (sub[j] == NULL) {
 				perror(geomname);
 				exit(EXIT_FAILURE);

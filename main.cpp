@@ -150,7 +150,7 @@ void init_cpus() {
 	long long fds[MAX_FILES];
 	long long i;
 	for (i = 0; i < MAX_FILES; i++) {
-		fds[i] = open("/dev/null", O_RDONLY);
+		fds[i] = open("/dev/null", O_RDONLY | O_CLOEXEC);
 		if (fds[i] < 0) {
 			break;
 		}
@@ -567,23 +567,23 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		geomfds[i] = mkstemp(geomname);
+		geomfds[i] = mkstemp_cloexec(geomname);
 		if (geomfds[i] < 0) {
 			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		indexfds[i] = mkstemp(indexname);
+		indexfds[i] = mkstemp_cloexec(indexname);
 		if (indexfds[i] < 0) {
 			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 
-		geomfiles[i] = fopen(geomname, "wb");
+		geomfiles[i] = fopen_oflag(geomname, "wb", O_WRONLY | O_CLOEXEC);
 		if (geomfiles[i] == NULL) {
 			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		indexfiles[i] = fopen(indexname, "wb");
+		indexfiles[i] = fopen_oflag(indexname, "wb", O_WRONLY | O_CLOEXEC);
 		if (indexfiles[i] == NULL) {
 			perror(indexname);
 			exit(EXIT_FAILURE);
@@ -962,33 +962,33 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		r->metafd = mkstemp(metaname);
+		r->metafd = mkstemp_cloexec(metaname);
 		if (r->metafd < 0) {
 			perror(metaname);
 			exit(EXIT_FAILURE);
 		}
-		r->poolfd = mkstemp(poolname);
+		r->poolfd = mkstemp_cloexec(poolname);
 		if (r->poolfd < 0) {
 			perror(poolname);
 			exit(EXIT_FAILURE);
 		}
-		r->treefd = mkstemp(treename);
+		r->treefd = mkstemp_cloexec(treename);
 		if (r->treefd < 0) {
 			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfd = mkstemp(geomname);
+		r->geomfd = mkstemp_cloexec(geomname);
 		if (r->geomfd < 0) {
 			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfd = mkstemp(indexname);
+		r->indexfd = mkstemp_cloexec(indexname);
 		if (r->indexfd < 0) {
 			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
 
-		r->metafile = fopen(metaname, "wb");
+		r->metafile = fopen_oflag(metaname, "wb", O_WRONLY | O_CLOEXEC);
 		if (r->metafile == NULL) {
 			perror(metaname);
 			exit(EXIT_FAILURE);
@@ -1003,12 +1003,12 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 			perror(treename);
 			exit(EXIT_FAILURE);
 		}
-		r->geomfile = fopen(geomname, "wb");
+		r->geomfile = fopen_oflag(geomname, "wb", O_WRONLY | O_CLOEXEC);
 		if (r->geomfile == NULL) {
 			perror(geomname);
 			exit(EXIT_FAILURE);
 		}
-		r->indexfile = fopen(indexname, "wb");
+		r->indexfile = fopen_oflag(indexname, "wb", O_WRONLY | O_CLOEXEC);
 		if (r->indexfile == NULL) {
 			perror(indexname);
 			exit(EXIT_FAILURE);
@@ -1134,7 +1134,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 			fd = 0;
 		} else {
 			reading = sources[source].file;
-			fd = open(sources[source].file.c_str(), O_RDONLY);
+			fd = open(sources[source].file.c_str(), O_RDONLY, O_CLOEXEC);
 			if (fd < 0) {
 				perror(sources[source].file.c_str());
 				continue;
@@ -1183,7 +1183,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 				char readname[strlen(tmpdir) + strlen("/read.XXXXXXXX") + 1];
 				sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-				int readfd = mkstemp(readname);
+				int readfd = mkstemp_cloexec(readname);
 				if (readfd < 0) {
 					perror(readname);
 					exit(EXIT_FAILURE);
@@ -1235,7 +1235,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 							ahead = 0;
 
 							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
-							readfd = mkstemp(readname);
+							readfd = mkstemp_cloexec(readname);
 							if (readfd < 0) {
 								perror(readname);
 								exit(EXIT_FAILURE);
@@ -1334,13 +1334,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
 
-	int poolfd = mkstemp(poolname);
+	int poolfd = mkstemp_cloexec(poolname);
 	if (poolfd < 0) {
 		perror(poolname);
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *poolfile = fopen(poolname, "wb");
+	FILE *poolfile = fopen_oflag(poolname, "wb", O_WRONLY | O_CLOEXEC);
 	if (poolfile == NULL) {
 		perror(poolname);
 		exit(EXIT_FAILURE);
@@ -1351,13 +1351,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 
-	int metafd = mkstemp(metaname);
+	int metafd = mkstemp_cloexec(metaname);
 	if (metafd < 0) {
 		perror(metaname);
 		exit(EXIT_FAILURE);
 	}
 
-	FILE *metafile = fopen(metaname, "wb");
+	FILE *metafile = fopen_oflag(metaname, "wb", O_WRONLY | O_CLOEXEC);
 	if (metafile == NULL) {
 		perror(metaname);
 		exit(EXIT_FAILURE);
@@ -1434,12 +1434,12 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 	sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-	int indexfd = mkstemp(indexname);
+	int indexfd = mkstemp_cloexec(indexname);
 	if (indexfd < 0) {
 		perror(indexname);
 		exit(EXIT_FAILURE);
 	}
-	FILE *indexfile = fopen(indexname, "wb");
+	FILE *indexfile = fopen_oflag(indexname, "wb", O_WRONLY | O_CLOEXEC);
 	if (indexfile == NULL) {
 		perror(indexname);
 		exit(EXIT_FAILURE);
@@ -1450,12 +1450,12 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 	sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 
-	int geomfd = mkstemp(geomname);
+	int geomfd = mkstemp_cloexec(geomname);
 	if (geomfd < 0) {
 		perror(geomname);
 		exit(EXIT_FAILURE);
 	}
-	FILE *geomfile = fopen(geomname, "wb");
+	FILE *geomfile = fopen_oflag(geomname, "wb", O_WRONLY | O_CLOEXEC);
 	if (geomfile == NULL) {
 		perror(geomname);
 		exit(EXIT_FAILURE);
@@ -2166,7 +2166,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	files_open_at_start = open("/dev/null", O_RDONLY);
+	files_open_at_start = open("/dev/null", O_RDONLY | O_CLOEXEC);
 	if (files_open_at_start < 0) {
 		perror("open /dev/null");
 		exit(EXIT_FAILURE);
@@ -2245,7 +2245,7 @@ int main(int argc, char **argv) {
 	muntrace();
 #endif
 
-	i = open("/dev/null", O_RDONLY);
+	i = open("/dev/null", O_RDONLY | O_CLOEXEC);
 	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
@@ -2253,4 +2253,23 @@ int main(int argc, char **argv) {
 	}
 
 	return ret;
+}
+
+int mkstemp_cloexec(char *name) {
+	int fd = mkstemp(name);
+	if (fd >= 0) {
+		if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
+			perror("cloexec for temporary file");
+			exit(EXIT_FAILURE);
+		}
+	}
+	return fd;
+}
+
+FILE *fopen_oflag(const char *name, const char *mode, int oflag) {
+	int fd = open(name, oflag);
+	if (fd < 0) {
+		return NULL;
+	}
+	return fdopen(fd, mode);
 }
