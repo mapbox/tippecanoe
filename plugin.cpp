@@ -46,8 +46,22 @@ void *run_writer(void *a) {
 	return NULL;
 }
 
-mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
+// XXX deduplicate
+static std::vector<mvt_geometry> to_feature(drawvec &geom) {
+	std::vector<mvt_geometry> out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
+	}
+
+	return out;
+}
+
+mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer const &olayer) {
 	mvt_layer ret;
+	ret.name = olayer.name;
+	ret.version = olayer.version;
+	ret.extent = olayer.extent;
 
 	FILE *f = fdopen(fd, "r");
 	if (f == NULL) {
@@ -125,6 +139,61 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y) {
 			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
 			json_context(j);
 			exit(EXIT_FAILURE);
+		}
+
+		drawvec dv;
+		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
+		if (mb_geometry[t] == VT_POLYGON) {
+			dv = fix_polygon(dv);
+		}
+
+		// Scale and offset geometry from global to tile
+		for (size_t i = 0; i < dv.size(); i++) {
+			long long scale = 1LL << (32 - z);
+			dv[i].x = (dv[i].x - scale * x) * olayer.extent / scale;
+			dv[i].y = (dv[i].y - scale * y) * olayer.extent / scale;
+		}
+
+		if (mb_geometry[t] == VT_POLYGON) {
+			dv = clean_or_clip_poly(dv, 0, 0, 0, false);
+			if (dv.size() < 3) {
+				dv.clear();
+			}
+		}
+		dv = remove_noop(dv, mb_geometry[t], 0);
+		if (mb_geometry[t] == VT_POLYGON) {
+			dv = close_poly(dv);
+		}
+
+		if (dv.size() > 0) {
+			mvt_feature feature;
+			feature.type = mb_geometry[t];
+			feature.geometry = to_feature(dv);
+
+			json_object *id = json_hash_get(j, "id");
+			if (id != NULL) {
+				feature.id = atoll(id->string);
+				feature.has_id = true;
+			}
+
+			for (size_t i = 0; i < properties->length; i++) {
+				mvt_value v;
+
+				// XXX reconcile with JSON property parsing
+				if (properties->values[i]->type == JSON_STRING) {
+					v.type = mvt_string;
+					v.string_value = std::string(properties->values[i]->string);
+				} else if (properties->values[i]->type == JSON_NUMBER) {
+					v.type = mvt_double;
+					v.numeric_value.double_value = atof(properties->values[i]->string);
+				} else {
+					continue;
+				}
+
+				ret.tag(feature, std::string(properties->keys[i]->string), v);
+			}
+
+			ret.features.push_back(feature);
 		}
 
 		json_free(j);
@@ -207,7 +276,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 			exit(EXIT_FAILURE);
 		}
 
-		layer = parse_layer(pipe_filtered[0], z, x, y);
+		layer = parse_layer(pipe_filtered[0], z, x, y, layer);
 
 		int stat_loc;
 		if (waitpid(pid, &stat_loc, 0) < 0) {
