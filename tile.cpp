@@ -2062,7 +2062,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		for (size_t j = 0; j < TEMP_FILES; j++) {
 			char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX" XSTRINGIFY(INT_MAX)) + 1];
 			sprintf(geomname, "%s/geom%zu.XXXXXXXX", tmpdir, j);
-			subfd[j] = mkstemp(geomname);
+			subfd[j] = mkstemp_cloexec(geomname);
 			// printf("%s\n", geomname);
 			if (subfd[j] < 0) {
 				perror(geomname);
