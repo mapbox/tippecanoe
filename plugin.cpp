@@ -6,6 +6,7 @@
 #include <map>
 #include <pthread.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <cmath>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -279,6 +280,14 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		}
 		if (close(pipe_filtered[1]) != 0) {
 			perror("close filter-side writer");
+			exit(EXIT_FAILURE);
+		}
+		if (fcntl(pipe_orig[1], F_SETFD, FD_CLOEXEC) != 0) {
+			perror("cloxec output to filter");
+			exit(EXIT_FAILURE);
+		}
+		if (fcntl(pipe_filtered[0], F_SETFD, FD_CLOEXEC) != 0) {
+			perror("cloxec input from filter");
 			exit(EXIT_FAILURE);
 		}
 
