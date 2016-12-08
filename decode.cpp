@@ -63,7 +63,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			within = 0;
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y);
+		layer_to_geojson(stdout, layer, z, x, y, true);
 
 		if (describe) {
 			printf("] }\n");

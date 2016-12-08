@@ -41,7 +41,7 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
-	layer_to_geojson(fp, *(wa->layer), wa->z, wa->x, wa->y);
+	layer_to_geojson(fp, *(wa->layer), wa->z, wa->x, wa->y, false);
 
 	if (fclose(fp) != 0) {
 		perror("fclose output to filter");
