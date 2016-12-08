@@ -86,26 +86,21 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-static void quote(std::string *buf, const char *s) {
-	char tmp[strlen(s) * 8 + 1];
-	char *out = tmp;
-
-	for (; *s != '\0'; s++) {
-		unsigned char ch = (unsigned char) *s;
+static void quote(std::string &buf, std::string const &s) {
+	for (size_t i = 0; i < s.size(); i++) {
+		unsigned char ch = s[i];
 
 		if (ch == '\\' || ch == '\"') {
-			*out++ = '\\';
-			*out++ = ch;
+			buf.push_back('\\');
+			buf.push_back(ch);
 		} else if (ch < ' ') {
-			sprintf(out, "\\u%04x", ch);
-			out = out + strlen(out);
+			char tmp[7];
+			sprintf(tmp, "\\u%04x", ch);
+			buf.append(std::string(tmp));
 		} else {
-			*out++ = ch;
+			buf.push_back(ch);
 		}
 	}
-
-	*out = '\0';
-	buf->append(tmp, strlen(tmp));
 }
 
 void aprintf(std::string *buf, const char *format, ...) {
@@ -243,7 +238,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 
 		auto fk = layermap.find(lnames[i]);
 		aprintf(&buf, "{ \"id\": \"");
-		quote(&buf, lnames[i].c_str());
+		quote(buf, lnames[i]);
 		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
 		std::set<type_and_string>::iterator j;
@@ -256,7 +251,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 			}
 
 			aprintf(&buf, "\"");
-			quote(&buf, j->string.c_str());
+			quote(buf, j->string);
 
 			if (j->type == VT_NUMBER) {
 				aprintf(&buf, "\": \"Number\"");
