@@ -5,6 +5,7 @@
 #include <map>
 #include <zlib.h>
 #include <errno.h>
+#include <limits.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
