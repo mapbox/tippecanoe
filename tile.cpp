@@ -1,3 +1,7 @@
+#ifdef __APPLE__
+#define _DARWIN_UNLIMITED_STREAMS
+#endif
+
 #include <iostream>
 #include <fstream>
 #include <string>

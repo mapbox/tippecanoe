@@ -2,6 +2,10 @@
 #include <mcheck.h>
 #endif
 
+#ifdef __APPLE__
+#define _DARWIN_UNLIMITED_STREAMS
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
