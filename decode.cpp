@@ -56,14 +56,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf("{ \"type\": \"FeatureCollection\"");
 			printf(", \"properties\": { \"layer\": ");
 			fprintq(stdout, layer.name.c_str());
-			printf(", \"version\": %d, \"extent\": %d", layer.version, layer.extent);
+			printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
 			printf(" }");
 			printf(", \"features\": [\n");
 
 			within = 0;
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y, true);
+		layer_to_geojson(stdout, layer, z, x, y, true, false);
 
 		if (describe) {
 			printf("] }\n");

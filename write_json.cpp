@@ -24,7 +24,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer &layer, unsigned z, unsigned x, unsigned y, bool comma) {
+void layer_to_geojson(FILE *fp, mvt_layer &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature &feat = layer.features[f];
 
@@ -36,6 +36,12 @@ void layer_to_geojson(FILE *fp, mvt_layer &layer, unsigned z, unsigned x, unsign
 
 		if (feat.has_id) {
 			fprintf(fp, ", \"id\": %llu", feat.id);
+		}
+
+		if (name) {
+			fprintf(fp, ", \"tippecanoe\": { \"layer\": ");
+			fprintq(fp, layer.name.c_str());
+			fprintf(fp, " }");
 		}
 
 		fprintf(fp, ", \"properties\": { ");

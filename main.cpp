@@ -947,7 +947,7 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, const char *filter) {
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, const char *prefilter, const char *postfilter) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1729,7 +1729,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, filter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1868,7 +1868,8 @@ int main(int argc, char **argv) {
 	const char *tmpdir = "/tmp";
 	const char *attribution = NULL;
 	std::vector<source> sources;
-	const char *filter = NULL;
+	const char *prefilter = NULL;
+	const char *postfilter = NULL;
 
 	std::set<std::string> exclude, include;
 	int exclude_all = 0;
@@ -1904,7 +1905,8 @@ int main(int argc, char **argv) {
 		{"projection", required_argument, 0, 's'},
 		{"simplification", required_argument, 0, 'S'},
 		{"maximum-tile-bytes", required_argument, 0, 'M'},
-		{"filter", required_argument, 0, 'c'},
+		{"prefilter", required_argument, 0, 'C'},
+		{"postfilter", required_argument, 0, 'c'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1960,7 +1962,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:c:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:c:C:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2144,7 +2146,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'c':
-			filter = optarg;
+			postfilter = optarg;
+			break;
+
+		case 'C':
+			prefilter = optarg;
 			break;
 
 		default: {
@@ -2247,7 +2253,7 @@ int main(int argc, char **argv) {
 		sources.push_back(src);
 	}
 
-	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, filter);
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, prefilter, postfilter);
 
 	mbtiles_close(outdb, argv);
 

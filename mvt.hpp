@@ -65,7 +65,7 @@ struct mvt_layer {
 	std::vector<mvt_feature> features;
 	std::vector<std::string> keys;
 	std::vector<mvt_value> values;
-	int extent;
+	long long extent;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
