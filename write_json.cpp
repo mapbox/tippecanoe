@@ -24,9 +24,9 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
-		mvt_feature &feat = layer.features[f];
+		mvt_feature const &feat = layer.features[f];
 
 		if (comma && f != 0) {
 			fprintf(fp, ",\n");

@@ -1367,6 +1367,10 @@ void *run_prefilter(void *v) {
 		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true);
 	}
 
+	if (fclose(rpa->prefilter_fp) != 0) {
+		perror("fclose output to prefilter");
+		exit(EXIT_FAILURE);
+	}
 	return NULL;
 }
 
@@ -1582,10 +1586,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (prefilter != NULL) {
-			if (fclose(prefilter_fp) != 0) {
-				perror("fclose output to prefilter");
-				exit(EXIT_FAILURE);
-			}
 			if (close(prefilter_read) != 0) {
 				perror("close output from prefilter");
 				exit(EXIT_FAILURE);
