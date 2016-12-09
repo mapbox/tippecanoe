@@ -1171,6 +1171,82 @@ struct write_tile_args {
 	const char *postfilter;
 };
 
+bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
+	int quick = quick_check(sf.bbox, z, buffer);
+	if (quick == 0) {
+		return true;
+	}
+
+	if (z == 0) {
+		if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
+			// If the geometry extends off the edge of the world, concatenate on another copy
+			// shifted by 360 degrees, and then make sure both copies get clipped down to size.
+
+			size_t n = sf.geometry.size();
+
+			if (sf.bbox[0] < 0) {
+				for (size_t i = 0; i < n; i++) {
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
+				}
+			}
+
+			if (sf.bbox[2] > 1LL << 32) {
+				for (size_t i = 0; i < n; i++) {
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
+				}
+			}
+
+			sf.bbox[0] = 0;
+			sf.bbox[2] = 1LL << 32;
+
+			quick = -1;
+		}
+	}
+
+	// Can't accept the quick check if guaranteeing no duplication, since the
+	// overlap might have been in the buffer.
+	if (quick != 1 || prevent[P_DUPLICATION]) {
+		drawvec clipped;
+
+		// Do the clipping, even if we are going to include the whole feature,
+		// so that we can know whether the feature itself, or only the feature's
+		// bounding box, touches the tile.
+
+		if (sf.t == VT_LINE) {
+			clipped = clip_lines(sf.geometry, z, buffer);
+		}
+		if (sf.t == VT_POLYGON) {
+			clipped = simple_clip_poly(sf.geometry, z, buffer);
+		}
+		if (sf.t == VT_POINT) {
+			clipped = clip_point(sf.geometry, z, buffer);
+		}
+
+		clipped = remove_noop(clipped, sf.t, 0);
+
+		// Must clip at z0 even if we don't want clipping, to handle features
+		// that are duplicated across the date line
+
+		if (prevent[P_DUPLICATION] && z != 0) {
+			if (point_within_tile((sf.bbox[0] + sf.bbox[2]) / 2, (sf.bbox[1] + sf.bbox[3]) / 2, z, buffer)) {
+				// sf.geometry is unchanged
+			} else {
+				sf.geometry.clear();
+			}
+		} else if (prevent[P_CLIPPING] && z != 0) {
+			if (clipped.size() == 0) {
+				sf.geometry.clear();
+			} else {
+				// sf.geometry is unchanged
+			}
+		} else {
+			sf.geometry = clipped;
+		}
+	}
+
+	return false;
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1270,76 +1346,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			original_features++;
 
-			int quick = quick_check(sf.bbox, z, line_detail, buffer);
-			if (quick == 0) {
+			if (clip_to_tile(sf, z, buffer)) {
 				continue;
-			}
-
-			if (z == 0) {
-				if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
-					// If the geometry extends off the edge of the world, concatenate on another copy
-					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
-
-					size_t n = sf.geometry.size();
-
-					if (sf.bbox[0] < 0) {
-						for (size_t i = 0; i < n; i++) {
-							sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
-						}
-					}
-
-					if (sf.bbox[2] > 1LL << 32) {
-						for (size_t i = 0; i < n; i++) {
-							sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
-						}
-					}
-
-					sf.bbox[0] = 0;
-					sf.bbox[2] = 1LL << 32;
-
-					quick = -1;
-				}
-			}
-
-			// Can't accept the quick check if guaranteeing no duplication, since the
-			// overlap might have been in the buffer.
-			if (quick != 1 || prevent[P_DUPLICATION]) {
-				drawvec clipped;
-
-				// Do the clipping, even if we are going to include the whole feature,
-				// so that we can know whether the feature itself, or only the feature's
-				// bounding box, touches the tile.
-
-				if (sf.t == VT_LINE) {
-					clipped = clip_lines(sf.geometry, z, line_detail, buffer);
-				}
-				if (sf.t == VT_POLYGON) {
-					clipped = simple_clip_poly(sf.geometry, z, line_detail, buffer);
-				}
-				if (sf.t == VT_POINT) {
-					clipped = clip_point(sf.geometry, z, line_detail, buffer);
-				}
-
-				clipped = remove_noop(clipped, sf.t, 0);
-
-				// Must clip at z0 even if we don't want clipping, to handle features
-				// that are duplicated across the date line
-
-				if (prevent[P_DUPLICATION] && z != 0) {
-					if (point_within_tile((sf.bbox[0] + sf.bbox[2]) / 2, (sf.bbox[1] + sf.bbox[3]) / 2, z, line_detail, buffer)) {
-						// sf.geometry is unchanged
-					} else {
-						sf.geometry.clear();
-					}
-				} else if (prevent[P_CLIPPING] && z != 0) {
-					if (clipped.size() == 0) {
-						sf.geometry.clear();
-					} else {
-						// sf.geometry is unchanged
-					}
-				} else {
-					sf.geometry = clipped;
-				}
 			}
 
 			if (sf.geometry.size() > 0) {

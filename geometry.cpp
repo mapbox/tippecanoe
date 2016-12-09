@@ -699,7 +699,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, int z, int detail, int buffer) {
+drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
 	long long area = 1LL << (32 - z);
 	long long clip_buffer = buffer * area / 256;
 
@@ -785,7 +785,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
-drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
+drawvec clip_point(drawvec &geom, int z, long long buffer) {
 	drawvec out;
 
 	long long min = 0;
@@ -803,7 +803,7 @@ drawvec clip_point(drawvec &geom, int z, int detail, long long buffer) {
 	return out;
 }
 
-int quick_check(long long *bbox, int z, int detail, long long buffer) {
+int quick_check(long long *bbox, int z, long long buffer) {
 	long long min = 0;
 	long long area = 1LL << (32 - z);
 
@@ -827,7 +827,7 @@ int quick_check(long long *bbox, int z, int detail, long long buffer) {
 	return 2;
 }
 
-bool point_within_tile(long long x, long long y, int z, int detail, long long buffer) {
+bool point_within_tile(long long x, long long y, int z, long long buffer) {
 	// No adjustment for buffer, because the point must be
 	// strictly within the tile to appear exactly once
 
@@ -836,7 +836,7 @@ bool point_within_tile(long long x, long long y, int z, int detail, long long bu
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-drawvec clip_lines(drawvec &geom, int z, int detail, long long buffer) {
+drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 	drawvec out;
 
 	long long min = 0;
