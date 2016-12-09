@@ -19,6 +19,11 @@ int deserialize_ulong_long_io(FILE *f, unsigned long long *n, long long *geompos
 int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos);
 int deserialize_byte_io(FILE *f, signed char *n, long long *geompos);
 
+struct serial_val {
+	int type;
+	std::string s;
+};
+
 struct serial_feature {
 	long long layer;
 	int segment;
@@ -47,6 +52,7 @@ struct serial_feature {
 
 	// XXX This isn't serialized. Should it be here?
 	long long bbox[4];
+	std::map<std::string, serial_val> kv;
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);

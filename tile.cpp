@@ -35,8 +35,13 @@
 #include "serial.hpp"
 #include "options.hpp"
 #include "main.hpp"
-#include "plugin.hpp"
 #include "write_json.hpp"
+
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
+
+#include "plugin.hpp"
 
 #define CMD_BITS 3
 
@@ -1450,6 +1455,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		FILE *prefilter_fp = NULL;
 		pthread_t prefilter_writer;
 		run_prefilter_args rpa;  // here so it stays in scope until joined
+		FILE *prefilter_read_fp;
+		json_pull *prefilter_jp;
 
 		if (prefilter != NULL) {
 			setup_filter(prefilter, &prefilter_write, &prefilter_read, &prefilter_pid, z, tx, ty);
@@ -1497,6 +1504,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				perror("pthread_create (prefilter writer)");
 				exit(EXIT_FAILURE);
 			}
+
+			prefilter_read_fp = fdopen(prefilter_read, "r");
+			if (prefilter_read_fp == NULL) {
+				perror("fdopen prefilter output");
+				exit(EXIT_FAILURE);
+			}
+			prefilter_jp = json_begin_file(prefilter_read_fp);
 		}
 
 		while (1) {
@@ -1505,8 +1519,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (prefilter == NULL) {
 				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, line_detail, geomfile, geompos, &oprogress, todo, fname, child_shards);
 			} else {
-				// XXX parse prefilter
-				break;
+				sf = parse_feature(prefilter_jp, z, tx, ty);
 			}
 
 			if (sf.t < 0) {
@@ -1586,7 +1599,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (prefilter != NULL) {
-			if (close(prefilter_read) != 0) {
+			json_end(prefilter_jp);
+			if (fclose(prefilter_read_fp) != 0) {
 				perror("close output from prefilter");
 				exit(EXIT_FAILURE);
 			}
