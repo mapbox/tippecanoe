@@ -1243,6 +1243,18 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			*geompos_in = og;
 		}
 
+		int prefilter_write = -1, prefilter_read = -1;
+		pid_t prefilter_pid = 0;
+		FILE *prefilter_fd = NULL;
+		if (prefilter != NULL) {
+			setup_filter(prefilter, &prefilter_write, &prefilter_read, &prefilter_pid, z, tx, ty);
+			prefilter_fd = fdopen(prefilter_write, "w");
+			if (prefilter_fd == NULL) {
+				perror("freopen prefilter");
+				exit(EXIT_FAILURE);
+			}
+		}
+
 		while (1) {
 			signed char t;
 			deserialize_byte_io(geoms, &t, geompos_in);
@@ -1449,7 +1461,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				decode_meta(m, metakeys, metavals, stringpool + pool_off[segment], tmp_layer, tmp_feature);
 				tmp_layer.features.push_back(tmp_feature);
 
-				layer_to_geojson(stdout, tmp_layer, 0, 0, 0, false, true);
+				layer_to_geojson(prefilter_fd, tmp_layer, 0, 0, 0, false, true);
 			}
 
 			if (gamma > 0) {
@@ -1523,6 +1535,27 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			merge_previndex = index;
+		}
+
+		if (prefilter != NULL) {
+			if (fclose(prefilter_fd) != 0) {
+				perror("fclose output to prefilter");
+				exit(EXIT_FAILURE);
+			}
+			if (close(prefilter_read) != 0) {
+				perror("close output from prefilter");
+				exit(EXIT_FAILURE);
+			}
+			while (1) {
+				int stat_loc;
+				if (waitpid(prefilter_pid, &stat_loc, 0) < 0) {
+					perror("waitpid for prefilter\n");
+					exit(EXIT_FAILURE);
+				}
+				if (WIFEXITED(stat_loc) || WIFSIGNALED(stat_loc)) {
+					break;
+				}
+			}
 		}
 
 		first_time = false;
