@@ -69,7 +69,6 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
-	char *meta;
 	char *stringpool;
 	std::vector<long long> keys;
 	std::vector<long long> values;
@@ -310,7 +309,6 @@ struct partial {
 	std::vector<long long> keys;
 	std::vector<long long> values;
 	std::vector<ssize_t> arc_polygon;
-	char *meta;
 	long long layer;
 	long long original_seq;
 	unsigned long long index;
@@ -1256,81 +1254,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		while (1) {
-			signed char t;
-			deserialize_byte_io(geoms, &t, geompos_in);
-			if (t < 0) {
+			serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
+			if (sf.t < 0) {
 				break;
 			}
-
-			long long xlayer;
-			deserialize_long_long_io(geoms, &xlayer, geompos_in);
-
-			long long original_seq = 0;
-			if (xlayer & (1 << 5)) {
-				deserialize_long_long_io(geoms, &original_seq, geompos_in);
-			}
-
-			int tippecanoe_minzoom = -1, tippecanoe_maxzoom = -1;
-			unsigned long long id = 0;
-			bool has_id = false;
-			if (xlayer & (1 << 1)) {
-				deserialize_int_io(geoms, &tippecanoe_minzoom, geompos_in);
-			}
-			if (xlayer & (1 << 0)) {
-				deserialize_int_io(geoms, &tippecanoe_maxzoom, geompos_in);
-			}
-			if (xlayer & (1 << 2)) {
-				has_id = true;
-				deserialize_ulong_long_io(geoms, &id, geompos_in);
-			}
-			long long layer = xlayer >> 6;
-
-			int segment;
-			deserialize_int_io(geoms, &segment, geompos_in);
-
-			long long bbox[4];
-			unsigned long long index = 0;
-			long long extent = 0;
-
-			drawvec geom = decode_geometry(geoms, geompos_in, z, tx, ty, line_detail, bbox, initial_x[segment], initial_y[segment]);
-			if (xlayer & (1 << 4)) {
-				deserialize_ulong_long_io(geoms, &index, geompos_in);
-			}
-			if (xlayer & (1 << 3)) {
-				deserialize_long_long_io(geoms, &extent, geompos_in);
-			}
-
-			long long metastart = 0;
-			int m;
-			deserialize_int_io(geoms, &m, geompos_in);
-			if (m != 0) {
-				deserialize_long_long_io(geoms, &metastart, geompos_in);
-			}
-			char *meta = NULL;
-			std::vector<long long> metakeys, metavals;
-
-			if (metastart >= 0) {
-				meta = metabase + metastart + meta_off[segment];
-
-				for (int i = 0; i < m; i++) {
-					long long k, v;
-					deserialize_long_long(&meta, &k);
-					deserialize_long_long(&meta, &v);
-					metakeys.push_back(k);
-					metavals.push_back(v);
-				}
-			} else {
-				for (int i = 0; i < m; i++) {
-					long long k, v;
-					deserialize_long_long_io(geoms, &k, geompos_in);
-					deserialize_long_long_io(geoms, &v, geompos_in);
-					metakeys.push_back(k);
-					metavals.push_back(v);
-				}
-			}
-
-			signed char feature_minzoom;
-			deserialize_byte_io(geoms, &feature_minzoom, geompos_in);
 
 			double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
 			if (progress >= oprogress + 0.1) {
@@ -1342,32 +1269,32 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			original_features++;
 
-			int quick = quick_check(bbox, z, line_detail, buffer);
+			int quick = quick_check(sf.bbox, z, line_detail, buffer);
 			if (quick == 0) {
 				continue;
 			}
 
 			if (z == 0) {
-				if (bbox[0] < 0 || bbox[2] > 1LL << 32) {
+				if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
 					// If the geometry extends off the edge of the world, concatenate on another copy
 					// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
-					size_t n = geom.size();
+					size_t n = sf.geometry.size();
 
-					if (bbox[0] < 0) {
+					if (sf.bbox[0] < 0) {
 						for (size_t i = 0; i < n; i++) {
-							geom.push_back(draw(geom[i].op, geom[i].x + (1LL << 32), geom[i].y));
+							sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
 						}
 					}
 
-					if (bbox[2] > 1LL << 32) {
+					if (sf.bbox[2] > 1LL << 32) {
 						for (size_t i = 0; i < n; i++) {
-							geom.push_back(draw(geom[i].op, geom[i].x - (1LL << 32), geom[i].y));
+							sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
 						}
 					}
 
-					bbox[0] = 0;
-					bbox[2] = 1LL << 32;
+					sf.bbox[0] = 0;
+					sf.bbox[2] = 1LL << 32;
 
 					quick = -1;
 				}
@@ -1382,70 +1309,70 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				// so that we can know whether the feature itself, or only the feature's
 				// bounding box, touches the tile.
 
-				if (t == VT_LINE) {
-					clipped = clip_lines(geom, z, line_detail, buffer);
+				if (sf.t == VT_LINE) {
+					clipped = clip_lines(sf.geometry, z, line_detail, buffer);
 				}
-				if (t == VT_POLYGON) {
-					clipped = simple_clip_poly(geom, z, line_detail, buffer);
+				if (sf.t == VT_POLYGON) {
+					clipped = simple_clip_poly(sf.geometry, z, line_detail, buffer);
 				}
-				if (t == VT_POINT) {
-					clipped = clip_point(geom, z, line_detail, buffer);
+				if (sf.t == VT_POINT) {
+					clipped = clip_point(sf.geometry, z, line_detail, buffer);
 				}
 
-				clipped = remove_noop(clipped, t, 0);
+				clipped = remove_noop(clipped, sf.t, 0);
 
 				// Must clip at z0 even if we don't want clipping, to handle features
 				// that are duplicated across the date line
 
 				if (prevent[P_DUPLICATION] && z != 0) {
-					if (point_within_tile((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2, z, line_detail, buffer)) {
-						// geom is unchanged
+					if (point_within_tile((sf.bbox[0] + sf.bbox[2]) / 2, (sf.bbox[1] + sf.bbox[3]) / 2, z, line_detail, buffer)) {
+						// sf.geometry is unchanged
 					} else {
-						geom.clear();
+						sf.geometry.clear();
 					}
 				} else if (prevent[P_CLIPPING] && z != 0) {
 					if (clipped.size() == 0) {
-						geom.clear();
+						sf.geometry.clear();
 					} else {
-						// geom is unchanged
+						// sf.geometry is unchanged
 					}
 				} else {
-					geom = clipped;
+					sf.geometry = clipped;
 				}
 			}
 
-			if (geom.size() > 0) {
+			if (sf.geometry.size() > 0) {
 				unclipped_features++;
 			}
 
 			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
 			}
 
 			if (z < minzoom) {
 				continue;
 			}
 
-			if (tippecanoe_minzoom != -1 && z < tippecanoe_minzoom) {
+			if (sf.tippecanoe_minzoom != -1 && z < sf.tippecanoe_minzoom) {
 				continue;
 			}
-			if (tippecanoe_maxzoom != -1 && z > tippecanoe_maxzoom) {
+			if (sf.tippecanoe_maxzoom != -1 && z > sf.tippecanoe_maxzoom) {
 				continue;
 			}
-			if (tippecanoe_minzoom == -1 && z < feature_minzoom) {
+			if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
 				continue;
 			}
 
 			if (prefilter != NULL) {
 				mvt_layer tmp_layer;
 				tmp_layer.extent = 1LL << 32;
-				tmp_layer.name = (*layer_unmaps)[segment][layer];
+				tmp_layer.name = (*layer_unmaps)[sf.segment][sf.layer];
 
 				mvt_feature tmp_feature;
-				tmp_feature.type = t;
-				tmp_feature.geometry = to_feature(geom);
-				tmp_feature.id = id;
-				tmp_feature.has_id = id;
+				tmp_feature.type = sf.t;
+				tmp_feature.geometry = to_feature(sf.geometry);
+				tmp_feature.id = sf.id;
+				tmp_feature.has_id = sf.has_id;
 
 				// Offset from tile coordinates back to world coordinates
 				unsigned sx = 0, sy = 0;
@@ -1458,27 +1385,27 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					tmp_feature.geometry[i].y += sy;
 				}
 
-				decode_meta(m, metakeys, metavals, stringpool + pool_off[segment], tmp_layer, tmp_feature);
+				decode_meta(sf.m, sf.keys, sf.values, stringpool + pool_off[sf.segment], tmp_layer, tmp_feature);
 				tmp_layer.features.push_back(tmp_feature);
 
 				layer_to_geojson(prefilter_fd, tmp_layer, 0, 0, 0, false, true);
 			}
 
 			if (gamma > 0) {
-				if (manage_gap(index, &previndex, scale, gamma, &gap)) {
+				if (manage_gap(sf.index, &previndex, scale, gamma, &gap)) {
 					continue;
 				}
 			}
 
 			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
-				indices.push_back(index);
-				if (index - merge_previndex < mingap) {
+				indices.push_back(sf.index);
+				if (sf.index - merge_previndex < mingap) {
 					continue;
 				}
 			}
 			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
-				extents.push_back(extent);
-				if (extent <= minextent && t != VT_POINT) {
+				extents.push_back(sf.extent);
+				if (sf.extent <= minextent && sf.t != VT_POINT) {
 					continue;
 				}
 			}
@@ -1490,8 +1417,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				// that standard, so that duplicates aren't reported as infinitely dense.
 
 				double o_density_previndex = density_previndex;
-				if (!manage_gap(index, &density_previndex, scale, 1, &density_gap)) {
-					spacing = (index - o_density_previndex) / scale;
+				if (!manage_gap(sf.index, &density_previndex, scale, 1, &density_gap)) {
+					spacing = (sf.index - o_density_previndex) / scale;
 				}
 			}
 
@@ -1502,39 +1429,38 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			fraction_accum -= 1;
 
 			bool reduced = false;
-			if (t == VT_POLYGON) {
+			if (sf.t == VT_POLYGON) {
 				if (!prevent[P_TINY_POLYGON_REDUCTION] && !additional[A_GRID_LOW_ZOOMS]) {
-					geom = reduce_tiny_poly(geom, z, line_detail, &reduced, &accum_area);
+					sf.geometry = reduce_tiny_poly(sf.geometry, z, line_detail, &reduced, &accum_area);
 				}
 				has_polygons = true;
 			}
 
-			if (geom.size() > 0) {
+			if (sf.geometry.size() > 0) {
 				partial p;
-				p.geoms.push_back(geom);
-				p.layer = layer;
-				p.m = m;
-				p.meta = meta;
-				p.t = t;
-				p.segment = segment;
-				p.original_seq = original_seq;
+				p.geoms.push_back(sf.geometry);
+				p.layer = sf.layer;
+				p.m = sf.m;
+				p.t = sf.t;
+				p.segment = sf.segment;
+				p.original_seq = sf.seq;
 				p.reduced = reduced;
 				p.z = z;
 				p.line_detail = line_detail;
 				p.maxzoom = maxzoom;
-				p.keys = metakeys;
-				p.values = metavals;
+				p.keys = sf.keys;
+				p.values = sf.values;
 				p.spacing = spacing;
 				p.simplification = simplification;
-				p.id = id;
-				p.has_id = has_id;
+				p.id = sf.id;
+				p.has_id = sf.has_id;
 				p.index2 = merge_previndex;
-				p.index = index;
+				p.index = sf.index;
 				p.renamed = -1;
 				partials.push_back(p);
 			}
 
-			merge_previndex = index;
+			merge_previndex = sf.index;
 		}
 
 		if (prefilter != NULL) {
@@ -1616,7 +1542,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.coalesced = false;
 					c.original_seq = original_seq;
 					c.m = partials[i].m;
-					c.meta = partials[i].meta;
 					c.stringpool = stringpool + pool_off[partials[i].segment];
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;

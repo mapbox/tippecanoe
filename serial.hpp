@@ -44,6 +44,10 @@ struct serial_feature {
 	std::vector<long long> keys;
 	std::vector<long long> values;
 	long long metapos;
+
+	// XXX This isn't serialized. Should it be here?
+	long long bbox[4];
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
+serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
