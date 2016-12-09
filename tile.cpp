@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
