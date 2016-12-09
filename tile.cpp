@@ -1247,12 +1247,60 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	return false;
 }
 
+serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile long long *along, long long alongminus, int buffer, int *within, bool *first_time, int line_detail, FILE **geomfile, long long *geompos, volatile double *oprogress, double todo, const char *fname, int child_shards) {
+	while (1) {
+		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
+		if (sf.t < 0) {
+			return sf;
+		}
+
+		double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
+		if (progress >= *oprogress + 0.1) {
+			if (!quiet) {
+				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+			}
+			*oprogress = progress;
+		}
+
+		(*original_features)++;
+
+		if (clip_to_tile(sf, z, buffer)) {
+			continue;
+		}
+
+		if (sf.geometry.size() > 0) {
+			(*unclipped_features)++;
+		}
+
+		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
+			rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+		}
+
+		if (z < minzoom) {
+			continue;
+		}
+
+		if (sf.tippecanoe_minzoom != -1 && z < sf.tippecanoe_minzoom) {
+			continue;
+		}
+		if (sf.tippecanoe_maxzoom != -1 && z > sf.tippecanoe_maxzoom) {
+			continue;
+		}
+		if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
+			continue;
+		}
+
+		return sf;
+	}
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
 	double minextent_fraction = 1;
 
+	static volatile double oprogress = 0;
 	long long og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
@@ -1275,7 +1323,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 	}
 
-	static volatile double oprogress = 0;
 	bool has_polygons = false;
 
 	bool first_time = true;
@@ -1331,45 +1378,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		while (1) {
-			serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
+			serial_feature sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, line_detail, geomfile, geompos, &oprogress, todo, fname, child_shards);
+
 			if (sf.t < 0) {
 				break;
-			}
-
-			double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
-			if (progress >= oprogress + 0.1) {
-				if (!quiet) {
-					fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
-				}
-				oprogress = progress;
-			}
-
-			original_features++;
-
-			if (clip_to_tile(sf, z, buffer)) {
-				continue;
-			}
-
-			if (sf.geometry.size() > 0) {
-				unclipped_features++;
-			}
-
-			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
-			}
-
-			if (z < minzoom) {
-				continue;
-			}
-
-			if (sf.tippecanoe_minzoom != -1 && z < sf.tippecanoe_minzoom) {
-				continue;
-			}
-			if (sf.tippecanoe_maxzoom != -1 && z > sf.tippecanoe_maxzoom) {
-				continue;
-			}
-			if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
-				continue;
 			}
 
 			if (prefilter != NULL) {
