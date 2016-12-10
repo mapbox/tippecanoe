@@ -8,8 +8,8 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
-	int x;
-	int y;
+	long long x;
+	long long y;
 	int /* mvt_operation */ op;
 
 	mvt_geometry(int op, long long x, long long y);
