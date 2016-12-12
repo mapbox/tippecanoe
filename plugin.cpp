@@ -8,13 +8,16 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <set>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <cmath>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sqlite3.h>
 #include "mvt.hpp"
+#include "mbtiles.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
@@ -67,11 +70,13 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	return out;
 }
 
-mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer const &olayer) {
+mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer const &olayer, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg) {
 	mvt_layer ret;
 	ret.name = olayer.name;
 	ret.version = olayer.version;
 	ret.extent = olayer.extent;
+
+	std::string layername = olayer.name;
 
 	FILE *f = fdopen(fd, "r");
 	if (f == NULL) {
@@ -186,6 +191,8 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 				feature.has_id = true;
 			}
 
+			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
+
 			for (size_t i = 0; i < properties->length; i++) {
 				int tp = -1;
 				std::string s;
@@ -194,6 +201,27 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 				if (tp >= 0) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					ret.tag(feature, std::string(properties->keys[i]->string), v);
+
+					if (layermap.count(layername) == 0) {
+						layermap_entry lme = layermap_entry(layermap.size());
+						lme.minzoom = z;
+						lme.maxzoom = z;
+
+						layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+					}
+
+					type_and_string tas;
+					tas.string = std::string(properties->keys[i]->string);
+					tas.type = tp;
+
+					auto fk = layermap.find(layername);
+					if (z < fk->second.minzoom) {
+						fk->second.minzoom = z;
+					}
+					if (z > fk->second.maxzoom) {
+						fk->second.maxzoom = z;
+					}
+					fk->second.file_keys.insert(tas);
 				}
 			}
 
@@ -204,7 +232,10 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 	}
 
 	json_end(jp);
-	fclose(f);
+	if (fclose(f) != 0) {
+		perror("fclose postfilter output");
+		exit(EXIT_FAILURE);
+	}
 	return ret;
 }
 
@@ -434,7 +465,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y) {
+mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
@@ -452,12 +483,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		exit(EXIT_FAILURE);
 	}
 
-	layer = parse_layer(read_from, z, x, y, layer);
-
-	if (close(read_from) != 0) {
-		perror("close output from filter");
-		exit(EXIT_FAILURE);
-	}
+	layer = parse_layer(read_from, z, x, y, layer, layermaps, tiling_seg);
 
 	while (1) {
 		int stat_loc;
