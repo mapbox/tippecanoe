@@ -32,6 +32,9 @@ install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
 	cp tile-join $(PREFIX)/bin/tile-join
 	cp man/tippecanoe.1 $(MANDIR)/tippecanoe.1
 
+uninstall:
+	rm $(PREFIX)/bin/tippecanoe $(PREFIX)/bin/tippecanoe-enumerate $(PREFIX)/bin/tippecanoe-decode $(PREFIX)/bin/tile-join $(MANDIR)/tippecanoe.1
+
 man/tippecanoe.1: README.md
 	md2man-roff README.md > man/tippecanoe.1
 
@@ -130,13 +133,16 @@ join-test:
 	./tile-join -f -o tests/join-population/joined.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
 	./tile-join -f -i -o tests/join-population/joined-i.mbtiles -x GEOID10 -c tests/join-population/population.csv tests/join-population/tabblock_06001420.mbtiles
 	./tile-join -f -o tests/join-population/merged.mbtiles tests/join-population/tabblock_06001420.mbtiles tests/join-population/macarthur.mbtiles tests/join-population/macarthur2.mbtiles
+	./tile-join -f -c tests/join-population/windows.csv -o tests/join-population/windows.mbtiles tests/join-population/macarthur.mbtiles
 	./tippecanoe-decode tests/join-population/joined.mbtiles > tests/join-population/joined.mbtiles.json.check
 	./tippecanoe-decode tests/join-population/joined-i.mbtiles > tests/join-population/joined-i.mbtiles.json.check
 	./tippecanoe-decode tests/join-population/merged.mbtiles > tests/join-population/merged.mbtiles.json.check
+	./tippecanoe-decode tests/join-population/windows.mbtiles > tests/join-population/windows.mbtiles.json.check
 	cmp tests/join-population/joined.mbtiles.json.check tests/join-population/joined.mbtiles.json
 	cmp tests/join-population/joined-i.mbtiles.json.check tests/join-population/joined-i.mbtiles.json
 	cmp tests/join-population/merged.mbtiles.json.check tests/join-population/merged.mbtiles.json
-	rm tests/join-population/tabblock_06001420.mbtiles tests/join-population/joined.mbtiles tests/join-population/joined-i.mbtiles tests/join-population/joined.mbtiles.json.check tests/join-population/joined-i.mbtiles.json.check tests/join-population/macarthur.mbtiles tests/join-population/merged.mbtiles tests/join-population/merged.mbtiles.json.check tests/join-population/macarthur2.mbtiles
+	cmp tests/join-population/windows.mbtiles.json.check tests/join-population/windows.mbtiles.json
+	rm tests/join-population/tabblock_06001420.mbtiles tests/join-population/joined.mbtiles tests/join-population/joined-i.mbtiles tests/join-population/joined.mbtiles.json.check tests/join-population/joined-i.mbtiles.json.check tests/join-population/macarthur.mbtiles tests/join-population/merged.mbtiles tests/join-population/merged.mbtiles.json.check tests/join-population/macarthur2.mbtiles tests/join-population/windows.mbtiles tests/join-population/windows.mbtiles.json.check
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
