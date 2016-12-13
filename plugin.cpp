@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sqlite3.h>
+#include "main.hpp"
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "projection.hpp"
@@ -321,14 +322,15 @@ serial_feature parse_feature(json_pull *jp, unsigned z, unsigned x, unsigned y, 
 		}
 
 		// Scale and offset geometry from global to tile
+		double scale = 1LL << geometry_scale;
 		for (size_t i = 0; i < dv.size(); i++) {
 			unsigned sx = 0, sy = 0;
 			if (z != 0) {
 				sx = x << (32 - z);
 				sy = y << (32 - z);
 			}
-			dv[i].x -= sx;
-			dv[i].y -= sy;
+			dv[i].x = std::round(dv[i].x / scale) * scale - sx;
+			dv[i].y = std::round(dv[i].y / scale) * scale - sy;
 		}
 
 		if (dv.size() > 0) {
