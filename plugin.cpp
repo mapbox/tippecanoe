@@ -71,7 +71,7 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	return out;
 }
 
-mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer const &olayer, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg) {
+mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &olayer, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
 	mvt_layer ret;
 	ret.name = olayer.name;
 	ret.version = olayer.version;
@@ -209,6 +209,11 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 						lme.maxzoom = z;
 
 						layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+
+						if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
+							(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
+							(*layer_unmaps)[tiling_seg][lme.id] = layername;
+						}
 					}
 
 					type_and_string tas;
@@ -240,7 +245,7 @@ mvt_layer parse_layer(int fd, unsigned z, unsigned x, unsigned y, mvt_layer cons
 	return ret;
 }
 
-serial_feature parse_feature(json_pull *jp, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg) {
+serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
 	serial_feature sf;
 
 	while (1) {
@@ -345,9 +350,8 @@ serial_feature parse_feature(json_pull *jp, unsigned z, unsigned x, unsigned y, 
 			}
 
 			sf.t = mb_geometry[t];
+			sf.segment = tiling_seg;
 			sf.geometry = dv;
-			sf.segment = 0;
-			sf.layer = 0;						// XXX
 			sf.seq = 0;						// XXX
 			sf.index = 0;						// XXX
 			sf.bbox[0] = sf.bbox[1] = sf.bbox[2] = sf.bbox[3] = 0;  // XXX
@@ -379,6 +383,11 @@ serial_feature parse_feature(json_pull *jp, unsigned z, unsigned x, unsigned y, 
 						lme.maxzoom = z;
 
 						layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+
+						if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
+							(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
+							(*layer_unmaps)[tiling_seg][lme.id] = layername;
+						}
 					}
 
 					type_and_string tas;
@@ -393,6 +402,8 @@ serial_feature parse_feature(json_pull *jp, unsigned z, unsigned x, unsigned y, 
 						fk->second.maxzoom = z;
 					}
 					fk->second.file_keys.insert(tas);
+
+					sf.layer = fk->second.id;
 				}
 			}
 
@@ -500,7 +511,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg) {
+mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
@@ -518,7 +529,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		exit(EXIT_FAILURE);
 	}
 
-	layer = parse_layer(read_from, z, x, y, layer, layermaps, tiling_seg);
+	layer = parse_layer(read_from, z, x, y, layer, layermaps, tiling_seg, layer_unmaps);
 
 	while (1) {
 		int stat_loc;

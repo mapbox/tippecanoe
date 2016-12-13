@@ -1048,9 +1048,10 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	volatile long long progress_seq = 0;
 
-	int initialized[CPUS];
-	unsigned initial_x[CPUS], initial_y[CPUS];
-	for (size_t i = 0; i < CPUS; i++) {
+	// 2 * CPUS: One per reader thread, one per tiling thread
+	int initialized[2 * CPUS];
+	unsigned initial_x[2 * CPUS], initial_y[2 * CPUS];
+	for (size_t i = 0; i < 2 * CPUS; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
@@ -1332,8 +1333,12 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	// but keep track of the offsets into it since we still need
 	// segment+offset to find the data.
 
-	long long pool_off[CPUS];
-	long long meta_off[CPUS];
+	// 2 * CPUS: One per input thread, one per tiling thread
+	long long pool_off[2 * CPUS];
+	long long meta_off[2 * CPUS];
+	for (size_t i = 0; i < 2 * CPUS; i++) {
+		pool_off[i] = meta_off[i] = 0;
+	}
 
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");

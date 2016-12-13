@@ -1522,7 +1522,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (prefilter == NULL) {
 				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, line_detail, geomfile, geompos, &oprogress, todo, fname, child_shards);
 			} else {
-				sf = parse_feature(prefilter_jp, z, tx, ty, layermaps, tiling_seg);
+				sf = parse_feature(prefilter_jp, z, tx, ty, layermaps, tiling_seg, layer_unmaps);
 			}
 
 			if (sf.t < 0) {
@@ -1826,7 +1826,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (postfilter != NULL) {
-				layer = filter_layer(postfilter, layer, z, tx, ty, layermaps, tiling_seg);
+				layer = filter_layer(postfilter, layer, z, tx, ty, layermaps, tiling_seg, layer_unmaps);
 			}
 
 			if (layer.features.size() > 0) {
@@ -2121,6 +2121,14 @@ void *run_thread(void *vargs) {
 }
 
 int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
+	// The existing layermaps are one table per input thread.
+	// We need to add another one per *tiling* thread so that it can be
+	// safely changed during tiling.
+	size_t layermaps_off = layermaps.size();
+	for (size_t i = 0; i < CPUS; i++) {
+		layermaps.push_back(std::map<std::string, layermap_entry>());
+	}
+
 	// Table to map segment and layer number back to layer name
 	std::vector<std::vector<std::string>> layer_unmaps;
 	for (size_t seg = 0; seg < layermaps.size(); seg++) {
@@ -2132,14 +2140,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 			layer_unmaps[seg][a->second.id] = a->first;
 		}
-	}
-
-	// The existing layermaps are one table per input thread.
-	// We need to add another one per *tiling* thread so that it can be
-	// safely changed during tiling.
-	size_t layermaps_off = layermaps.size();
-	for (size_t i = 0; i < CPUS; i++) {
-		layermaps.push_back(std::map<std::string, layermap_entry>());
 	}
 
 	int i;
