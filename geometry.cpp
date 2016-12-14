@@ -1231,8 +1231,8 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 	}
 
 	for (size_t i = 0; i < out.size(); i++) {
-		out[i].x <<= (32 - detail - z);
-		out[i].y <<= (32 - detail - z);
+		out[i].x *= 1 << (32 - detail - z);
+		out[i].y *= 1 << (32 - detail - z);
 	}
 
 	return out;

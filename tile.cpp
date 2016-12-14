@@ -726,12 +726,12 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 						if (s > 0) {
 							drawvec left;
-							if (g[a + (0 - 1 + s) % s] < g[a + 0]) {
-								left.push_back(g[a + (0 - 1 + s) % s]);
-								left.push_back(g[a + 0]);
+							if (g[a + (s - 1) % s] < g[a]) {
+								left.push_back(g[a + (s - 1) % s]);
+								left.push_back(g[a]);
 							} else {
-								left.push_back(g[a + 0]);
-								left.push_back(g[a + (0 - 1 + s) % s]);
+								left.push_back(g[a]);
+								left.push_back(g[a + (s - 1) % s]);
 							}
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
@@ -878,8 +878,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									partials[i].arc_polygon.push_back(added);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(added, i));
 								} else {
-									partials[i].arc_polygon.push_back(-f2->second);
-									merge_candidates.insert(std::pair<ssize_t, size_t>(-f2->second, i));
+									partials[i].arc_polygon.push_back(-(ssize_t) f2->second);
+									merge_candidates.insert(std::pair<ssize_t, size_t>(-(ssize_t) f2->second, i));
 								}
 							} else {
 								partials[i].arc_polygon.push_back(f->second);
@@ -1263,11 +1263,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		long long count = 0;
 		double accum_area = 0;
 
-		double interval = 0;
-		if (z < basezoom) {
-			interval = std::exp(std::log(droprate) * (basezoom - z));
-		}
-
 		double fraction_accum = 0;
 
 		unsigned long long previndex = 0, density_previndex = 0, merge_previndex = 0;
@@ -1285,8 +1280,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		int within[child_shards];
 		long long geompos[child_shards];
-		memset(within, '\0', sizeof(within));
-		memset(geompos, '\0', sizeof(geompos));
+		memset(within, '\0', child_shards * sizeof(int));
+		memset(geompos, '\0', child_shards * sizeof(long long));
 
 		if (*geompos_in != og) {
 			if (fseek(geoms, og, SEEK_SET) != 0) {
@@ -2096,13 +2091,13 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		// Round down to a power of 2
 		for (int e = 0; e < 30; e++) {
-			if (threads >= (1 << e) && threads < (1 << (e + 1))) {
-				threads = 1 << e;
+			if (threads >= (1U << e) && threads < (1U << (e + 1))) {
+				threads = 1U << e;
 				break;
 			}
 		}
-		if (threads >= (1 << 30)) {
-			threads = 1 << 30;
+		if (threads >= (1U << 30)) {
+			threads = 1U << 30;
 		}
 
 		// Assign temporary files to threads
