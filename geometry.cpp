@@ -197,6 +197,7 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
+	geom = remove_noop(geom, VT_POLYGON, 0);
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
