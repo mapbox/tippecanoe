@@ -141,13 +141,13 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
             }
         } else if ((*b1)->poly_type != (*b2)->poly_type) {
             // toggle subj open path index on/off when std::abs(clip.WndCnt) == 1
-            if (((*b1)->winding_delta == 0) && std::abs((*b2)->winding_count) == 1 &&
+            if (((*b1)->winding_delta == 0) && std::abs(static_cast<int>((*b2)->winding_count)) == 1 &&
                 (cliptype != clip_type_union || (*b2)->winding_count2 == 0)) {
                 add_point(b1, active_bounds, pt, rings);
                 if (b1Contributing) {
                     (*b1)->ring = nullptr;
                 }
-            } else if (((*b2)->winding_delta == 0) && (std::abs((*b1)->winding_count) == 1) &&
+            } else if (((*b2)->winding_delta == 0) && (std::abs(static_cast<int>((*b1)->winding_count)) == 1) &&
                        (cliptype != clip_type_union || (*b1)->winding_count2 == 0)) {
                 add_point(b2, active_bounds, pt, rings);
                 if (b2Contributing) {
@@ -217,7 +217,7 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
     case fill_type_even_odd:
     case fill_type_non_zero:
     default:
-        b1Wc = std::abs((*b1)->winding_count);
+        b1Wc = std::abs(static_cast<int>((*b1)->winding_count));
     }
     switch (b2FillType) {
     case fill_type_positive:
@@ -229,7 +229,7 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
     case fill_type_even_odd:
     case fill_type_non_zero:
     default:
-        b2Wc = std::abs((*b2)->winding_count);
+        b2Wc = std::abs(static_cast<int>((*b2)->winding_count));
     }
     if (b1Contributing && b2Contributing) {
         if ((b1Wc != 0 && b1Wc != 1) || (b2Wc != 0 && b2Wc != 1) ||
@@ -269,7 +269,7 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
         case fill_type_even_odd:
         case fill_type_non_zero:
         default:
-            b1Wc2 = std::abs((*b1)->winding_count2);
+            b1Wc2 = std::abs(static_cast<int>((*b1)->winding_count2));
         }
         switch (b2FillType2) {
         case fill_type_positive:
@@ -281,7 +281,7 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
         case fill_type_even_odd:
         case fill_type_non_zero:
         default:
-            b2Wc2 = std::abs((*b2)->winding_count2);
+            b2Wc2 = std::abs(static_cast<int>((*b2)->winding_count2));
         }
 
         if ((*b1)->poly_type != (*b2)->poly_type) {

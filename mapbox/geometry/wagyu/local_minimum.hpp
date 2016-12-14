@@ -2,7 +2,9 @@
 
 #ifdef DEBUG
 #include <iostream>
+#include <sstream>
 #endif
+
 #include <queue>
 
 #include <mapbox/geometry/wagyu/bound.hpp>

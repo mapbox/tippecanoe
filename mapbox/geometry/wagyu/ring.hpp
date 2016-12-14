@@ -13,6 +13,7 @@
 #ifdef DEBUG
 #include <execinfo.h>
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
 //
 // void* callstack[128];

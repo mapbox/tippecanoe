@@ -79,10 +79,11 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
     // Find next non repeated point going backwards from
     // end for pt1
     while (pt1 == pt2) {
-        pt1 = *(++itr_rev);
+        ++itr_rev;
         if (itr_rev == path_geometry.rend()) {
             return false;
         }
+        pt1 = *itr_rev;
     }
     ++itr;
     mapbox::geometry::point<value_type> pt3 = *itr;

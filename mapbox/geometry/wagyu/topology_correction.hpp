@@ -16,6 +16,7 @@
 
 #ifdef DEBUG
 #include <iostream>
+#include <sstream>
 #endif
 
 namespace mapbox {

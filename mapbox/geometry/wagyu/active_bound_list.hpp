@@ -2,6 +2,7 @@
 
 #ifdef DEBUG
 #include <iostream>
+#include <sstream>
 #endif
 
 #include <mapbox/geometry/wagyu/bound.hpp>
@@ -246,7 +247,7 @@ void set_winding_count(active_bound_list_itr<T>& bnd_itr,
         if ((*rev_bnd_itr)->winding_count * (*rev_bnd_itr)->winding_delta < 0) {
             // prev edge is 'decreasing' WindCount (WC) toward zero
             // so we're outside the previous polygon ...
-            if (std::abs((*rev_bnd_itr)->winding_count) > 1) {
+            if (std::abs(static_cast<int>((*rev_bnd_itr)->winding_count)) > 1) {
                 // outside prev poly but still inside another.
                 // when reversing direction of prev poly use the same WC
                 if ((*rev_bnd_itr)->winding_delta * (*bnd_itr)->winding_delta < 0) {
@@ -320,7 +321,7 @@ bool is_contributing(bound<T> const& bnd,
         }
         break;
     case fill_type_non_zero:
-        if (std::abs(bnd.winding_count) != 1) {
+        if (std::abs(static_cast<int>(bnd.winding_count)) != 1) {
             return false;
         }
         break;
