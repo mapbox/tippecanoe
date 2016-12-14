@@ -89,6 +89,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.id = feat.id;
 			}
 
+			std::map<std::string, mvt_value> attributes;
+			std::map<std::string, int> types;
+			std::vector<std::string> key_order;
+
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
@@ -125,11 +129,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				if (exclude.count(std::string(key)) == 0) {
-					type_and_string tas;
-					tas.string = std::string(key);
-					tas.type = type;
-					file_keys->second.file_keys.insert(tas);
-					outlayer.tag(outfeature, layer.keys[feat.tags[t]], val);
+					attributes.insert(std::pair<std::string, mvt_value>(key, val));
+					types.insert(std::pair<std::string, int>(key, type));
+					key_order.push_back(key);
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
@@ -155,11 +157,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 							const char *sjoinkey = joinkey.c_str();
 
 							if (exclude.count(joinkey) == 0) {
-								type_and_string tas;
-								tas.string = std::string(sjoinkey);
-								tas.type = attr_type;
-								file_keys->second.file_keys.insert(tas);
-
 								mvt_value outval;
 								if (attr_type == VT_STRING) {
 									outval.type = mvt_string;
@@ -169,10 +166,39 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 									outval.numeric_value.double_value = atof(joinval.c_str());
 								}
 
-								outlayer.tag(outfeature, joinkey, outval);
+								auto fa = attributes.find(sjoinkey);
+								if (fa != attributes.end()) {
+									attributes.erase(fa);
+								}
+								auto ft = types.find(sjoinkey);
+								if (ft != types.end()) {
+									types.erase(ft);
+								}
+
+								attributes.insert(std::pair<std::string, mvt_value>(sjoinkey, outval));
+								types.insert(std::pair<std::string, int>(sjoinkey, attr_type));
+								key_order.push_back(sjoinkey);
 							}
 						}
 					}
+				}
+			}
+
+			for (auto tp : types) {
+				type_and_string tas;
+				tas.string = tp.first;
+				tas.type = tp.second;
+
+				file_keys->second.file_keys.insert(tas);
+			}
+
+			// To keep attributes in their original order instead of alphabetical
+			for (auto k : key_order) {
+				auto fa = attributes.find(k);
+
+				if (fa != attributes.end()) {
+					outlayer.tag(outfeature, k, fa->second);
+					attributes.erase(fa);
 				}
 			}
 
@@ -547,11 +573,11 @@ void usage(char **argv) {
 std::vector<std::string> split(char *s) {
 	std::vector<std::string> ret;
 
-	while (*s && *s != '\n') {
+	while (*s && *s != '\n' && *s != '\r') {
 		char *start = s;
 		int within = 0;
 
-		for (; *s && *s != '\n'; s++) {
+		for (; *s && *s != '\n' && *s != '\r'; s++) {
 			if (*s == '"') {
 				within = !within;
 			}
