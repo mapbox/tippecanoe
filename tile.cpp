@@ -726,12 +726,12 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 						if (s > 0) {
 							drawvec left;
-							if (g[a + (0 - 1 + s) % s] < g[a + 0]) {
-								left.push_back(g[a + (0 - 1 + s) % s]);
-								left.push_back(g[a + 0]);
+							if (g[a + (s - 1) % s] < g[a]) {
+								left.push_back(g[a + (s - 1) % s]);
+								left.push_back(g[a]);
 							} else {
-								left.push_back(g[a + 0]);
-								left.push_back(g[a + (0 - 1 + s) % s]);
+								left.push_back(g[a]);
+								left.push_back(g[a + (s - 1) % s]);
 							}
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
@@ -878,8 +878,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									partials[i].arc_polygon.push_back(added);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(added, i));
 								} else {
-									partials[i].arc_polygon.push_back(-f2->second);
-									merge_candidates.insert(std::pair<ssize_t, size_t>(-f2->second, i));
+									partials[i].arc_polygon.push_back(-(ssize_t) f2->second);
+									merge_candidates.insert(std::pair<ssize_t, size_t>(-(ssize_t) f2->second, i));
 								}
 							} else {
 								partials[i].arc_polygon.push_back(f->second);
