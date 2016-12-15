@@ -1,3 +1,7 @@
+## 1.16.0
+
+* Switch from Clipper to Wagyu for polygon topology correction
+
 ## 1.15.4
 
 * Dot-dropping with -r/-B doesn't apply if there is a per-feature minzoom tag
