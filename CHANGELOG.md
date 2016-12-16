@@ -1,3 +1,8 @@
+## 1.16.1
+
+* Choose a deeper starting tile than 0/0/0 if there is one that contains
+  all the features
+
 ## 1.16.0
 
 * Switch from Clipper to Wagyu for polygon topology correction
