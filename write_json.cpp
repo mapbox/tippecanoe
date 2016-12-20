@@ -12,10 +12,10 @@ struct lonlat {
 	int op;
 	double lon;
 	double lat;
-	int x;
-	int y;
+	long long x;
+	long long y;
 
-	lonlat(int nop, double nlon, double nlat, int nx, int ny) {
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny) {
 		this->op = nop;
 		this->lon = nlon;
 		this->lat = nlat;
@@ -196,17 +196,18 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				long double area = 0;
 				for (size_t k = 0; k < rings[i].size(); k++) {
 					if (rings[i][k].op != VT_CLOSEPATH) {
-						area += rings[i][k].x * rings[i][(k + 1) % rings[i].size()].y;
-						area -= rings[i][k].y * rings[i][(k + 1) % rings[i].size()].x;
+						area += (long double) rings[i][k].x * (long double) rings[i][(k + 1) % rings[i].size()].y;
+						area -= (long double) rings[i][k].y * (long double) rings[i][(k + 1) % rings[i].size()].x;
 					}
 				}
+				area /= 2;
 
 				areas[i] = area;
 				if (areas[i] >= 0 || i == 0) {
 					outer++;
 				}
 
-				// fprintf(fp, "area %f\n", area / .00000274 / .00000274);
+				// fprintf(fp, "\"area\": %Lf,", area);
 			}
 
 			if (outer > 1) {
