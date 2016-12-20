@@ -947,7 +947,58 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, const char *prefilter, const char *postfilter) {
+void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz, unsigned *ix, unsigned *iy, int minzoom, int buffer) {
+	for (size_t i = 0; i < CPUS; i++) {
+		if (reader[i].file_bbox[0] < file_bbox[0]) {
+			file_bbox[0] = reader[i].file_bbox[0];
+		}
+		if (reader[i].file_bbox[1] < file_bbox[1]) {
+			file_bbox[1] = reader[i].file_bbox[1];
+		}
+		if (reader[i].file_bbox[2] > file_bbox[2]) {
+			file_bbox[2] = reader[i].file_bbox[2];
+		}
+		if (reader[i].file_bbox[3] > file_bbox[3]) {
+			file_bbox[3] = reader[i].file_bbox[3];
+		}
+	}
+
+	// If the bounding box extends off the plane on either side,
+	// a feature wrapped across the date line, so the width of the
+	// bounding box is the whole world.
+	if (file_bbox[0] < 0) {
+		file_bbox[0] = 0;
+		file_bbox[2] = (1LL << 32) - 1;
+	}
+	if (file_bbox[2] > (1LL << 32) - 1) {
+		file_bbox[0] = 0;
+		file_bbox[2] = (1LL << 32) - 1;
+	}
+	if (file_bbox[1] < 0) {
+		file_bbox[1] = 0;
+	}
+	if (file_bbox[3] > (1LL << 32) - 1) {
+		file_bbox[3] = (1LL << 32) - 1;
+	}
+
+	for (ssize_t z = minzoom; z >= 0; z--) {
+		long long shift = 1LL << (32 - z);
+
+		long long left = (file_bbox[0] - buffer * shift / 256) / shift;
+		long long top = (file_bbox[1] - buffer * shift / 256) / shift;
+		long long right = (file_bbox[2] + buffer * shift / 256) / shift;
+		long long bottom = (file_bbox[3] + buffer * shift / 256) / shift;
+
+		if (left == right && top == bottom) {
+			*iz = z;
+			*ix = left;
+			*iy = top;
+			break;
+		}
+	}
+}
+
+int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1471,12 +1522,15 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 	}
 	unlink(geomname);
 
+	unsigned iz = 0, ix = 0, iy = 0;
+	choose_first_zoom(file_bbox, reader, &iz, &ix, &iy, minzoom, buffer);
+
 	long long geompos = 0;
 
 	/* initial tile is 0/0/0 */
-	serialize_int(geomfile, 0, &geompos, fname);
-	serialize_uint(geomfile, 0, &geompos, fname);
-	serialize_uint(geomfile, 0, &geompos, fname);
+	serialize_int(geomfile, iz, &geompos, fname);
+	serialize_uint(geomfile, ix, &geompos, fname);
+	serialize_uint(geomfile, iy, &geompos, fname);
 
 	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos, maxzoom, basezoom, droprate, gamma);
 
@@ -1767,40 +1821,6 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	midlat = (maxlat + minlat) / 2;
 	midlon = (maxlon + minlon) / 2;
-
-	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
-	for (size_t i = 0; i < CPUS; i++) {
-		if (reader[i].file_bbox[0] < file_bbox[0]) {
-			file_bbox[0] = reader[i].file_bbox[0];
-		}
-		if (reader[i].file_bbox[1] < file_bbox[1]) {
-			file_bbox[1] = reader[i].file_bbox[1];
-		}
-		if (reader[i].file_bbox[2] > file_bbox[2]) {
-			file_bbox[2] = reader[i].file_bbox[2];
-		}
-		if (reader[i].file_bbox[3] > file_bbox[3]) {
-			file_bbox[3] = reader[i].file_bbox[3];
-		}
-	}
-
-	// If the bounding box extends off the plane on either side,
-	// a feature wrapped across the date line, so the width of the
-	// bounding box is the whole world.
-	if (file_bbox[0] < 0) {
-		file_bbox[0] = 0;
-		file_bbox[2] = (1LL << 32) - 1;
-	}
-	if (file_bbox[2] > (1LL << 32) - 1) {
-		file_bbox[0] = 0;
-		file_bbox[2] = (1LL << 32) - 1;
-	}
-	if (file_bbox[1] < 0) {
-		file_bbox[1] = 0;
-	}
-	if (file_bbox[3] > (1LL << 32) - 1) {
-		file_bbox[3] = (1LL << 32) - 1;
-	}
 
 	tile2lonlat(file_bbox[0], file_bbox[1], 32, &minlon, &maxlat);
 	tile2lonlat(file_bbox[2], file_bbox[3], 32, &maxlon, &minlat);
@@ -2258,7 +2278,9 @@ int main(int argc, char **argv) {
 		sources.push_back(src);
 	}
 
-	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, prefilter, postfilter);
+	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
+
+	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter);
 
 	mbtiles_close(outdb, argv);
 

@@ -1,3 +1,12 @@
+## 1.16.1
+
+* Choose a deeper starting tile than 0/0/0 if there is one that contains
+  all the features
+
+## 1.16.0
+
+* Switch from Clipper to Wagyu for polygon topology correction
+
 ## 1.15.4
 
 * Dot-dropping with -r/-B doesn't apply if there is a per-feature minzoom tag

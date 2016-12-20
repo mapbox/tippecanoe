@@ -1,5 +1,18 @@
-Boost Software License - Version 1.0 - August 17th, 2003
-http://www.boost.org/LICENSE_1_0.txt
+Parts of the code in the Wagyu Library are derived from the version of the 
+Clipper Library by Angus Johnson listed below.
+
+Author    :  Angus Johnson
+Version   :  6.4.0
+Date      :  2 July 2015
+Website   :  http://www.angusj.com
+
+Copyright for portions of the derived code in the Wagyu library are held 
+by Angus Johnson, 2010-2015. All other copyright for the Wagyu Library are held by 
+Mapbox, 2016. This code is published in accordance with, and retains the same license
+as the Clipper Library by Angus Johnson.
+
+Copyright (c) 2010-2015, Angus Johnson
+Copyright (c) 2016, Mapbox
 
 Permission is hereby granted, free of charge, to any person or organization
 obtaining a copy of the software and accompanying documentation covered by
