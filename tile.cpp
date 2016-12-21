@@ -78,7 +78,8 @@ struct coalesce {
 	char *stringpool;
 	std::vector<long long> keys;
 	std::vector<long long> values;
-	std::map<std::string, serial_val> kv;
+	std::vector<std::string> full_keys;
+	std::vector<serial_val> full_values;
 	drawvec geom;
 	unsigned long long index;
 	unsigned long long index2;
@@ -315,7 +316,8 @@ struct partial {
 	std::vector<drawvec> geoms;
 	std::vector<long long> keys;
 	std::vector<long long> values;
-	std::map<std::string, serial_val> kv;
+	std::vector<std::string> full_keys;
+	std::vector<serial_val> full_values;
 	std::vector<ssize_t> arc_polygon;
 	long long layer;
 	long long original_seq;
@@ -1583,7 +1585,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.maxzoom = maxzoom;
 				p.keys = sf.keys;
 				p.values = sf.values;
-				p.kv = sf.kv;
+				p.full_keys = sf.full_keys;
+				p.full_values = sf.full_values;
 				p.spacing = spacing;
 				p.simplification = simplification;
 				p.id = sf.id;
@@ -1681,7 +1684,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.stringpool = stringpool + pool_off[partials[i].segment];
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;
-					c.kv = partials[i].kv;
+					c.full_keys = partials[i].full_keys;
+					c.full_values = partials[i].full_values;
 					c.spacing = partials[i].spacing;
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
@@ -1798,9 +1802,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.has_id = layer_features[x].has_id;
 
 				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
-				for (auto kv : layer_features[x].kv) {
-					mvt_value v = stringified_to_mvt_value(kv.second.type, kv.second.s.c_str());
-					layer.tag(feature, kv.first, v);
+				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
+					serial_val sv = layer_features[x].full_values[a];
+					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
+					layer.tag(feature, layer_features[x].full_keys[a], v);
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {

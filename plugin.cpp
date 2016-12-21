@@ -368,6 +368,30 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
 
+			if (layermap.count(layername) == 0) {
+				layermap_entry lme = layermap_entry(layermap.size());
+				lme.minzoom = z;
+				lme.maxzoom = z;
+
+				layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+
+				if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
+					(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
+					(*layer_unmaps)[tiling_seg][lme.id] = layername;
+				}
+			}
+
+			auto fk = layermap.find(layername);
+			fprintf(stderr, "assign layer %zu\n", fk->second.id);
+			sf.layer = fk->second.id;
+
+			if (z < fk->second.minzoom) {
+				fk->second.minzoom = z;
+			}
+			if (z > fk->second.maxzoom) {
+				fk->second.maxzoom = z;
+			}
+
 			for (size_t i = 0; i < properties->length; i++) {
 				serial_val v;
 				v.type = -1;
@@ -375,35 +399,14 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
 
 				if (v.type >= 0) {
-					sf.kv.insert(std::pair<std::string, serial_val>(std::string(properties->keys[i]->string), v));
-
-					if (layermap.count(layername) == 0) {
-						layermap_entry lme = layermap_entry(layermap.size());
-						lme.minzoom = z;
-						lme.maxzoom = z;
-
-						layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
-
-						if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
-							(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
-							(*layer_unmaps)[tiling_seg][lme.id] = layername;
-						}
-					}
+					sf.full_keys.push_back(std::string(properties->keys[i]->string));
+					sf.full_values.push_back(v);
 
 					type_and_string tas;
 					tas.string = std::string(properties->keys[i]->string);
 					tas.type = v.type;
 
-					auto fk = layermap.find(layername);
-					if (z < fk->second.minzoom) {
-						fk->second.minzoom = z;
-					}
-					if (z > fk->second.maxzoom) {
-						fk->second.maxzoom = z;
-					}
 					fk->second.file_keys.insert(tas);
-
-					sf.layer = fk->second.id;
 				}
 			}
 
