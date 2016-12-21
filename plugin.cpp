@@ -34,10 +34,11 @@ extern "C" {
 
 struct writer_arg {
 	int write_to;
-	mvt_layer *layer;
+	std::vector<mvt_layer> *layers;
 	unsigned z;
 	unsigned x;
 	unsigned y;
+	int extent;
 };
 
 void *run_writer(void *a) {
@@ -49,7 +50,9 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
-	layer_to_geojson(fp, *(wa->layer), wa->z, wa->x, wa->y, false, false);
+	for (size_t i = 0; i < wa->layers->size(); i++) {
+		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true);
+	}
 
 	if (fclose(fp) != 0) {
 		if (errno == EPIPE) {
@@ -78,13 +81,8 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	return out;
 }
 
-mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &olayer, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
-	mvt_layer ret;
-	ret.name = olayer.name;
-	ret.version = olayer.version;
-	ret.extent = olayer.extent;
-
-	std::string layername = olayer.name;
+std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+	std::map<std::string, mvt_layer> ret;
 
 	FILE *f = fdopen(fd, "r");
 	if (f == NULL) {
@@ -164,6 +162,26 @@ mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &ol
 			exit(EXIT_FAILURE);
 		}
 
+		std::string layername = "unknown";
+		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
+		json_object *layer = NULL;
+		if (tippecanoe != NULL) {
+			layer = json_hash_get(tippecanoe, "layer");
+			if (layer != NULL && layer->type == JSON_STRING) {
+				layername = std::string(layer->string);
+			}
+		}
+
+		if (ret.count(layername) == 0) {
+			mvt_layer l;
+			l.name = layername;
+			l.version = 2;
+			l.extent = extent;
+
+			ret.insert(std::pair<std::string, mvt_layer>(layername, l));
+		}
+		auto l = ret.find(layername);
+
 		drawvec dv;
 		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
 		if (mb_geometry[t] == VT_POLYGON) {
@@ -173,8 +191,8 @@ mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &ol
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
 			long long scale = 1LL << (32 - z);
-			dv[i].x = std::round((dv[i].x - scale * x) * olayer.extent / (double) scale);
-			dv[i].y = std::round((dv[i].y - scale * y) * olayer.extent / (double) scale);
+			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
+			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}
 
 		if (mb_geometry[t] == VT_POLYGON) {
@@ -208,7 +226,7 @@ mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &ol
 				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
 				if (tp >= 0) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
-					ret.tag(feature, std::string(properties->keys[i]->string), v);
+					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
 					if (layermap.count(layername) == 0) {
 						layermap_entry lme = layermap_entry(layermap.size());
@@ -238,7 +256,7 @@ mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &ol
 				}
 			}
 
-			ret.features.push_back(feature);
+			l->second.features.push_back(feature);
 		}
 
 		json_free(j);
@@ -249,7 +267,12 @@ mvt_layer parse_layer(int fd, int z, unsigned x, unsigned y, mvt_layer const &ol
 		perror("fclose postfilter output");
 		exit(EXIT_FAILURE);
 	}
-	return ret;
+
+	std::vector<mvt_layer> final;
+	for (auto a : ret) {
+		final.push_back(a.second);
+	}
+	return final;
 }
 
 serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
@@ -520,17 +543,18 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
 
 	writer_arg wa;
 	wa.write_to = write_to;
-	wa.layer = &layer;
+	wa.layers = &layers;
 	wa.z = z;
 	wa.x = x;
 	wa.y = y;
+	wa.extent = extent;
 
 	pthread_t writer;
 	if (pthread_create(&writer, NULL, run_writer, &wa) != 0) {
@@ -538,7 +562,7 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		exit(EXIT_FAILURE);
 	}
 
-	layer = parse_layer(read_from, z, x, y, layer, layermaps, tiling_seg, layer_unmaps);
+	layers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
 
 	while (1) {
 		int stat_loc;
@@ -557,5 +581,5 @@ mvt_layer filter_layer(const char *filter, mvt_layer &layer, unsigned z, unsigne
 		exit(EXIT_FAILURE);
 	}
 
-	return layer;
+	return layers;
 }

@@ -1833,13 +1833,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				layer.features.push_back(feature);
 			}
 
-			if (postfilter != NULL) {
-				layer = filter_layer(postfilter, layer, z, tx, ty, layermaps, tiling_seg, layer_unmaps);
-			}
-
 			if (layer.features.size() > 0) {
 				tile.layers.push_back(layer);
 			}
+		}
+
+		if (postfilter != NULL) {
+			tile.layers = filter_layers(postfilter, tile.layers, z, tx, ty, layermaps, tiling_seg, layer_unmaps, 1 << line_detail);
 		}
 
 		if (z == 0 && unclipped_features < original_features / 2) {
