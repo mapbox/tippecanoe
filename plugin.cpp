@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <cmath>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -42,8 +43,6 @@ struct writer_arg {
 void *run_writer(void *a) {
 	writer_arg *wa = (writer_arg *) a;
 
-	// XXX worry about SIGPIPE?
-
 	FILE *fp = fdopen(wa->write_to, "w");
 	if (fp == NULL) {
 		perror("fdopen (pipe writer)");
@@ -53,8 +52,16 @@ void *run_writer(void *a) {
 	layer_to_geojson(fp, *(wa->layer), wa->z, wa->x, wa->y, false, false);
 
 	if (fclose(fp) != 0) {
-		perror("fclose output to filter");
-		exit(EXIT_FAILURE);
+		if (errno == EPIPE) {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Warning: broken pipe in postfilter\n");
+				warned = true;
+			}
+		} else {
+			perror("fclose output to filter");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	return NULL;
@@ -382,7 +389,6 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			}
 
 			auto fk = layermap.find(layername);
-			fprintf(stderr, "assign layer %zu\n", fk->second.id);
 			sf.layer = fk->second.id;
 
 			if (z < fk->second.minzoom) {

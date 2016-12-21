@@ -24,6 +24,7 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <signal.h>
 #include <vector>
 #include <string>
 #include <set>
@@ -2206,6 +2207,8 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	signal(SIGPIPE, SIG_IGN);
 
 	files_open_at_start = open("/dev/null", O_RDONLY | O_CLOEXEC);
 	if (files_open_at_start < 0) {

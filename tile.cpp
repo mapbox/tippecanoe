@@ -1378,8 +1378,16 @@ void *run_prefilter(void *v) {
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {
-		perror("fclose output to prefilter");
-		exit(EXIT_FAILURE);
+		if (errno == EPIPE) {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Warning: broken pipe in prefilter\n");
+				warned = true;
+			}
+		} else {
+			perror("fclose output to prefilter");
+			exit(EXIT_FAILURE);
+		}
 	}
 	return NULL;
 }
