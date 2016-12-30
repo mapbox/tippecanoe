@@ -466,7 +466,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] file.mbtiles zoom x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t projection] file.mbtiles [zoom x y] [zoom south west north east]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -485,8 +485,36 @@ int main(int argc, char **argv) {
 			usage(argv);
 		}
 	}
+	if(argc == optind + 6) {
+		double minX = atof(argv[optind + 2]);
+		double minY = atof(argv[optind + 3]);
+		double maxX = atof(argv[optind + 4]);
+		double maxY = atof(argv[optind + 5]);
 
-	if (argc == optind + 4) {
+		long long tilerow_LL;
+		long long tilecol_LL;
+		long long tilerow_UR;
+		long long tilecol_UR;
+
+		int zoom = atoi(argv[optind + 1]);
+
+		lonlat2tile(minX, minY, zoom, &tilerow_LL, &tilecol_LL);
+		lonlat2tile(maxX, maxY, zoom, &tilerow_UR, &tilecol_UR);
+
+		printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
+		char sep = ' ';
+		for(int i = tilerow_LL; i <= tilerow_UR; i++) {
+			for(int j = tilecol_UR; j <= tilecol_LL; j++) {
+				printf("%c", sep);
+				decode(argv[optind], zoom, i, j);
+				sep = ',';
+
+			}
+		}
+		printf("\n]}\n");
+
+		// Decode bottom right,
+    } else if (argc == optind + 4) {
 		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
 	} else if (argc == optind + 1) {
 		decode(argv[optind], -1, -1, -1);
