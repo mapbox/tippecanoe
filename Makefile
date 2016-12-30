@@ -19,7 +19,7 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit
+all: tippecanoe tippecanoe-enumerate tippecanoe-decode tippecanoe-exclude tile-join unit
 
 docs: man/tippecanoe.1
 
@@ -54,6 +54,9 @@ tippecanoe-enumerate: enumerate.o
 
 tippecanoe-decode: decode.o projection.o mvt.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	
+tippecanoe-exclude: exclude.o projection.o mvt.o mbtiles.o
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -l:libgdal.so.20
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread

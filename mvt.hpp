@@ -31,6 +31,7 @@ struct mvt_feature {
 	mvt_feature() {
 		has_id = false;
 		id = 0;
+		type = 0;
 	}
 };
 

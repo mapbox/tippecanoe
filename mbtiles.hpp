@@ -1,3 +1,4 @@
+#include <set>
 struct type_and_string {
 	int type;
 	std::string string;

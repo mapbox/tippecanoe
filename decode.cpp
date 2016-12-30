@@ -55,7 +55,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
-	} catch (protozero::unknown_pbf_wire_type_exception e) {
+	} catch (protozero::unknown_pbf_wire_type_exception &e) {
 		fprintf(stderr, "PBF decoding error in tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
