@@ -330,7 +330,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	printf("] }\n");
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y) {
+bool decode(char *fname, int z, unsigned x, unsigned y) {
+	bool hadOutput = false;
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
@@ -347,7 +348,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 							std::string s = std::string(map, st.st_size);
 							handle(s, z, x, y, 1);
 							munmap(map, st.st_size);
-							return;
+							return false;
 						} else {
 							fprintf(stderr, "Must specify zoom/x/y to decode a single pbf file\n");
 							exit(EXIT_FAILURE);
@@ -370,6 +371,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	}
 
 	if (z < 0) {
+		hadOutput = true;
 		printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
 
 		const char *sql2 = "SELECT name, value from metadata order by name;";
@@ -440,6 +442,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
+				hadOutput = true;
 				int len = sqlite3_column_bytes(stmt, 0);
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
@@ -463,6 +466,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
+	return hadOutput;
 }
 
 void usage(char **argv) {
@@ -502,18 +506,15 @@ int main(int argc, char **argv) {
 		lonlat2tile(maxX, maxY, zoom, &tilerow_UR, &tilecol_UR);
 
 		printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
-		char sep = ' ';
-		for(int i = tilerow_LL; i <= tilerow_UR; i++) {
-			for(int j = tilecol_UR; j <= tilecol_LL; j++) {
-				printf("%c", sep);
-				decode(argv[optind], zoom, i, j);
-				sep = ',';
-
+		bool last = false;
+		for(long long i = tilerow_LL; i <= tilerow_UR; i++) {
+			for(long long j = tilecol_LL; j <= tilecol_UR; j++) {
+				if(decode(argv[optind], zoom, i, j)) {
+					printf(",");
+				}
 			}
 		}
-		printf("\n]}\n");
-
-		// Decode bottom right,
+		printf("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[]}}]}\n");
     } else if (argc == optind + 4) {
 		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
 	} else if (argc == optind + 1) {
