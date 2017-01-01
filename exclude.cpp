@@ -74,7 +74,9 @@ bool featureWithinLayer(mvt_feature &feat, int z, unsigned x, unsigned y, int ex
 
 			while((poFeature = exclude_layer->GetNextFeature()) != NULL) {
 				OGRGeometry *geom = poFeature->GetGeometryRef();
-				if(geom->WithinEx(geosContext, &p)) {
+				if(p.WithinEx(geosContext, geom)) {
+					OGRFeature::DestroyFeature(poFeature);
+					poFeature = NULL;
 					return true;
 				}
 
