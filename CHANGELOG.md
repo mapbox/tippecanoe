@@ -1,3 +1,7 @@
+## 1.16.2
+
+* Associate attributes with the right layer when explicitly tagged
+
 ## 1.16.1
 
 * Choose a deeper starting tile than 0/0/0 if there is one that contains
