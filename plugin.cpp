@@ -218,6 +218,26 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			}
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
+			if (layermap.count(layername) == 0) {
+				layermap_entry lme = layermap_entry(layermap.size());
+				lme.minzoom = z;
+				lme.maxzoom = z;
+
+				layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+
+				if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
+					(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
+					(*layer_unmaps)[tiling_seg][lme.id] = layername;
+				}
+			}
+
+			auto fk = layermap.find(layername);
+			if (z < fk->second.minzoom) {
+				fk->second.minzoom = z;
+			}
+			if (z > fk->second.maxzoom) {
+				fk->second.maxzoom = z;
+			}
 
 			for (size_t i = 0; i < properties->length; i++) {
 				int tp = -1;
@@ -228,30 +248,10 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
-					if (layermap.count(layername) == 0) {
-						layermap_entry lme = layermap_entry(layermap.size());
-						lme.minzoom = z;
-						lme.maxzoom = z;
-
-						layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
-
-						if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
-							(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
-							(*layer_unmaps)[tiling_seg][lme.id] = layername;
-						}
-					}
-
 					type_and_string tas;
 					tas.string = std::string(properties->keys[i]->string);
 					tas.type = tp;
 
-					auto fk = layermap.find(layername);
-					if (z < fk->second.minzoom) {
-						fk->second.minzoom = z;
-					}
-					if (z > fk->second.maxzoom) {
-						fk->second.maxzoom = z;
-					}
 					fk->second.file_keys.insert(tas);
 				}
 			}
