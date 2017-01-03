@@ -3,7 +3,7 @@
 "center": "-90.000000,37.836443,1",
 "description": "tests/muni/out/-z1_-Z1_-ao_-P.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {\"name\": \"String\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {\"name\": \"String\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 1, \"fields\": {\"name\": \"String\"} } ] }",
 "maxzoom": "1",
 "minzoom": "1",
 "name": "tests/muni/out/-z1_-Z1_-ao_-P.json.check.mbtiles",
