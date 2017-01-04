@@ -3,7 +3,7 @@
 "center": "-122.431641,37.788049,11",
 "description": "tests/muni/out/-Z11_-z11_--calculate-feature-density.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 11, \"fields\": {\"name\": \"String\", \"tippecanoe_feature_density\": \"Number\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 11, \"fields\": {\"tippecanoe_feature_density\": \"Number\"} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"muni\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 11, \"fields\": {\"name\": \"String\", \"tippecanoe_feature_density\": \"Number\"} }, { \"id\": \"subway\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 11, \"fields\": {\"name\": \"String\", \"tippecanoe_feature_density\": \"Number\"} } ] }",
 "maxzoom": "11",
 "minzoom": "11",
 "name": "tests/muni/out/-Z11_-z11_--calculate-feature-density.json.check.mbtiles",
