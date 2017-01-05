@@ -1,3 +1,7 @@
+## 1.16.3
+
+* Upgrade Wagyu to bfbf2893
+
 ## 1.16.2
 
 * Associate attributes with the right layer when explicitly tagged

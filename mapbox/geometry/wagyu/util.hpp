@@ -46,10 +46,6 @@ inline bool greater_than_or_equal(double x, double y) {
     return x > y || values_are_equal(x, y);
 }
 
-inline bool less_than_or_equal(double x, double y) {
-    return x < y || values_are_equal(x, y);
-}
-
 template <typename T>
 bool slopes_equal(mapbox::geometry::point<T> const& pt1,
                   mapbox::geometry::point<T> const& pt2,
