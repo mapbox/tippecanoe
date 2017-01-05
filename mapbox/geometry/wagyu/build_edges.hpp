@@ -6,7 +6,6 @@
 
 #include <mapbox/geometry/wagyu/config.hpp>
 #include <mapbox/geometry/wagyu/edge.hpp>
-#include <mapbox/geometry/wagyu/exceptions.hpp>
 #include <mapbox/geometry/wagyu/util.hpp>
 
 namespace mapbox {
@@ -14,42 +13,8 @@ namespace geometry {
 namespace wagyu {
 
 template <typename T>
-bool build_edge_list(mapbox::geometry::line_string<T> const& path_geometry,
-                     edge_list<T>& edges,
-                     bool& is_flat) {
-    if (path_geometry.size() < 2) {
-        return false;
-    }
-
-    auto itr_next = path_geometry.begin();
-    ++itr_next;
-    auto itr = path_geometry.begin();
-    while (itr_next != path_geometry.end()) {
-        if (*itr_next == *itr) {
-            // Duplicate point advance itr_next, but do not
-            // advance itr
-            ++itr_next;
-            continue;
-        }
-
-        if (is_flat && itr_next->y != itr->y) {
-            is_flat = false;
-        }
-        edges.emplace_back(*itr, *itr_next);
-        itr = itr_next;
-        ++itr_next;
-    }
-
-    if (edges.size() < 2) {
-        return false;
-    }
-
-    return true;
-}
-
-template <typename T>
-bool point_2_is_between_point_1_and_point_3(mapbox::geometry::point<T> const& pt1, 
-                                            mapbox::geometry::point<T> const& pt2, 
+bool point_2_is_between_point_1_and_point_3(mapbox::geometry::point<T> const& pt1,
+                                            mapbox::geometry::point<T> const& pt2,
                                             mapbox::geometry::point<T> const& pt3) {
     if ((pt1 == pt3) || (pt1 == pt2) || (pt3 == pt2)) {
         return false;
@@ -62,7 +27,6 @@ bool point_2_is_between_point_1_and_point_3(mapbox::geometry::point<T> const& pt
 
 template <typename T>
 bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge_list<T>& edges) {
-    using value_type = T;
 
     if (path_geometry.size() < 3) {
         return false;
@@ -73,8 +37,8 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
 
     auto itr_rev = path_geometry.rbegin();
     auto itr = path_geometry.begin();
-    mapbox::geometry::point<value_type> pt1 = *itr_rev;
-    mapbox::geometry::point<value_type> pt2 = *itr;
+    mapbox::geometry::point<T> pt1 = *itr_rev;
+    mapbox::geometry::point<T> pt2 = *itr;
 
     // Find next non repeated point going backwards from
     // end for pt1
@@ -86,10 +50,10 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
         pt1 = *itr_rev;
     }
     ++itr;
-    mapbox::geometry::point<value_type> pt3 = *itr;
+    mapbox::geometry::point<T> pt3 = *itr;
     auto itr_last = itr_rev.base();
-    mapbox::geometry::point<value_type> front_pt;
-    mapbox::geometry::point<value_type> back_pt;
+    mapbox::geometry::point<T> front_pt;
+    mapbox::geometry::point<T> back_pt;
     while (true) {
         if (pt3 == pt2) {
             // Duplicate point advance itr, but do not
@@ -129,13 +93,13 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
             } else {
                 // If this occurs we must look to the back of the
                 // ring for new points.
-                do {
+                while (*itr_rev == pt2) {
                     ++itr_rev;
                     if ((itr + 1) == itr_rev.base()) {
                         return false;
                     }
-                    pt1 = *itr_rev;
-                } while (pt1 == pt2);
+                }
+                pt1 = *itr_rev;
                 itr_last = itr_rev.base();
             }
             continue;

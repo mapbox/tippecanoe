@@ -3,7 +3,6 @@
 #include <mapbox/geometry/wagyu/active_bound_list.hpp>
 #include <mapbox/geometry/wagyu/config.hpp>
 #include <mapbox/geometry/wagyu/edge.hpp>
-#include <mapbox/geometry/wagyu/exceptions.hpp>
 #include <mapbox/geometry/wagyu/intersect_util.hpp>
 #include <mapbox/geometry/wagyu/local_minimum.hpp>
 #include <mapbox/geometry/wagyu/local_minimum_util.hpp>
@@ -47,14 +46,8 @@ active_bound_list_itr<T> do_maxima(active_bound_list_itr<T>& bnd,
     } else if ((*bnd)->ring && (*bndMaxPair)->ring) {
         add_local_maximum_point(bnd, bndMaxPair, (*bnd)->current_edge->top, rings, active_bounds);
         active_bounds.erase(bndMaxPair);
-    } else if ((*bnd)->winding_delta == 0 && (*bnd)->ring) {
-        add_point_to_ring(*(*bnd), (*bnd)->current_edge->top, rings);
-        active_bounds.erase(bndMaxPair);
-    } else if ((*bnd)->winding_delta == 0 && (*bndMaxPair)->ring) {
-        add_point_to_ring(*(*bndMaxPair), (*bnd)->current_edge->top, rings);
-        active_bounds.erase(bndMaxPair);
     } else {
-        throw clipper_exception("DoMaxima error");
+        throw std::runtime_error("DoMaxima error");
     }
     auto prev_itr = active_bounds.erase(bnd);
     if (skipped) {
@@ -78,7 +71,7 @@ void process_edges_at_top_of_scanbeam(T top_y,
     for (auto bnd = active_bounds.begin(); bnd != active_bounds.end();) {
         // 1. Process maxima, treating them as if they are "bent" horizontal edges,
         // but exclude maxima with horizontal edges.
-    
+
         bool is_maxima_edge = is_maxima(bnd, top_y);
 
         if (is_maxima_edge) {
@@ -87,8 +80,8 @@ void process_edges_at_top_of_scanbeam(T top_y,
                                !current_edge_is_horizontal<T>(bnd_max_pair)) &&
                               is_maxima(bnd_max_pair, top_y));
             if (is_maxima_edge) {
-                bnd = do_maxima(bnd, bnd_max_pair, cliptype, subject_fill_type, clip_fill_type, rings,
-                                active_bounds);
+                bnd = do_maxima(bnd, bnd_max_pair, cliptype, subject_fill_type, clip_fill_type,
+                                rings, active_bounds);
                 continue;
             }
         }
@@ -127,7 +120,6 @@ void process_edges_at_top_of_scanbeam(T top_y,
         }
     }
 }
-
 }
 }
 }

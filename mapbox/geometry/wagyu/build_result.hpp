@@ -15,16 +15,16 @@ void push_ring_to_polygon(mapbox::geometry::polygon<T>& poly, ring_ptr<T>& r, bo
     auto ptIt = r->points;
     if (reverse_output) {
         do {
-            lr.push_back({ ptIt->x, ptIt->y });
+            lr.emplace_back(ptIt->x, ptIt->y);
             ptIt = ptIt->next;
         } while (ptIt != firstPt);
     } else {
         do {
-            lr.push_back({ ptIt->x, ptIt->y });
+            lr.emplace_back(ptIt->x, ptIt->y);
             ptIt = ptIt->prev;
         } while (ptIt != firstPt);
     }
-    lr.push_back({ firstPt->x, firstPt->y }); // close the ring
+    lr.emplace_back(firstPt->x, firstPt->y); // close the ring
     poly.push_back(lr);
 }
 
@@ -36,7 +36,7 @@ void build_result_polygons(std::vector<mapbox::geometry::polygon<T>>& solution,
     for (auto& r : rings) {
         assert(r->points);
         std::size_t cnt = point_count(r->points);
-        if ((r->is_open && cnt < 2) || (!r->is_open && cnt < 3)) {
+        if (cnt < 3) {
             continue;
         }
         solution.emplace_back();
@@ -44,7 +44,7 @@ void build_result_polygons(std::vector<mapbox::geometry::polygon<T>>& solution,
         for (auto& c : r->children) {
             assert(c->points);
             cnt = point_count(c->points);
-            if ((c->is_open && cnt < 2) || (!c->is_open && cnt < 3)) {
+            if (cnt < 3) {
                 continue;
             }
             push_ring_to_polygon(solution.back(), c, reverse_output);
