@@ -1,9 +1,9 @@
 #pragma once
 
 #include <mapbox/geometry/wagyu/active_bound_list.hpp>
-#include <mapbox/geometry/wagyu/edge.hpp>
 #include <mapbox/geometry/wagyu/bound.hpp>
 #include <mapbox/geometry/wagyu/config.hpp>
+#include <mapbox/geometry/wagyu/edge.hpp>
 #include <mapbox/geometry/wagyu/intersect.hpp>
 #include <mapbox/geometry/wagyu/intersect_util.hpp>
 #include <mapbox/geometry/wagyu/ring.hpp>
@@ -30,11 +30,14 @@ void process_hot_pixel_intersections(T top_y,
         auto bnd = active_bounds.begin();
         auto bnd_next = std::next(bnd);
         while (bnd_next != active_bounds.end()) {
-            if ((*bnd)->current_x > (*bnd_next)->current_x && !slopes_equal(*(*bnd)->current_edge, *(*bnd_next)->current_edge)) {
+            if ((*bnd)->current_x > (*bnd_next)->current_x &&
+                !slopes_equal(*(*bnd)->current_edge, *(*bnd_next)->current_edge)) {
                 mapbox::geometry::point<double> pt;
                 if (!get_edge_intersection<T, double>(*((*bnd)->current_edge),
-                                                     *((*bnd_next)->current_edge), pt)) {
+                                                      *((*bnd_next)->current_edge), pt)) {
+                    // LCOV_EXCL_START
                     throw std::runtime_error("Edges do not intersect!");
+                    // LCOV_EXCL_END
                 }
                 add_to_hot_pixels(round_point<T>(pt), rings);
                 swap_positions_in_ABL(bnd, bnd_next, active_bounds);
@@ -55,16 +58,20 @@ void process_hot_pixel_edges_at_top_of_scanbeam(T top_y,
                                                 ring_manager<T>& rings) {
     for (auto bnd = active_bounds.begin(); bnd != active_bounds.end();) {
         auto bnd_2 = std::next(bnd);
-        while ((*bnd)->current_edge != (*bnd)->edges.end() && (*bnd)->current_edge->top.y == top_y) {
+        while ((*bnd)->current_edge != (*bnd)->edges.end() &&
+               (*bnd)->current_edge->top.y == top_y) {
             add_to_hot_pixels((*bnd)->current_edge->top, rings);
             if (current_edge_is_horizontal<T>(bnd)) {
                 (*bnd)->current_x = static_cast<double>((*bnd)->current_edge->top.x);
                 if ((*bnd)->current_edge->bot.x < (*bnd)->current_edge->top.x) {
                     // left to right
                     auto bnd_next = std::next(bnd);
-                    while (bnd_next != active_bounds.end() && (*bnd_next)->current_x < (*bnd)->current_x) {
-                        if (std::llround((*bnd_next)->current_edge->top.y) != top_y && std::llround((*bnd_next)->current_edge->bot.y) != top_y) {
-                            mapbox::geometry::point<T> pt(std::llround((*bnd_next)->current_x), top_y);
+                    while (bnd_next != active_bounds.end() &&
+                           (*bnd_next)->current_x < (*bnd)->current_x) {
+                        if (std::llround((*bnd_next)->current_edge->top.y) != top_y &&
+                            std::llround((*bnd_next)->current_edge->bot.y) != top_y) {
+                            mapbox::geometry::point<T> pt(std::llround((*bnd_next)->current_x),
+                                                          top_y);
                             add_to_hot_pixels(pt, rings);
                         }
                         swap_positions_in_ABL(bnd, bnd_next, active_bounds);
@@ -74,9 +81,12 @@ void process_hot_pixel_edges_at_top_of_scanbeam(T top_y,
                     // right to left
                     if (bnd != active_bounds.begin()) {
                         auto bnd_prev = std::prev(bnd);
-                        while (bnd != active_bounds.begin() && (*bnd_prev)->current_x > (*bnd)->current_x) {
-                            if (std::llround((*bnd_prev)->current_edge->top.y) != top_y && std::llround((*bnd_prev)->current_edge->bot.y) != top_y) {
-                                mapbox::geometry::point<T> pt(std::llround((*bnd_prev)->current_x), top_y);
+                        while (bnd != active_bounds.begin() &&
+                               (*bnd_prev)->current_x > (*bnd)->current_x) {
+                            if (std::llround((*bnd_prev)->current_edge->top.y) != top_y &&
+                                std::llround((*bnd_prev)->current_edge->bot.y) != top_y) {
+                                mapbox::geometry::point<T> pt(std::llround((*bnd_prev)->current_x),
+                                                              top_y);
                                 add_to_hot_pixels(pt, rings);
                             }
                             swap_positions_in_ABL(bnd, bnd_prev, active_bounds);
@@ -96,18 +106,13 @@ void process_hot_pixel_edges_at_top_of_scanbeam(T top_y,
 
 template <typename T>
 void insert_local_minima_into_ABL_hot_pixel(T top_y,
-                                            local_minimum_ptr_list<T> & minima_sorted,
-                                            local_minimum_ptr_list_itr<T> & lm,
+                                            local_minimum_ptr_list<T>& minima_sorted,
+                                            local_minimum_ptr_list_itr<T>& lm,
                                             active_bound_list<T>& active_bounds,
                                             ring_manager<T>& rings,
                                             scanbeam_list<T>& scanbeam) {
     while (lm != minima_sorted.end() && (*lm)->y == top_y) {
-        if ((*lm)->left_bound.edges.empty() || (*lm)->right_bound.edges.empty()) {
-            ++lm;
-            continue;
-        }
-
-        add_to_hot_pixels((*lm)->left_bound.edges.front().bot, rings); 
+        add_to_hot_pixels((*lm)->left_bound.edges.front().bot, rings);
         auto& left_bound = (*lm)->left_bound;
         left_bound.current_edge = left_bound.edges.begin();
         left_bound.current_x = static_cast<double>(left_bound.current_edge->bot.x);
@@ -127,12 +132,7 @@ void insert_local_minima_into_ABL_hot_pixel(T top_y,
 }
 
 template <typename T>
-void build_hot_pixels(local_minimum_list<T>& minima_list,
-                      ring_manager<T>& rings) {
-    if (minima_list.empty()) {
-        return;
-    }
-    
+void build_hot_pixels(local_minimum_list<T>& minima_list, ring_manager<T>& rings) {
     active_bound_list<T> active_bounds;
     scanbeam_list<T> scanbeam;
     T scanline_y = std::numeric_limits<T>::max();
@@ -149,7 +149,7 @@ void build_hot_pixels(local_minimum_list<T>& minima_list,
 
     // Estimate size for reserving hot pixels
     std::size_t reserve = 0;
-    for (auto & lm : minima_list) {
+    for (auto& lm : minima_list) {
         reserve += lm.left_bound.edges.size() + 2;
         reserve += lm.right_bound.edges.size() + 2;
     }
@@ -160,15 +160,13 @@ void build_hot_pixels(local_minimum_list<T>& minima_list,
         process_hot_pixel_intersections(scanline_y, active_bounds, rings);
 
         insert_local_minima_into_ABL_hot_pixel(scanline_y, minima_sorted, current_lm, active_bounds,
-                                     rings, scanbeam);
-        
+                                               rings, scanbeam);
+
         process_hot_pixel_edges_at_top_of_scanbeam(scanline_y, scanbeam, active_bounds, rings);
-        
     }
     preallocate_point_memory(rings, rings.hot_pixels.size());
     sort_hot_pixels(rings);
 }
-
 }
 }
 }

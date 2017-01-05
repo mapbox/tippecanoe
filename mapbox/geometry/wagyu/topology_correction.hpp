@@ -28,22 +28,19 @@ struct point_ptr_pair {
     point_ptr<T> op1;
     point_ptr<T> op2;
 
-    constexpr point_ptr_pair(point_ptr<T> o1, point_ptr<T> o2)
-     : op1(o1),
-       op2(o2) {}
+    constexpr point_ptr_pair(point_ptr<T> o1, point_ptr<T> o2) : op1(o1), op2(o2) {
+    }
 
     point_ptr_pair(point_ptr_pair<T> const& p) = default;
 
-    point_ptr_pair(point_ptr_pair<T> && p)
-        : op1(std::move(p.op1)),
-          op2(std::move(p.op2)) {}
+    point_ptr_pair(point_ptr_pair<T>&& p) : op1(std::move(p.op1)), op2(std::move(p.op2)) {
+    }
 
-    point_ptr_pair& operator=(point_ptr_pair<T> && p) {
+    point_ptr_pair& operator=(point_ptr_pair<T>&& p) {
         op1 = std::move(p.op1);
         op2 = std::move(p.op2);
         return *this;
     }
-
 };
 
 #ifdef DEBUG
@@ -202,19 +199,65 @@ void remove_spikes(point_ptr<T>& pt) {
 }
 
 template <typename T>
-void fixup_children(ring_ptr<T> old_ring, ring_ptr<T> new_ring) {
+void fixup_children_complex(ring_ptr<T> old_ring,
+                            ring_ptr<T> new_ring,
+                            ring_vector<T> const& grand_children,
+                            ring_manager<T> const& rings) {
     // Tests if any of the children from the old ring are now children of the new ring
-    assert(old_ring != new_ring);
     for (auto r = old_ring->children.begin(); r != old_ring->children.end();) {
         assert((*r)->points);
         assert((*r) != old_ring);
-        if ((*r) != new_ring && !ring1_right_of_ring2(new_ring, (*r)) &&
-            poly2_contains_poly1((*r)->points, new_ring->points)) {
+        if ((*r) == new_ring) {
+            ++r;
+            continue;
+        }
+        if (poly2_contains_poly1(*r, new_ring)) {
             (*r)->parent = new_ring;
             new_ring->children.push_back((*r));
             r = old_ring->children.erase(r);
-        } else {
+        } else if (poly2_contains_poly1(*r, old_ring)) {
             ++r;
+        } else {
+            // Rare situation where one of old_rings's previous grand children
+            // should actually contain this ring.
+            bool found = false;
+            for (auto const& gc : grand_children) {
+                if (poly2_contains_poly1(*r, gc)) {
+                    (*r)->parent = gc;
+                    gc->children.push_back((*r));
+                    r = old_ring->children.erase(r);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                if (old_ring->parent == nullptr) {
+                    for (auto const& r2 : rings.children) {
+                        if (r2 != new_ring && r2 != old_ring && r2->points && r2 != (*r) &&
+                            poly2_contains_poly1(*r, r2)) {
+                            (*r)->parent = r2;
+                            r2->children.push_back((*r));
+                            r = old_ring->children.erase(r);
+                            found = true;
+                            break;
+                        }
+                    }
+                } else {
+                    for (auto const& r2 : old_ring->parent->children) {
+                        if (r2 != new_ring && r2 != old_ring && r2->points && r2 != (*r) &&
+                            poly2_contains_poly1((*r), r2)) {
+                            (*r)->parent = r2;
+                            r2->children.push_back((*r));
+                            r = old_ring->children.erase(r);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!found) {
+                throw std::runtime_error("No proper parent for child ring found");
+            }
         }
     }
 }
@@ -266,16 +309,7 @@ bool fix_intersects(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dup
     if (ring_parent != ring_search->parent) {
         // The two holes do not have the same parent, do not add them
         // simply return!
-        if (ring_parent->parent != ring_search &&
-            poly2_contains_poly1(ring_search->points, ring_parent->points) && 
-            !ring1_right_of_ring2(ring_search, ring_parent)) {
-            ring_ptr<T> old_parent = ring_search->parent;
-            ring_search->parent = ring_parent;
-            old_parent->children.remove(ring_search);
-            ring_parent->children.push_back(ring_search);
-        } else {
-            return false;
-        }
+        return false;
     }
     bool found = false;
     std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> iList;
@@ -459,11 +493,15 @@ bool fix_intersects(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dup
 
         ring_origin->bottom_point = nullptr;
 
+        ring_vector<T> grand_children;
         for (auto& iRing : iList) {
             ring_ptr<T> ring_itr = iRing.first;
             ring_itr->points = nullptr;
             ring_itr->area = std::numeric_limits<double>::quiet_NaN();
             ring_itr->bottom_point = nullptr;
+            for (auto& c : ring_itr->children) {
+                grand_children.push_back(c);
+            }
             if (ring_is_hole(ring_origin)) {
                 ring1_replaces_ring2(ring_origin, ring_itr, rings);
             } else {
@@ -473,8 +511,8 @@ bool fix_intersects(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dup
         if (ring_is_hole(ring_origin)) {
             ring_new->parent = ring_origin;
             ring_new->parent->children.push_back(ring_new);
-            fixup_children(ring_origin, ring_new);
-            fixup_children(ring_parent, ring_new);
+            fixup_children_complex(ring_origin, ring_new, grand_children, rings);
+            fixup_children_complex(ring_parent, ring_new, grand_children, rings);
         } else {
             ring_new->parent = ring_origin->parent;
             if (ring_new->parent == nullptr) {
@@ -482,7 +520,7 @@ bool fix_intersects(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dup
             } else {
                 ring_new->parent->children.push_back(ring_new);
             }
-            fixup_children(ring_origin, ring_new);
+            fixup_children_complex(ring_origin, ring_new, grand_children, rings);
         }
     }
 
@@ -602,6 +640,58 @@ bool parent_in_tree(ring_ptr<T> r, ring_ptr<T> possible_parent) {
 }
 
 template <typename T>
+void fixup_children_sibling(ring_ptr<T> old_ring, ring_ptr<T> new_ring) {
+    for (auto r = old_ring->children.begin(); r != old_ring->children.end();) {
+        if ((*r) == new_ring) {
+            ++r;
+            continue;
+        }
+        if (poly2_contains_poly1(*r, new_ring)) {
+            (*r)->parent = new_ring;
+            new_ring->children.push_back((*r));
+            r = old_ring->children.erase(r);
+        } else {
+            ++r;
+        }
+    }
+}
+
+template <typename T>
+void fixup_parents_siblings(ring_ptr<T> parent, ring_ptr<T> ring, ring_manager<T>& rings) {
+    bool parent_ring_area_is_positive = area(parent) > 0.0;
+    if (parent->parent == nullptr) {
+        for (auto r = rings.children.begin(); r != rings.children.end();) {
+            assert((*r)->points);
+            bool ring_area_is_positive = area((*r)) > 0.0;
+            if ((*r) != parent && ring_area_is_positive == parent_ring_area_is_positive &&
+                poly2_contains_poly1(ring, (*r))) {
+                ring->parent = (*r);
+                (*r)->children.push_back(ring);
+                parent->children.remove(ring);
+                break;
+            } else {
+                ++r;
+            }
+        }
+    } else {
+        ring_ptr<T> grand_parent = parent->parent;
+        for (auto r = grand_parent->children.begin(); r != grand_parent->children.end();) {
+            assert((*r)->points);
+            bool ring_area_is_positive = area((*r)) > 0.0;
+            if ((*r) != parent && ring_area_is_positive == parent_ring_area_is_positive &&
+                poly2_contains_poly1(ring, (*r))) {
+                ring->parent = (*r);
+                (*r)->children.push_back(ring);
+                parent->children.remove(ring);
+                break;
+            } else {
+                ++r;
+            }
+        }
+    }
+}
+
+template <typename T>
 void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
                                       ring_ptr<T> new_ring,
                                       ring_manager<T>& rings) {
@@ -614,7 +704,7 @@ void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
             assert((*r)->points);
             bool ring_area_is_positive = area((*r)) > 0.0;
             if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r)->points, new_ring->points)) {
+                poly2_contains_poly1((*r), new_ring)) {
                 (*r)->parent = new_ring;
                 new_ring->children.push_back((*r));
                 r = rings.children.erase(r);
@@ -629,7 +719,7 @@ void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
             assert((*r) != parent);
             bool ring_area_is_positive = area((*r)) > 0.0;
             if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r)->points, new_ring->points)) {
+                poly2_contains_poly1((*r), new_ring)) {
                 (*r)->parent = new_ring;
                 new_ring->children.push_back((*r));
                 r = parent->children.erase(r);
@@ -804,23 +894,23 @@ void handle_self_intersections(point_ptr<T> op,
         }
         update_points_ring(ring);
         update_points_ring(new_ring);
-        if (poly2_contains_poly1(new_ring->points, ring->points)) {
-            // This is the situation where there is the new ring is
-            // created inside the ring. Later on this should be inherited
-            // as child of a newly created hole. However, we should check existing
-            // holes of this polygon to see if they might belong inside this polygon.
-            new_ring->parent = ring;
-            new_ring->parent->children.push_back(new_ring);
-            fixup_children(ring, new_ring);
+        // Polygons are completely seperate
+        new_ring->parent = ring->parent;
+        if (new_ring->parent == nullptr) {
+            rings.children.push_back(new_ring);
         } else {
-            // Polygons are completely seperate
-            new_ring->parent = ring->parent;
-            if (new_ring->parent == nullptr) {
-                rings.children.push_back(new_ring);
-            } else {
-                new_ring->parent->children.push_back(new_ring);
+            new_ring->parent->children.push_back(new_ring);
+        }
+        fixup_children_sibling(ring, new_ring);
+        // The parent might need to be reassigned in rare situations
+        if (ring->parent) {
+            if (!poly2_contains_poly1(ring, ring->parent)) {
+                // Parent ring split on outside - search parent's siblings
+                fixup_parents_siblings(ring->parent, ring, rings);
+            } else if (!poly2_contains_poly1(new_ring, ring->parent)) {
+                // child ring split on the outside
+                fixup_parents_siblings(ring->parent, new_ring, rings);
             }
-            fixup_children(ring, new_ring);
         }
     }
     update_duplicate_point_entries(ring, dupe_ring);
@@ -1190,7 +1280,8 @@ bool clockwise_of_next(point_ptr<T> const& origin, point_ptr<T> pt) {
                 } else if (ot_next_prev == orientation_collinear_line) {
                     // This shouldn't happen?
                     // LCOV_EXCL_START
-                    throw std::runtime_error("Impossible situation reached in clockwise_of_next - 2");
+                    throw std::runtime_error(
+                        "Impossible situation reached in clockwise_of_next - 2");
                     // LCOV_EXCL_END
                 } else {
                     // Pt next is counter clockwise of origin prev
@@ -1548,7 +1639,6 @@ bool process_repeated_point_set(std::size_t first_index,
                                 std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
                                 ring_manager<T>& rings) {
     point_ptr<T> point_1 = rings.all_points[current_index];
-
     if (point_1->ring == nullptr) {
         return false;
     }
@@ -1576,8 +1666,10 @@ bool process_repeated_point_set(std::size_t first_index,
         if (ot_next == orientation_collinear_spike) {
             orientation_type ot_prev = orientation_of_points(point_2, point_2->prev, point_3->prev);
             if (ot_prev == orientation_collinear_spike) {
-                // Start at point_1 and we will travel around the circle until we find another point at
-                // the same location. We will measure its area, and then continue till the next point at
+                // Start at point_1 and we will travel around the circle until we find another point
+                // at
+                // the same location. We will measure its area, and then continue till the next
+                // point at
                 // the same location. The smallest absolute value of area is the one we will use.
                 point_ptr<T> point_a = point_1;
                 point_ptr<T> min_a = nullptr;
@@ -1586,7 +1678,8 @@ bool process_repeated_point_set(std::size_t first_index,
                 double area = 0.0;
                 double min_area = std::numeric_limits<double>::max();
                 while (pt != point_1) {
-                    area += static_cast<double>(pt->prev->x + pt->x) * static_cast<double>(pt->prev->y - pt->y);
+                    area += static_cast<double>(pt->prev->x + pt->x) *
+                            static_cast<double>(pt->prev->y - pt->y);
                     if (*pt == *point_1) {
                         if (std::fabs(area) < min_area) {
                             min_area = std::fabs(area);
@@ -1603,7 +1696,8 @@ bool process_repeated_point_set(std::size_t first_index,
                     throw std::runtime_error("No other point was between point_1 on the path");
                     // LCOV_EXCL_END
                 }
-                area += static_cast<double>(pt->prev->x + pt->x) * static_cast<double>(pt->prev->y - pt->y);
+                area += static_cast<double>(pt->prev->x + pt->x) *
+                        static_cast<double>(pt->prev->y - pt->y);
                 if (std::fabs(area) < min_area) {
                     min_area = std::fabs(area);
                     min_a = point_a;
@@ -1659,7 +1753,7 @@ void process_repeated_points(std::size_t first_index,
             }
         }
     }
-    // LCOV_EXCL_STOP
+// LCOV_EXCL_END
 #endif
 }
 
@@ -1721,14 +1815,10 @@ bool index_is_after_point(std::size_t const& i,
         return false;
     }
 
-    if (rings.all_points[i]->y < pt.y) {
-        return true;
-    } else if (rings.all_points[i]->y > pt.y) {
-        return false;
-    } else if (rings.all_points[i]->x >= pt.x) {
-        return true;
+    if (rings.all_points[i]->y == pt.y) {
+        return rings.all_points[i]->x >= pt.x;
     } else {
-        return false;
+        return rings.all_points[i]->y < pt.y;
     }
 }
 
@@ -1772,35 +1862,6 @@ void remove_spikes_in_polygons(ring_ptr<T> r, ring_manager<T>& rings) {
 }
 
 template <typename T>
-void fixup_out_polyline(ring<T>& ring, ring_manager<T>& rings) {
-    point_ptr<T> pp = ring.points;
-    point_ptr<T> lastPP = pp->prev;
-    while (pp != lastPP) {
-        pp = pp->next;
-        if (*pp == *pp->prev) {
-            if (pp == lastPP)
-                lastPP = pp->prev;
-            point_ptr<T> tmpPP = pp->prev;
-            tmpPP->next = pp->next;
-            pp->next->prev = tmpPP;
-            // delete pp;
-            pp->next = pp;
-            pp->prev = pp;
-            pp->ring = nullptr;
-            pp = tmpPP;
-        }
-    }
-
-    if (pp == pp->prev) {
-        remove_ring(&ring, rings);
-        dispose_out_points(pp);
-        ring.points = nullptr;
-        return;
-    }
-}
-
-
-template <typename T>
 void fixup_out_polygon(ring<T>& ring, ring_manager<T>& rings) {
     // FixupOutPolygon() - removes duplicate points and simplifies consecutive
     // parallel edges by removing the middle vertex.
@@ -1820,8 +1881,7 @@ void fixup_out_polygon(ring<T>& ring, ring_manager<T>& rings) {
         }
 
         // test for duplicate points and collinear edges ...
-        if ((*pp == *pp->next) || (*pp == *pp->prev) ||
-            (slopes_equal(*pp->prev, *pp, *pp->next))) {
+        if ((*pp == *pp->next) || (*pp == *pp->prev) || (slopes_equal(*pp->prev, *pp, *pp->next))) {
             lastOK = nullptr;
             point_ptr<T> tmp = pp;
             pp->prev->next = pp->next;
@@ -1842,13 +1902,11 @@ void fixup_out_polygon(ring<T>& ring, ring_manager<T>& rings) {
     ring.points = pp;
 }
 
-
 template <typename T>
 void do_simple_polygons(ring_manager<T>& rings) {
-
     // fix orientations ...
     for (auto& r : rings.rings) {
-        if (!r.points || r.is_open) {
+        if (!r.points) {
             continue;
         }
         std::size_t s = 0;
@@ -1904,7 +1962,7 @@ void do_simple_polygons(ring_manager<T>& rings) {
 #if DEBUG
     // LCOV_EXCL_START
     for (auto& r : rings.rings) {
-        if (!r.points || r.is_open) {
+        if (!r.points) {
             continue;
         }
         double stored_area = area(&r);
@@ -1914,18 +1972,14 @@ void do_simple_polygons(ring_manager<T>& rings) {
             throw std::runtime_error("Difference in stored area vs calculated area!");
         }
     }
-    // LCOV_EXCL_END
+// LCOV_EXCL_END
 #endif
 
     for (auto& r : rings.rings) {
-        if (!r.points || r.is_open) {
+        if (!r.points) {
             continue;
         }
         fixup_out_polygon(r, rings);
-        if (ring_is_hole(&r) == (area(&r) > 0.0)) {
-            reverse_ring(r.points);
-            r.area = std::numeric_limits<double>::quiet_NaN();
-        }
     }
 }
 }

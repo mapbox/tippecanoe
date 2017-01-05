@@ -83,13 +83,14 @@ void set_hole_state(active_bound_list_rev_itr<T>& bnd,
 template <typename T>
 void update_current_hp_itr(T scanline_y, ring_manager<T>& rings) {
     while (rings.current_hp_itr->y > scanline_y) {
-        ++rings.current_hp_itr;       
+        ++rings.current_hp_itr;
     }
 }
 
 template <typename T>
 struct hot_pixel_sorter {
-    inline bool operator()(mapbox::geometry::point<T> const& pt1, mapbox::geometry::point<T> const& pt2) {
+    inline bool operator()(mapbox::geometry::point<T> const& pt1,
+                           mapbox::geometry::point<T> const& pt2) {
         if (pt1.y == pt2.y) {
             return pt1.x < pt2.x;
         } else {
@@ -100,7 +101,7 @@ struct hot_pixel_sorter {
 
 // Due to the nature of floating point calculations
 // and the high likely hood of values around X.5, we
-// need to fudge what is X.5 some for our rounding. 
+// need to fudge what is X.5 some for our rounding.
 const double rounding_offset = 1e-12;
 const double rounding_offset_y = 5e-13;
 
@@ -141,8 +142,9 @@ inline T get_edge_min_x(edge<T> const& edge, const T current_y) {
         if (current_y == edge.bot.y) {
             return edge.bot.x;
         } else {
-            double return_val = static_cast<double>(edge.bot.x) +
-                                edge.dx * (static_cast<double>(current_y - edge.bot.y) + 0.5 - rounding_offset_y);
+            double return_val =
+                static_cast<double>(edge.bot.x) +
+                edge.dx * (static_cast<double>(current_y - edge.bot.y) + 0.5 - rounding_offset_y);
             T value = round_towards_min<T>(return_val);
             return value;
         }
@@ -170,8 +172,9 @@ inline T get_edge_max_x(edge<T> const& edge, const T current_y) {
         if (current_y == edge.bot.y) {
             return edge.bot.x;
         } else {
-            double return_val = static_cast<double>(edge.bot.x) +
-                                edge.dx * (static_cast<double>(current_y - edge.bot.y) + 0.5 - rounding_offset_y);
+            double return_val =
+                static_cast<double>(edge.bot.x) +
+                edge.dx * (static_cast<double>(current_y - edge.bot.y) + 0.5 - rounding_offset_y);
             T value = round_towards_max<T>(return_val);
             return value;
         }
@@ -184,14 +187,14 @@ void hot_pixel_set_left_to_right(T y,
                                  T end_x,
                                  bound<T>& bnd,
                                  ring_manager<T>& rings,
-                                 hot_pixel_itr<T> & itr,
-                                 hot_pixel_itr<T> & end,
+                                 hot_pixel_itr<T>& itr,
+                                 hot_pixel_itr<T>& end,
                                  bool add_end_point) {
     T x_min = get_edge_min_x(*(bnd.current_edge), y);
     x_min = std::max(x_min, start_x);
     T x_max = get_edge_max_x(*(bnd.current_edge), y);
     x_max = std::min(x_max, end_x);
-    for (;itr != end; ++itr) {
+    for (; itr != end; ++itr) {
         if (itr->x < x_min) {
             continue;
         }
@@ -221,16 +224,16 @@ void hot_pixel_set_right_to_left(T y,
                                  T end_x,
                                  bound<T>& bnd,
                                  ring_manager<T>& rings,
-                                 hot_pixel_rev_itr<T> & itr,
-                                 hot_pixel_rev_itr<T> & end,
+                                 hot_pixel_rev_itr<T>& itr,
+                                 hot_pixel_rev_itr<T>& end,
                                  bool add_end_point) {
     T x_min = get_edge_min_x(*(bnd.current_edge), y);
     x_min = std::max(x_min, end_x);
     T x_max = get_edge_max_x(*(bnd.current_edge), y);
     x_max = std::min(x_max, start_x);
-    for (;itr != end; ++itr) {
+    for (; itr != end; ++itr) {
         if (itr->x > x_max) {
-            continue;   
+            continue;
         }
         if (itr->x < x_min) {
             break;
@@ -265,10 +268,6 @@ void insert_hot_pixels_in_path(bound<T>& bnd,
                                ring_manager<T>& rings,
                                bool add_end_point) {
     if (end_pt == bnd.last_point) {
-        return;
-    }
-    if (!bnd.ring) {
-        bnd.last_point = end_pt;
         return;
     }
 
@@ -336,11 +335,8 @@ void add_first_point(active_bound_list_itr<T>& bnd,
 
     ring_ptr<T> r = create_new_ring(rings);
     (*bnd)->ring = r;
-    r->is_open = ((*bnd)->winding_delta == 0);
     r->points = create_new_point(r, pt, rings);
-    if (!r->is_open) {
-        set_hole_state(bnd, active_bounds, rings);
-    }
+    set_hole_state(bnd, active_bounds, rings);
     (*bnd)->last_point = pt;
 }
 
@@ -352,11 +348,8 @@ void add_first_point(active_bound_list_rev_itr<T>& bnd,
     ring_ptr<T> r = create_new_ring(rings);
     // no ring currently set!
     (*bnd)->ring = r;
-    r->is_open = ((*bnd)->winding_delta == 0);
     r->points = create_new_point(r, pt, rings);
-    if (!r->is_open) {
-        set_hole_state(bnd, active_bounds, rings);
-    }
+    set_hole_state(bnd, active_bounds, rings);
     (*bnd)->last_point = pt;
 }
 
@@ -556,7 +549,7 @@ ring_ptr<T> get_lower_most_ring(ring_ptr<T> outRec1, ring_ptr<T> outRec2) {
 }
 
 template <typename T>
-bool ring1_right_of_ring2(ring_ptr<T> ring1, ring_ptr<T> ring2) {
+bool ring1_child_below_ring2(ring_ptr<T> ring1, ring_ptr<T> ring2) {
     do {
         ring1 = ring1->parent;
         if (ring1 == ring2) {
@@ -588,12 +581,12 @@ void append_ring(active_bound_list_itr<T>& b1,
     bound_ptr<T> keep_bound;
     ring_ptr<T> remove_ring;
     bound_ptr<T> remove_bound;
-    if (ring1_right_of_ring2(outRec1, outRec2)) {
+    if (ring1_child_below_ring2(outRec1, outRec2)) {
         keep_ring = outRec2;
         keep_bound = *b2;
         remove_ring = outRec1;
         remove_bound = *b1;
-    } else if (ring1_right_of_ring2(outRec2, outRec1)) {
+    } else if (ring1_child_below_ring2(outRec2, outRec1)) {
         keep_ring = outRec1;
         keep_bound = *b1;
         remove_ring = outRec2;
@@ -688,9 +681,6 @@ void add_local_maximum_point(active_bound_list_itr<T>& b1,
                              active_bound_list<T>& active_bounds) {
     insert_hot_pixels_in_path(*(*b2), pt, rings, false);
     add_point(b1, active_bounds, pt, rings);
-    if ((*b2)->winding_delta == 0) {
-        add_point(b2, active_bounds, pt, rings);
-    }
     if ((*b1)->ring == (*b2)->ring) {
         (*b1)->ring = nullptr;
         (*b2)->ring = nullptr;
@@ -881,7 +871,9 @@ point_in_polygon_result inside_or_outside_special(point_ptr<T> first_pt, point_p
 }
 
 template <typename T>
-bool poly2_contains_poly1(point_ptr<T> outpt1, point_ptr<T> outpt2) {
+bool poly2_contains_poly1(ring_ptr<T> ring1, ring_ptr<T> ring2) {
+    point_ptr<T> outpt1 = ring1->points->next;
+    point_ptr<T> outpt2 = ring2->points->next;
     point_ptr<T> op = outpt1;
     do {
         // nb: PointInPolygon returns 0 if false, +1 if true, -1 if pt on polygon
@@ -907,7 +899,6 @@ void dispose_out_points(point_ptr<T>& pp) {
         tmpPp->next = tmpPp;
         tmpPp->prev = tmpPp;
         tmpPp->ring = nullptr;
-        // delete tmpPp;
     }
 }
 }

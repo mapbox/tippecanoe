@@ -4,7 +4,7 @@
 #include <mapbox/geometry/wagyu/local_minimum.hpp>
 
 #ifdef DEBUG
-#include <mapbox/geometry/wagyu/exceptions.hpp>
+#include <stdexcept>
 #endif
 
 namespace mapbox {
@@ -194,106 +194,8 @@ void move_horizontals_on_left_to_right(bound<T>& left_bound, bound<T>& right_bou
     auto dist = std::distance(left_bound.edges.begin(), edge_itr);
     std::move(left_bound.edges.begin(), edge_itr, std::back_inserter(right_bound.edges));
     left_bound.edges.erase(left_bound.edges.begin(), edge_itr);
-    std::rotate(right_bound.edges.begin(), std::prev(right_bound.edges.end(), dist), right_bound.edges.end());
-}
-
-template <typename T>
-void add_line_to_local_minima_list(edge_list<T>& edges, local_minimum_list<T>& minima_list) {
-
-    if (edges.empty()) {
-        return;
-    }
-    // Adjust the order of the ring so we start on a local maximum
-    // therefore we start right away on a bound.
-    start_list_on_local_maximum(edges);
-    bound_ptr<T> last_maximum = nullptr;
-    while (!edges.empty()) {
-        bool lm_minimum_has_horizontal = false;
-        auto to_minimum = create_bound_towards_minimum(edges);
-        assert(!to_minimum.edges.empty());
-        fix_horizontals(to_minimum);
-        to_minimum.poly_type = polygon_type_subject;
-        to_minimum.maximum_bound = last_maximum;
-        to_minimum.winding_delta = 0;
-        auto to_min_first_non_horizontal = to_minimum.edges.begin();
-        while (to_min_first_non_horizontal != to_minimum.edges.end() &&
-               is_horizontal(*to_min_first_non_horizontal)) {
-            lm_minimum_has_horizontal = true;
-            ++to_min_first_non_horizontal;
-        }
-        if (edges.empty()) {
-            if (to_min_first_non_horizontal != to_minimum.edges.end() &&
-                to_min_first_non_horizontal->dx > 0.0) {
-                to_minimum.side = edge_left;
-                bound<T> right_bound;
-                right_bound.winding_delta = 0;
-                right_bound.side = edge_right;
-                right_bound.poly_type = polygon_type_subject;
-                move_horizontals_on_left_to_right(to_minimum, right_bound);
-                auto const& min_front = to_minimum.edges.front();
-                minima_list.emplace_back(std::move(to_minimum), std::move(right_bound), min_front.y,
-                                         lm_minimum_has_horizontal);
-                if (last_maximum) {
-                    last_maximum->maximum_bound = &(minima_list.back().left_bound);
-                    last_maximum = nullptr;
-                }
-            } else {
-                to_minimum.side = edge_right;
-                bound<T> left_bound;
-                left_bound.winding_delta = 0;
-                left_bound.side = edge_left;
-                left_bound.poly_type = polygon_type_subject;
-                auto const& min_front = to_minimum.edges.front();
-                minima_list.emplace_back(std::move(left_bound), std::move(to_minimum), min_front.y);
-                if (last_maximum) {
-                    last_maximum->maximum_bound = &(minima_list.back().right_bound);
-                    last_maximum = nullptr;
-                }
-            }
-            break;
-        }
-        bool minimum_is_left = true;
-        auto to_maximum = create_bound_towards_maximum(edges);
-        assert(!to_maximum.edges.empty());
-        fix_horizontals(to_maximum);
-        auto to_max_first_non_horizontal = to_minimum.edges.begin();
-        while (to_max_first_non_horizontal != to_maximum.edges.end() &&
-               is_horizontal(*to_max_first_non_horizontal)) {
-            lm_minimum_has_horizontal = true;
-            ++to_max_first_non_horizontal;
-        }
-        if (to_max_first_non_horizontal != to_maximum.edges.end() &&
-            (to_min_first_non_horizontal == to_minimum.edges.end() ||
-             to_max_first_non_horizontal->dx > to_min_first_non_horizontal->dx)) {
-            minimum_is_left = false;
-            move_horizontals_on_left_to_right(to_maximum, to_minimum);
-        } else {
-            minimum_is_left = true;
-            move_horizontals_on_left_to_right(to_minimum, to_maximum);
-        }
-        auto const& min_front = to_minimum.edges.front();
-        to_maximum.poly_type = polygon_type_subject;
-        to_maximum.winding_delta = 0;
-        if (!minimum_is_left) {
-            to_minimum.side = edge_right;
-            to_maximum.side = edge_left;
-            minima_list.emplace_back(std::move(to_maximum), std::move(to_minimum), min_front.bot.y,
-                                     lm_minimum_has_horizontal);
-            if (last_maximum) {
-                last_maximum->maximum_bound = &(minima_list.back().right_bound);
-            }
-            last_maximum = &(minima_list.back().left_bound);
-        } else {
-            to_minimum.side = edge_left;
-            to_maximum.side = edge_right;
-            minima_list.emplace_back(std::move(to_minimum), std::move(to_maximum), min_front.bot.y,
-                                     lm_minimum_has_horizontal);
-            if (last_maximum) {
-                last_maximum->maximum_bound = &(minima_list.back().left_bound);
-            }
-            last_maximum = &(minima_list.back().right_bound);
-        }
-    }
+    std::rotate(right_bound.edges.begin(), std::prev(right_bound.edges.end(), dist),
+                right_bound.edges.end());
 }
 
 template <typename T>
@@ -335,7 +237,7 @@ void add_ring_to_local_minima_list(edge_list<T>& edges,
 #ifdef DEBUG
         if (to_max_first_non_horizontal == to_maximum.edges.end() ||
             to_min_first_non_horizontal == to_minimum.edges.end()) {
-            throw clipper_exception("should not have a horizontal only bound for a ring");
+            throw std::runtime_error("should not have a horizontal only bound for a ring");
         }
 #endif
         if (lm_minimum_has_horizontal) {

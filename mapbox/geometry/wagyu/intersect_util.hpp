@@ -69,12 +69,13 @@ bool get_edge_intersection(edge<T1> const& e1,
         pt.y = p0_y + (t * s1_y);
         return true;
     }
+    // LCOV_EXCL_START
     return false;
+    // LCOV_EXCL_END
 }
 
 template <typename T>
-void build_intersect_list(active_bound_list<T>& active_bounds,
-                          intersect_list<T>& intersects) {
+void build_intersect_list(active_bound_list<T>& active_bounds, intersect_list<T>& intersects) {
     // bubblesort ...
     bool isModified = false;
     do {
@@ -87,8 +88,10 @@ void build_intersect_list(active_bound_list<T>& active_bounds,
                 mapbox::geometry::point<double> pt;
                 if (!get_edge_intersection<T, double>(*((*bnd)->current_edge),
                                                       *((*bnd_next)->current_edge), pt)) {
+                    // LCOV_EXCL_START
                     throw std::runtime_error(
                         "Trying to find intersection of lines that do not intersect");
+                    // LCOV_EXCL_END
                 }
                 intersects.emplace_back(bnd, bnd_next, pt);
                 swap_positions_in_ABL(bnd, bnd_next, active_bounds);
@@ -113,50 +116,6 @@ void intersect_bounds(active_bound_list_itr<T>& b1,
                       active_bound_list<T>& active_bounds) {
     bool b1Contributing = ((*b1)->ring != nullptr);
     bool b2Contributing = ((*b2)->ring != nullptr);
-    // if either bound is on an OPEN path ...
-    if ((*b1)->winding_delta == 0 || (*b2)->winding_delta == 0) {
-        // ignore subject-subject open path intersections UNLESS they
-        // are both open paths, AND they are both 'contributing maximas' ...
-        if ((*b1)->winding_delta == 0 && (*b2)->winding_delta == 0) {
-            return;
-        }
-
-        // if intersecting a subj line with a subj poly ...
-        else if ((*b1)->poly_type == (*b2)->poly_type &&
-                 (*b1)->winding_delta != (*b2)->winding_delta && cliptype == clip_type_union) {
-            if ((*b1)->winding_delta == 0) {
-                if (b2Contributing) {
-                    add_point(b1, active_bounds, pt, rings);
-                    if (b1Contributing) {
-                        (*b1)->ring = nullptr;
-                    }
-                }
-            } else {
-                if (b1Contributing) {
-                    add_point(b2, active_bounds, pt, rings);
-                    if (b2Contributing) {
-                        (*b2)->ring = nullptr;
-                    }
-                }
-            }
-        } else if ((*b1)->poly_type != (*b2)->poly_type) {
-            // toggle subj open path index on/off when std::abs(clip.WndCnt) == 1
-            if (((*b1)->winding_delta == 0) && std::abs(static_cast<int>((*b2)->winding_count)) == 1 &&
-                (cliptype != clip_type_union || (*b2)->winding_count2 == 0)) {
-                add_point(b1, active_bounds, pt, rings);
-                if (b1Contributing) {
-                    (*b1)->ring = nullptr;
-                }
-            } else if (((*b2)->winding_delta == 0) && (std::abs(static_cast<int>((*b1)->winding_count)) == 1) &&
-                       (cliptype != clip_type_union || (*b1)->winding_count2 == 0)) {
-                add_point(b2, active_bounds, pt, rings);
-                if (b2Contributing) {
-                    (*b2)->ring = nullptr;
-                }
-            }
-        }
-        return;
-    }
 
     // update winding counts...
     // assumes that b1 will be to the Right of b2 ABOVE the intersection
@@ -347,7 +306,7 @@ void process_intersect_list(intersect_list<T>& intersects,
 template <typename T>
 void update_current_x(active_bound_list<T>& active_bounds, T top_y) {
     std::size_t pos = 0;
-    for (auto & bnd : active_bounds) {
+    for (auto& bnd : active_bounds) {
         bnd->pos = pos++;
         bnd->current_x = get_current_x(*bnd->current_edge, top_y);
     }
@@ -372,9 +331,8 @@ void process_intersections(T top_y,
     }
 
     // Restore order of active bounds list
-    active_bounds.sort([] (bound_ptr<T> const& b1, bound_ptr<T> const& b2) {
-        return b1->pos < b2->pos;
-    });
+    active_bounds.sort(
+        [](bound_ptr<T> const& b1, bound_ptr<T> const& b2) { return b1->pos < b2->pos; });
 
     // Sort the intersection list
     std::stable_sort(intersects.begin(), intersects.end(), intersect_list_sorter<T>());
