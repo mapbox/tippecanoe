@@ -135,8 +135,8 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	}
 
 	mvt_value tv;
-	if (type == VT_NUMBER) {
-		long long v;
+	long long v;
+	if (type == VT_NUMBER || (type == VT_STRING && additional[A_REPRESENT_INTEGER_STRINGS_AS_INTEGERS] && is_integer(s, &v) && std::string(s) == std::to_string(v))) {
 		if (is_integer(s, &v)) {
 			if (v >= 0) {
 				tv.type = mvt_int;

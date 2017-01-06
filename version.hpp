@@ -1,1 +1,1 @@
-#define VERSION "tippecanoe v1.16.3\n"
+#define VERSION "tippecanoe v1.16.4\n"

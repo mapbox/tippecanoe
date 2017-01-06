@@ -1,3 +1,7 @@
+## 1.16.4
+
+* Add --represent-integer-strings-as-integers
+
 ## 1.16.3
 
 * Upgrade Wagyu to bfbf2893
