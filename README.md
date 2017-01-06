@@ -132,6 +132,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
  * -an or --drop-smallest-as-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
  * -aL or --grid-low-zooms: At all zoom levels below _maxzoom_, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably `-D8`. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data.
+ * -ai or --represent-integer-strings-as-integers: Turn any feature attributes that are strings but whose values are integers into real integers, which will usually make the tiles smaller.
 
 ### Doing less
 
