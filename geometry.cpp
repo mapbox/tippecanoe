@@ -11,6 +11,7 @@
 #include <sqlite3.h>
 #include <mapbox/geometry.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
+#include <mapbox/geometry/wagyu/quick_clip.hpp>
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
@@ -520,6 +521,10 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out;
 
+	mapbox::geometry::point<long long> min(minx, miny);
+	mapbox::geometry::point<long long> max(maxx, maxy);
+	mapbox::geometry::box<long long> bbox(min, max);
+
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
@@ -529,19 +534,25 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 				}
 			}
 
-			drawvec tmp;
+			mapbox::geometry::linear_ring<long long> ring;
 			for (size_t k = i; k < j; k++) {
-				tmp.push_back(geom[k]);
+				ring.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
 			}
-			tmp = clip_poly1(tmp, minx, miny, maxx, maxy);
-			if (tmp.size() > 0) {
-				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
-					fprintf(stderr, "Internal error: Polygon ring not closed\n");
-					exit(EXIT_FAILURE);
+
+			optional_linear_ring<long long> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
+
+			if (lr) {
+				for (size_t k = 0; k < lr->size(); k++) {
+					if (k == 0) {
+						out.push_back(draw(VT_MOVETO, (*lr)[k].x, (*lr)[k].y));
+					} else {
+						out.push_back(draw(VT_LINETO, (*lr)[k].x, (*lr)[k].y));
+					}
 				}
-			}
-			for (size_t k = 0; k < tmp.size(); k++) {
-				out.push_back(tmp[k]);
+
+				if (lr->size() > 0 && (*lr)[0] != (*lr)[lr->size() - 1]) {
+					out.push_back(draw(VT_LINETO, (*lr)[0].x, (*lr)[0].y));
+				}
 			}
 
 			i = j - 1;
