@@ -1,3 +1,7 @@
+## 1.16.4
+
+* Use Wagyu's quick_lr_clip() instead of a separate implementation
+
 ## 1.16.3
 
 * Upgrade Wagyu to bfbf2893
