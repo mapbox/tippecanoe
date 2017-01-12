@@ -485,15 +485,15 @@ bool first_is_bottom_point(const_point_ptr<T> btmPt1, const_point_ptr<T> btmPt2)
 
 template <typename T>
 point_ptr<T> get_bottom_point(point_ptr<T> pp) {
-    point_ptr<T> dups = 0;
+    point_ptr<T> dups = nullptr;
     point_ptr<T> p = pp->next;
     while (p != pp) {
         if (p->y > pp->y) {
             pp = p;
-            dups = 0;
+            dups = nullptr;
         } else if (p->y == pp->y && p->x <= pp->x) {
             if (p->x < pp->x) {
-                dups = 0;
+                dups = nullptr;
                 pp = p;
             } else {
                 if (p->next != pp && p->prev != pp) {
