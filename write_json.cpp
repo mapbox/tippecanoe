@@ -24,7 +24,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, unsigned long long index, long long sequence, long long extent) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -38,9 +38,44 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			fprintf(fp, ", \"id\": %llu", feat.id);
 		}
 
-		if (name) {
-			fprintf(fp, ", \"tippecanoe\": { \"layer\": ");
-			fprintq(fp, layer.name.c_str());
+		if (name || index != 0 || sequence != 0 || extent != 0) {
+			bool need_comma = false;
+
+			fprintf(fp, ", \"tippecanoe\": { ");
+
+			if (name) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"layer\": ");
+				fprintq(fp, layer.name.c_str());
+				need_comma = true;
+			}
+
+			if (index != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"index\": %llu", index);
+				need_comma = true;
+			}
+
+			if (sequence != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"sequence\": %lld", sequence);
+				need_comma = true;
+			}
+
+			if (extent != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"extent\": %lld", extent);
+				need_comma = true;
+			}
+
 			fprintf(fp, " }");
 		}
 

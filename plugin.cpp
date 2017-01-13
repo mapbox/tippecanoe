@@ -51,7 +51,7 @@ void *run_writer(void *a) {
 	}
 
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true);
+		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, 0, 0, 0);
 	}
 
 	if (fclose(fp) != 0) {
@@ -369,26 +369,58 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		}
 
 		if (dv.size() > 0) {
-			std::string layername = "unknown";
-			json_object *tippecanoe = json_hash_get(j, "tippecanoe");
-			json_object *layer = NULL;
-			if (tippecanoe != NULL) {
-				layer = json_hash_get(tippecanoe, "layer");
-				if (layer != NULL && layer->type == JSON_STRING) {
-					layername = std::string(layer->string);
-				}
-			}
-
 			sf.t = mb_geometry[t];
 			sf.segment = tiling_seg;
 			sf.geometry = dv;
-			sf.seq = 0;						// XXX
-			sf.index = 0;						// XXX
-			sf.bbox[0] = sf.bbox[1] = sf.bbox[2] = sf.bbox[3] = 0;  // XXX
-			sf.extent = 0;						// XXX
-			sf.m = 0;						// XXX
-			sf.metapos = 0;						// XXX
+			sf.seq = 0;
+			sf.index = 0;
+			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
+			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
+			sf.extent = 0;
+			sf.m = 0;
+			sf.metapos = 0;
 			sf.has_id = false;
+
+			std::string layername = "unknown";
+			json_object *tippecanoe = json_hash_get(j, "tippecanoe");
+			if (tippecanoe != NULL) {
+				json_object *layer = json_hash_get(tippecanoe, "layer");
+				if (layer != NULL && layer->type == JSON_STRING) {
+					layername = std::string(layer->string);
+				}
+
+				json_object *index = json_hash_get(tippecanoe, "index");
+				if (index != NULL && index->type == JSON_NUMBER) {
+					sf.index = index->number;
+				}
+
+				json_object *sequence = json_hash_get(tippecanoe, "sequence");
+				if (sequence != NULL && sequence->type == JSON_NUMBER) {
+					sf.seq = sequence->number;
+				}
+
+				json_object *extent = json_hash_get(tippecanoe, "extent");
+				if (extent != NULL && sequence->type == JSON_NUMBER) {
+					sf.extent = extent->number;
+				}
+			}
+
+			for (size_t i = 0; i < dv.size(); i++) {
+				if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
+					if (dv[i].x < sf.bbox[0]) {
+						sf.bbox[0] = dv[i].x;
+					}
+					if (dv[i].y < sf.bbox[1]) {
+						sf.bbox[1] = dv[i].y;
+					}
+					if (dv[i].x > sf.bbox[2]) {
+						sf.bbox[2] = dv[i].x;
+					}
+					if (dv[i].y > sf.bbox[3]) {
+						sf.bbox[3] = dv[i].y;
+					}
+				}
+			}
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {

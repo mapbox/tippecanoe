@@ -317,6 +317,8 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || uses_gamma) {
 		sf.index = bbox_index;
+	} else {
+		sf.index = 0;
 	}
 
 	if (inline_meta) {
