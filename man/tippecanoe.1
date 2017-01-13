@@ -188,6 +188,41 @@ which may not be what you want.
 .IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
+.SS Filters
+.RS
+.IP \(bu 2
+\-C \fIcommand\fP or \-\-prefilter=\fIcommand\fP: Specify a shell filter command to be run at the start of assembling each tile
+.IP \(bu 2
+\-c \fIcommand\fP or \-\-postfilter=\fIcommand\fP: Specify a shell filter command to be run at the end of assembling each tile
+.RE
+.PP
+The pre\- and post\-filter commands allow you to do optional filtering or transformation on the features of each tile
+as it is created. They are shell commands, run with the zoom level, X, and Y as the \fB\fC$1\fR, \fB\fC$2\fR, and \fB\fC$3\fR arguments.
+.PP
+The features are provided to the filter
+as a series of newline\-delimited GeoJSON objects on the standard input, and \fB\fCtippecanoe\fR expects to read another
+set of GeoJSON features from the filter's standard output.
+.PP
+The prefilter receives the features at the highest available resolution, before line simplification,
+polygon topology repair, gamma calculation, dynamic feature dropping, or other internal processing.
+The postfilter receives the features at tile resolution, after simplification, cleaning, and dropping.
+.PP
+The layer name is provided as part of the \fB\fCtippecanoe\fR element of the feature and must be passed through
+to keep the feature in its correct layer. In the case of the prefilter, the \fB\fCtippecanoe\fR element may also
+contain \fB\fCindex\fR, \fB\fCsequence\fR, and \fB\fCextent\fR elements, which must be passed through for internal operations like
+\fB\fC\-\-drop\-densest\-as\-needed\fR, \fB\fC\-\-drop\-smallest\-as\-needed\fR, and \fB\fC\-\-preserve\-input\-order\fR to work.
+.SS Examples:
+.RS
+.IP \(bu 2
+Make a tileset of the Natural Earth countries to zoom level 5, and also copy the GeoJSON features
+to files in a \fB\fCtiles/z/x/y.geojson\fR directory hierarchy.
+.RE
+.PP
+.RS
+.nf
+tippecanoe \-o countries.mbtiles \-z5 \-C 'mkdir \-p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
+.fi
+.RE
 .SH Example
 .PP
 .RS
@@ -315,7 +350,7 @@ Linux:
 .PP
 .RS
 .nf
-sudo apt\-get install libsqlite3\-dev zlib1g\-dev
+sudo apt\-get install build\-essential libsqlite3\-dev zlib1g\-dev
 .fi
 .RE
 .PP

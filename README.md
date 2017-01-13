@@ -147,6 +147,36 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
  * -q or --quiet: Work quietly instead of reporting progress
 
+### Filters
+
+ * -C _command_ or --prefilter=_command_: Specify a shell filter command to be run at the start of assembling each tile
+ * -c _command_ or --postfilter=_command_: Specify a shell filter command to be run at the end of assembling each tile
+
+The pre- and post-filter commands allow you to do optional filtering or transformation on the features of each tile
+as it is created. They are shell commands, run with the zoom level, X, and Y as the `$1`, `$2`, and `$3` arguments.
+
+The features are provided to the filter
+as a series of newline-delimited GeoJSON objects on the standard input, and `tippecanoe` expects to read another
+set of GeoJSON features from the filter's standard output.
+
+The prefilter receives the features at the highest available resolution, before line simplification,
+polygon topology repair, gamma calculation, dynamic feature dropping, or other internal processing.
+The postfilter receives the features at tile resolution, after simplification, cleaning, and dropping.
+
+The layer name is provided as part of the `tippecanoe` element of the feature and must be passed through
+to keep the feature in its correct layer. In the case of the prefilter, the `tippecanoe` element may also
+contain `index`, `sequence`, and `extent` elements, which must be passed through for internal operations like
+`--drop-densest-as-needed`, `--drop-smallest-as-needed`, and `--preserve-input-order` to work.
+
+#### Examples:
+
+ * Make a tileset of the Natural Earth countries to zoom level 5, and also copy the GeoJSON features
+   to files in a `tiles/z/x/y.geojson` directory hierarchy.
+
+```
+tippecanoe -o countries.mbtiles -z5 -C 'mkdir -p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
+```
+
 Example
 -------
 
