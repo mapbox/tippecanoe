@@ -279,6 +279,17 @@ and perhaps
 
     make install
 
+Tippecanoe now requires features from the 2014 C++ standard. If your compiler is older than
+that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
+get you a new enough version of `clang++`. On Linux, you should be able to upgrade `g++` with
+
+```
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+sudo apt-get update -y
+sudo apt-get install -y g++-5
+export CXX=g++-5
+```
+
 Examples
 ------
 
