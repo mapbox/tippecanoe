@@ -369,6 +369,19 @@ and perhaps
 make install
 .fi
 .RE
+.PP
+Tippecanoe now requires features from the 2014 C++ standard. If your compiler is older than
+that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
+get you a new enough version of \fB\fCclang++\fR\&. On Linux, you should be able to upgrade \fB\fCg++\fR with
+.PP
+.RS
+.nf
+sudo add\-apt\-repository \-y ppa:ubuntu\-toolchain\-r/test
+sudo apt\-get update \-y
+sudo apt\-get install \-y g++\-5
+export CXX=g++\-5
+.fi
+.RE
 .SH Examples
 .PP
 Check out some examples of maps made with tippecanoe \[la]MADE_WITH.md\[ra]
