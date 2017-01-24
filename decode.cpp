@@ -16,6 +16,9 @@
 #include "projection.hpp"
 #include "geometry.hpp"
 
+int minzoom = 0;
+int maxzoom = 32;
+
 void printq(const char *s) {
 	putchar('"');
 	for (; *s; s++) {
@@ -396,12 +399,15 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 
 		sqlite3_finalize(stmt2);
 
-		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles order by zoom_level, tile_column, tile_row;";
+		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
 		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
 			exit(EXIT_FAILURE);
 		}
+
+		sqlite3_bind_int(stmt, 1, minzoom);
+		sqlite3_bind_int(stmt, 2, maxzoom);
 
 		printf("\n}, \"features\": [\n");
 
@@ -466,7 +472,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] file.mbtiles zoom x y\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] file.mbtiles [zoom x y]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -475,10 +481,18 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "t:")) != -1) {
+	while ((i = getopt(argc, argv, "t:Z:z:")) != -1) {
 		switch (i) {
 		case 't':
 			set_projection_or_exit(optarg);
+			break;
+
+		case 'z':
+			maxzoom = atoi(optarg);
+			break;
+
+		case 'Z':
+			minzoom = atoi(optarg);
 			break;
 
 		default:
