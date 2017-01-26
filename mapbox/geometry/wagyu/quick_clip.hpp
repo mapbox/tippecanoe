@@ -5,11 +5,6 @@
 #include <mapbox/geometry/polygon.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 
-#include <experimental/optional>
-
-template <typename T>
-using optional_linear_ring = std::experimental::optional<mapbox::geometry::linear_ring<T>>;
-
 namespace mapbox {
 namespace geometry {
 namespace wagyu {
@@ -61,7 +56,7 @@ bool inside(mapbox::geometry::point<T> p, size_t edge, mapbox::geometry::box<T> 
 }
 
 template <typename T>
-optional_linear_ring<T> quick_lr_clip(mapbox::geometry::linear_ring<T> const& ring,
+mapbox::geometry::linear_ring<T> quick_lr_clip(mapbox::geometry::linear_ring<T> const& ring,
                                       mapbox::geometry::box<T> const& b) {
     mapbox::geometry::linear_ring<T> out = ring;
 
@@ -89,13 +84,14 @@ optional_linear_ring<T> quick_lr_clip(mapbox::geometry::linear_ring<T> const& ri
     }
 
     if (out.size() < 3) {
-        return optional_linear_ring<T>();
+        out.clear();
+        return out;
     }
     // Close the ring if the first/last point was outside
     if (out[0] != out[out.size() - 1]) {
         out.push_back(out[0]);
     }
-    return optional_linear_ring<T>(std::move(out));
+    return out;
 }
 }
 
@@ -107,8 +103,8 @@ mapbox::geometry::multi_polygon<T> clip(mapbox::geometry::polygon<T> const& poly
     wagyu<T> clipper;
     for (auto const& lr : poly) {
         auto new_lr = quick_clip::quick_lr_clip(lr, b);
-        if (new_lr) {
-            clipper.add_ring(*new_lr, polygon_type_subject);
+        if (!new_lr.empty()) {
+            clipper.add_ring(new_lr, polygon_type_subject);
         }
     }
     clipper.execute(clip_type_union, result, subject_fill_type, fill_type_even_odd);
@@ -124,8 +120,8 @@ mapbox::geometry::multi_polygon<T> clip(mapbox::geometry::multi_polygon<T> const
     for (auto const& poly : mp) {
         for (auto const& lr : poly) {
             auto new_lr = quick_clip::quick_lr_clip(lr, b);
-            if (new_lr) {
-                clipper.add_ring(*new_lr, polygon_type_subject);
+            if (!new_lr.empty()) {
+                clipper.add_ring(new_lr, polygon_type_subject);
             }
         }
     }

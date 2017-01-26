@@ -9,7 +9,8 @@
 #include <cmath>
 #include <limits.h>
 #include <sqlite3.h>
-#include <mapbox/geometry.hpp>
+#include <mapbox/geometry/point.hpp>
+#include <mapbox/geometry/multi_polygon.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 #include <mapbox/geometry/wagyu/quick_clip.hpp>
 #include "geometry.hpp"
@@ -445,19 +446,19 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 				ring.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
 			}
 
-			optional_linear_ring<long long> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
+			mapbox::geometry::linear_ring<long long> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
 
-			if (lr) {
-				for (size_t k = 0; k < lr->size(); k++) {
+			if (lr.size() > 0) {
+				for (size_t k = 0; k < lr.size(); k++) {
 					if (k == 0) {
-						out.push_back(draw(VT_MOVETO, (*lr)[k].x, (*lr)[k].y));
+						out.push_back(draw(VT_MOVETO, lr[k].x, lr[k].y));
 					} else {
-						out.push_back(draw(VT_LINETO, (*lr)[k].x, (*lr)[k].y));
+						out.push_back(draw(VT_LINETO, lr[k].x, lr[k].y));
 					}
 				}
 
-				if (lr->size() > 0 && (*lr)[0] != (*lr)[lr->size() - 1]) {
-					out.push_back(draw(VT_LINETO, (*lr)[0].x, (*lr)[0].y));
+				if (lr.size() > 0 && lr[0] != lr[lr.size() - 1]) {
+					out.push_back(draw(VT_LINETO, lr[0].x, lr[0].y));
 				}
 			}
 

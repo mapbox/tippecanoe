@@ -1,3 +1,7 @@
+## 1.16.6
+
+* Upgrade Wagyu to 0.3.0; downgrade C++ requirement to C++ 11
+
 ## 1.16.5
 
 * Add -z and -Z options to tippecanoe-decode
