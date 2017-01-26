@@ -1,3 +1,7 @@
+## 1.16.5
+
+* Add -z and -Z options to tippecanoe-decode
+
 ## 1.16.4
 
 * Use Wagyu's quick_lr_clip() instead of a separate implementation
