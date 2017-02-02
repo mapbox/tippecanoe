@@ -1,0 +1,43 @@
+diff --git a/gdal/ogr/ogr_geometry.h b/gdal/ogr/ogr_geometry.h
+index d940333..ed87951 100644
+--- a/gdal/ogr/ogr_geometry.h
++++ b/gdal/ogr/ogr_geometry.h
+@@ -249,6 +249,7 @@ class CPL_DLL OGRGeometry
+     virtual OGRBoolean  Touches( const OGRGeometry * ) const;
+     virtual OGRBoolean  Crosses( const OGRGeometry * ) const;
+     virtual OGRBoolean  Within( const OGRGeometry * ) const;
++    virtual OGRBoolean  WithinEx(GEOSContextHandle_t hGEOSCtxt, const OGRGeometry *poOtherGeom ) const;
+     virtual OGRBoolean  Contains( const OGRGeometry * ) const;
+     virtual OGRBoolean  Overlaps( const OGRGeometry * ) const;
+ //    virtual OGRBoolean  Relate( const OGRGeometry *, const char * ) const;
+diff --git a/gdal/ogr/ogrgeometry.cpp b/gdal/ogr/ogrgeometry.cpp
+index a6ea6b4..f312408 100644
+--- a/gdal/ogr/ogrgeometry.cpp
++++ b/gdal/ogr/ogrgeometry.cpp
+@@ -4756,7 +4756,26 @@ OGRGeometry::Within( UNUSED_IF_NO_GEOS const OGRGeometry *poOtherGeom ) const
+ 
+ #endif  // HAVE_GEOS
+ }
++OGRBoolean
++OGRGeometry::WithinEx(GEOSContextHandle_t hGEOSCtxt, const OGRGeometry *poOtherGeom ) const
++{
++    GEOSGeom hThisGeosGeom = NULL;
++    GEOSGeom hOtherGeosGeom = NULL;
++    OGRBoolean bResult = FALSE;
++
++
++    hThisGeosGeom = exportToGEOS(hGEOSCtxt);
++    hOtherGeosGeom = poOtherGeom->exportToGEOS(hGEOSCtxt);
++    if( hThisGeosGeom != NULL && hOtherGeosGeom != NULL )
++    {
++        bResult = GEOSWithin_r( hGEOSCtxt, hThisGeosGeom, hOtherGeosGeom );
++    }
++    GEOSGeom_destroy_r( hGEOSCtxt, hThisGeosGeom );
++    GEOSGeom_destroy_r( hGEOSCtxt, hOtherGeosGeom );
++
+ 
++    return bResult;
++}
+ /************************************************************************/
+ /*                            OGR_G_Within()                            */
+ /************************************************************************/
