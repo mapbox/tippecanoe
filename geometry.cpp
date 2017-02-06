@@ -166,6 +166,27 @@ double get_area(drawvec &geom, size_t i, size_t j) {
 	return area;
 }
 
+double get_mp_area(drawvec &geom) {
+	double ret = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			ret += get_area(geom, i, j);
+			i = j - 1;
+		}
+	}
+
+	return ret;
+}
+
 static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawvec &out) {
 	out.clear();
 
