@@ -125,7 +125,8 @@ public:
             return false;
         }
 
-        do_simple_polygons(rings);
+        //do_simple_polygons(rings);
+        correct_topology(rings);
 
         build_result(solution, rings, reverse_output);
 
