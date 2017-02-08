@@ -1,3 +1,6 @@
+## 1.19.2
+* Ignore UTF-8 byte order mark if present
+
 ## 1.19.1
 
 * Add an option to increase maxzoom if features are still being dropped
