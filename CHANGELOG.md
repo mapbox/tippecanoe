@@ -1,3 +1,7 @@
+## 1.16.7
+
+* Fix area of placeholders for degenerate multipolygons
+
 ## 1.16.6
 
 * Upgrade Wagyu to 0.3.0; downgrade C++ requirement to C++ 11

@@ -449,7 +449,7 @@ void *partial_feature_worker(void *v) {
 
 		double area = 0;
 		if (t == VT_POLYGON) {
-			area = get_area(geom, 0, geom.size());
+			area = get_mp_area(geom);
 		}
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
