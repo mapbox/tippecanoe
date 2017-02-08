@@ -270,9 +270,6 @@ template <typename T>
 void reassign_as_child(ring_ptr<T> ring,
                        ring_ptr<T> parent,
                        ring_manager<T>& manager) {
-    if (ring->parent == parent) {
-        return;
-    }
     // Reassigning a ring assumes it already
     // has an existing parent
     if ((parent == nullptr && ring->is_hole()) || 

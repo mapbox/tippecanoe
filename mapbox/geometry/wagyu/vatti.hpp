@@ -19,16 +19,11 @@ namespace geometry {
 namespace wagyu {
 
 template <typename T>
-bool execute_vatti(local_minimum_list<T>& minima_list,
+void execute_vatti(local_minimum_list<T>& minima_list,
                    ring_manager<T>& manager,
                    clip_type cliptype,
                    fill_type subject_fill_type,
                    fill_type clip_fill_type) {
-
-    if (minima_list.empty()) {
-        return false;
-    }
-
     active_bound_list<T> active_bounds;
     scanbeam_list<T> scanbeam;
     T scanline_y = std::numeric_limits<T>::max();
@@ -65,7 +60,6 @@ bool execute_vatti(local_minimum_list<T>& minima_list,
         insert_local_minima_into_ABL(scanline_y, minima_sorted, current_lm, active_bounds, manager,
                                      scanbeam, cliptype, subject_fill_type, clip_fill_type);
     }
-    return true;
 }
 }
 }
