@@ -1,3 +1,23 @@
+## 1.16.7
+
+* Fix area of placeholders for degenerate multipolygons
+
+## 1.16.6
+
+* Upgrade Wagyu to 0.3.0; downgrade C++ requirement to C++ 11
+
+## 1.16.5
+
+* Add -z and -Z options to tippecanoe-decode
+
+## 1.16.4
+
+* Use Wagyu's quick_lr_clip() instead of a separate implementation
+
+## 1.16.3
+
+* Upgrade Wagyu to bfbf2893
+
 ## 1.16.2
 
 * Associate attributes with the right layer when explicitly tagged

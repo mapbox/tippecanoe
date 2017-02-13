@@ -7,13 +7,19 @@
 #include <mapbox/geometry/multi_polygon.hpp>
 #include <mapbox/geometry/polygon.hpp>
 
-#include <mapbox/geometry/wagyu/build_result.hpp>
 #include <mapbox/geometry/wagyu/build_local_minima_list.hpp>
+#include <mapbox/geometry/wagyu/build_result.hpp>
 #include <mapbox/geometry/wagyu/config.hpp>
 #include <mapbox/geometry/wagyu/local_minimum.hpp>
 #include <mapbox/geometry/wagyu/snap_rounding.hpp>
 #include <mapbox/geometry/wagyu/topology_correction.hpp>
 #include <mapbox/geometry/wagyu/vatti.hpp>
+
+#define WAGYU_MAJOR_VERSION 0
+#define WAGYU_MINOR_VERSION 3
+#define WAGYU_PATCH_VERSION 0
+
+#define WAGYU_VERSION (WAGYU_MAJOR_VERSION * 100000) + (WAGYU_MINOR_VERSION * 100) + (WAGYU_PATCH_VERSION)
 
 namespace mapbox {
 namespace geometry {
@@ -25,26 +31,17 @@ private:
     using value_type = T;
 
     local_minimum_list<value_type> minima_list;
-    bool has_open_paths;
     bool reverse_output;
 
-    wagyu( wagyu const& ) = delete;
-    wagyu& operator=(wagyu const& ) = delete;
+    wagyu(wagyu const&) = delete;
+    wagyu& operator=(wagyu const&) = delete;
 
 public:
-    wagyu() : minima_list(), has_open_paths(false), reverse_output(false) {
+    wagyu() : minima_list(), reverse_output(false) {
     }
 
     ~wagyu() {
         clear();
-    }
-
-    bool add_line(mapbox::geometry::line_string<value_type> const& pg) {
-        bool success = add_line_string(pg, minima_list);
-        if (success) {
-            has_open_paths = true;
-        }
-        return success;
     }
 
     bool add_ring(mapbox::geometry::linear_ring<value_type> const& pg,
@@ -69,7 +66,6 @@ public:
 
     void clear() {
         minima_list.clear();
-        has_open_paths = false;
     }
 
     mapbox::geometry::box<value_type> get_bounds() {
@@ -122,13 +118,13 @@ public:
                  fill_type clip_fill_type) {
 
         ring_manager<T> rings;
-        
+
         build_hot_pixels(minima_list, rings);
 
         if (!execute_vatti(minima_list, rings, cliptype, subject_fill_type, clip_fill_type)) {
             return false;
         }
-        
+
         do_simple_polygons(rings);
 
         build_result(solution, rings, reverse_output);

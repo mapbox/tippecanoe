@@ -241,17 +241,32 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				id_value = strtoull(id->string, &err, 10);
 
 				if (err != NULL && *err != '\0') {
-					fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+					static bool warned_frac = false;
+
+					if (!warned_frac) {
+						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+						warned_frac = true;
+					}
 				} else {
 					has_id = true;
 				}
 			} else {
-				fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+				static bool warned_neg = false;
+
+				if (!warned_neg) {
+					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+					warned_neg = true;
+				}
 			}
 		} else {
-			char *s = json_stringify(id);
-			fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
-			free(s);  // stringify
+			static bool warned_nan = false;
+
+			if (!warned_nan) {
+				char *s = json_stringify(id);
+				fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
+				free(s);  // stringify
+				warned_nan = true;
+			}
 		}
 	}
 

@@ -47,8 +47,8 @@ struct bound {
           poly_type(polygon_type_subject),
           side(edge_left) {
     }
-    
-    bound(bound<T> && b) noexcept
+
+    bound(bound<T>&& b) noexcept
         : edges(std::move(b.edges)),
           current_edge(std::move(b.current_edge)),
           last_point(std::move(b.last_point)),

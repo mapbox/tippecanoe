@@ -315,7 +315,7 @@ Linux:
 .PP
 .RS
 .nf
-sudo apt\-get install libsqlite3\-dev zlib1g\-dev
+sudo apt\-get install build\-essential libsqlite3\-dev zlib1g\-dev
 .fi
 .RE
 .PP
@@ -332,6 +332,19 @@ and perhaps
 .RS
 .nf
 make install
+.fi
+.RE
+.PP
+Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
+that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
+get you a new enough version of \fB\fCclang++\fR\&. On Linux, you should be able to upgrade \fB\fCg++\fR with
+.PP
+.RS
+.nf
+sudo add\-apt\-repository \-y ppa:ubuntu\-toolchain\-r/test
+sudo apt\-get update \-y
+sudo apt\-get install \-y g++\-5
+export CXX=g++\-5
 .fi
 .RE
 .SH Examples
@@ -463,4 +476,8 @@ resolutions.
 .RS
 .IP \(bu 2
 \-t \fIprojection\fP: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+.IP \(bu 2
+\-z \fImaxzoom\fP: Specify the highest zoom level to decode from the tileset
+.IP \(bu 2
+\-Z \fIminzoom\fP: Specify the lowest zoom level to decode from the tileset
 .RE

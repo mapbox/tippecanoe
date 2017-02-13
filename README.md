@@ -269,7 +269,7 @@ uses md2man (`gem install md2man`).
 
 Linux:
 
-    sudo apt-get install libsqlite3-dev zlib1g-dev
+    sudo apt-get install build-essential libsqlite3-dev zlib1g-dev
 
 Then build:
 
@@ -278,6 +278,17 @@ Then build:
 and perhaps
 
     make install
+
+Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
+that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
+get you a new enough version of `clang++`. On Linux, you should be able to upgrade `g++` with
+
+```
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+sudo apt-get update -y
+sudo apt-get install -y g++-5
+export CXX=g++-5
+```
 
 Examples
 ------
@@ -392,3 +403,5 @@ resolutions.
 ### Options
 
  * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+ * -z _maxzoom_: Specify the highest zoom level to decode from the tileset
+ * -Z _minzoom_: Specify the lowest zoom level to decode from the tileset
