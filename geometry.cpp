@@ -13,6 +13,7 @@
 #include <mapbox/geometry/multi_polygon.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 #include <mapbox/geometry/wagyu/quick_clip.hpp>
+#include <mapbox/geometry/snap_rounding.hpp>
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "serial.hpp"
@@ -344,27 +345,39 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 }
 
 void check_polygon(drawvec &geom, drawvec &before) {
-	for (size_t i = 0; i + 1 < geom.size(); i++) {
-		for (size_t j = i + 1; j + 1 < geom.size(); j++) {
-			if (geom[i + 1].op == VT_LINETO && geom[j + 1].op == VT_LINETO) {
-				double s1_x = geom[i + 1].x - geom[i + 0].x;
-				double s1_y = geom[i + 1].y - geom[i + 0].y;
-				double s2_x = geom[j + 1].x - geom[j + 0].x;
-				double s2_y = geom[j + 1].y - geom[j + 0].y;
+	geom = remove_noop(geom, VT_POLYGON, 0);
 
-				double s, t;
-				s = (-s1_y * (geom[i + 0].x - geom[j + 0].x) + s1_x * (geom[i + 0].y - geom[j + 0].y)) / (-s2_x * s1_y + s1_x * s2_y);
-				t = (s2_x * (geom[i + 0].y - geom[j + 0].y) - s2_y * (geom[i + 0].x - geom[j + 0].x)) / (-s2_x * s1_y + s1_x * s2_y);
-
-				if (t > 0 && t < 1 && s > 0 && s < 1) {
-					printf("Internal error: self-intersecting polygon. %lld,%lld to %lld,%lld intersects %lld,%lld to %lld,%lld\n",
-					       geom[i + 0].x, geom[i + 0].y,
-					       geom[i + 1].x, geom[i + 1].y,
-					       geom[j + 0].x, geom[j + 0].y,
-					       geom[j + 1].x, geom[j + 1].y);
+	mapbox::geometry::multi_polygon<long long> mp;
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
 				}
 			}
+
+			if (j >= i + 4) {
+				mapbox::geometry::linear_ring<long long> lr;
+
+				for (size_t k = i; k < j; k++) {
+					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+				}
+
+				if (lr.size() >= 3) {
+					mapbox::geometry::polygon<long long> p;
+					p.push_back(lr);
+					mp.push_back(p);
+				}
+			}
+
+			i = j - 1;
 		}
+	}
+
+	mapbox::geometry::multi_polygon<long long> mp2 = mapbox::geometry::snap_round(mp, true, true);
+	if (mp != mp2) {
+		fprintf(stderr, "Internal error: self-intersecting polygon\n");
 	}
 
 	size_t outer_start = -1;
