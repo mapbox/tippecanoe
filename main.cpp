@@ -708,6 +708,9 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					unit = max_unit;
 				}
 				unit = ((unit + page - 1) / page) * page;
+				if (unit < page) {
+					unit = page;
+				}
 
 				size_t nmerges = (indexpos + unit - 1) / unit;
 				struct mergelist merges[nmerges];
