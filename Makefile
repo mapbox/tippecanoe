@@ -43,7 +43,7 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
+INCLUDES = -Iprotozero-1.5.1/include -Igeometry.hpp-0.9.0-gcc-4.9/include -Iwagyu-0.3.0/include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o
@@ -74,6 +74,29 @@ clean:
 
 indent:
 	clang-format -i -style="{BasedOnStyle: Google, IndentWidth: 8, UseTab: Always, AllowShortIfStatementsOnASingleLine: false, ColumnLimit: 0, ContinuationIndentWidth: 8, SpaceAfterCStyleCast: true, IndentCaseLabels: false, AllowShortBlocksOnASingleLine: false, AllowShortFunctionsOnASingleLine: false, SortIncludes: false}" $(C) $(H)
+
+###########################################################################
+#
+# EXTERNAL DEPENDENCIES
+
+mvt.o serial.o decode.o: protozero-1.5.1/include/protozero/pbf_reader.hpp
+
+protozero-1.5.1/include/protozero/pbf_reader.hpp:
+	curl -s -L https://github.com/mapbox/protozero/archive/v1.5.1.tar.gz | tar xf -
+
+geometry.o: wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp
+
+wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp:
+	curl -s -L https://github.com/mapbox/wagyu/archive/0.3.0.tar.gz | tar xf -
+
+geometry.o: geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp
+
+geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp:
+	curl -s -L https://github.com/mapbox/geometry.hpp/archive/v0.9.0-gcc-4.9.tar.gz | tar xf -
+
+###########################################################################
+#
+# TESTS
 
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)

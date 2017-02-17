@@ -5,9 +5,9 @@
 #include <map>
 #include <zlib.h>
 #include "mvt.hpp"
-#include "protozero/varint.hpp"
-#include "protozero/pbf_reader.hpp"
-#include "protozero/pbf_writer.hpp"
+#include <protozero/varint.hpp>
+#include <protozero/pbf_reader.hpp>
+#include <protozero/pbf_writer.hpp>
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
