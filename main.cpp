@@ -117,7 +117,14 @@ void checkdisk(struct reader *r, int nreader) {
 };
 
 void init_cpus() {
-	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
+
+	if (TIPPECANOE_MAX_THREADS != NULL) {
+		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+	} else {
+		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	}
+
 	if (CPUS < 1) {
 		CPUS = 1;
 	}
