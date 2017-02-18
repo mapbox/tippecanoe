@@ -82,17 +82,17 @@ indent:
 mvt.o serial.o decode.o: protozero-1.5.1/include/protozero/pbf_reader.hpp
 
 protozero-1.5.1/include/protozero/pbf_reader.hpp:
-	curl -s -L https://github.com/mapbox/protozero/archive/v1.5.1.tar.gz | tar xf -
+	curl -s -L https://github.com/mapbox/protozero/archive/v1.5.1.tar.gz | gzip -dc | tar xf -
 
 geometry.o: wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp
 
 wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp:
-	curl -s -L https://github.com/mapbox/wagyu/archive/0.3.0.tar.gz | tar xf -
+	curl -s -L https://github.com/mapbox/wagyu/archive/0.3.0.tar.gz | gzip -dc | tar xf -
 
 geometry.o: geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp
 
 geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp:
-	curl -s -L https://github.com/mapbox/geometry.hpp/archive/v0.9.0-gcc-4.9.tar.gz | tar xf -
+	curl -s -L https://github.com/mapbox/geometry.hpp/archive/v0.9.0-gcc-4.9.tar.gz | gzip -dc | tar xf -
 
 ###########################################################################
 #
