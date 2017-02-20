@@ -1,3 +1,8 @@
+## 1.16.8
+
+* Fix some code that could sometimes try to divide by zero
+* Add check for $TIPPECANOE_MAX_THREADS environmental variable
+
 ## 1.16.7
 
 * Fix area of placeholders for degenerate multipolygons
