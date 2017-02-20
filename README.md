@@ -147,6 +147,12 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
  * -q or --quiet: Work quietly instead of reporting progress
 
+Environment
+-----------
+
+Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
+You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable.
+
 Example
 -------
 
