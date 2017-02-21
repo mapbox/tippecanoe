@@ -1,3 +1,7 @@
+## 1.16.9
+
+* Clean up layer name handling to fix layer merging crash
+
 ## 1.16.8
 
 * Fix some code that could sometimes try to divide by zero

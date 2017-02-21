@@ -1619,6 +1619,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 
 					auto l = layers.find(layername);
+					if (l == layers.end()) {
+						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
+						fprintf(stderr, "segment %d\n", partials[i].segment);
+						fprintf(stderr, "layer %lld\n", partials[i].layer);
+						exit(EXIT_FAILURE);
+					}
 					l->second.push_back(c);
 				}
 			}
