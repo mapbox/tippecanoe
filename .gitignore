@@ -3,6 +3,7 @@
 *.lo
 *.o
 *.obj
+*.d
 
 # Precompiled Headers
 *.gch
@@ -27,3 +28,12 @@
 *.exe
 *.out
 *.app
+
+# Eclipse
+.cproject
+.project
+.settings
+
+# Data Files
+*.mbtiles
+*.mbtiles-journal

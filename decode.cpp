@@ -58,7 +58,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
-	} catch (protozero::unknown_pbf_wire_type_exception e) {
+	} catch (protozero::unknown_pbf_wire_type_exception &e) {
 		fprintf(stderr, "PBF decoding error in tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -333,7 +333,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	printf("] }\n");
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y) {
+bool decode(char *fname, int z, unsigned x, unsigned y) {
+	bool hadOutput = false;
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
@@ -350,7 +351,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 							std::string s = std::string(map, st.st_size);
 							handle(s, z, x, y, 1);
 							munmap(map, st.st_size);
-							return;
+							return false;
 						} else {
 							fprintf(stderr, "Must specify zoom/x/y to decode a single pbf file\n");
 							exit(EXIT_FAILURE);
@@ -373,6 +374,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 	}
 
 	if (z < 0) {
+		hadOutput = true;
 		printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
 
 		const char *sql2 = "SELECT name, value from metadata order by name;";
@@ -446,6 +448,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
+				hadOutput = true;
 				int len = sqlite3_column_bytes(stmt, 0);
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
@@ -469,10 +472,11 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
 		exit(EXIT_FAILURE);
 	}
+	return hadOutput;
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] file.mbtiles [zoom x y]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t projection] file.mbtiles [zoom x y] [zoom south west north east]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -499,8 +503,33 @@ int main(int argc, char **argv) {
 			usage(argv);
 		}
 	}
+	if(argc == optind + 6) {
+		double minX = atof(argv[optind + 2]);
+		double minY = atof(argv[optind + 3]);
+		double maxX = atof(argv[optind + 4]);
+		double maxY = atof(argv[optind + 5]);
 
-	if (argc == optind + 4) {
+		long long tilerow_LL;
+		long long tilecol_LL;
+		long long tilerow_UR;
+		long long tilecol_UR;
+
+		int zoom = atoi(argv[optind + 1]);
+
+		lonlat2tile(minX, minY, zoom, &tilerow_LL, &tilecol_LL);
+		lonlat2tile(maxX, maxY, zoom, &tilerow_UR, &tilecol_UR);
+
+		printf("{ \"type\": \"FeatureCollection\", \"features\": [\n");
+		bool last = false;
+		for(long long i = tilerow_LL; i <= tilerow_UR; i++) {
+			for(long long j = tilecol_LL; j <= tilecol_UR; j++) {
+				if(decode(argv[optind], zoom, i, j)) {
+					printf(",");
+				}
+			}
+		}
+		printf("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[]}}]}\n");
+    } else if (argc == optind + 4) {
 		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
 	} else if (argc == optind + 1) {
 		decode(argv[optind], -1, -1, -1);
