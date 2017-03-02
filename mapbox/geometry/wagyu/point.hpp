@@ -61,6 +61,12 @@ struct point {
 };
 
 template <typename T>
+using point_vector = std::vector<point_ptr<T>>;
+
+template <typename T>
+using point_vector_itr = typename point_vector<T>::iterator;
+
+template <typename T>
 bool operator==(point<T> const& lhs, point<T> const& rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y;
 }

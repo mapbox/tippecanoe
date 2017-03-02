@@ -31,7 +31,7 @@ double area(mapbox::geometry::linear_ring<T> const& poly) {
 }
 
 inline bool value_is_zero(double val) {
-    return std::fabs(val) < std::numeric_limits<double>::epsilon();
+    return std::fabs(val) < (5.0 * std::numeric_limits<double>::epsilon());
 }
 
 inline bool values_are_equal(double x, double y) {

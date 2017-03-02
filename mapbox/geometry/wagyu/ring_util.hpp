@@ -476,7 +476,8 @@ bool first_is_bottom_point(const_point_ptr<T> btmPt1, const_point_ptr<T> btmPt2)
     if (values_are_equal(std::max(dx1p, dx1n), std::max(dx2p, dx2n)) &&
         values_are_equal(std::min(dx1p, dx1n), std::min(dx2p, dx2n))) {
         std::size_t s = 0;
-        return area_from_point(btmPt1, s) > 0.0; // if otherwise identical use orientation
+        mapbox::geometry::box<T> bbox({0,0},{0,0});
+        return area_from_point(btmPt1, s, bbox) > 0.0; // if otherwise identical use orientation
     } else {
         return (greater_than_or_equal(dx1p, dx2p) && greater_than_or_equal(dx1p, dx2n)) ||
                (greater_than_or_equal(dx1n, dx2p) && greater_than_or_equal(dx1n, dx2n));
@@ -832,46 +833,69 @@ point_in_polygon_result point_in_polygon(mapbox::geometry::point<double> const& 
 }
 
 template <typename T>
+bool is_convex(point_ptr<T> edge) {
+    point_ptr<T> prev = edge->prev;
+    point_ptr<T> next = edge->next;
+    T v1x = edge->x - prev->x;
+    T v1y = edge->y - prev->y;
+    T v2x = next->x - edge->x;
+    T v2y = next->y - edge->y;
+    T cross = v1x*v2y - v2x*v1y;
+    if (cross < 0 && edge->ring->area() > 0) {
+        return true;
+    } else if (cross > 0 && edge->ring->area() < 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+template <typename T>
+mapbox::geometry::point<double> centroid_of_points(point_ptr<T> edge) {
+    point_ptr<T> prev = edge->prev;
+    point_ptr<T> next = edge->next;
+    return { (prev->x + edge->x + next->x) / 3.0, (prev->y + edge->y + next->y) / 3.0 };
+}
+
+template <typename T>
 point_in_polygon_result inside_or_outside_special(point_ptr<T> first_pt, point_ptr<T> other_poly) {
 
-    if (value_is_zero(area(first_pt->ring))) {
-        return point_inside_polygon;
-    }
-    if (value_is_zero(area(other_poly->ring))) {
-        return point_outside_polygon;
-    }
-    point_ptr<T> pt = first_pt;
+    // We are going to loop through all the points
+    // of the original triangle. The goal is to find a convex edge
+    // that with its next and previous forms a triangle with its centroid
+    // that is within the first ring. Then we will check the other polygon
+    // to see if it is within this polygon.
+    point_ptr<T> itr = first_pt;
     do {
-        if (*pt == *(pt->prev) || *pt == *(pt->next) || *(pt->next) == *(pt->prev) ||
-            slopes_equal(*(pt->prev), *pt, *(pt->next))) {
-            pt = pt->next;
-            continue;
-        }
-        double dx = ((pt->prev->x - pt->x) / 3.0) + ((pt->next->x - pt->x) / 3.0);
-        double dy = ((pt->prev->y - pt->y) / 3.0) + ((pt->next->y - pt->y) / 3.0);
-        mapbox::geometry::point<double> offset_pt(pt->x + dx, pt->y + dy);
-        point_in_polygon_result res = point_in_polygon(offset_pt, pt);
-        if (res != point_inside_polygon) {
-            offset_pt.x = pt->x - dx;
-            offset_pt.y = pt->y - dy;
-            res = point_in_polygon(offset_pt, pt);
-            if (res != point_inside_polygon) {
-                pt = pt->next;
-                continue;
+        if (is_convex(itr)) {
+            auto pt = centroid_of_points(itr);
+            if (point_inside_polygon == point_in_polygon(pt, first_pt)) {
+                return point_in_polygon(pt, other_poly);
             }
         }
-        res = point_in_polygon(offset_pt, other_poly);
-        if (res == point_on_polygon) {
-            pt = pt->next;
-            continue;
-        }
-        return res;
-    } while (pt != first_pt);
-    return point_inside_polygon;
+        itr = itr->next;
+    } while (itr != first_pt);
+    
+    throw std::runtime_error("Could not find a point within the polygon to test");
+}
+
+template <typename T>
+bool box2_contains_box1(mapbox::geometry::box<T> const& box1,
+                        mapbox::geometry::box<T> const& box2) {
+    return (box2.max.x >= box1.max.x && 
+            box2.max.y >= box1.max.y &&
+            box2.min.x <= box1.min.x &&
+            box2.min.y <= box1.min.y);
 }
 
 template <typename T>
 bool poly2_contains_poly1(ring_ptr<T> ring1, ring_ptr<T> ring2) {
+    if (!box2_contains_box1(ring1->bbox, ring2->bbox)) {
+        return false;
+    }
+    if (std::fabs(ring2->area()) < std::fabs(ring1->area())) {
+        return false;
+    }
     point_ptr<T> outpt1 = ring1->points->next;
     point_ptr<T> outpt2 = ring2->points->next;
     point_ptr<T> op = outpt1;
@@ -887,20 +911,6 @@ bool poly2_contains_poly1(ring_ptr<T> ring1, ring_ptr<T> ring2) {
     return res == point_inside_polygon;
 }
 
-template <typename T>
-void dispose_out_points(point_ptr<T>& pp) {
-    if (pp == nullptr) {
-        return;
-    }
-    pp->prev->next = nullptr;
-    while (pp) {
-        point_ptr<T> tmpPp = pp;
-        pp = pp->next;
-        tmpPp->next = tmpPp;
-        tmpPp->prev = tmpPp;
-        tmpPp->ring = nullptr;
-    }
-}
 }
 }
 }

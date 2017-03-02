@@ -117,15 +117,17 @@ public:
                  fill_type subject_fill_type,
                  fill_type clip_fill_type) {
 
-        ring_manager<T> rings;
-
-        build_hot_pixels(minima_list, rings);
-
-        if (!execute_vatti(minima_list, rings, cliptype, subject_fill_type, clip_fill_type)) {
+        if (minima_list.empty()) {
             return false;
         }
 
-        do_simple_polygons(rings);
+        ring_manager<T> rings;
+        
+        build_hot_pixels(minima_list, rings);
+        
+        execute_vatti(minima_list, rings, cliptype, subject_fill_type, clip_fill_type);
+        
+        correct_topology(rings);
 
         build_result(solution, rings, reverse_output);
 
