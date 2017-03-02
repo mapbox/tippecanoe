@@ -223,6 +223,10 @@ to files in a \fB\fCtiles/z/x/y.geojson\fR directory hierarchy.
 tippecanoe \-o countries.mbtiles \-z5 \-C 'mkdir \-p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
 .fi
 .RE
+.SH Environment
+.PP
+Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
+You can override this number by setting the \fB\fCTIPPECANOE_MAX_THREADS\fR environmental variable.
 .SH Example
 .PP
 .RS
@@ -370,7 +374,7 @@ make install
 .fi
 .RE
 .PP
-Tippecanoe now requires features from the 2014 C++ standard. If your compiler is older than
+Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
 that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
 get you a new enough version of \fB\fCclang++\fR\&. On Linux, you should be able to upgrade \fB\fCg++\fR with
 .PP
@@ -515,4 +519,6 @@ resolutions.
 \-z \fImaxzoom\fP: Specify the highest zoom level to decode from the tileset
 .IP \(bu 2
 \-Z \fIminzoom\fP: Specify the lowest zoom level to decode from the tileset
+.IP \(bu 2
+\-l \fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
 .RE

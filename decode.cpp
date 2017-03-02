@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <zlib.h>
 #include <math.h>
 #include <fcntl.h>
@@ -20,7 +21,7 @@
 int minzoom = 0;
 int maxzoom = 32;
 
-void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
+void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode) {
 	int within = 0;
 	mvt_tile tile;
 
@@ -48,11 +49,16 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 
 	printf(", \"features\": [\n");
 
+	bool first_layer = true;
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
 
+		if (to_decode.size() != 0 && !to_decode.count(layer.name)) {
+			continue;
+		}
+
 		if (describe) {
-			if (l != 0) {
+			if (!first_layer) {
 				printf(",\n");
 			}
 
@@ -63,6 +69,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 			printf(" }");
 			printf(", \"features\": [\n");
 
+			first_layer = false;
 			within = 0;
 		}
 
@@ -76,7 +83,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe) {
 	printf("] }\n");
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode) {
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
@@ -91,7 +98,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, 1);
+							handle(s, z, x, y, 1, to_decode);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -171,7 +178,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), tz, tx, ty, 1);
+			handle(std::string(s, len), tz, tx, ty, 1, to_decode);
 		}
 
 		printf("] }\n");
@@ -199,7 +206,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, 0);
+				handle(std::string(s, len), z, x, y, 0, to_decode);
 				handled = 1;
 			}
 
@@ -218,7 +225,7 @@ void decode(char *fname, int z, unsigned x, unsigned y) {
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] file.mbtiles [zoom x y]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] [-l layer ...] file.mbtiles [zoom x y]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -226,8 +233,9 @@ int main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
 	int i;
+	std::set<std::string> to_decode;
 
-	while ((i = getopt(argc, argv, "t:Z:z:")) != -1) {
+	while ((i = getopt(argc, argv, "t:Z:z:l:")) != -1) {
 		switch (i) {
 		case 't':
 			set_projection_or_exit(optarg);
@@ -241,15 +249,19 @@ int main(int argc, char **argv) {
 			minzoom = atoi(optarg);
 			break;
 
+		case 'l':
+			to_decode.insert(optarg);
+			break;
+
 		default:
 			usage(argv);
 		}
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]));
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1);
+		decode(argv[optind], -1, -1, -1, to_decode);
 	} else {
 		usage(argv);
 	}

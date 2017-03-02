@@ -177,6 +177,12 @@ contain `index`, `sequence`, and `extent` elements, which must be passed through
 tippecanoe -o countries.mbtiles -z5 -C 'mkdir -p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
 ```
 
+Environment
+-----------
+
+Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
+You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable.
+
 Example
 -------
 
@@ -309,7 +315,7 @@ and perhaps
 
     make install
 
-Tippecanoe now requires features from the 2014 C++ standard. If your compiler is older than
+Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
 that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
 get you a new enough version of `clang++`. On Linux, you should be able to upgrade `g++` with
 
@@ -435,3 +441,4 @@ resolutions.
  * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
  * -z _maxzoom_: Specify the highest zoom level to decode from the tileset
  * -Z _minzoom_: Specify the lowest zoom level to decode from the tileset
+ * -l _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)

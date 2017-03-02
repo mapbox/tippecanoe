@@ -402,7 +402,7 @@ void *partial_feature_worker(void *v) {
 
 		double area = 0;
 		if (t == VT_POLYGON) {
-			area = get_area(geom, 0, geom.size());
+			area = get_mp_area(geom);
 		}
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
@@ -1706,6 +1706,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 
 					auto l = layers.find(layername);
+					if (l == layers.end()) {
+						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
+						fprintf(stderr, "segment %d\n", partials[i].segment);
+						fprintf(stderr, "layer %lld\n", partials[i].layer);
+						exit(EXIT_FAILURE);
+					}
 					l->second.push_back(c);
 				}
 			}

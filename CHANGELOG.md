@@ -1,3 +1,24 @@
+## 1.16.10
+
+* Add a tippecanoe-decode option to specify layer names
+
+## 1.16.9
+
+* Clean up layer name handling to fix layer merging crash
+
+## 1.16.8
+
+* Fix some code that could sometimes try to divide by zero
+* Add check for $TIPPECANOE_MAX_THREADS environmental variable
+
+## 1.16.7
+
+* Fix area of placeholders for degenerate multipolygons
+
+## 1.16.6
+
+* Upgrade Wagyu to 0.3.0; downgrade C++ requirement to C++ 11
+
 ## 1.16.5
 
 * Add -z and -Z options to tippecanoe-decode
