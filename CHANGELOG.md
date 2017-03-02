@@ -1,3 +1,7 @@
+## 1.16.11
+
+* Remove polygon splitting, since polygon cleaning is now fast enough
+
 ## 1.16.10
 
 * Add a tippecanoe-decode option to specify layer names

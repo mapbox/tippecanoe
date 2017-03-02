@@ -141,7 +141,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
  * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.)
  * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
- * -pp or --no-polygon-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+ * -pp or --no-polygon-splitting: This no longer has any effect.
  * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
  * -pD or --no-duplication: As with --no-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
  * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
@@ -256,9 +256,6 @@ any polygons that are smaller than a minimum area (currently 4 square subpixels)
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
-
-Any polygons that have over 700 vertices after line simplification will be split into
-multiple features so they can be rendered efficiently, unless you use -pp to prevent this.
 
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry if you use `--coalesce`. You are strongly encouraged to use -x to exclude
