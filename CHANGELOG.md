@@ -1,3 +1,7 @@
+## 1.16.10
+
+* Add a tippecanoe-decode option to specify layer names
+
 ## 1.16.9
 
 * Clean up layer name handling to fix layer merging crash

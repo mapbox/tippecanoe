@@ -411,3 +411,4 @@ resolutions.
  * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
  * -z _maxzoom_: Specify the highest zoom level to decode from the tileset
  * -Z _minzoom_: Specify the lowest zoom level to decode from the tileset
+ * -l _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
