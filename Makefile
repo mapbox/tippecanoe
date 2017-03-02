@@ -78,7 +78,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test join-test enumerate-test unit
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) parallel-test pbf-test join-test enumerate-test decode-test unit
 	./unit
 
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
@@ -110,6 +110,13 @@ parallel-test:
 	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipe.json
 	cmp tests/parallel/linear-file.json tests/parallel/parallel-pipes.json
 	rm tests/parallel/*.mbtiles tests/parallel/*.json
+
+decode-test:
+	mkdir -p tests/muni/decode
+	./tippecanoe -z11 -Z11 -f -o tests/muni/decode/multi.mbtiles tests/muni/*.json
+	./tippecanoe-decode -l subway tests/muni/decode/multi.mbtiles > tests/muni/decode/multi.mbtiles.json.check
+	cmp tests/muni/decode/multi.mbtiles.json.check tests/muni/decode/multi.mbtiles.json
+	rm -f tests/muni/decode/multi.mbtiles.json.check tests/muni/decode/multi.mbtiles
 
 pbf-test:
 	./tippecanoe-decode tests/pbf/11-328-791.vector.pbf 11 328 791 > tests/pbf/11-328-791.vector.pbf.out
