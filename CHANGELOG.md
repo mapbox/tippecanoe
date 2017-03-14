@@ -1,3 +1,7 @@
+## 1.16.12
+
+* Stop processing higher zooms when a feature reaches its explicit maxzoom tag
+
 ## 1.16.11
 
 * Remove polygon splitting, since polygon cleaning is now fast enough
