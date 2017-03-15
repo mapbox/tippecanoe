@@ -75,7 +75,7 @@ void json_context(json_object *j) {
 	free(s);  // stringify
 }
 
-long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
+long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
 	long long g = 0;
 
 	if (j == NULL || j->type != JSON_ARRAY) {
@@ -96,7 +96,7 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 				}
 			}
 
-			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, initialized, initial_x, initial_y, feature);
+			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
@@ -114,6 +114,22 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 					json_context(feature);
 					warned = 1;
 				}
+			}
+
+			if (additional[A_DETECT_WRAPAROUND]) {
+				x += offset;
+				if (has_prev) {
+					if (x - prev > (1LL << 31)) {
+						offset -= 1LL << 32;
+						x -= 1LL << 32;
+					} else if (prev - x > (1LL << 31)) {
+						offset += 1LL << 32;
+						x += 1LL << 32;
+					}
+				}
+
+				has_prev = true;
+				prev = x;
 			}
 
 			if (x < bbox[0]) {
@@ -351,8 +367,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
+	bool has_prev = false;
+	long long prev = 0;
+	long long offset = 0;
+
 	drawvec dv;
-	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature);
+	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
 	}

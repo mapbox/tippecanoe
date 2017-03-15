@@ -1,3 +1,7 @@
+## 1.16.13
+
+* Add --detect-longitude-wraparound option
+
 ## 1.16.12
 
 * Stop processing higher zooms when a feature reaches its explicit maxzoom tag
