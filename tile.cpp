@@ -1451,7 +1451,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
+				if (tippecanoe_maxzoom == -1 || tippecanoe_maxzoom >= nextzoom) {
+					rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
+				}
 			}
 
 			if (z < minzoom) {
