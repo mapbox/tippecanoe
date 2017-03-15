@@ -441,10 +441,6 @@ void *partial_feature_worker(void *v) {
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
 
-		if (t == VT_POLYGON && !prevent[P_POLYGON_SPLIT]) {
-			geoms = chop_polygon(geoms);
-		}
-
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
@@ -1283,7 +1279,9 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 		}
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-			rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+			}
 		}
 
 		if (z < minzoom) {

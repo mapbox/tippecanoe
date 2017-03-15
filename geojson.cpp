@@ -40,13 +40,29 @@ extern "C" {
 #include "text.hpp"
 #include "read_json.hpp"
 
-static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
+static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
 	parse_geometry(t, j, geom, op, fname, line, feature);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
 			long long x = geom[i].x;
 			long long y = geom[i].y;
+
+			if (additional[A_DETECT_WRAPAROUND]) {
+				x += offset;
+				if (has_prev) {
+					if (x - prev > (1LL << 31)) {
+						offset -= 1LL << 32;
+						x -= 1LL << 32;
+					} else if (prev - x > (1LL << 31)) {
+						offset += 1LL << 32;
+						x += 1LL << 32;
+					}
+				}
+
+				has_prev = true;
+				prev = x;
+			}
 
 			if (x < bbox[0]) {
 				bbox[0] = x;
@@ -244,8 +260,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
+	bool has_prev = false;
+	long long prev = 0;
+	long long offset = 0;
+
 	drawvec dv;
-	long long g = parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature);
+	long long g = parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
 	}
