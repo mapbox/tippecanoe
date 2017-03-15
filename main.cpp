@@ -1940,6 +1940,7 @@ int main(int argc, char **argv) {
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
 		{"grid-low-zooms", no_argument, &additional[A_GRID_LOW_ZOOMS], 1},
+		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
