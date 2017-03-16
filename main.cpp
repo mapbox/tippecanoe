@@ -117,7 +117,14 @@ void checkdisk(struct reader *r, int nreader) {
 };
 
 void init_cpus() {
-	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
+
+	if (TIPPECANOE_MAX_THREADS != NULL) {
+		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+	} else {
+		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+	}
+
 	if (CPUS < 1) {
 		CPUS = 1;
 	}
@@ -409,7 +416,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].treefile = reader[i].treefile;
 		pja[i].fname = fname;
 		pja[i].basezoom = basezoom;
-		pja[i].layer = source < nlayers ? source : 0;
+		pja[i].layer = source;
 		pja[i].droprate = droprate;
 		pja[i].file_bbox = reader[i].file_bbox;
 		pja[i].segment = i;
@@ -708,6 +715,9 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					unit = max_unit;
 				}
 				unit = ((unit + page - 1) / page) * page;
+				if (unit < page) {
+					unit = page;
+				}
 
 				size_t nmerges = (indexpos + unit - 1) / unit;
 				struct mergelist merges[nmerges];
@@ -994,7 +1004,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, const char *layername, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1101,26 +1111,12 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
-	size_t nlayers;
-	if (layername != NULL) {
-		nlayers = 1;
-	} else {
-		nlayers = sources.size();
-		if (nlayers == 0) {
-			nlayers = 1;
-		}
-	}
-
-	std::vector<std::string> layernames;
+	size_t nlayers = sources.size();
 	for (size_t l = 0; l < nlayers; l++) {
-		if (layername != NULL) {
-			layernames.push_back(std::string(layername));
-		} else {
+		if (sources[l].layer.size() == 0) {
 			const char *src;
-			if (sources.size() < 1) {
+			if (sources[l].file.size() == 0) {
 				src = fname;
-			} else if (sources[l].layer.size() != 0) {
-				src = sources[l].layer.c_str();
 			} else {
 				src = sources[l].file.c_str();
 			}
@@ -1152,7 +1148,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 					out.append(trunc, p, 1);
 				}
 			}
-			layernames.push_back(out);
+			sources[l].layer = out;
 
 			if (!quiet) {
 				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, out.c_str());
@@ -1162,25 +1158,21 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 	std::map<std::string, layermap_entry> layermap;
 	for (size_t l = 0; l < nlayers; l++) {
-		layermap.insert(std::pair<std::string, layermap_entry>(layernames[l], layermap_entry(l)));
+		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, layermap_entry(l)));
 	}
 	std::vector<std::map<std::string, layermap_entry> > layermaps;
 	for (size_t l = 0; l < CPUS; l++) {
 		layermaps.push_back(layermap);
 	}
 
-	size_t nsources = sources.size();
-	if (nsources == 0) {
-		nsources = 1;
-	}
-
 	long overall_offset = 0;
 
+	size_t nsources = sources.size();
 	for (size_t source = 0; source < nsources; source++) {
 		std::string reading;
 		int fd;
 
-		if (source >= sources.size()) {
+		if (sources[source].file.size() == 0) {
 			reading = "standard input";
 			fd = 0;
 		} else {
@@ -1191,6 +1183,13 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				continue;
 			}
 		}
+
+		auto a = layermap.find(sources[source].layer);
+		if (a == layermap.end()) {
+			fprintf(stderr, "Internal error: couldn't find layer %s", sources[source].layer.c_str());
+			exit(EXIT_FAILURE);
+		}
+		size_t layer = a->second.id;
 
 		struct stat st;
 		char *map = NULL;
@@ -1210,7 +1209,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0], uses_gamma);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
@@ -1221,7 +1220,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
-				perror(sources[source].file.c_str());
+				perror(sources[layer].file.c_str());
 				if (close(fd) != 0) {
 					perror("close source file");
 					exit(EXIT_FAILURE);
@@ -1278,7 +1277,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0], gamma != 0);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1315,7 +1314,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, source, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, layernames[source < nlayers ? source : 0], gamma != 0);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1332,7 +1331,7 @@ int read_input(std::vector<source> &sources, char *fname, const char *layername,
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, source < nlayers ? source : 0, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], layernames[source < nlayers ? source : 0], uses_gamma);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
@@ -1870,7 +1869,7 @@ int main(int argc, char **argv) {
 	int i;
 
 	char *name = NULL;
-	char *layer = NULL;
+	char *layername = NULL;
 	char *outdir = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
@@ -1941,6 +1940,7 @@ int main(int argc, char **argv) {
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
 		{"grid-low-zooms", no_argument, &additional[A_GRID_LOW_ZOOMS], 1},
+		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
 
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
@@ -1984,7 +1984,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'l':
-			layer = optarg;
+			layername = optarg;
 			break;
 
 		case 'A':
@@ -2250,9 +2250,22 @@ int main(int argc, char **argv) {
 		sources.push_back(src);
 	}
 
+	if (sources.size() == 0) {
+		struct source src;
+		src.layer = "";
+		src.file = "";  // standard input
+		sources.push_back(src);
+	}
+
+	if (layername != NULL) {
+		for (size_t a = 0; a < sources.size(); a++) {
+			sources[a].layer = layername;
+		}
+	}
+
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : outdir, layer, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox);
+	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox);
 
 	mbtiles_close(outdb, argv);
 

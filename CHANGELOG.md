@@ -1,3 +1,28 @@
+## 1.16.13
+
+* Add --detect-longitude-wraparound option
+
+## 1.16.12
+
+* Stop processing higher zooms when a feature reaches its explicit maxzoom tag
+
+## 1.16.11
+
+* Remove polygon splitting, since polygon cleaning is now fast enough
+
+## 1.16.10
+
+* Add a tippecanoe-decode option to specify layer names
+
+## 1.16.9
+
+* Clean up layer name handling to fix layer merging crash
+
+## 1.16.8
+
+* Fix some code that could sometimes try to divide by zero
+* Add check for $TIPPECANOE_MAX_THREADS environmental variable
+
 ## 1.16.7
 
 * Fix area of placeholders for degenerate multipolygons

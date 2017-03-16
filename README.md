@@ -132,6 +132,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
  * -an or --drop-smallest-as-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
  * -aL or --grid-low-zooms: At all zoom levels below _maxzoom_, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably `-D8`. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data.
+ * -aw or --detect-longitude-wraparound: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
 
 ### Doing less
 
@@ -141,11 +142,17 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
  * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.)
  * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
- * -pp or --no-polygon-splitting: Don't split complex polygons (over 700 vertices after simplification) into multiple features.
+ * -pp or --no-polygon-splitting: This no longer has any effect.
  * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
  * -pD or --no-duplication: As with --no-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
  * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
  * -q or --quiet: Work quietly instead of reporting progress
+
+Environment
+-----------
+
+Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
+You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable.
 
 Example
 -------
@@ -250,9 +257,6 @@ any polygons that are smaller than a minimum area (currently 4 square subpixels)
 have their probability diffused, so that some of them will be drawn as a square of
 this minimum size and others will not be drawn at all, preserving the total area that
 all of them should have had together.
-
-Any polygons that have over 700 vertices after line simplification will be split into
-multiple features so they can be rendered efficiently, unless you use -pp to prevent this.
 
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry if you use `--coalesce`. You are strongly encouraged to use -x to exclude
@@ -405,3 +409,4 @@ resolutions.
  * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
  * -z _maxzoom_: Specify the highest zoom level to decode from the tileset
  * -Z _minzoom_: Specify the lowest zoom level to decode from the tileset
+ * -l _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)

@@ -488,10 +488,6 @@ void *partial_feature_worker(void *v) {
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
 
-		if (t == VT_POLYGON && !prevent[P_POLYGON_SPLIT]) {
-			geoms = chop_polygon(geoms);
-		}
-
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
@@ -1455,7 +1451,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
-				rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
+				if (tippecanoe_maxzoom == -1 || tippecanoe_maxzoom >= nextzoom) {
+					rewrite(geom, z, nextzoom, maxzoom, bbox, tx, ty, buffer, line_detail, within, geompos, geomfile, fname, t, layer, metastart, feature_minzoom, child_shards, max_zoom_increment, original_seq, tippecanoe_minzoom, tippecanoe_maxzoom, segment, initial_x, initial_y, m, metakeys, metavals, has_id, id, index, extent);
+				}
 			}
 
 			if (z < minzoom) {
@@ -1619,6 +1617,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 
 					auto l = layers.find(layername);
+					if (l == layers.end()) {
+						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
+						fprintf(stderr, "segment %d\n", partials[i].segment);
+						fprintf(stderr, "layer %lld\n", partials[i].layer);
+						exit(EXIT_FAILURE);
+					}
 					l->second.push_back(c);
 				}
 			}
