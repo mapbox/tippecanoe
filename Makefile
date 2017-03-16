@@ -43,7 +43,7 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -Iprotozero-1.5.1/include -Igeometry.hpp-0.9.0-gcc-4.9/include -Iwagyu-0.3.0/include
+INCLUDES = -Iprotozero-1.5.1/include -Igeometry.hpp-0.9.0-gcc-4.9/include -Iwagyu-0.4.1/include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o
@@ -84,10 +84,10 @@ mvt.o serial.o decode.o: protozero-1.5.1/include/protozero/pbf_reader.hpp
 protozero-1.5.1/include/protozero/pbf_reader.hpp:
 	curl -s -L https://github.com/mapbox/protozero/archive/v1.5.1.tar.gz | gzip -dc | tar xf -
 
-geometry.o: wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp
+geometry.o: wagyu-0.4.1/include/mapbox/geometry/wagyu/wagyu.hpp
 
-wagyu-0.3.0/include/mapbox/geometry/wagyu/wagyu.hpp:
-	curl -s -L https://github.com/mapbox/wagyu/archive/0.3.0.tar.gz | gzip -dc | tar xf -
+wagyu-0.4.1/include/mapbox/geometry/wagyu/wagyu.hpp:
+	curl -s -L https://github.com/mapbox/wagyu/archive/0.4.1.tar.gz | gzip -dc | tar xf -
 
 geometry.o: geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp
 
