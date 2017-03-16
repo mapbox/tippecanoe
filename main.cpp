@@ -50,6 +50,7 @@ extern "C" {
 #include "geometry.hpp"
 #include "serial.hpp"
 #include "options.hpp"
+#include "mvt.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -1832,7 +1833,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 			type_and_string tas;
-			tas.type = VT_NUMBER;
+			tas.type = mvt_double;
 			tas.string = "tippecanoe_feature_density";
 			ai->second.file_keys.insert(tas);
 		}
@@ -1842,7 +1843,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
 	}
-	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm);
+	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true);
 
 	return ret;
 }

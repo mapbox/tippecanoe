@@ -38,6 +38,7 @@ extern "C" {
 #include "options.hpp"
 #include "serial.hpp"
 #include "text.hpp"
+#include "mvt.hpp"
 
 #define GEOM_POINT 0	   /* array of positions */
 #define GEOM_MULTIPOINT 1      /* array of arrays of positions */
@@ -333,7 +334,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			metakey[m] = properties->keys[i]->string;
 
 			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-				tas.type = metatype[m] = VT_STRING;
+				tas.type = metatype[m] = mvt_string;
 				metaval[m] = std::string(properties->values[i]->string);
 				std::string err = check_utf8(metaval[m]);
 				if (err != "") {
@@ -343,17 +344,17 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				}
 				m++;
 			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-				tas.type = metatype[m] = VT_NUMBER;
+				tas.type = metatype[m] = mvt_double;
 				metaval[m] = std::string(properties->values[i]->string);
 				m++;
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-				tas.type = metatype[m] = VT_BOOLEAN;
+				tas.type = metatype[m] = mvt_bool;
 				metaval[m] = std::string(properties->values[i]->type == JSON_TRUE ? "true" : "false");
 				m++;
 			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
 				;
 			} else {
-				tas.type = metatype[m] = VT_STRING;
+				tas.type = metatype[m] = mvt_string;
 				const char *v = json_stringify(properties->values[i]);
 				metaval[m] = std::string(v);
 				free((void *) v);  // stringify
@@ -464,13 +465,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < m; i++) {
-			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], VT_STRING));
+			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], mvt_string));
 			sf.values.push_back(addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]));
 		}
 	} else {
 		sf.metapos = *metapos;
 		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
+			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], mvt_string), metapos, fname);
 			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
 		}
 	}

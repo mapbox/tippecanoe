@@ -83,13 +83,32 @@ unsigned long long encode(unsigned int wx, unsigned int wy) {
 	return out;
 }
 
+static unsigned char decodex[256];
+static unsigned char decodey[256];
+
 void decode(unsigned long long index, unsigned *wx, unsigned *wy) {
+	static int initialized = 0;
+	if (!initialized) {
+		for (size_t ix = 0; ix < 256; ix++) {
+			size_t xx = 0, yy = 0;
+
+			for (size_t i = 0; i < 32; i++) {
+				xx |= ((ix >> (64 - 2 * (i + 1) + 1)) & 1) << (32 - (i + 1));
+				yy |= ((ix >> (64 - 2 * (i + 1) + 0)) & 1) << (32 - (i + 1));
+			}
+
+			decodex[ix] = xx;
+			decodey[ix] = yy;
+		}
+
+		initialized = 1;
+	}
+
 	*wx = *wy = 0;
 
-	int i;
-	for (i = 0; i < 32; i++) {
-		*wx |= ((index >> (64 - 2 * (i + 1) + 1)) & 1) << (32 - (i + 1));
-		*wy |= ((index >> (64 - 2 * (i + 1) + 0)) & 1) << (32 - (i + 1));
+	for (size_t i = 0; i < 8; i++) {
+		*wx |= ((unsigned) decodex[(index >> (8 * i)) & 0xFF]) << (4 * i);
+		*wy |= ((unsigned) decodey[(index >> (8 * i)) & 0xFF]) << (4 * i);
 	}
 }
 

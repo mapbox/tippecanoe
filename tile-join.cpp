@@ -101,25 +101,25 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				if (val.type == mvt_string) {
 					value = val.string_value;
-					type = VT_STRING;
+					type = mvt_string;
 				} else if (val.type == mvt_int) {
 					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
-					type = VT_NUMBER;
+					type = mvt_double;
 				} else if (val.type == mvt_double) {
 					aprintf(&value, "%g", val.numeric_value.double_value);
-					type = VT_NUMBER;
+					type = mvt_double;
 				} else if (val.type == mvt_float) {
 					aprintf(&value, "%g", val.numeric_value.float_value);
-					type = VT_NUMBER;
+					type = mvt_double;
 				} else if (val.type == mvt_bool) {
 					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
-					type = VT_BOOLEAN;
+					type = mvt_bool;
 				} else if (val.type == mvt_sint) {
 					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
-					type = VT_NUMBER;
+					type = mvt_double;
 				} else if (val.type == mvt_uint) {
 					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
-					type = VT_NUMBER;
+					type = mvt_double;
 				} else {
 					continue;
 				}
@@ -144,13 +144,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 						for (size_t i = 1; i < fields.size(); i++) {
 							std::string joinkey = header[i];
 							std::string joinval = fields[i];
-							int attr_type = VT_STRING;
+							int attr_type = mvt_string;
 
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
 									joinval = dequote(joinval);
 								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
-									attr_type = VT_NUMBER;
+									attr_type = mvt_double;
 								}
 							}
 
@@ -158,7 +158,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							if (exclude.count(joinkey) == 0) {
 								mvt_value outval;
-								if (attr_type == VT_STRING) {
+								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
 								} else {
@@ -743,7 +743,7 @@ int main(int argc, char **argv) {
 
 	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution);
 
-	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap);
+	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true);
 	mbtiles_close(outdb, argv);
 
 	return 0;

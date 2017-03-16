@@ -11,10 +11,8 @@
 #include <string>
 #include <set>
 #include <map>
-#include "main.hpp"
-#include "pool.hpp"
+#include "mvt.hpp"
 #include "mbtiles.hpp"
-#include "geometry.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -133,7 +131,7 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -219,7 +217,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 		sqlite3_free(sql);
 	}
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", "pbf");
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", vector ? "pbf" : "png");
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set format: %s\n", err);
 		if (!forcetable) {
@@ -228,58 +226,64 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 	}
 	sqlite3_free(sql);
 
-	std::string buf("{");
-	aprintf(&buf, "\"vector_layers\": [ ");
+	if (vector) {
+		std::string buf("{");
+		aprintf(&buf, "\"vector_layers\": [ ");
 
-	std::vector<std::string> lnames;
-	for (auto ai = layermap.begin(); ai != layermap.end(); ++ai) {
-		lnames.push_back(ai->first);
-	}
-
-	for (size_t i = 0; i < lnames.size(); i++) {
-		if (i != 0) {
-			aprintf(&buf, ", ");
+		std::vector<std::string> lnames;
+		for (auto ai = layermap.begin(); ai != layermap.end(); ++ai) {
+			lnames.push_back(ai->first);
 		}
 
-		auto fk = layermap.find(lnames[i]);
-		aprintf(&buf, "{ \"id\": \"");
-		quote(&buf, lnames[i].c_str());
-		aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
-
-		std::set<type_and_string>::iterator j;
-		bool first = true;
-		for (j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
-			if (first) {
-				first = false;
-			} else {
+		for (size_t i = 0; i < lnames.size(); i++) {
+			if (i != 0) {
 				aprintf(&buf, ", ");
 			}
 
-			aprintf(&buf, "\"");
-			quote(&buf, j->string.c_str());
+			auto fk = layermap.find(lnames[i]);
+			aprintf(&buf, "{ \"id\": \"");
+			quote(&buf, lnames[i].c_str());
+			aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
-			if (j->type == VT_NUMBER) {
-				aprintf(&buf, "\": \"Number\"");
-			} else if (j->type == VT_BOOLEAN) {
-				aprintf(&buf, "\": \"Boolean\"");
-			} else {
-				aprintf(&buf, "\": \"String\"");
+			std::set<type_and_string>::iterator j;
+			bool first = true;
+			for (j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
+				if (first) {
+					first = false;
+				} else {
+					aprintf(&buf, ", ");
+				}
+
+				aprintf(&buf, "\"");
+				quote(&buf, j->string.c_str());
+
+				if (j->type == mvt_double ||
+				    j->type == mvt_float ||
+				    j->type == mvt_double ||
+				    j->type == mvt_uint ||
+				    j->type == mvt_sint) {
+					aprintf(&buf, "\": \"Number\"");
+				} else if (j->type == mvt_bool) {
+					aprintf(&buf, "\": \"Boolean\"");
+				} else {
+					aprintf(&buf, "\": \"String\"");
+				}
+			}
+
+			aprintf(&buf, "} }");
+		}
+
+		aprintf(&buf, " ] }");
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
+		if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set json: %s\n", err);
+			if (!forcetable) {
+				exit(EXIT_FAILURE);
 			}
 		}
-
-		aprintf(&buf, "} }");
+		sqlite3_free(sql);
 	}
-
-	aprintf(&buf, " ] }");
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
-	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set json: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_FAILURE);
-		}
-	}
-	sqlite3_free(sql);
 }
 
 void mbtiles_close(sqlite3 *outdb, char **argv) {
