@@ -43,7 +43,7 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -Iprotozero-1.5.1/include -Igeometry.hpp-0.9.0-gcc-4.9/include -Iwagyu-0.4.1/include
+INCLUDES = -Iprotozero-1.5.1/include -Igeometry.hpp-0.9.0-gcc-4.9/include -Iwagyu-0.4.1/include -ICatch-1.8.2/single_include
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o
@@ -93,6 +93,11 @@ geometry.o: geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp
 
 geometry.hpp-0.9.0-gcc-4.9/include/mapbox/geometry/geometry.hpp:
 	curl -s -L https://github.com/mapbox/geometry.hpp/archive/v0.9.0-gcc-4.9.tar.gz | gzip -dc | tar xf -
+
+unit.o: Catch-1.8.2/single_include/catch.hpp
+
+Catch-1.8.2/single_include/catch.hpp:
+	curl -s -L https://github.com/philsquared/Catch/archive/v1.8.2.tar.gz | gzip -dc | tar xf -
 
 ###########################################################################
 #
