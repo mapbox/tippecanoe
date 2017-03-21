@@ -1,3 +1,8 @@
+## 1.16.14
+
+* Add --description option for mbtiles metadata
+* Clean up some utility functions
+
 ## 1.16.13
 
 * Add --detect-longitude-wraparound option

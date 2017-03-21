@@ -453,7 +453,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -538,6 +538,12 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 				attribution = std::string((char *) sqlite3_column_text(r->stmt, 0));
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'description'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				description = std::string((char *) sqlite3_column_text(r->stmt, 0));
 			}
 			sqlite3_finalize(r->stmt);
 		}
@@ -724,6 +730,7 @@ int main(int argc, char **argv) {
 
 	std::map<std::string, layermap_entry> layermap;
 	std::string attribution;
+	std::string description;
 
 	struct reader *readers = NULL;
 
@@ -741,9 +748,9 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution);
+	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description);
 
-	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true);
+	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
 	mbtiles_close(outdb, argv);
 
 	return 0;

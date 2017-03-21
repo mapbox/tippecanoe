@@ -131,7 +131,7 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description) {
 	char *sql, *err;
 
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
@@ -143,7 +143,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *fname, int minzoom, int 
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", fname);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", description != NULL ? description : fname);
 	if (sqlite3_exec(outdb, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set description in metadata: %s\n", err);
 		if (!forcetable) {
