@@ -24,7 +24,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, unsigned long long index, long long sequence, long long extent) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -38,7 +38,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			fprintf(fp, ", \"id\": %llu", feat.id);
 		}
 
-		if (name || index != 0 || sequence != 0 || extent != 0) {
+		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
 			bool need_comma = false;
 
 			fprintf(fp, ", \"tippecanoe\": { ");
@@ -49,6 +49,15 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 				fprintf(fp, "\"layer\": ");
 				fprintq(fp, layer.name.c_str());
+				need_comma = true;
+			}
+
+			if (zoom) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"minzoom\": %u, ", z);
+				fprintf(fp, "\"maxzoom\": %u", z);
 				need_comma = true;
 			}
 

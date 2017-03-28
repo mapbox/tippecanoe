@@ -21,7 +21,7 @@
 int minzoom = 0;
 int maxzoom = 32;
 
-void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode) {
+void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
 	int within = 0;
 	mvt_tile tile;
 
@@ -35,19 +35,21 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		exit(EXIT_FAILURE);
 	}
 
-	printf("{ \"type\": \"FeatureCollection\"");
+	if (!pipeline) {
+		printf("{ \"type\": \"FeatureCollection\"");
 
-	if (describe) {
-		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+		if (describe) {
+			printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
 
-		if (projection != projections) {
-			printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
-			fprintq(stdout, projection->alias);
-			printf(" } }");
+			if (projection != projections) {
+				printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
+				fprintq(stdout, projection->alias);
+				printf(" } }");
+			}
 		}
-	}
 
-	printf(", \"features\": [\n");
+		printf(", \"features\": [\n");
+	}
 
 	bool first_layer = true;
 	for (size_t l = 0; l < tile.layers.size(); l++) {
@@ -57,33 +59,39 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 			continue;
 		}
 
-		if (describe) {
-			if (!first_layer) {
-				printf(",\n");
+		if (!pipeline) {
+			if (describe) {
+				if (!first_layer) {
+					printf(",\n");
+				}
+
+				printf("{ \"type\": \"FeatureCollection\"");
+				printf(", \"properties\": { \"layer\": ");
+				fprintq(stdout, layer.name.c_str());
+				printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
+				printf(" }");
+				printf(", \"features\": [\n");
+
+				first_layer = false;
+				within = 0;
 			}
-
-			printf("{ \"type\": \"FeatureCollection\"");
-			printf(", \"properties\": { \"layer\": ");
-			fprintq(stdout, layer.name.c_str());
-			printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
-			printf(" }");
-			printf(", \"features\": [\n");
-
-			first_layer = false;
-			within = 0;
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y, true, false, 0, 0, 0);
+		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0);
 
-		if (describe) {
-			printf("] }\n");
+		if (!pipeline) {
+			if (describe) {
+				printf("] }\n");
+			}
 		}
 	}
 
-	printf("] }\n");
+	if (!pipeline) {
+		printf("] }\n");
+	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline) {
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
@@ -98,7 +106,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, 1, to_decode);
+							handle(s, z, x, y, 1, to_decode, pipeline);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -126,31 +134,34 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	}
 
 	if (z < 0) {
-		printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
-
-		const char *sql2 = "SELECT name, value from metadata order by name;";
-		sqlite3_stmt *stmt2;
-		if (sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL) != SQLITE_OK) {
-			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
-			exit(EXIT_FAILURE);
-		}
-
 		int within = 0;
-		while (sqlite3_step(stmt2) == SQLITE_ROW) {
-			if (within) {
-				printf(",\n");
+
+		if (!pipeline) {
+			printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
+
+			const char *sql2 = "SELECT name, value from metadata order by name;";
+			sqlite3_stmt *stmt2;
+			if (sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL) != SQLITE_OK) {
+				fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
+				exit(EXIT_FAILURE);
 			}
-			within = 1;
 
-			const unsigned char *name = sqlite3_column_text(stmt2, 0);
-			const unsigned char *value = sqlite3_column_text(stmt2, 1);
+			while (sqlite3_step(stmt2) == SQLITE_ROW) {
+				if (within) {
+					printf(",\n");
+				}
+				within = 1;
 
-			fprintq(stdout, (char *) name);
-			printf(": ");
-			fprintq(stdout, (char *) value);
+				const unsigned char *name = sqlite3_column_text(stmt2, 0);
+				const unsigned char *value = sqlite3_column_text(stmt2, 1);
+
+				fprintq(stdout, (char *) name);
+				printf(": ");
+				fprintq(stdout, (char *) value);
+			}
+
+			sqlite3_finalize(stmt2);
 		}
-
-		sqlite3_finalize(stmt2);
 
 		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
@@ -162,14 +173,18 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		sqlite3_bind_int(stmt, 1, minzoom);
 		sqlite3_bind_int(stmt, 2, maxzoom);
 
-		printf("\n}, \"features\": [\n");
+		if (!pipeline) {
+			printf("\n}, \"features\": [\n");
+		}
 
 		within = 0;
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			if (within) {
-				printf(",\n");
+			if (!pipeline) {
+				if (within) {
+					printf(",\n");
+				}
+				within = 1;
 			}
-			within = 1;
 
 			int len = sqlite3_column_bytes(stmt, 0);
 			int tz = sqlite3_column_int(stmt, 1);
@@ -178,10 +193,12 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), tz, tx, ty, 1, to_decode);
+			handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline);
 		}
 
-		printf("] }\n");
+		if (!pipeline) {
+			printf("] }\n");
+		}
 
 		sqlite3_finalize(stmt);
 	} else {
@@ -206,7 +223,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, 0, to_decode);
+				handle(std::string(s, len), z, x, y, 0, to_decode, pipeline);
 				handled = 1;
 			}
 
@@ -234,8 +251,9 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 	std::set<std::string> to_decode;
+	bool pipeline = false;
 
-	while ((i = getopt(argc, argv, "t:Z:z:l:")) != -1) {
+	while ((i = getopt(argc, argv, "t:Z:z:l:c")) != -1) {
 		switch (i) {
 		case 't':
 			set_projection_or_exit(optarg);
@@ -253,15 +271,19 @@ int main(int argc, char **argv) {
 			to_decode.insert(optarg);
 			break;
 
+		case 'c':
+			pipeline = true;
+			break;
+
 		default:
 			usage(argv);
 		}
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode);
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1, to_decode);
+		decode(argv[optind], -1, -1, -1, to_decode, pipeline);
 	} else {
 		usage(argv);
 	}
