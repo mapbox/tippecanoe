@@ -1,7 +1,7 @@
 { "type": "FeatureCollection", "properties": {
 "bounds": "-122.334735,37.695438,-122.104097,37.898925",
 "center": "-122.299805,37.892187,12",
-"description": "tests/join-population/merged.mbtiles",
+"description": "tests/join-population/tabblock_06001420.mbtiles",
 "format": "pbf",
 "json": "{\"vector_layers\": [ { \"id\": \"macarthur\", \"description\": \"\", \"minzoom\": 5, \"maxzoom\": 11, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} }, { \"id\": \"tabblock_06001420\", \"description\": \"\", \"minzoom\": 3, \"maxzoom\": 12, \"fields\": {\"ALAND10\": \"Number\", \"AWATER10\": \"Number\", \"BLOCKCE10\": \"String\", \"COUNTYFP10\": \"String\", \"FUNCSTAT10\": \"String\", \"GEOID10\": \"String\", \"INTPTLAT10\": \"String\", \"INTPTLON10\": \"String\", \"MTFCC10\": \"String\", \"NAME10\": \"String\", \"STATEFP10\": \"String\", \"TRACTCE10\": \"String\", \"UACE10\": \"String\", \"UATYP10\": \"String\", \"UR10\": \"String\"} } ] }",
 "maxzoom": "12",

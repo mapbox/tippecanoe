@@ -455,7 +455,7 @@ static int is_integer(const char *s, long long *v) {
 mvt_value stringified_to_mvt_value(int type, const char *s) {
 	mvt_value tv;
 
-	if (type == VT_NUMBER) {
+	if (type == mvt_double) {
 		long long v;
 		if (is_integer(s, &v)) {
 			if (v >= 0) {
@@ -476,7 +476,7 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 				tv.numeric_value.double_value = d;
 			}
 		}
-	} else if (type == VT_BOOLEAN) {
+	} else if (type == mvt_bool) {
 		tv.type = mvt_bool;
 		tv.numeric_value.bool_value = (s[0] == 't');
 	} else {

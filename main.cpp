@@ -55,6 +55,7 @@ extern "C" {
 #include "geometry.hpp"
 #include "serial.hpp"
 #include "options.hpp"
+#include "mvt.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -1009,7 +1010,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1842,7 +1843,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 			type_and_string tas;
-			tas.type = VT_NUMBER;
+			tas.type = mvt_double;
 			tas.string = "tippecanoe_feature_density";
 			ai->second.file_keys.insert(tas);
 		}
@@ -1852,7 +1853,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
 	}
-	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm);
+	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
 
 	return ret;
 }
@@ -1879,6 +1880,7 @@ int main(int argc, char **argv) {
 	int i;
 
 	char *name = NULL;
+	char *description = NULL;
 	char *layername = NULL;
 	char *outdir = NULL;
 	int maxzoom = 14;
@@ -1910,6 +1912,7 @@ int main(int argc, char **argv) {
 		{"output", required_argument, 0, 'o'},
 
 		{"name", required_argument, 0, 'n'},
+		{"description", required_argument, 0, 'N'},
 		{"layer", required_argument, 0, 'l'},
 		{"attribution", required_argument, 0, 'A'},
 		{"named-layer", required_argument, 0, 'L'},
@@ -1988,13 +1991,17 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:c:C:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:c:C:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
 
 		case 'n':
 			name = optarg;
+			break;
+
+		case 'N':
+			description = optarg;
 			break;
 
 		case 'l':
@@ -2296,7 +2303,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter);
+	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description);
 
 	mbtiles_close(outdb, argv);
 

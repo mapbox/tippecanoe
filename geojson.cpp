@@ -39,6 +39,7 @@ extern "C" {
 #include "serial.hpp"
 #include "text.hpp"
 #include "read_json.hpp"
+#include "mvt.hpp"
 
 static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
 	parse_geometry(t, j, geom, op, fname, line, feature);
@@ -359,13 +360,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < m; i++) {
-			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], VT_STRING));
+			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], mvt_string));
 			sf.values.push_back(addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]));
 		}
 	} else {
 		sf.metapos = *metapos;
 		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
+			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], mvt_string), metapos, fname);
 			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
 		}
 	}
