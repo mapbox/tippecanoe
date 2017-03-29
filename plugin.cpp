@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sqlite3.h>
+#include <limits.h>
 #include "main.hpp"
 #include "mvt.hpp"
 #include "mbtiles.hpp"
