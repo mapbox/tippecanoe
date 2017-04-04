@@ -1837,7 +1837,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			std::string compressed = tile.encode();
+			std::string compressed;
+			std::string pbf = tile.encode();
+
+			if(!prevent[P_PBF_COMPRESSION]){
+				compress(pbf, compressed);
+			}else{
+				compressed = pbf;
+			}
 
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
@@ -1909,7 +1916,22 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						exit(EXIT_FAILURE);
 					}
 
-					mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					if(!prevent[P_PBF_COMPRESSION]){
+						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());						
+					}else{
+						mkdir(outpbfdir, S_IRWXU | S_IRWXG | S_IRWXO);
+						std::string curdir(outpbfdir);
+					    std::string slash( "/" );
+					    std::string newdir = curdir + slash + std::to_string(z);
+						mkdir(newdir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+					   	newdir = newdir + "/" + std::to_string(tx);
+					   	mkdir(newdir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+					   	newdir = newdir + "/" + std::to_string(ty) + ".pbf";
+						
+					    std::ofstream pbfFile (newdir, std::ios::out | std::ios::app | std::ios::binary);
+					    pbfFile.write (pbf.data(), pbf.size());
+					    pbfFile.close();
+					}
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {
 						perror("pthread_mutex_unlock");

@@ -367,10 +367,7 @@ std::string mvt_tile::encode() {
 		writer.add_message(3, layer_string);
 	}
 
-	std::string compressed;
-	compress(data, compressed);
-
-	return compressed;
+	return data;
 }
 
 bool mvt_value::operator<(const mvt_value &o) const {

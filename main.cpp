@@ -69,6 +69,8 @@ struct source {
 	std::string file;
 };
 
+char *outpbfdir;
+
 size_t CPUS;
 size_t TEMP_FILES;
 long long MAX_FILES;
@@ -1843,7 +1845,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
 	}
-	mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
+
+	if(!prevent[P_PBF_COMPRESSION])
+		mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
 
 	return ret;
 }
@@ -1873,6 +1877,7 @@ int main(int argc, char **argv) {
 	char *description = NULL;
 	char *layername = NULL;
 	char *outdir = NULL;
+	sqlite3 *outdb = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
 	int basezoom = -1;
@@ -1955,6 +1960,7 @@ int main(int argc, char **argv) {
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
 		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
+		{"raw-tiles", no_argument, &prevent[P_PBF_COMPRESSION], 1},
 
 		{0, 0, 0, 0},
 	};
@@ -2247,7 +2253,12 @@ int main(int argc, char **argv) {
 		unlink(outdir);
 	}
 
-	sqlite3 *outdb = mbtiles_open(outdir, argv, forcetable);
+	if(!prevent[P_PBF_COMPRESSION]){
+		outdb = mbtiles_open(outdir, argv, forcetable);
+	}else{		
+		outpbfdir = outdir;
+	}
+
 	int ret = EXIT_SUCCESS;
 
 	for (i = optind; i < argc; i++) {
@@ -2274,7 +2285,8 @@ int main(int argc, char **argv) {
 
 	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description);
 
-	mbtiles_close(outdb, argv);
+	if(!prevent[P_PBF_COMPRESSION])
+		mbtiles_close(outdb, argv);
 
 #ifdef MTRACE
 	muntrace();
