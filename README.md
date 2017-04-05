@@ -78,6 +78,7 @@ Options
    messages may result otherwise.
    Performance will be better if the input is a named file that can be mapped into memory
    rather than a stream that can only be read sequentially.
+ * -pC or --raw-tiles: Export to raw uncompressed pbf files rather than to an .mbtiles. This flag will use the output file name (-o) as the folder name. 
 
 ### Zoom levels and resolution
 
