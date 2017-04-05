@@ -22,6 +22,7 @@
 #include <time.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
+#include "rawtiles.hpp"
 #include "geometry.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -1919,18 +1920,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					if(!prevent[P_PBF_COMPRESSION]){
 						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());						
 					}else{
-						mkdir(outpbfdir, S_IRWXU | S_IRWXG | S_IRWXO);
-						std::string curdir(outpbfdir);
-					    std::string slash( "/" );
-					    std::string newdir = curdir + slash + std::to_string(z);
-						mkdir(newdir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-					   	newdir = newdir + "/" + std::to_string(tx);
-					   	mkdir(newdir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-					   	newdir = newdir + "/" + std::to_string(ty) + ".pbf";
-						
-					    std::ofstream pbfFile (newdir, std::ios::out | std::ios::app | std::ios::binary);
-					    pbfFile.write (pbf.data(), pbf.size());
-					    pbfFile.close();
+						write_raw_tile(outpbfdir, z, tx, ty, pbf);
 					}
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {

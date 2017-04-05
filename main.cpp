@@ -2255,7 +2255,7 @@ int main(int argc, char **argv) {
 
 	if(!prevent[P_PBF_COMPRESSION]){
 		outdb = mbtiles_open(outdir, argv, forcetable);
-	}else{		
+	}else{
 		outpbfdir = outdir;
 	}
 

@@ -1,0 +1,1 @@
+void write_raw_tile(char *outdir, int z, int tx, int ty, std::string pbf);
