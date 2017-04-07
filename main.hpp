@@ -11,7 +11,7 @@ void checkdisk(struct reader *r, int nreader);
 
 extern int geometry_scale;
 extern int quiet;
-
+extern int outdirtable;
 extern char *outpbfdir;
 
 extern size_t CPUS;

@@ -112,7 +112,7 @@ parallel-test:
 	rm tests/parallel/*.mbtiles tests/parallel/*.json
 
 raw-tiles-test:	
-	./tippecanoe -o tests/raw-tiles/raw-tiles tests/raw-tiles/hackspots.geojson --raw-tiles	
+	./tippecanoe -e tests/raw-tiles/raw-tiles tests/raw-tiles/hackspots.geojson -pC
 	diff -x '.*' -rq tests/raw-tiles/raw-tiles tests/raw-tiles/compare
 	rm -rf tests/raw-tiles/raw-tiles
 

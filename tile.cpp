@@ -1841,9 +1841,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			std::string compressed;
 			std::string pbf = tile.encode();
 
-			if(!prevent[P_PBF_COMPRESSION]){
+			if (!prevent[P_TILE_COMPRESSION]) {
 				compress(pbf, compressed);
-			}else{
+			} else {
 				compressed = pbf;
 			}
 
@@ -1917,10 +1917,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						exit(EXIT_FAILURE);
 					}
 
-					if(!prevent[P_PBF_COMPRESSION]){
-						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());						
-					}else{
-						write_raw_tile(outpbfdir, z, tx, ty, pbf);
+					if (!outdirtable) {
+						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					} else {
+						write_raw_tile(outpbfdir, z, tx, ty, compressed);
 					}
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {

@@ -57,6 +57,7 @@ static int full_detail = -1;
 static int min_detail = 7;
 
 int quiet = 0;
+int outdirtable = 0;
 int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
@@ -1846,7 +1847,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	if(!prevent[P_PBF_COMPRESSION])
+	if (!outdirtable)
 		mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
 
 	return ret;
@@ -1903,6 +1904,7 @@ int main(int argc, char **argv) {
 
 	static struct option long_options[] = {
 		{"output", required_argument, 0, 'o'},
+		{"output-to-directory", required_argument, 0, 'e'},
 
 		{"name", required_argument, 0, 'n'},
 		{"description", required_argument, 0, 'N'},
@@ -1960,7 +1962,7 @@ int main(int argc, char **argv) {
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
 		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
-		{"raw-tiles", no_argument, &prevent[P_PBF_COMPRESSION], 1},
+		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 
 		{0, 0, 0, 0},
 	};
@@ -1983,7 +1985,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:e:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2061,6 +2063,11 @@ int main(int argc, char **argv) {
 
 		case 'o':
 			outdir = optarg;
+			break;
+
+		case 'e':
+			outpbfdir = optarg;
+			outdirtable = 1;
 			break;
 
 		case 'x':
@@ -2244,8 +2251,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
 	}
 
-	if (outdir == NULL) {
-		fprintf(stderr, "%s: must specify -o out.mbtiles\n", argv[0]);
+	if (outdir == NULL && outpbfdir == NULL) {
+		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
@@ -2253,10 +2260,8 @@ int main(int argc, char **argv) {
 		unlink(outdir);
 	}
 
-	if(!prevent[P_PBF_COMPRESSION]){
+	if (!outdirtable) {
 		outdb = mbtiles_open(outdir, argv, forcetable);
-	}else{
-		outpbfdir = outdir;
 	}
 
 	int ret = EXIT_SUCCESS;
@@ -2285,7 +2290,7 @@ int main(int argc, char **argv) {
 
 	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description);
 
-	if(!prevent[P_PBF_COMPRESSION])
+	if (!outdirtable)
 		mbtiles_close(outdb, argv);
 
 #ifdef MTRACE

@@ -25,7 +25,7 @@
 #define P_CLIPPING ((int) 'c')
 #define P_DUPLICATION ((int) 'D')
 #define P_TINY_POLYGON_REDUCTION ((int) 't')
-#define P_PBF_COMPRESSION ((int) 'C')
+#define P_TILE_COMPRESSION ((int) 'C')
 
 extern int prevent[256];
 extern int additional[256];
