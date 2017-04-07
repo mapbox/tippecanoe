@@ -1,0 +1,12 @@
+{
+    "name": "tests/raw-tiles/raw-tiles",
+    "description": "tests/raw-tiles/raw-tiles",
+    "version": "2",
+    "minzoom": "0",
+    "maxzoom": "14",
+    "center": "-122.662354,45.514045,14",
+    "bounds": "-122.682427,45.512332,-122.654961,45.569975",
+    "type": "overlay",
+    "format": "pbf",
+    "json": "{\"vector_layers\": [ { \"id\": \"hackspotsgeojson\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {\"Address\": \"String\", \"Name\": \"String\", \"Notes\": \"String\"} } ] }"
+}

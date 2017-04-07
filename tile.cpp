@@ -28,6 +28,7 @@
 #include <sys/wait.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
+#include "rawtiles.hpp"
 #include "geometry.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -1137,6 +1138,7 @@ struct write_tile_args {
 	int min_detail;
 	int basezoom;
 	sqlite3 *outdb;
+	const char *outdir;
 	double droprate;
 	int buffer;
 	const char *fname;
@@ -1390,7 +1392,7 @@ void *run_prefilter(void *v) {
 	return NULL;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
@@ -1933,7 +1935,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			std::string compressed = tile.encode();
+			std::string compressed;
+			std::string pbf = tile.encode();
+
+			if (!prevent[P_TILE_COMPRESSION]) {
+				compress(pbf, compressed);
+			} else {
+				compressed = pbf;
+			}
 
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
@@ -2005,7 +2014,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						exit(EXIT_FAILURE);
 					}
 
-					mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					if (outdb != NULL) {
+						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
+					} else if (outdir != NULL) {
+						write_raw_tile(outdir, z, tx, ty, compressed);
+					}
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {
 						perror("pthread_mutex_unlock");
@@ -2067,7 +2080,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->outdir, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2132,7 +2145,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.
@@ -2275,6 +2288,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].min_detail = min_detail;
 				args[thread].basezoom = basezoom;
 				args[thread].outdb = outdb;  // locked with db_lock
+				args[thread].outdir = outdir;
 				args[thread].droprate = droprate;
 				args[thread].buffer = buffer;
 				args[thread].fname = fname;

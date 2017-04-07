@@ -60,11 +60,15 @@ specified, the files are all merged into the single named layer, even if they tr
 \-n \fIname\fP or \-\-name=\fIname\fP: Human\-readable name for the tileset (default file.json)
 .IP \(bu 2
 \-A \fItext\fP or \-\-attribution=\fItext\fP: Attribution (HTML) to be shown with maps that use data from this tileset.
+.IP \(bu 2
+\-N \fIdescription\fP or \-\-description=\fIdescription\fP: Description for the tileset (default file.mbtiles)
 .RE
 .SS File control
 .RS
 .IP \(bu 2
 \-o \fIfile\fP\&.mbtiles or \-\-output=\fIfile\fP\&.mbtiles: Name the output file.
+.IP \(bu 2
+\-e \fIdirectory\fP or \-\-output\-directory=\fIdirectory\fP: Write tiles to the specified \fIdirectory\fP instead of to an mbtiles file.
 .IP \(bu 2
 \-f or \-\-force: Delete the mbtiles file if it already exists instead of giving an error
 .IP \(bu 2
@@ -187,6 +191,8 @@ which may not be what you want.
 \-pD or \-\-no\-duplication: As with \-\-no\-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
 .IP \(bu 2
 \-pt or \-\-no\-tiny\-polygon\-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
+.IP \(bu 2
+\-pC or \-\-no\-tile\-compression: Don't compress the PBF vector tile data.
 .IP \(bu 2
 \-q or \-\-quiet: Work quietly instead of reporting progress
 .RE
