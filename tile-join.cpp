@@ -750,7 +750,7 @@ int main(int argc, char **argv) {
 
 	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description);
 
-	mbtiles_write_metadata(outdb, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
+	mbtiles_write_metadata(outdb, NULL, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
 	mbtiles_close(outdb, argv);
 
 	return 0;

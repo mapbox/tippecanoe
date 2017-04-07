@@ -1,3 +1,7 @@
+## 1.16.15
+
+* Add --output-to-directory and --no-tile-compression options
+
 ## 1.16.14
 
 * Add --description option for mbtiles metadata

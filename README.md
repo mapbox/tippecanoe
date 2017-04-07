@@ -67,6 +67,7 @@ Options
 ### File control
 
  * -o _file_.mbtiles or --output=_file_.mbtiles: Name the output file.
+ * -e _directory_ or --output-directory=_directory_: Write tiles to the specified *directory* instead of to an mbtiles file.
  * -f or --force: Delete the mbtiles file if it already exists instead of giving an error
  * -F or --allow-existing: Proceed (without deleting existing data) if the metadata or tiles table already exists
    or if metadata fields can't be set
@@ -147,6 +148,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
  * -pD or --no-duplication: As with --no-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
  * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
+ * -pC or --no-tile-compression: Don't compress the PBF vector tile data.
  * -q or --quiet: Work quietly instead of reporting progress
 
 Environment
