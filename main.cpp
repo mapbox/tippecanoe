@@ -1863,6 +1863,15 @@ static bool has_name(struct option *long_options, int *pl) {
 	return false;
 }
 
+static bool findFlag(int argc, char **argv, std::string str) {
+	char **ptr = std::find(argv, argv + argc, str);
+
+	if (ptr != argv + argc)
+		return true;
+	else
+		return false;
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -2253,6 +2262,11 @@ int main(int argc, char **argv) {
 
 	if (outdir == NULL && outpbfdir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((findFlag(argc, argv, "-o") && findFlag(argc, argv, "-e")) || (findFlag(argc, argv, "--output") && findFlag(argc, argv, "--output-to-directory"))) {
+		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
