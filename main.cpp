@@ -20,6 +20,7 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <getopt.h>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <set>
