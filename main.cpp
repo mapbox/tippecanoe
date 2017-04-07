@@ -1845,9 +1845,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	if (outdb != NULL) {
-		mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
-	}
+	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
 
 	return ret;
 }
