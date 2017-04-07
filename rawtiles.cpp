@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include "rawtiles.hpp"
 
-void write_raw_tile(char *outdir, int z, int tx, int ty, std::string pbf) {
+void write_raw_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string curdir(outdir);
 	std::string slash("/");

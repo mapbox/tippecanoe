@@ -58,7 +58,6 @@ static int full_detail = -1;
 static int min_detail = 7;
 
 int quiet = 0;
-int outdirtable = 0;
 int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
@@ -70,8 +69,6 @@ struct source {
 	std::string layer;
 	std::string file;
 };
-
-char *outpbfdir;
 
 size_t CPUS;
 size_t TEMP_FILES;
@@ -1009,7 +1006,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *description) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *description) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1783,7 +1780,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, basezoom, outdb, outdir, droprate, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -1848,8 +1845,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	if (!outdirtable)
+	if (outdb != NULL) {
 		mbtiles_write_metadata(outdb, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
+	}
 
 	return ret;
 }
@@ -1862,15 +1860,6 @@ static bool has_name(struct option *long_options, int *pl) {
 	}
 
 	return false;
-}
-
-static bool findFlag(int argc, char **argv, std::string str) {
-	char **ptr = std::find(argv, argv + argc, str);
-
-	if (ptr != argv + argc)
-		return true;
-	else
-		return false;
 }
 
 int main(int argc, char **argv) {
@@ -1887,7 +1876,8 @@ int main(int argc, char **argv) {
 	char *name = NULL;
 	char *description = NULL;
 	char *layername = NULL;
-	char *outdir = NULL;
+	char *out_mbtiles = NULL;
+	char *out_directory = NULL;
 	sqlite3 *outdb = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
@@ -2072,12 +2062,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'o':
-			outdir = optarg;
+			out_mbtiles = optarg;
 			break;
 
 		case 'e':
-			outpbfdir = optarg;
-			outdirtable = 1;
+			out_directory = optarg;
 			break;
 
 		case 'x':
@@ -2261,22 +2250,22 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
 	}
 
-	if (outdir == NULL && outpbfdir == NULL) {
+	if (out_mbtiles == NULL && out_directory == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	if ((findFlag(argc, argv, "-o") && findFlag(argc, argv, "-e")) || (findFlag(argc, argv, "--output") && findFlag(argc, argv, "--output-to-directory"))) {
+	if (out_mbtiles != NULL && out_directory != NULL) {
 		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	if (force) {
-		unlink(outdir);
-	}
+	if (out_mbtiles != NULL) {
+		if (force) {
+			unlink(out_mbtiles);
+		}
 
-	if (!outdirtable) {
-		outdb = mbtiles_open(outdir, argv, forcetable);
+		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
 	}
 
 	int ret = EXIT_SUCCESS;
@@ -2303,10 +2292,11 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : outdir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_directory, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_directory, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description);
 
-	if (!outdirtable)
+	if (outdb != NULL) {
 		mbtiles_close(outdb, argv);
+	}
 
 #ifdef MTRACE
 	muntrace();
