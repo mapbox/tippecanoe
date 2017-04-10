@@ -326,6 +326,8 @@ The options are:
  * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * -i: Only include features that matched the CSV.
  * -pk: Don't skip tiles larger than 500K.
+ * -l *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
+ * -L *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),

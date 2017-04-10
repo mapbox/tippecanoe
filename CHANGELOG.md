@@ -1,3 +1,7 @@
+## 1.16.16
+
+* Add tile-join options to include or exclude specific layers
+
 ## 1.16.15
 
 * Add --output-to-directory and --no-tile-compression options
