@@ -55,6 +55,22 @@ it encounters.
 Options
 -------
 
+There are a lot of options. A lot of the time you won't want to use any of them
+other than `-o` _output_`.mbtiles` to name the output file, and probably `-f` to
+delete the file that already exists with that name.
+
+If you are mapping point features, you will often want to use `-Bg` to automatically choose
+a base zoom level for dot dropping. If that doesn't work out for you, try
+`-r1 --drop-fraction-as-needed` to turn off the normal dot dropping and instead
+only drop features if the tiles get too big.
+
+If you are mapping points or polygons, you will often want to use `--drop-densest-as-needed`
+to drop some of them if necessary to make the low zoom levels work.
+
+If your features have a lot of attributes, use `-y` to keep only the ones you really need.
+
+If your input is formatted as newline-delimited GeoJSON, use `-P` to make input parsing a lot faster.
+
 ### Names of layers and tileset description and attribution
 
  * `-l` _name_ or `--layer=`_name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
@@ -100,7 +116,7 @@ All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^3
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
 resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
-### Feature attributes
+### Filtering feature attributes
 
  * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
  * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
@@ -119,7 +135,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-al` or `--drop-lines`: Let "dot" dropping at lower zooms apply to lines too
  * `-ap` or `--drop-polygons`: Let "dot" dropping at lower zooms apply to polygons too
 
-### Dropping a fraction of features to reduce tile size
+### Dropping a fraction of features to keep under tile size limits
 
  * `-as` or `--drop-densest-as-needed`: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
  * `-ad` or `--drop-fraction-as-needed`: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
@@ -157,13 +173,6 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
  * `-ar` or `--reverse`: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 
-### Tile sizes
-
- * `-M` _bytes_ or `--maximum-tile-bytes=`_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
- * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
- * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
- * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
-
 ### Adding calculated attributes
 
  * `-ag` or `--calculate-feature-density`: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
@@ -171,6 +180,13 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 ### Trying to correct bad source geometry
 
  * `-aw` or `--detect-longitude-wraparound`: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+
+### Setting or disabling tile size limits
+
+ * `-M` _bytes_ or `--maximum-tile-bytes=`_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
+ * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
+ * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
+ * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
 
 ### Temporary storage
 
