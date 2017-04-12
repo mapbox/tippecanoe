@@ -136,9 +136,6 @@ void init_cpus() {
 		CPUS = 32767;
 	}
 
-	// Round down to a power of 2
-	CPUS = 1 << (int) (log(CPUS) / log(2));
-
 	struct rlimit rl;
 	if (getrlimit(RLIMIT_NOFILE, &rl) != 0) {
 		perror("getrlimit");

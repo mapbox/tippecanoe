@@ -312,14 +312,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 				// the four that would normally result from splitting one tile,
 				// because it will go through all the shards when it does the
 				// next zoom.
-				//
-				// If child_shards is a power of 2 but not a power of 4, this will
-				// shard X more widely than Y. XXX Is there a better way to do this
-				// without causing collisions?
 
 				int j = ((jx << max_zoom_increment) |
-					 ((jy & ((1 << max_zoom_increment) - 1)))) &
-					(child_shards - 1);
+					 ((jy & ((1 << max_zoom_increment) - 1)))) % child_shards;
 
 				{
 					if (!within[j]) {
@@ -1237,10 +1232,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
 		exit(EXIT_FAILURE);
 	}
-	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
-		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
-		exit(EXIT_FAILURE);
-	}
 
 	int nextzoom = z + 1;
 	if (nextzoom < minzoom) {
@@ -2106,13 +2097,6 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			threads = useful_threads;
 		}
 
-		// Round down to a power of 2
-		for (int e = 0; e < 30; e++) {
-			if (threads >= (1U << e) && threads < (1U << (e + 1))) {
-				threads = 1U << e;
-				break;
-			}
-		}
 		if (threads >= (1U << 30)) {
 			threads = 1U << 30;
 		}
