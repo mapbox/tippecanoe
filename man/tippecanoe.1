@@ -431,6 +431,10 @@ The options are:
 \fB\fC\-i\fR: Only include features that matched the CSV.
 .IP \(bu 2
 \fB\fC\-pk\fR: Don't skip tiles larger than 500K.
+.IP \(bu 2
+\fB\fC\-l\fR \fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
+.IP \(bu 2
+\fB\fC\-L\fR \fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
 .RE
 .PP
 Because tile\-join just copies the geometries to the new .mbtiles without processing them

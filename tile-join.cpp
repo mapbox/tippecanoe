@@ -29,7 +29,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, mvt_tile &outtile) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
 	int features_added = 0;
 
@@ -40,6 +40,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
+
+		if (keep_layers.size() > 0 && keep_layers.count(layer.name) == 0) {
+			continue;
+		}
+		if (remove_layers.count(layer.name) != 0) {
+			continue;
+		}
 
 		size_t ol;
 		for (ol = 0; ol < outtile.layers.size(); ol++) {
@@ -369,6 +376,8 @@ struct arg {
 	std::vector<std::string> *header;
 	std::map<std::string, std::vector<std::string>> *mapping;
 	std::set<std::string> *exclude;
+	std::set<std::string> *keep_layers;
+	std::set<std::string> *remove_layers;
 	int ifmatched;
 };
 
@@ -379,7 +388,7 @@ void *join_worker(void *v) {
 		mvt_tile tile;
 
 		for (size_t i = 0; i < ai->second.size(); i++) {
-			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), a->ifmatched, tile);
+			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile);
 		}
 
 		ai->second.clear();
@@ -406,7 +415,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -417,6 +426,8 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		args[i].header = &header;
 		args[i].mapping = &mapping;
 		args[i].exclude = &exclude;
+		args[i].keep_layers = &keep_layers;
+		args[i].remove_layers = &remove_layers;
 		args[i].ifmatched = ifmatched;
 	}
 
@@ -453,7 +464,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -475,7 +486,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
-				handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched);
+				handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
 				tasks.clear();
 			}
 		}
@@ -506,7 +517,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		*rr = r;
 	}
 
-	handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched);
+	handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
 	layermap = merge_layermaps(layermaps);
 
 	struct reader *next;
@@ -667,12 +678,14 @@ int main(int argc, char **argv) {
 	std::map<std::string, std::vector<std::string>> mapping;
 
 	std::set<std::string> exclude;
+	std::set<std::string> keep_layers;
+	std::set<std::string> remove_layers;
 
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:ip:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:ip:l:L:")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -707,6 +720,14 @@ int main(int argc, char **argv) {
 
 		case 'x':
 			exclude.insert(std::string(optarg));
+			break;
+
+		case 'l':
+			keep_layers.insert(std::string(optarg));
+			break;
+
+		case 'L':
+			remove_layers.insert(std::string(optarg));
 			break;
 
 		default:
@@ -748,7 +769,7 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description);
+	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers);
 
 	mbtiles_write_metadata(outdb, NULL, outfile, st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
 	mbtiles_close(outdb, argv);
