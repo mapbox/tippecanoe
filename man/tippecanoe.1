@@ -73,7 +73,7 @@ specified, the files are all merged into the single named layer, even if they tr
 \fB\fC\-f\fR or \fB\fC\-\-force\fR: Delete the mbtiles file if it already exists instead of giving an error
 .IP \(bu 2
 \fB\fC\-F\fR or \fB\fC\-\-allow\-existing\fR: Proceed (without deleting existing data) if the metadata or tiles table already exists
-or if metadata fields can't be set
+or if metadata fields can't be set. You probably don't want to use this.
 .RE
 .SS Parallel processing of input
 .RS
@@ -85,17 +85,17 @@ messages may result otherwise.
 Performance will be better if the input is a named file that can be mapped into memory
 rather than a stream that can only be read sequentially.
 .RE
+.SS Projection of input
+.RS
+.IP \(bu 2
+\fB\fC\-s\fR \fIprojection\fP or \fB\fC\-\-projection=\fR\fIprojection\fP: Specify the projection of the input data. Currently supported are \fB\fCEPSG:4326\fR (WGS84, the default) and \fB\fCEPSG:3857\fR (Web Mercator).
+.RE
 .SS Zoom levels
 .RS
 .IP \(bu 2
 \fB\fC\-z\fR \fIzoom\fP or \fB\fC\-\-maximum\-zoom=\fR\fIzoom\fP: Maxzoom: the highest zoom level for which tiles are generated (default 14)
 .IP \(bu 2
 \fB\fC\-Z\fR \fIzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
-.IP \(bu 2
-\fB\fC\-B\fR \fIzoom\fP or \fB\fC\-\-base\-zoom=\fR\fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
-If you use \fB\fC\-Bg\fR, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
-You can also specify a marker\-width with \fB\fC\-Bg\fR\fIwidth\fP to allow fewer features in the densest tile to
-compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .RE
 .SS Tile resolution
 .RS
@@ -105,14 +105,12 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 \fB\fC\-D\fR \fIdetail\fP or \fB\fC\-\-low\-detail=\fR\fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 4096)
 .IP \(bu 2
 \fB\fC\-m\fR \fIdetail\fP or \fB\fC\-\-minimum\-detail=\fR\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
-.IP \(bu 2
-\fB\fC\-s\fR \fIprojection\fP or \fB\fC\-\-projection=\fR\fIprojection\fP: Specify the projection of the input data. Currently supported are \fB\fCEPSG:4326\fR (WGS84, the default) and \fB\fCEPSG:3857\fR (Web Mercator).
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If \fImaxzoom\fP + \fIdetail\fP > 32, no additional
 resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
-.SS Properties
+.SS Feature attributes
 .RS
 .IP \(bu 2
 \fB\fC\-x\fR \fIname\fP or \fB\fC\-\-exclude=\fR\fIname\fP: Exclude the named properties from all features
@@ -129,6 +127,11 @@ If you use \fB\fC\-rg\fR, it will guess a drop rate that will keep at most 50,00
 You can also specify a marker\-width with \fB\fC\-rg\fR\fIwidth\fP to allow fewer features in the densest tile to
 compensate for the larger marker, or \fB\fC\-rf\fR\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .IP \(bu 2
+\fB\fC\-B\fR \fIzoom\fP or \fB\fC\-\-base\-zoom=\fR\fIzoom\fP: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+If you use \fB\fC\-Bg\fR, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
+You can also specify a marker\-width with \fB\fC\-Bg\fR\fIwidth\fP to allow fewer features in the densest tile to
+compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
+.IP \(bu 2
 \fB\fC\-al\fR or \fB\fC\-\-drop\-lines\fR: Let "dot" dropping at lower zooms apply to lines too
 .IP \(bu 2
 \fB\fC\-ap\fR or \fB\fC\-\-drop\-polygons\fR: Let "dot" dropping at lower zooms apply to polygons too
@@ -142,14 +145,14 @@ compensate for the larger marker, or \fB\fC\-rf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
-\fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.)
+\fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .RE
 .SS Dropping tightly overlapping features
 .RS
 .IP \(bu 2
 \fB\fC\-g\fR \fIgamma\fP or \fB\fC\-\-gamma=_gamma\fR_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
 .IP \(bu 2
-\fB\fC\-aG\fR or \fB\fC\-\-increase\-gamma\-as\-needed\fR: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma. The discovered gamma applies to the entire zoom level.
+\fB\fC\-aG\fR or \fB\fC\-\-increase\-gamma\-as\-needed\fR: If a tile is too large, try to reduce it to under 500K by increasing the \fB\fC\-g\fR gamma. The discovered gamma applies to the entire zoom level. You probably want to use \fB\fC\-\-drop\-densest\-as\-needed\fR instead.
 .RE
 .SS Line and polygon simplification
 .RS
@@ -163,6 +166,13 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pt\fR or \fB\fC\-\-no\-tiny\-polygon\-reduction\fR: Don't combine the area of very small polygons into small squares that represent their combined area.
 .RE
+.SS Attempts to improve shared polygon boundaries
+.RS
+.IP \(bu 2
+\fB\fC\-ab\fR or \fB\fC\-\-detect\-shared\-borders\fR: In the manner of TopoJSON \[la]https://github.com/mbostock/topojson/wiki/Introduction\[ra], detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+.IP \(bu 2
+\fB\fC\-aL\fR or \fB\fC\-\-grid\-low\-zooms\fR: At all zoom levels below \fImaxzoom\fP, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably \fB\fC\-D8\fR\&. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data. You probably don't want to use this.
+.RE
 .SS Controlling clipping to tile boundaries
 .RS
 .IP \(bu 2
@@ -172,23 +182,16 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \-pD or \-\-no\-duplication: As with \-\-no\-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
 .RE
-.SS Attempts to improve shared polygon boundaries
-.RS
-.IP \(bu 2
-\fB\fC\-ab\fR or \fB\fC\-\-detect\-shared\-borders\fR: In the manner of TopoJSON \[la]https://github.com/mbostock/topojson/wiki/Introduction\[ra], detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
-.IP \(bu 2
-\fB\fC\-aL\fR or \fB\fC\-\-grid\-low\-zooms\fR: At all zoom levels below \fImaxzoom\fP, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably \fB\fC\-D8\fR\&. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data.
-.RE
 .SS Reordering features within each tile
 .RS
 .IP \(bu 2
 \fB\fC\-pi\fR or \fB\fC\-\-preserve\-input\-order\fR: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \-ao).
 .IP \(bu 2
-\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
+\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably don't want to use this.
 .IP \(bu 2
-\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same properties.
+\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
 .IP \(bu 2
-\fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better
+\fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 .RE
 .SS Tile sizes
 .RS
