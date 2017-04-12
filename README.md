@@ -71,15 +71,6 @@ If your features have a lot of attributes, use `-y` to keep only the ones you re
 
 If your input is formatted as newline-delimited GeoJSON, use `-P` to make input parsing a lot faster.
 
-### Names of layers and tileset description and attribution
-
- * `-l` _name_ or `--layer=`_name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
-   specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
- * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
- * `-n` _name_ or `--name=`_name_: Human-readable name for the tileset (default file.json)
- * `-A` _text_ or `--attribution=`_text_: Attribution (HTML) to be shown with maps that use data from this tileset.
- * `-N` _description_ or `--description=`_description_: Description for the tileset (default file.mbtiles)
-
 ### Output tileset
 
  * `-o` _file_`.mbtiles` or `--output=`_file_`.mbtiles`: Name the output file.
@@ -87,6 +78,19 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
  * `-f` or `--force`: Delete the mbtiles file if it already exists instead of giving an error
  * `-F` or `--allow-existing`: Proceed (without deleting existing data) if the metadata or tiles table already exists
    or if metadata fields can't be set. You probably don't want to use this.
+
+### Tileset description and attribution
+
+ * `-n` _name_ or `--name=`_name_: Human-readable name for the tileset (default file.json)
+ * `-A` _text_ or `--attribution=`_text_: Attribution (HTML) to be shown with maps that use data from this tileset.
+ * `-N` _description_ or `--description=`_description_: Description for the tileset (default file.mbtiles)
+
+### Input files and layer names
+
+ * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
+ * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
+   specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
+ * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
 
 ### Parallel processing of input
 

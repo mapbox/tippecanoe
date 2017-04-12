@@ -65,20 +65,6 @@ to drop some of them if necessary to make the low zoom levels work.
 If your features have a lot of attributes, use \fB\fC\-y\fR to keep only the ones you really need.
 .PP
 If your input is formatted as newline\-delimited GeoJSON, use \fB\fC\-P\fR to make input parsing a lot faster.
-.SS Names of layers and tileset description and attribution
-.RS
-.IP \(bu 2
-\fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
-specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
-.IP \(bu 2
-\fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
-.IP \(bu 2
-\fB\fC\-n\fR \fIname\fP or \fB\fC\-\-name=\fR\fIname\fP: Human\-readable name for the tileset (default file.json)
-.IP \(bu 2
-\fB\fC\-A\fR \fItext\fP or \fB\fC\-\-attribution=\fR\fItext\fP: Attribution (HTML) to be shown with maps that use data from this tileset.
-.IP \(bu 2
-\fB\fC\-N\fR \fIdescription\fP or \fB\fC\-\-description=\fR\fIdescription\fP: Description for the tileset (default file.mbtiles)
-.RE
 .SS Output tileset
 .RS
 .IP \(bu 2
@@ -90,6 +76,25 @@ specified, the files are all merged into the single named layer, even if they tr
 .IP \(bu 2
 \fB\fC\-F\fR or \fB\fC\-\-allow\-existing\fR: Proceed (without deleting existing data) if the metadata or tiles table already exists
 or if metadata fields can't be set. You probably don't want to use this.
+.RE
+.SS Tileset description and attribution
+.RS
+.IP \(bu 2
+\fB\fC\-n\fR \fIname\fP or \fB\fC\-\-name=\fR\fIname\fP: Human\-readable name for the tileset (default file.json)
+.IP \(bu 2
+\fB\fC\-A\fR \fItext\fP or \fB\fC\-\-attribution=\fR\fItext\fP: Attribution (HTML) to be shown with maps that use data from this tileset.
+.IP \(bu 2
+\fB\fC\-N\fR \fIdescription\fP or \fB\fC\-\-description=\fR\fIdescription\fP: Description for the tileset (default file.mbtiles)
+.RE
+.SS Input files and layer names
+.RS
+.IP \(bu 2
+\fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
+specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
+.IP \(bu 2
+\fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
 .RE
 .SS Parallel processing of input
 .RS
