@@ -55,101 +55,151 @@ it encounters.
 Options
 -------
 
-### Naming
+There are a lot of options. A lot of the time you won't want to use any of them
+other than `-o` _output_`.mbtiles` to name the output file, and probably `-f` to
+delete the file that already exists with that name.
 
- * -l _name_ or --layer=_name_: Layer name (default "file" if source is file.json or output is file.mbtiles). If there are multiple input files
-   specified, the files are all merged into the single named layer, even if they try to specify individual names with -L.
- * -L _name_:_file.json_ or --named-layer=_name_:_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like -L _name_:<(cat dir/*.json) to specify a layer name for the output of streamed input.
- * -n _name_ or --name=_name_: Human-readable name for the tileset (default file.json)
- * -A _text_ or --attribution=_text_: Attribution (HTML) to be shown with maps that use data from this tileset.
- * -N _description_ or --description=_description_: Description for the tileset (default file.mbtiles)
+If you are mapping point features, you will often want to use `-Bg` to automatically choose
+a base zoom level for dot dropping. If that doesn't work out for you, try
+`-r1 --drop-fraction-as-needed` to turn off the normal dot dropping and instead
+only drop features if the tiles get too big.
 
-### File control
+If you are mapping points or polygons, you will often want to use `--drop-densest-as-needed`
+to drop some of them if necessary to make the low zoom levels work.
 
- * -o _file_.mbtiles or --output=_file_.mbtiles: Name the output file.
- * -e _directory_ or --output-directory=_directory_: Write tiles to the specified *directory* instead of to an mbtiles file.
- * -f or --force: Delete the mbtiles file if it already exists instead of giving an error
- * -F or --allow-existing: Proceed (without deleting existing data) if the metadata or tiles table already exists
-   or if metadata fields can't be set
- * -t _directory_ or --temporary-directory=_directory_: Put the temporary files in _directory_.
-   If you don't specify, it will use `/tmp`.
- * -P or --read-parallel: Use multiple threads to read different parts of each input file at once.
+If your features have a lot of attributes, use `-y` to keep only the ones you really need.
+
+If your input is formatted as newline-delimited GeoJSON, use `-P` to make input parsing a lot faster.
+
+### Output tileset
+
+ * `-o` _file_`.mbtiles` or `--output=`_file_`.mbtiles`: Name the output file.
+ * `-e` _directory_ or `--output-to-directory`=_directory_: Write tiles to the specified *directory* instead of to an mbtiles file.
+ * `-f` or `--force`: Delete the mbtiles file if it already exists instead of giving an error
+ * `-F` or `--allow-existing`: Proceed (without deleting existing data) if the metadata or tiles table already exists
+   or if metadata fields can't be set. You probably don't want to use this.
+
+### Tileset description and attribution
+
+ * `-n` _name_ or `--name=`_name_: Human-readable name for the tileset (default file.json)
+ * `-A` _text_ or `--attribution=`_text_: Attribution (HTML) to be shown with maps that use data from this tileset.
+ * `-N` _description_ or `--description=`_description_: Description for the tileset (default file.mbtiles)
+
+### Input files and layer names
+
+ * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
+ * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
+   specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
+ * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
+
+### Parallel processing of input
+
+ * `-P` or `--read-parallel`: Use multiple threads to read different parts of each input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
    own line, because it knows nothing of the top-level structure around the Features. Spurious "EOF" error
    messages may result otherwise.
    Performance will be better if the input is a named file that can be mapped into memory
    rather than a stream that can only be read sequentially.
 
-### Zoom levels and resolution
+### Projection of input
 
- * -z _zoom_ or --maximum-zoom=_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
- * -Z _zoom_ or --minimum-zoom=_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
- * -B _zoom_ or --base-zoom=_zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
-   If you use -Bg, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
-   You can also specify a marker-width with -Bg*width* to allow fewer features in the densest tile to
-   compensate for the larger marker, or -Bf*number* to allow at most *number* features in the densest tile.
- * -d _detail_ or --full-detail=_detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
- * -D _detail_ or --low-detail=_detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
- * -m _detail_ or --minimum-detail=_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
- * -b _pixels_ or --buffer=_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"--1/256th of the tile width or height. (default 5)
- * -s _projection_ or --projection=_projection_: Specify the projection of the input data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
- * -M _bytes_ or --maximum-tile-bytes=_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
+ * `-s` _projection_ or `--projection=`_projection_: Specify the projection of the input data. Currently supported are `EPSG:4326` (WGS84, the default) and `EPSG:3857` (Web Mercator).
+
+### Zoom levels
+
+ * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+ * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+
+### Tile resolution
+
+ * `-d` _detail_ or `--full-detail=`_detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
+ * `-D` _detail_ or `--low-detail=`_detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
+ * `-m` _detail_ or `--minimum-detail=`_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
 resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
-### Properties
+### Filtering feature attributes
 
- * -x _name_ or --exclude=_name_: Exclude the named properties from all features
- * -y _name_ or --include=_name_: Include the named properties in all features, excluding all those not explicitly named
- * -X or --exclude-all: Exclude all properties and encode only geometries
+ * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
+ * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
+ * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
 
-### Point simplification
+### Dropping a fixed fraction of features by zoom level
 
- * -r _rate_ or --drop-rate=_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
-   If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
-   You can also specify a marker-width with -rg*width* to allow fewer features in the densest tile to
-   compensate for the larger marker, or -rf*number* to allow at most *number* features in the densest tile.
- * -g _gamma_ or --gamma=_gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+ * `-r` _rate_ or `--drop-rate=`_rate_: Rate at which dots are dropped at zoom levels below basezoom (default 2.5).
+   If you use `-rg`, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
+   You can also specify a marker-width with `-rg`*width* to allow fewer features in the densest tile to
+   compensate for the larger marker, or `-rf`*number* to allow at most *number* features in the densest tile.
+ * `-B` _zoom_ or `--base-zoom=`_zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
+   If you use `-Bg`, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
+   You can also specify a marker-width with `-Bg`*width* to allow fewer features in the densest tile to
+   compensate for the larger marker, or `-Bf`*number* to allow at most *number* features in the densest tile.
+ * `-al` or `--drop-lines`: Let "dot" dropping at lower zooms apply to lines too
+ * `-ap` or `--drop-polygons`: Let "dot" dropping at lower zooms apply to polygons too
+
+### Dropping a fraction of features to keep under tile size limits
+
+ * `-as` or `--drop-densest-as-needed`: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
+ * `-ad` or `--drop-fraction-as-needed`: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
+ * `-an` or `--drop-smallest-as-needed`: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
+ * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
+
+### Dropping tightly overlapping features
+
+ * `-g` _gamma_ or `--gamma=_gamma`_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+ * `-aG` or `--increase-gamma-as-needed`: If a tile is too large, try to reduce it to under 500K by increasing the `-g` gamma. The discovered gamma applies to the entire zoom level. You probably want to use `--drop-densest-as-needed` instead.
 
 ### Line and polygon simplification
 
- * -S _scale_ or --simplification=_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
+ * `-S` _scale_ or `--simplification=`_scale_: Multiply the tolerance for line and polygon simplification by _scale_. The standard tolerance tries to keep
    the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
+ * `-ps` or `--no-line-simplification`: Don't simplify lines and polygons
+ * `-pS` or `--simplify-only-low-zooms`: Don't simplify lines and polygons at maxzoom (but do simplify at lower zooms)
+ * `-pt` or `--no-tiny-polygon-reduction`: Don't combine the area of very small polygons into small squares that represent their combined area.
 
-### Doing more
+### Attempts to improve shared polygon boundaries
 
- * -ac or --coalesce: Coalesce adjacent line and polygon features that have the same properties.
-   Note that when overlapping polygons are coalesced, the overlapping region is treated as a hole,
-   which may not be what you want.
- * -ar or --reverse: Try reversing the directions of lines to make them coalesce and compress better
- * -ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce
- * -al or --drop-lines: Let "dot" dropping at lower zooms apply to lines too
- * -ap or --drop-polygons: Let "dot" dropping at lower zooms apply to polygons too
- * -ag or --calculate-feature-density: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
- * -ab or --detect-shared-borders: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
- * -aG or --increase-gamma-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the `-g` gamma. The discovered gamma applies to the entire zoom level.
- * -as or --drop-densest-as-needed: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
- * -ad or --drop-fraction-as-needed: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
- * -an or --drop-smallest-as-needed: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
- * -aL or --grid-low-zooms: At all zoom levels below _maxzoom_, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably `-D8`. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data.
- * -aw or --detect-longitude-wraparound: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+ * `-ab` or `--detect-shared-borders`: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+ * `-aL` or `--grid-low-zooms`: At all zoom levels below _maxzoom_, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably `-D8`. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data. You probably don't want to use this.
 
-### Doing less
+### Controlling clipping to tile boundaries
 
- * -ps or --no-line-simplification: Don't simplify lines
- * -pS or --simplify-only-low-zooms: Don't simplify lines at maxzoom (but do simplify at lower zooms)
- * -pf or --no-feature-limit: Don't limit tiles to 200,000 features
- * -pk or --no-tile-size-limit: Don't limit tiles to 500K bytes
- * -pd or --force-feature-limit: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.)
- * -pi or --preserve-input-order: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes -ao).
- * -pp or --no-polygon-splitting: This no longer has any effect.
- * -pc or --no-clipping: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
- * -pD or --no-duplication: As with --no-clipping, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
- * -pt or --no-tiny-polygon-reduction: Don't combine the area of very small polygons into small squares that represent their combined area.
- * -pC or --no-tile-compression: Don't compress the PBF vector tile data.
- * -q or --quiet: Work quietly instead of reporting progress
+ * `-b` _pixels_ or `--buffer=`_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"—1/256th of the tile width or height. (default 5)
+ * `-pc` or `--no-clipping`: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
+ * `-pD` or `--no-duplication`: As with `--no-clipping`, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
+
+### Reordering features within each tile
+
+ * `-pi` or `--preserve-input-order`: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes `-ao`).
+ * `-ao` or `--reorder`: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably don't want to use this.
+ * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
+ * `-ar` or `--reverse`: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
+
+### Adding calculated attributes
+
+ * `-ag` or `--calculate-feature-density`: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+
+### Trying to correct bad source geometry
+
+ * `-aw` or `--detect-longitude-wraparound`: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+
+### Setting or disabling tile size limits
+
+ * `-M` _bytes_ or `--maximum-tile-bytes=`_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
+ * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
+ * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
+ * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+
+### Temporary storage
+
+ * `-t` _directory_ or `--temporary-directory=`_directory_: Put the temporary files in _directory_.
+   If you don't specify, it will use `/tmp`.
+
+### Progress indicator
+
+ * `-q` or `--quiet`: Work quietly instead of reporting progress
 
 Environment
 -----------
@@ -320,14 +370,14 @@ the same tiles, the layers or tiles are merged.
 
 The options are:
 
- * -o *out.mbtiles*: Write the new tiles to the specified .mbtiles file
- * -f: Remove *out.mbtiles* if it already exists
- * -c *match.csv*: Use *match.csv* as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
- * -x *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
- * -i: Only include features that matched the CSV.
- * -pk: Don't skip tiles larger than 500K.
- * -l *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
- * -L *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file
+ * `-f`: Remove *out.mbtiles* if it already exists
+ * `-c` *match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+ * `-x` *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * `-i`: Only include features that matched the CSV.
+ * `-pk`: Don't skip tiles larger than 500K.
+ * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
+ * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
@@ -411,7 +461,7 @@ resolutions.
 
 ### Options
 
- * -t _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
- * -z _maxzoom_: Specify the highest zoom level to decode from the tileset
- * -Z _minzoom_: Specify the lowest zoom level to decode from the tileset
- * -l _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
+ * `-t` _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+ * `-z` _maxzoom_: Specify the highest zoom level to decode from the tileset
+ * `-Z` _minzoom_: Specify the lowest zoom level to decode from the tileset
+ * `-l` _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
