@@ -1,3 +1,8 @@
+## 1.16.17
+
+* Clean up JSON parsing at the end of each FeatureCollection
+  to avoid running out of memory
+
 ## 1.16.16
 
 * Add tile-join options to include or exclude specific layers
