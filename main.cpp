@@ -369,35 +369,35 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma) {
-	long long segs[CPUS + 1];
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, size_t threads) {
+	long long segs[threads + 1];
 	segs[0] = 0;
-	segs[CPUS] = len;
+	segs[threads] = len;
 
-	for (size_t i = 1; i < CPUS; i++) {
-		segs[i] = len * i / CPUS;
+	for (size_t i = 1; i < threads; i++) {
+		segs[i] = len * i / threads;
 
 		while (segs[i] < len && map[segs[i]] != '\n') {
 			segs[i]++;
 		}
 	}
 
-	volatile long long layer_seq[CPUS];
-	for (size_t i = 0; i < CPUS; i++) {
+	volatile long long layer_seq[threads];
+	for (size_t i = 0; i < threads; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
 		layer_seq[i] = segs[i] + initial_offset;
 	}
 
-	struct parse_json_args pja[CPUS];
-	pthread_t pthreads[CPUS];
+	struct parse_json_args pja[threads];
+	pthread_t pthreads[threads];
 	std::vector<std::set<type_and_string> > file_subkeys;
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < threads; i++) {
 		file_subkeys.push_back(std::set<type_and_string>());
 	}
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < threads; i++) {
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].reading = reading;
 		pja[i].layer_seq = &layer_seq[i];
@@ -427,6 +427,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].layermap = &(*layermaps)[i];
 		pja[i].layername = &layername;
 		pja[i].uses_gamma = uses_gamma;
+		pja[i].threads = threads;
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -434,7 +435,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		}
 	}
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < threads; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
@@ -470,6 +471,7 @@ struct read_parallel_arg {
 	unsigned *initial_y;
 	std::string layername;
 	bool uses_gamma;
+	size_t threads;
 };
 
 void *run_read_parallel(void *v) {
@@ -491,7 +493,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->threads);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -508,7 +510,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, size_t threads) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -545,6 +547,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->maxzoom = maxzoom;
 	rpa->layername = layername;
 	rpa->uses_gamma = uses_gamma;
+	rpa->threads = threads;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -952,8 +955,8 @@ void radix(struct reader *reader, int nreaders, FILE *geomfile, int geomfd, FILE
 	}
 }
 
-void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz, unsigned *ix, unsigned *iy, int minzoom, int buffer) {
-	for (size_t i = 0; i < CPUS; i++) {
+void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz, unsigned *ix, unsigned *iy, int minzoom, int buffer, size_t threads) {
+	for (size_t i = 0; i < threads; i++) {
 		if (reader[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = reader[i].file_bbox[0];
 		}
@@ -1005,9 +1008,19 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 
 int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *description) {
 	int ret = EXIT_SUCCESS;
+	size_t threads = CPUS;
 
-	struct reader reader[CPUS];
-	for (size_t i = 0; i < CPUS; i++) {
+	if (10 * threads > TEMP_FILES) {
+		threads = TEMP_FILES / 10;
+		printf("reduce threads to %zu\n", threads);
+	}
+
+	if (threads < 1) {
+		threads = 1;
+	}
+
+	struct reader reader[threads];
+	for (size_t i = 0; i < threads; i++) {
 		struct reader *r = reader + i;
 
 		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
@@ -1104,9 +1117,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	volatile long long progress_seq = 0;
 
-	int initialized[CPUS];
-	unsigned initial_x[CPUS], initial_y[CPUS];
-	for (size_t i = 0; i < CPUS; i++) {
+	int initialized[threads];
+	unsigned initial_x[threads], initial_y[threads];
+	for (size_t i = 0; i < threads; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
 
@@ -1160,7 +1173,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, layermap_entry(l)));
 	}
 	std::vector<std::map<std::string, layermap_entry> > layermaps;
-	for (size_t l = 0; l < CPUS; l++) {
+	for (size_t l = 0; l < threads; l++) {
 		layermaps.push_back(layermap);
 	}
 
@@ -1208,9 +1221,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, threads);
 			overall_offset += st.st_size - off;
-			checkdisk(reader, CPUS);
+			checkdisk(reader, threads);
 
 			if (munmap(map, st.st_size - off) != 0) {
 				madvise(map, st.st_size, MADV_DONTNEED);
@@ -1276,11 +1289,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, threads);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
-							checkdisk(reader, CPUS);
+							checkdisk(reader, threads);
 							ahead = 0;
 
 							sprintf(readname, "%s%s", tmpdir, "/read.XXXXXXXX");
@@ -1313,7 +1326,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, threads);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1323,17 +1336,17 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					}
 
 					overall_offset += ahead;
-					checkdisk(reader, CPUS);
+					checkdisk(reader, threads);
 				}
 			} else {
 				// Plain serial reading
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, threads);
 				json_end(jp);
 				overall_offset = layer_seq;
-				checkdisk(reader, CPUS);
+				checkdisk(reader, threads);
 			}
 
 			if (fclose(fp) != 0) {
@@ -1348,7 +1361,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		//     (stderr, "Read 10000.00 million features\r", *progress_seq / 1000000.0);
 	}
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < threads; i++) {
 		if (fclose(reader[i].metafile) != 0) {
 			perror("fclose meta");
 			exit(EXIT_FAILURE);
@@ -1377,8 +1390,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	// but keep track of the offsets into it since we still need
 	// segment+offset to find the data.
 
-	long long pool_off[CPUS];
-	long long meta_off[CPUS];
+	long long pool_off[threads];
+	long long meta_off[threads];
 
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 	sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
@@ -1417,7 +1430,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	long long metapos = 0;
 	long long poolpos = 0;
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < threads; i++) {
 		if (reader[i].metapos > 0) {
 			void *map = mmap(NULL, reader[i].metapos, PROT_READ, MAP_PRIVATE, reader[i].metafd, 0);
 			if (map == MAP_FAILED) {
@@ -1512,7 +1525,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	unlink(geomname);
 
 	unsigned iz = 0, ix = 0, iy = 0;
-	choose_first_zoom(file_bbox, reader, &iz, &ix, &iy, minzoom, buffer);
+	choose_first_zoom(file_bbox, reader, &iz, &ix, &iy, minzoom, buffer, threads);
 
 	long long geompos = 0;
 
@@ -1521,7 +1534,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	serialize_uint(geomfile, ix, &geompos, fname);
 	serialize_uint(geomfile, iy, &geompos, fname);
 
-	radix(reader, CPUS, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos, maxzoom, basezoom, droprate, gamma);
+	radix(reader, threads, geomfile, geomfd, indexfile, indexfd, tmpdir, &geompos, maxzoom, basezoom, droprate, gamma);
 
 	/* end of tile */
 	serialize_byte(geomfile, -2, &geompos, fname);

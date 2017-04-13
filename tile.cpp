@@ -314,7 +314,8 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 				// next zoom.
 
 				int j = ((jx << max_zoom_increment) |
-					 ((jy & ((1 << max_zoom_increment) - 1)))) % child_shards;
+					 ((jy & ((1 << max_zoom_increment) - 1)))) %
+					child_shards;
 
 				{
 					if (!within[j]) {
