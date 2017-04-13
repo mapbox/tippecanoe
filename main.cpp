@@ -1571,7 +1571,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 		long long progress = -1;
 		long long ip;
-		for (ip = 0; ip < indices; ip++) {
+		for (ip = 1; ip < indices; ip++) {
 			if (map[ip].index != map[ip - 1].index) {
 				count++;
 				sum += log(map[ip].index - map[ip - 1].index);
