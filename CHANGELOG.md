@@ -1,3 +1,7 @@
+## 1.17.0
+
+* Add -zg option to guess an appropriate maxzoom
+
 ## 1.16.17
 
 * Clean up JSON parsing at the end of each FeatureCollection

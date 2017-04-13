@@ -54,6 +54,9 @@ There are a lot of options. A lot of the time you won't want to use any of them
 other than \fB\fC\-o\fR \fIoutput\fP\fB\fC\&.mbtiles\fR to name the output file, and probably \fB\fC\-f\fR to
 delete the file that already exists with that name.
 .PP
+If you aren't sure what the right maxzoom is for your data, \fB\fC\-zg\fR will guess one for you
+based on the density of features.
+.PP
 If you are mapping point features, you will often want to use \fB\fC\-Bg\fR to automatically choose
 a base zoom level for dot dropping. If that doesn't work out for you, try
 \fB\fC\-r1 \-\-drop\-fraction\-as\-needed\fR to turn off the normal dot dropping and instead
@@ -115,6 +118,8 @@ rather than a stream that can only be read sequentially.
 .RS
 .IP \(bu 2
 \fB\fC\-z\fR \fIzoom\fP or \fB\fC\-\-maximum\-zoom=\fR\fIzoom\fP: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+.IP \(bu 2
+\fB\fC\-zg\fR or \fB\fC\-\-maximum\-zoom=g\fR: Guess what is probably a reasonable maxzoom based on the spacing of features.
 .IP \(bu 2
 \fB\fC\-Z\fR \fIzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 .RE
