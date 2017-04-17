@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -105,28 +106,75 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	}
 }
 
-void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature) {
-	if (value != NULL && value->type == JSON_STRING) {
-		type = mvt_string;
-		stringified = std::string(value->string);
-		std::string err = check_utf8(stringified);
-		if (err != "") {
-			fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
-			json_context(feature);
-			exit(EXIT_FAILURE);
+void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature, std::string const &key, std::map<std::string, int> const *attribute_types) {
+	if (value != NULL) {
+		int vt = value->type;
+		std::string val;
+
+		if (vt == JSON_STRING || vt == JSON_NUMBER) {
+			val = value->string;
+		} else if (vt == JSON_TRUE) {
+			val = "true";
+		} else if (vt == JSON_FALSE) {
+			val = "false";
+		} else if (vt == JSON_NULL) {
+			val = "null";
+		} else {
+			const char *v = json_stringify(value);
+			val = std::string(v);
+			free((void *) v);  // stringify
 		}
-	} else if (value != NULL && value->type == JSON_NUMBER) {
-		type = mvt_double;
-		stringified = std::string(value->string);
-	} else if (value != NULL && (value->type == JSON_TRUE || value->type == JSON_FALSE)) {
-		type = mvt_bool;
-		stringified = std::string(value->type == JSON_TRUE ? "true" : "false");
-	} else if (value != NULL && (value->type == JSON_NULL)) {
-		;
-	} else {
-		type = mvt_string;
-		const char *v = json_stringify(value);
-		stringified = std::string(v);
-		free((void *) v);  // stringify
+
+		auto a = (*attribute_types).find(key);
+		if (a != attribute_types->end()) {
+			if (a->second == mvt_string) {
+				vt = JSON_STRING;
+			} else if (a->second == mvt_float) {
+				vt = JSON_NUMBER;
+			} else if (a->second == mvt_int) {
+				vt = JSON_NUMBER;
+
+				for (size_t ii = 0; ii < val.size(); ii++) {
+					char c = val[ii];
+					if (c < '0' || c > '9') {
+						val = std::to_string(round(atof(val.c_str())));
+						break;
+					}
+				}
+			} else if (a->second == mvt_bool) {
+				if (val == "false" || val == "0" || val == "null" || val.size() == 0) {
+					vt = JSON_FALSE;
+					val = "false";
+				} else {
+					vt = JSON_TRUE;
+					val = "true";
+				}
+			} else {
+				fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		if (vt == JSON_STRING) {
+			type = mvt_string;
+			stringified = val;
+			std::string err = check_utf8(val);
+			if (err != "") {
+				fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
+				json_context(feature);
+				exit(EXIT_FAILURE);
+			}
+		} else if (vt == JSON_NUMBER) {
+			type = mvt_double;
+			stringified = val;
+		} else if (vt == JSON_TRUE || vt == JSON_FALSE) {
+			type = mvt_bool;
+			stringified = val;
+		} else if (vt == JSON_NULL) {
+			;
+		} else {
+			type = mvt_string;
+			stringified = val;
+		}
 	}
 }

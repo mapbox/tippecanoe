@@ -377,7 +377,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -435,6 +435,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].layermap = &(*layermaps)[i];
 		pja[i].layername = &layername;
 		pja[i].uses_gamma = uses_gamma;
+		pja[i].attribute_types = attribute_types;
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -478,6 +479,7 @@ struct read_parallel_arg {
 	unsigned *initial_y;
 	std::string layername;
 	bool uses_gamma;
+	std::map<std::string, int> const *attribute_types;
 };
 
 void *run_read_parallel(void *v) {
@@ -499,7 +501,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -516,7 +518,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -553,6 +555,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->maxzoom = maxzoom;
 	rpa->layername = layername;
 	rpa->uses_gamma = uses_gamma;
+	rpa->attribute_types = attribute_types;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -1011,7 +1014,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1217,7 +1220,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
@@ -1285,7 +1288,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1322,7 +1325,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1339,7 +1342,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
@@ -1565,15 +1568,75 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		exit(EXIT_FAILURE);
 	}
 
-	if (basezoom < 0 || droprate < 0) {
-		struct index *map = (struct index *) mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
-		if (map == MAP_FAILED) {
-			perror("mmap index for basezoom");
+	struct index *map = (struct index *) mmap(NULL, indexpos, PROT_READ, MAP_PRIVATE, indexfd, 0);
+	if (map == MAP_FAILED) {
+		perror("mmap index for basezoom");
+		exit(EXIT_FAILURE);
+	}
+	madvise(map, indexpos, MADV_SEQUENTIAL);
+	madvise(map, indexpos, MADV_WILLNEED);
+	long long indices = indexpos / sizeof(struct index);
+	bool fix_dropping = false;
+
+	if (guess_maxzoom) {
+		double sum = 0;
+		size_t count = 0;
+
+		long long progress = -1;
+		long long ip;
+		for (ip = 1; ip < indices; ip++) {
+			if (map[ip].index != map[ip - 1].index) {
+				count++;
+				sum += log(map[ip].index - map[ip - 1].index);
+			}
+
+			long long nprogress = 100 * ip / indices;
+			if (nprogress != progress) {
+				progress = nprogress;
+				if (!quiet) {
+					fprintf(stderr, "Maxzoom: %lld%% \r", progress);
+				}
+			}
+		}
+
+		if (count > 0) {
+			// Geometric mean is appropriate because distances between features
+			// are typically lognormally distributed
+			double avg = exp(sum / count);
+
+			// Convert approximately from tile units to feet
+			double dist_ft = sqrt(avg) / 33;
+			double want = dist_ft / 250;
+
+			maxzoom = ceil(log(360 / (.00000274 * want)) / log(2) - full_detail);
+			if (maxzoom < 0) {
+				maxzoom = 0;
+			}
+			if (maxzoom > MAX_ZOOM) {
+				maxzoom = MAX_ZOOM;
+			}
+
+			if (!quiet) {
+				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet apart\n", maxzoom, (int) ceil(dist_ft));
+			}
+		} else {
+			fprintf(stderr, "Can't guess maxzoom (-zg) without at least two distinct feature locations\n");
 			exit(EXIT_FAILURE);
 		}
-		madvise(map, indexpos, MADV_SEQUENTIAL);
-		madvise(map, indexpos, MADV_WILLNEED);
 
+		if (maxzoom < minzoom) {
+			fprintf(stderr, "Can't use %d for maxzoom because minzoom is %d\n", maxzoom, minzoom);
+			maxzoom = minzoom;
+		}
+
+		fix_dropping = true;
+
+		if (basezoom == -1) {
+			basezoom = maxzoom;
+		}
+	}
+
+	if (basezoom < 0 || droprate < 0) {
 		struct tile {
 			unsigned x;
 			unsigned y;
@@ -1593,7 +1656,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		long long progress = -1;
 
-		long long indices = indexpos / sizeof(struct index);
 		long long ip;
 		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
@@ -1734,6 +1796,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
+		fix_dropping = true;
+	}
+
+	if (fix_dropping) {
 		// Fix up the minzooms for features, now that we really know the base zoom
 		// and drop rate.
 
@@ -1753,7 +1819,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		struct drop_state ds[maxzoom + 1];
 		prep_drop_states(ds, maxzoom, basezoom, droprate);
 
-		for (ip = 0; ip < indices; ip++) {
+		for (long long ip = 0; ip < indices; ip++) {
 			if (ip > 0 && map[ip].start != map[ip - 1].end) {
 				fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
 			}
@@ -1762,9 +1828,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		munmap(geom, geomst.st_size);
-		madvise(map, indexpos, MADV_DONTNEED);
-		munmap(map, indexpos);
 	}
+
+	madvise(map, indexpos, MADV_DONTNEED);
+	munmap(map, indexpos);
 
 	if (close(indexfd) != 0) {
 		perror("close sorted index");
@@ -1870,6 +1937,33 @@ static bool has_name(struct option *long_options, int *pl) {
 	return false;
 }
 
+void set_attribute_type(std::map<std::string, int> &attribute_types, const char *arg) {
+	const char *s = strchr(arg, ':');
+	if (s == NULL) {
+		fprintf(stderr, "-T%s option must be in the form -Tname:type\n", arg);
+		exit(EXIT_FAILURE);
+	}
+
+	std::string name = std::string(arg, s - arg);
+	std::string type = std::string(s + 1);
+	int t = -1;
+
+	if (type == "int") {
+		t = mvt_int;
+	} else if (type == "float") {
+		t = mvt_float;
+	} else if (type == "string") {
+		t = mvt_string;
+	} else if (type == "bool") {
+		t = mvt_bool;
+	} else {
+		fprintf(stderr, "Attribute type (%s) must be int, float, string, or bool\n", type.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	attribute_types.insert(std::pair<std::string, int>(name, t));
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -1901,8 +1995,10 @@ int main(int argc, char **argv) {
 	std::vector<source> sources;
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
+	bool guess_maxzoom = false;
 
 	std::set<std::string> exclude, include;
+	std::map<std::string, int> attribute_types;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -1940,6 +2036,7 @@ int main(int argc, char **argv) {
 		{"maximum-tile-bytes", required_argument, 0, 'M'},
 		{"prefilter", required_argument, 0, 'C'},
 		{"postfilter", required_argument, 0, 'c'},
+		{"attribute-type", required_argument, 0, 'T'},
 
 		{"exclude-all", no_argument, 0, 'X'},
 		{"force", no_argument, 0, 'f'},
@@ -1997,7 +2094,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:e:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:c:C:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:e:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:T:N:c:C:", long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2031,7 +2128,12 @@ int main(int argc, char **argv) {
 		} break;
 
 		case 'z':
-			maxzoom = atoi(optarg);
+			if (strcmp(optarg, "g") == 0) {
+				maxzoom = MAX_ZOOM;
+				guess_maxzoom = true;
+			} else {
+				maxzoom = atoi(optarg);
+			}
 			break;
 
 		case 'Z':
@@ -2196,6 +2298,10 @@ int main(int argc, char **argv) {
 			prefilter = optarg;
 			break;
 
+		case 'T':
+			set_attribute_type(attribute_types, optarg);
+			break;
+
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Unknown option -%c\n", i);
@@ -2248,9 +2354,11 @@ int main(int argc, char **argv) {
 
 	// Need two checks: one for geometry representation, the other for
 	// index traversal when guessing base zoom and drop rate
-	if (maxzoom > 32 - full_detail) {
-		maxzoom = 32 - full_detail;
-		fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+	if (!guess_maxzoom) {
+		if (maxzoom > 32 - full_detail) {
+			maxzoom = 32 - full_detail;
+			fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+		}
 	}
 	if (maxzoom > MAX_ZOOM) {
 		maxzoom = MAX_ZOOM;
@@ -2263,13 +2371,17 @@ int main(int argc, char **argv) {
 	}
 
 	if (basezoom == -1) {
-		basezoom = maxzoom;
+		if (!guess_maxzoom) {
+			basezoom = maxzoom;
+		}
 	}
 
 	geometry_scale = 32 - (full_detail + maxzoom);
 	if (geometry_scale < 0) {
 		geometry_scale = 0;
-		fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
+		if (!guess_maxzoom) {
+			fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
+		}
 	}
 
 	if ((basezoom < 0 || droprate < 0) && (gamma < 0)) {
@@ -2321,7 +2433,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_directory, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_directory, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_directory, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_directory, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv);
