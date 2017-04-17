@@ -59,6 +59,9 @@ There are a lot of options. A lot of the time you won't want to use any of them
 other than `-o` _output_`.mbtiles` to name the output file, and probably `-f` to
 delete the file that already exists with that name.
 
+If you aren't sure what the right maxzoom is for your data, `-zg` will guess one for you
+based on the density of features.
+
 If you are mapping point features, you will often want to use `-Bg` to automatically choose
 a base zoom level for dot dropping. If that doesn't work out for you, try
 `-r1 --drop-fraction-as-needed` to turn off the normal dot dropping and instead
@@ -108,6 +111,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 ### Zoom levels
 
  * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
+ * `-zg` or `--maximum-zoom=g`: Guess what is probably a reasonable maxzoom based on the spacing of features.
  * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 
 ### Tile resolution
