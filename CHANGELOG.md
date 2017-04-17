@@ -1,3 +1,7 @@
+## 1.17.1
+
+* Add -T option to coerce the types of feature attributes
+
 ## 1.17.0
 
 * Add -zg option to guess an appropriate maxzoom
