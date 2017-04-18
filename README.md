@@ -106,7 +106,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
 ### Projection of input
 
- * `-s` _projection_ or `--projection=`_projection_: Specify the projection of the input data. Currently supported are `EPSG:4326` (WGS84, the default) and `EPSG:3857` (Web Mercator).
+ * `-s` _projection_ or `--projection=`_projection_: Specify the projection of the input data. Currently supported are `EPSG:4326` (WGS84, the default) and `EPSG:3857` (Web Mercator). In general you should use WGS84 for your input files if at all possible.
 
 ### Zoom levels
 
