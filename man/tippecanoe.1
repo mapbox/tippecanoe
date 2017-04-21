@@ -112,7 +112,7 @@ rather than a stream that can only be read sequentially.
 .SS Projection of input
 .RS
 .IP \(bu 2
-\fB\fC\-s\fR \fIprojection\fP or \fB\fC\-\-projection=\fR\fIprojection\fP: Specify the projection of the input data. Currently supported are \fB\fCEPSG:4326\fR (WGS84, the default) and \fB\fCEPSG:3857\fR (Web Mercator).
+\fB\fC\-s\fR \fIprojection\fP or \fB\fC\-\-projection=\fR\fIprojection\fP: Specify the projection of the input data. Currently supported are \fB\fCEPSG:4326\fR (WGS84, the default) and \fB\fCEPSG:3857\fR (Web Mercator). In general you should use WGS84 for your input files if at all possible.
 .RE
 .SS Zoom levels
 .RS
@@ -256,6 +256,8 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .RS
 .IP \(bu 2
 \fB\fC\-q\fR or \fB\fC\-\-quiet\fR: Work quietly instead of reporting progress
+.IP \(bu 2
+\fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
 .RE
 .SS Filters
 .RS

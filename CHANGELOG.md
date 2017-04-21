@@ -1,3 +1,7 @@
+## 1.17.2
+
+* Organize usage output the same way as in the README
+
 ## 1.17.1
 
 * Add -T option to coerce the types of feature attributes
