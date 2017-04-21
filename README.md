@@ -209,6 +209,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 ### Progress indicator
 
  * `-q` or `--quiet`: Work quietly instead of reporting progress
+ * `-v` or `--version`: Report Tippecanoe's version number
 
 Environment
 -----------

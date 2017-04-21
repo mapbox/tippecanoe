@@ -1996,73 +1996,131 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
-	static struct option long_options[] = {
+	static struct option long_options_orig[] = {
+		{"Output tileset", 0, 0, 0},
 		{"output", required_argument, 0, 'o'},
 		{"output-to-directory", required_argument, 0, 'e'},
+		{"force", no_argument, 0, 'f'},
+		{"allow-existing", no_argument, 0, 'F'},
 
+		{"Tileset description and attribution", 0, 0, 0},
 		{"name", required_argument, 0, 'n'},
-		{"description", required_argument, 0, 'N'},
-		{"layer", required_argument, 0, 'l'},
 		{"attribution", required_argument, 0, 'A'},
+		{"description", required_argument, 0, 'N'},
+
+		{"Input files and layer names", 0, 0, 0},
+		{"layer", required_argument, 0, 'l'},
 		{"named-layer", required_argument, 0, 'L'},
+
+		{"Parallel processing of input", 0, 0, 0},
+		{"read-parallel", no_argument, 0, 'P'},
+
+		{"Projection of input", 0, 0, 0},
+		{"projection", required_argument, 0, 's'},
+
+		{"Zoom levels", 0, 0, 0},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
-		{"base-zoom", required_argument, 0, 'B'},
+
+		{"Tile resolution", 0, 0, 0},
 		{"full-detail", required_argument, 0, 'd'},
 		{"low-detail", required_argument, 0, 'D'},
 		{"minimum-detail", required_argument, 0, 'm'},
+
+		{"Filtering feature attributes", 0, 0, 0},
 		{"exclude", required_argument, 0, 'x'},
 		{"include", required_argument, 0, 'y'},
-		{"drop-rate", required_argument, 0, 'r'},
-		{"buffer", required_argument, 0, 'b'},
-		{"temporary-directory", required_argument, 0, 't'},
-		{"gamma", required_argument, 0, 'g'},
-		{"prevent", required_argument, 0, 'p'},
-		{"additional", required_argument, 0, 'a'},
-		{"projection", required_argument, 0, 's'},
-		{"simplification", required_argument, 0, 'S'},
-		{"maximum-tile-bytes", required_argument, 0, 'M'},
+		{"exclude-all", no_argument, 0, 'X'},
 		{"attribute-type", required_argument, 0, 'T'},
 
-		{"exclude-all", no_argument, 0, 'X'},
-		{"force", no_argument, 0, 'f'},
-		{"allow-existing", no_argument, 0, 'F'},
-		{"quiet", no_argument, 0, 'q'},
-		{"version", no_argument, 0, 'v'},
-		{"read-parallel", no_argument, 0, 'P'},
-
-		{"coalesce", no_argument, &additional[A_COALESCE], 1},
-		{"reverse", no_argument, &additional[A_REVERSE], 1},
-		{"reorder", no_argument, &additional[A_REORDER], 1},
+		{"Dropping a fixed fraction of features by zoom level", 0, 0, 0},
+		{"drop-rate", required_argument, 0, 'r'},
+		{"base-zoom", required_argument, 0, 'B'},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
-		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
-		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
-		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
-		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
-		{"increase-gamma-as-needed", no_argument, &additional[A_INCREASE_GAMMA_AS_NEEDED], 1},
+
+		{"Dropping a fraction of features to keep under tile size limits", 0, 0, 0},
 		{"drop-densest-as-needed", no_argument, &additional[A_DROP_DENSEST_AS_NEEDED], 1},
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
-		{"grid-low-zooms", no_argument, &additional[A_GRID_LOW_ZOOMS], 1},
-		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
+		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
 
+		{"Dropping tightly overlapping features", 0, 0, 0},
+		{"gamma", required_argument, 0, 'g'},
+		{"increase-gamma-as-needed", no_argument, &additional[A_INCREASE_GAMMA_AS_NEEDED], 1},
+
+		{"Line and polygon simplification", 0, 0, 0},
+		{"simplification", required_argument, 0, 'S'},
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
-		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
-		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
-		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
-		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
-		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
+		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
+
+		{"Attempts to improve shared polygon boundaries", 0, 0, 0},
+		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
+		{"grid-low-zooms", no_argument, &additional[A_GRID_LOW_ZOOMS], 1},
+
+		{"Controlling clipping to tile boundaries", 0, 0, 0},
+		{"buffer", required_argument, 0, 'b'},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
-		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
+
+		{"Reordering features within each tile", 0, 0, 0},
+		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
+		{"reorder", no_argument, &additional[A_REORDER], 1},
+		{"coalesce", no_argument, &additional[A_COALESCE], 1},
+		{"reverse", no_argument, &additional[A_REVERSE], 1},
+
+		{"Adding calculated attributes", 0, 0, 0},
+		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
+
+		{"Trying to correct bad source geometry", 0, 0, 0},
+		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
+
+		{"Setting or disabling tile size limits", 0, 0, 0},
+		{"maximum-tile-bytes", required_argument, 0, 'M'},
+		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
+		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
+
+		{"Temporary storage", 0, 0, 0},
+		{"temporary-directory", required_argument, 0, 't'},
+
+		{"Progress indicator", 0, 0, 0},
+		{"quiet", no_argument, 0, 'q'},
+		{"version", no_argument, 0, 'v'},
+
+		{"", 0, 0, 0},
+		{"prevent", required_argument, 0, 'p'},
+		{"additional", required_argument, 0, 'a'},
+		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
+		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
+		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 
 		{0, 0, 0, 0},
 	};
 
+	static struct option long_options[sizeof(long_options_orig) / sizeof(long_options_orig[0])];
+	static char getopt_str[sizeof(long_options_orig) / sizeof(long_options_orig[0]) * 2 + 1];
+
 	{
+		size_t out = 0;
+		size_t cout = 0;
+		for (size_t lo = 0; long_options_orig[lo].name != NULL; lo++) {
+			if (long_options_orig[lo].val != 0) {
+				long_options[out++] = long_options_orig[lo];
+
+				if (long_options_orig[lo].val > ' ') {
+					getopt_str[cout++] = long_options_orig[lo].val;
+
+					if (long_options_orig[lo].has_arg == required_argument) {
+						getopt_str[cout++] = ':';
+					}
+				}
+			}
+		}
+		long_options[out] = {0, 0, 0, 0};
+		getopt_str[cout] = '\0';
+
 		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
 			if (long_options[lo].flag != NULL) {
 				if (*long_options[lo].flag != 0) {
@@ -2080,7 +2138,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:e:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:T:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, getopt_str, long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2283,29 +2341,34 @@ int main(int argc, char **argv) {
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Unknown option -%c\n", i);
-			fprintf(stderr, "Usage: %s", argv[0]);
-			for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
-				if (width + strlen(long_options[lo].name) + 9 >= 80) {
+			fprintf(stderr, "Usage: %s [options] [file.json ...]", argv[0]);
+			for (size_t lo = 0; long_options_orig[lo].name != NULL && strlen(long_options_orig[lo].name) > 0; lo++) {
+				if (long_options_orig[lo].val == 0) {
+					fprintf(stderr, "\n  %s\n        ", long_options_orig[lo].name);
+					width = 8;
+					continue;
+				}
+				if (width + strlen(long_options_orig[lo].name) + 9 >= 80) {
 					fprintf(stderr, "\n        ");
 					width = 8;
 				}
-				width += strlen(long_options[lo].name) + 9;
-				if (strcmp(long_options[lo].name, "output") == 0) {
-					fprintf(stderr, " --%s=output.mbtiles", long_options[lo].name);
+				width += strlen(long_options_orig[lo].name) + 9;
+				if (strcmp(long_options_orig[lo].name, "output") == 0) {
+					fprintf(stderr, " --%s=output.mbtiles", long_options_orig[lo].name);
 					width += 9;
-				} else if (long_options[lo].has_arg) {
-					fprintf(stderr, " [--%s=...]", long_options[lo].name);
+				} else if (long_options_orig[lo].has_arg) {
+					fprintf(stderr, " [--%s=...]", long_options_orig[lo].name);
 				} else {
-					fprintf(stderr, " [--%s]", long_options[lo].name);
+					fprintf(stderr, " [--%s]", long_options_orig[lo].name);
 				}
 			}
 			if (width + 16 >= 80) {
 				fprintf(stderr, "\n        ");
 				width = 8;
 			}
-			fprintf(stderr, " [file.json ...]\n");
-		}
+			fprintf(stderr, "\n");
 			exit(EXIT_FAILURE);
+		}
 		}
 	}
 
