@@ -2100,15 +2100,26 @@ int main(int argc, char **argv) {
 	};
 
 	static struct option long_options[sizeof(long_options_orig) / sizeof(long_options_orig[0])];
+	static char getopt_str[sizeof(long_options_orig) / sizeof(long_options_orig[0]) * 2 + 1];
 
 	{
 		size_t out = 0;
+		size_t cout = 0;
 		for (size_t lo = 0; long_options_orig[lo].name != NULL; lo++) {
 			if (long_options_orig[lo].val != 0) {
 				long_options[out++] = long_options_orig[lo];
+
+				if (long_options_orig[lo].val > ' ') {
+					getopt_str[cout++] = long_options_orig[lo].val;
+
+					if (long_options_orig[lo].has_arg == required_argument) {
+						getopt_str[cout++] = ':';
+					}
+				}
 			}
-			long_options[out] = {0, 0, 0, 0};
 		}
+		long_options[out] = {0, 0, 0, 0};
+		getopt_str[cout] = '\0';
 
 		for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
 			if (long_options[lo].flag != NULL) {
@@ -2127,7 +2138,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, "n:l:z:Z:B:d:D:m:o:e:x:y:r:b:t:g:p:a:XfFqvPL:A:s:S:M:N:T:", long_options, NULL)) != -1) {
+	while ((i = getopt_long(argc, argv, getopt_str, long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
 			break;
