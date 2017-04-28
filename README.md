@@ -104,6 +104,10 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
    Performance will be better if the input is a named file that can be mapped into memory
    rather than a stream that can only be read sequentially.
 
+If the input file begins with the [RFC 8142](https://tools.ietf.org/html/rfc8142) record separator,
+parallel processing of input will be invoked automatically, splitting at record separators rather
+than at all newlines.
+
 ### Projection of input
 
  * `-s` _projection_ or `--projection=`_projection_: Specify the projection of the input data. Currently supported are `EPSG:4326` (WGS84, the default) and `EPSG:3857` (Web Mercator). In general you should use WGS84 for your input files if at all possible.
