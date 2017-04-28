@@ -109,6 +109,10 @@ messages may result otherwise.
 Performance will be better if the input is a named file that can be mapped into memory
 rather than a stream that can only be read sequentially.
 .RE
+.PP
+If the input file begins with the RFC 8142 \[la]https://tools.ietf.org/html/rfc8142\[ra] record separator,
+parallel processing of input will be invoked automatically, splitting at record separators rather
+than at all newlines.
 .SS Projection of input
 .RS
 .IP \(bu 2
