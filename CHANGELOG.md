@@ -1,3 +1,7 @@
+## 1.17.4
+
+* Fix RFC 8142 support: Don't try to split *all* memory mapped files
+
 ## 1.17.3
 
 * Support RFC 8142 GeoJSON text sequences
