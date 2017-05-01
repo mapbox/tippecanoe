@@ -1,3 +1,7 @@
+## 1.17.3
+
+* Support RFC 8142 GeoJSON text sequences
+
 ## 1.17.2
 
 * Organize usage output the same way as in the README

@@ -377,7 +377,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -385,7 +385,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	for (size_t i = 1; i < CPUS; i++) {
 		segs[i] = len * i / CPUS;
 
-		while (segs[i] < len && map[segs[i]] != '\n') {
+		while (segs[i] < len && map[segs[i]] != separator) {
 			segs[i]++;
 		}
 	}
@@ -460,6 +460,7 @@ struct read_parallel_arg {
 	long long offset;
 	long long len;
 	volatile int *is_parsing;
+	int separator;
 
 	const char *reading;
 	struct reader *reader;
@@ -501,7 +502,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -518,7 +519,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -536,6 +537,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->offset = offset;
 	rpa->len = len;
 	rpa->is_parsing = is_parsing;
+	rpa->separator = separator;
 
 	rpa->reading = reading;
 	rpa->reader = reader;
@@ -1206,7 +1208,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		char *map = NULL;
 		off_t off = 0;
 
-		if (read_parallel) {
+		int read_parallel_this = read_parallel ? '\n' : 0x1E;
+
+		if (1) {
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
@@ -1219,14 +1223,31 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
+		if (map != NULL && map != MAP_FAILED && st.st_size - off > 0) {
+			if (map[0] == 0x1E) {
+				read_parallel_this = 0x1E;
+			}
+
+			if (!read_parallel_this) {
+				// Not a GeoJSON text sequence, so unmap and read serially
+
+				if (munmap(map, st.st_size - off) != 0) {
+					perror("munmap source file");
+					exit(EXIT_FAILURE);
+				}
+
+				map = NULL;
+			}
+		}
+
 		if (map != NULL && map != MAP_FAILED) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
 			if (munmap(map, st.st_size - off) != 0) {
-				madvise(map, st.st_size, MADV_DONTNEED);
 				perror("munmap source file");
+				exit(EXIT_FAILURE);
 			}
 		} else {
 			FILE *fp = fdopen(fd, "r");
@@ -1239,7 +1260,15 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				continue;
 			}
 
-			if (read_parallel) {
+			int c = getc(fp);
+			if (c != EOF) {
+				ungetc(c, fp);
+			}
+			if (c == 0x1E) {
+				read_parallel_this = 0x1E;
+			}
+
+			if (read_parallel_this) {
 				// Serial reading of chunks that are then parsed in parallel
 
 				char readname[strlen(tmpdir) + strlen("/read.XXXXXXXX") + 1];
@@ -1273,7 +1302,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
-					if (buf[n - 1] == '\n' && ahead > PARSE_MIN) {
+					if (buf[n - 1] == read_parallel_this && ahead > PARSE_MIN) {
 						// Don't let the streaming reader get too far ahead of the parsers.
 						// If the buffered input gets huge, even if the parsers are still running,
 						// wait for the parser thread instead of continuing to stream input.
@@ -1288,7 +1317,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1325,7 +1354,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
