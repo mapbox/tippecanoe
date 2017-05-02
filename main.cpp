@@ -1206,7 +1206,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 		int read_parallel_this = read_parallel ? '\n' : 0;
 
-		if (1) {
+		if (!prevent[P_MEMORY_MAP]) {
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
@@ -1282,7 +1282,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 				unlink(readname);
 
 				volatile int is_parsing = 0;
-				long long ahead = 0;
+				size_t ahead = 0;
 				long long initial_offset = overall_offset;
 				pthread_t parallel_parser;
 				bool parser_created = false;
@@ -1291,14 +1291,21 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 #define PARSE_MIN 10000000
 #define PARSE_MAX (1LL * 1024 * 1024 * 1024)
 
-				char buf[READ_BUF];
+				size_t parse_min = PARSE_MIN;
+				size_t read_buf = READ_BUF;
+				if (prevent[P_MEMORY_MAP]) {
+					parse_min = 2000;
+					read_buf = 5;
+				}
+
+				char buf[read_buf];
 				int n;
 
-				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
+				while ((n = fread(buf, sizeof(char), read_buf, fp)) > 0) {
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
-					if (buf[n - 1] == read_parallel_this && ahead > PARSE_MIN) {
+					if (buf[n - 1] == read_parallel_this && ahead > parse_min) {
 						// Don't let the streaming reader get too far ahead of the parsers.
 						// If the buffered input gets huge, even if the parsers are still running,
 						// wait for the parser thread instead of continuing to stream input.
@@ -2127,6 +2134,7 @@ int main(int argc, char **argv) {
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
 		{"tag-sequence", no_argument, &additional[A_TAG_SEQUENCE], 1},
+		{"no-memory-mapping", no_argument, &prevent[P_MEMORY_MAP], 1},
 
 		{0, 0, 0, 0},
 	};
