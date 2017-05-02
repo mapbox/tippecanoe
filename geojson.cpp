@@ -493,7 +493,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.extent = (long long) extent;
 
-	if (prevent[P_INPUT_ORDER]) {
+	if (prevent[P_INPUT_ORDER] || additional[A_TAG_SEQUENCE]) {
 		sf.seq = *layer_seq;
 	} else {
 		sf.seq = 0;

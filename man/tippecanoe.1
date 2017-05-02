@@ -250,11 +250,13 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
 .RE
-.SS Temporary storage
+.SS System parameters
 .RS
 .IP \(bu 2
 \fB\fC\-t\fR \fIdirectory\fP or \fB\fC\-\-temporary\-directory=\fR\fIdirectory\fP: Put the temporary files in \fIdirectory\fP\&.
 If you don't specify, it will use \fB\fC/tmp\fR\&.
+.IP \(bu 2
+\fB\fC\-j\fR \fIcpus\fP or \fB\fC\-\-cpus=\fR\fIcpus\fP: Use the specified number of CPUs for parallel processing.
 .RE
 .SS Progress indicator
 .RS
@@ -266,7 +268,7 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .SH Environment
 .PP
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
-You can override this number by setting the \fB\fCTIPPECANOE_MAX_THREADS\fR environmental variable.
+You can override this number by setting the \fB\fCTIPPECANOE_MAX_THREADS\fR environmental variable or using the \fB\fC\-\-cpus\fR option.
 .SH Example
 .PP
 .RS

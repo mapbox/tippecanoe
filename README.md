@@ -205,10 +205,11 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
 
-### Temporary storage
+### System parameters
 
  * `-t` _directory_ or `--temporary-directory=`_directory_: Put the temporary files in _directory_.
    If you don't specify, it will use `/tmp`.
+ * `-j` _cpus_ or `--cpus=`_cpus_: Use the specified number of CPUs for parallel processing.
 
 ### Progress indicator
 
@@ -219,7 +220,7 @@ Environment
 -----------
 
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
-You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable.
+You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable or using the `--cpus` option.
 
 Example
 -------

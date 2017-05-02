@@ -118,10 +118,12 @@ void checkdisk(struct reader *r, int nreader) {
 	}
 };
 
-void init_cpus() {
+void init_cpus(size_t cpus) {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
-	if (TIPPECANOE_MAX_THREADS != NULL) {
+	if (cpus > 0) {
+		CPUS = cpus;
+	} else if (TIPPECANOE_MAX_THREADS != NULL) {
 		CPUS = atoi(TIPPECANOE_MAX_THREADS);
 	} else {
 		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1988,8 +1990,6 @@ int main(int argc, char **argv) {
 	mtrace();
 #endif
 
-	init_cpus();
-
 	extern int optind;
 	extern char *optarg;
 	int i;
@@ -2013,6 +2013,7 @@ int main(int argc, char **argv) {
 	const char *attribution = NULL;
 	std::vector<source> sources;
 	bool guess_maxzoom = false;
+	size_t cpus = 0;
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
@@ -2111,8 +2112,9 @@ int main(int argc, char **argv) {
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 
-		{"Temporary storage", 0, 0, 0},
+		{"System parameters", 0, 0, 0},
 		{"temporary-directory", required_argument, 0, 't'},
+		{"cpus", required_argument, 0, 'j'},
 
 		{"Progress indicator", 0, 0, 0},
 		{"quiet", no_argument, 0, 'q'},
@@ -2124,6 +2126,7 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
+		{"tag-sequence", no_argument, &additional[A_TAG_SEQUENCE], 1},
 
 		{0, 0, 0, 0},
 	};
@@ -2307,6 +2310,10 @@ int main(int argc, char **argv) {
 			}
 			break;
 
+		case 'j':
+			cpus = atoi(optarg);
+			break;
+
 		case 'g':
 			gamma = atof(optarg);
 			break;
@@ -2400,6 +2407,8 @@ int main(int argc, char **argv) {
 		}
 		}
 	}
+
+	init_cpus(cpus);
 
 	files_open_at_start = open("/dev/null", O_RDONLY);
 	close(files_open_at_start);
