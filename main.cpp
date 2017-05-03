@@ -1293,9 +1293,11 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 				size_t parse_min = PARSE_MIN;
 				size_t read_buf = READ_BUF;
+				size_t parse_max = PARSE_MAX;
 				if (prevent[P_MEMORY_MAP]) {
 					parse_min = 2000;
 					read_buf = 5;
+					parse_max = 5;
 				}
 
 				char buf[read_buf];
@@ -1310,7 +1312,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 						// If the buffered input gets huge, even if the parsers are still running,
 						// wait for the parser thread instead of continuing to stream input.
 
-						if (is_parsing == 0 || ahead >= PARSE_MAX) {
+						if (is_parsing == 0 || ahead >= parse_max) {
 							if (parser_created) {
 								if (pthread_join(parallel_parser, NULL) != 0) {
 									perror("pthread_join 1088");
