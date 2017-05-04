@@ -1,3 +1,7 @@
+## 1.17.6
+
+* Add tile-join options to set name, attribution, description
+
 ## 1.17.5
 
 * Preserve the tileset names from the source mbtiles in tile-join

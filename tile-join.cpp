@@ -691,11 +691,13 @@ int main(int argc, char **argv) {
 	std::set<std::string> keep_layers;
 	std::set<std::string> remove_layers;
 
+	std::string set_name, set_description, set_attribution;
+
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:ip:l:L:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:c:x:ip:l:L:A:N:n:")) != -1) {
 		switch (i) {
 		case 'o':
 			outfile = optarg;
@@ -707,6 +709,18 @@ int main(int argc, char **argv) {
 
 		case 'i':
 			ifmatched = 1;
+			break;
+
+		case 'A':
+			set_attribution = optarg;
+			break;
+
+		case 'n':
+			set_name = optarg;
+			break;
+
+		case 'N':
+			set_description = optarg;
 			break;
 
 		case 'p':
@@ -781,6 +795,16 @@ int main(int argc, char **argv) {
 	}
 
 	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name);
+
+	if (set_attribution.size() != 0) {
+		attribution = set_attribution;
+	}
+	if (set_description.size() != 0) {
+		description = set_description;
+	}
+	if (set_name.size() != 0) {
+		name = set_name;
+	}
 
 	mbtiles_write_metadata(outdb, NULL, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
 	mbtiles_close(outdb, argv);
