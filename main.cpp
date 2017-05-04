@@ -1208,7 +1208,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		char *map = NULL;
 		off_t off = 0;
 
-		int read_parallel_this = read_parallel ? '\n' : 0x1E;
+		int read_parallel_this = read_parallel ? '\n' : 0;
 
 		if (1) {
 			if (fstat(fd, &st) == 0) {
@@ -1240,7 +1240,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
-		if (map != NULL && map != MAP_FAILED) {
+		if (map != NULL && map != MAP_FAILED && read_parallel_this) {
 			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
