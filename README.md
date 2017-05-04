@@ -217,8 +217,8 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filters
 
- * -C _command_ or --prefilter=_command_: Specify a shell filter command to be run at the start of assembling each tile
- * -c _command_ or --postfilter=_command_: Specify a shell filter command to be run at the end of assembling each tile
+ * `-C` _command_ or `--prefilter=`_command_: Specify a shell filter command to be run at the start of assembling each tile
+ * `-c` _command_ or `--postfilter=`_command_: Specify a shell filter command to be run at the end of assembling each tile
 
 The pre- and post-filter commands allow you to do optional filtering or transformation on the features of each tile
 as it is created. They are shell commands, run with the zoom level, X, and Y as the `$1`, `$2`, and `$3` arguments.
@@ -248,7 +248,7 @@ tippecanoe -o countries.mbtiles -z5 -C 'mkdir -p tiles/$1/$2; tee tiles/$1/$2/$3
 
  * Make a tileset of the Natural Earth countries to zoom level 5, but including only those tiles that
    intersect the [bounding box of Germany](https://www.flickr.com/places/info/23424829).
-   (The `limit-tiles-to-bbox` script is [in the Tippecanoe source directory](filters/limit-tiles-to-bbox)].)
+   (The `limit-tiles-to-bbox` script is [in the Tippecanoe source directory](filters/limit-tiles-to-bbox).)
 
 ```
 tippecanoe -o countries.mbtiles -z5 -C './filters/limit-tiles-to-bbox 5.8662 47.2702 15.0421 55.0581 $*' ne_10m_admin_0_countries.json

@@ -266,9 +266,9 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .SS Filters
 .RS
 .IP \(bu 2
-\-C \fIcommand\fP or \-\-prefilter=\fIcommand\fP: Specify a shell filter command to be run at the start of assembling each tile
+\fB\fC\-C\fR \fIcommand\fP or \fB\fC\-\-prefilter=\fR\fIcommand\fP: Specify a shell filter command to be run at the start of assembling each tile
 .IP \(bu 2
-\-c \fIcommand\fP or \-\-postfilter=\fIcommand\fP: Specify a shell filter command to be run at the end of assembling each tile
+\fB\fC\-c\fR \fIcommand\fP or \fB\fC\-\-postfilter=\fR\fIcommand\fP: Specify a shell filter command to be run at the end of assembling each tile
 .RE
 .PP
 The pre\- and post\-filter commands allow you to do optional filtering or transformation on the features of each tile
@@ -303,7 +303,7 @@ tippecanoe \-o countries.mbtiles \-z5 \-C 'mkdir \-p tiles/$1/$2; tee tiles/$1/$
 .IP \(bu 2
 Make a tileset of the Natural Earth countries to zoom level 5, but including only those tiles that
 intersect the bounding box of Germany \[la]https://www.flickr.com/places/info/23424829\[ra]\&.
-(The \fB\fClimit\-tiles\-to\-bbox\fR script is in the Tippecanoe source directory \[la]filters/limit-tiles-to-bbox\[ra]].)
+(The \fB\fClimit\-tiles\-to\-bbox\fR script is in the Tippecanoe source directory \[la]filters/limit-tiles-to-bbox\[ra]\&.)
 .RE
 .PP
 .RS
