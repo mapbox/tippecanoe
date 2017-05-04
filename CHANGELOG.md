@@ -1,3 +1,7 @@
+## 1.17.5
+
+* Preserve the tileset names from the source mbtiles in tile-join
+
 ## 1.17.4
 
 * Fix RFC 8142 support: Don't try to split *all* memory mapped files

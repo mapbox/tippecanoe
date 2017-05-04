@@ -6,7 +6,7 @@
 "json": "{\"vector_layers\": [ { \"id\": \"macarthur\", \"description\": \"\", \"minzoom\": 5, \"maxzoom\": 11, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} } ] }",
 "maxzoom": "12",
 "minzoom": "0",
-"name": "tests/join-population/just-macarthur.mbtiles",
+"name": "tests/join-population/macarthur.mbtiles + tests/join-population/macarthur2.mbtiles + tests/join-population/tabblock_06001420.mbtiles",
 "type": "overlay",
 "version": "2"
 }, "features": [
