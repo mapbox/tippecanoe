@@ -1,12 +1,13 @@
 { "type": "FeatureCollection", "properties": {
+"attribution": "macarthur attribution",
 "bounds": "-122.334735,37.695438,-122.104097,37.898925",
 "center": "-122.299805,37.892187,12",
-"description": "tests/join-population/tabblock_06001420.mbtiles",
+"description": "macarthur description",
 "format": "pbf",
 "json": "{\"vector_layers\": [ { \"id\": \"macarthur\", \"description\": \"\", \"minzoom\": 5, \"maxzoom\": 11, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} } ] }",
 "maxzoom": "12",
 "minzoom": "0",
-"name": "tests/join-population/macarthur.mbtiles + tests/join-population/macarthur2.mbtiles + tests/join-population/tabblock_06001420.mbtiles",
+"name": "macarthur name",
 "type": "overlay",
 "version": "2"
 }, "features": [

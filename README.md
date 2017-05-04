@@ -392,6 +392,9 @@ The options are:
  * `-pk`: Don't skip tiles larger than 500K.
  * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-A` *attribution*: Set the attribution string.
+ * `-n` *name*: Set the tileset name.
+ * `-N` *description*: Set the tileset description.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
