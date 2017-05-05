@@ -263,7 +263,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 						}
 					}
 
-					if (i >= ops.size() || ops[i + 1].op == VT_MOVETO) {
+					if (i + 1 >= ops.size() || ops[i + 1].op == VT_MOVETO) {
 						if (ops[i].op != VT_CLOSEPATH) {
 							fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
 							if (!force) {
