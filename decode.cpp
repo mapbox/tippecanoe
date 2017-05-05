@@ -19,6 +19,7 @@
 
 int minzoom = 0;
 int maxzoom = 32;
+bool force = false;
 
 void printq(const char *s) {
 	putchar('"');
@@ -261,6 +262,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 							rings[n].push_back(ops[i]);
 						}
 					}
+
+					if (i + 1 >= ops.size() || ops[i + 1].op == VT_MOVETO) {
+						if (ops[i].op != VT_CLOSEPATH) {
+							fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
+							if (!force) {
+								exit(EXIT_FAILURE);
+							}
+						}
+					}
 				}
 
 				int outer = 0;
@@ -290,6 +300,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 
 				int state = 0;
 				for (size_t i = 0; i < rings.size(); i++) {
+					if (i == 0 && areas[i] < 0) {
+						fprintf(stderr, "Polygon begins with an inner ring\n");
+						if (!force) {
+							exit(EXIT_FAILURE);
+						}
+					}
+
 					if (areas[i] >= 0) {
 						if (state != 0) {
 							// new multipolygon
@@ -489,7 +506,7 @@ int main(int argc, char **argv) {
 	int i;
 	std::set<std::string> to_decode;
 
-	while ((i = getopt(argc, argv, "t:Z:z:l:")) != -1) {
+	while ((i = getopt(argc, argv, "t:Z:z:l:f")) != -1) {
 		switch (i) {
 		case 't':
 			set_projection_or_exit(optarg);
@@ -505,6 +522,10 @@ int main(int argc, char **argv) {
 
 		case 'l':
 			to_decode.insert(optarg);
+			break;
+
+		case 'f':
+			force = true;
 			break;
 
 		default:
