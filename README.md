@@ -482,3 +482,4 @@ resolutions.
  * `-z` _maxzoom_: Specify the highest zoom level to decode from the tileset
  * `-Z` _minzoom_: Specify the lowest zoom level to decode from the tileset
  * `-l` _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
+ * `-f`: Decode tiles even if polygon ring order or closure problems are detected

@@ -1,3 +1,7 @@
+## 1.17.7
+
+* Enforce polygon winding and closure rules in tippecanoe-decode
+
 ## 1.17.6
 
 * Add tile-join options to set name, attribution, description
