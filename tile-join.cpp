@@ -32,8 +32,9 @@ struct stats {
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile) {
 	mvt_tile tile;
 	int features_added = 0;
+	bool was_compressed;
 
-	if (!tile.decode(message)) {
+	if (!tile.decode(message, was_compressed)) {
 		fprintf(stderr, "Couldn't decompress tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
 	}
@@ -402,7 +403,9 @@ void *join_worker(void *v) {
 		}
 
 		if (anything) {
-			std::string compressed = tile.encode();
+			std::string pbf = tile.encode();
+			std::string compressed;
+			compress(pbf, compressed);
 
 			if (!pk && compressed.size() > 500000) {
 				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
