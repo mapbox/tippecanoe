@@ -475,10 +475,33 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 	std::map<zxy, std::vector<std::string>> tasks;
 
+	double minlat = INT_MAX;
+	double minlon = INT_MAX;
+	double maxlat = INT_MIN;
+	double maxlon = INT_MIN;
+	int zoom_for_bbox = -1;
+
 	while (readers != NULL && readers->zoom < 32) {
 		reader *r = readers;
 		readers = readers->next;
 		r->next = NULL;
+
+		if (r->zoom != zoom_for_bbox) {
+			// Only use highest zoom for bbox calculation
+			// to avoid z0 always covering the world
+
+			minlat = minlon = INT_MAX;
+			maxlat = maxlon = INT_MIN;
+			zoom_for_bbox = r->zoom;
+		}
+
+		double lat1, lon1, lat2, lon2;
+		tile2lonlat(r->x, r->y, r->zoom, &lon1, &lat1);
+		tile2lonlat(r->x + 1, r->y + 1, r->zoom, &lon2, &lat2);
+		minlat = min(lat2, minlat);
+		minlon = min(lon1, minlon);
+		maxlat = max(lat1, maxlat);
+		maxlon = max(lon2, maxlon);
 
 		zxy tile = zxy(r->zoom, r->x, r->y);
 		if (tasks.count(tile) == 0) {
@@ -519,6 +542,11 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		r->next = *rr;
 		*rr = r;
 	}
+
+	st->minlon = min(minlon, st->minlon);
+	st->maxlon = max(maxlon, st->maxlon);
+	st->minlat = min(minlat, st->minlat);
+	st->maxlat = max(maxlat, st->maxlat);
 
 	handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
 	layermap = merge_layermaps(layermaps);
@@ -574,12 +602,12 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-				double minlon, minlat, maxlon, maxlat;
-				sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat);
-				st->minlon = min(minlon, st->minlon);
-				st->maxlon = max(maxlon, st->maxlon);
-				st->minlat = min(minlat, st->minlat);
-				st->maxlat = max(maxlat, st->maxlat);
+				if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
+					st->minlon = min(minlon, st->minlon);
+					st->maxlon = max(maxlon, st->maxlon);
+					st->minlat = min(minlat, st->minlat);
+					st->maxlat = max(maxlat, st->maxlat);
+				}
 			}
 			sqlite3_finalize(r->stmt);
 		}

@@ -1,3 +1,8 @@
+## 1.18.0
+
+* Fix compression of tiles in tile-join
+* Calculate the tileset bounding box in tile-join from the tile boundaries
+
 ## 1.17.7
 
 * Enforce polygon winding and closure rules in tippecanoe-decode

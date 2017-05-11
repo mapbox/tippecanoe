@@ -1,6 +1,6 @@
 { "type": "FeatureCollection", "properties": {
 "attribution": "macarthur attribution",
-"bounds": "-122.334735,37.695438,-122.104097,37.898925",
+"bounds": "-122.343750,37.695438,-122.104097,37.926868",
 "center": "-122.299805,37.892187,12",
 "description": "macarthur description",
 "format": "pbf",

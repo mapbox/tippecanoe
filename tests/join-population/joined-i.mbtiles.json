@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-122.334735,37.877356,-122.281639,37.898925",
+"bounds": "-122.343750,37.857507,-122.255859,37.926868",
 "center": "-122.299805,37.892187,12",
 "description": "tests/join-population/tabblock_06001420.mbtiles",
 "format": "pbf",
