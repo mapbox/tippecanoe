@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-122.294563,37.695438,-122.104097,37.833010",
+"bounds": "-122.343750,37.439974,-121.992188,37.996163",
 "center": "-122.167969,37.833010,10",
 "description": "tests/join-population/macarthur.mbtiles",
 "format": "pbf",

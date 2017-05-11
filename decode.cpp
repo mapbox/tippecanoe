@@ -54,9 +54,10 @@ struct lonlat {
 void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode) {
 	int within = 0;
 	mvt_tile tile;
+	bool was_compressed;
 
 	try {
-		if (!tile.decode(message)) {
+		if (!tile.decode(message, was_compressed)) {
 			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
@@ -68,7 +69,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	printf("{ \"type\": \"FeatureCollection\"");
 
 	if (describe) {
-		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d", z, x, y);
+		if (!was_compressed) {
+			printf(", \"compressed\": false");
+		}
+
+		printf(" }");
 
 		if (projection != projections) {
 			printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");

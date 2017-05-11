@@ -79,7 +79,7 @@ int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
-bool mvt_tile::decode(std::string &message) {
+bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	layers.clear();
 	std::string src;
 
@@ -87,8 +87,10 @@ bool mvt_tile::decode(std::string &message) {
 		std::string uncompressed;
 		decompress(message, uncompressed);
 		src = uncompressed;
+		was_compressed = true;
 	} else {
 		src = message;
+		was_compressed = false;
 	}
 
 	protozero::pbf_reader reader(src);
