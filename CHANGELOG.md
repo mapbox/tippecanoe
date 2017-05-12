@@ -1,3 +1,7 @@
+## 1.18.1
+
+* Only warn once about invalid polygons in tippecanoe-decode
+
 ## 1.18.0
 
 * Fix compression of tiles in tile-join
