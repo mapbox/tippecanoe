@@ -271,9 +271,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 
 					if (i + 1 >= ops.size() || ops[i + 1].op == VT_MOVETO) {
 						if (ops[i].op != VT_CLOSEPATH) {
-							fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
-							if (!force) {
-								exit(EXIT_FAILURE);
+							static bool warned = false;
+
+							if (!warned) {
+								fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
+								if (!force) {
+									exit(EXIT_FAILURE);
+								}
+
+								warned = true;
 							}
 						}
 					}
@@ -307,9 +313,15 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 				int state = 0;
 				for (size_t i = 0; i < rings.size(); i++) {
 					if (i == 0 && areas[i] < 0) {
-						fprintf(stderr, "Polygon begins with an inner ring\n");
-						if (!force) {
-							exit(EXIT_FAILURE);
+						static bool warned = false;
+
+						if (!warned) {
+							fprintf(stderr, "Polygon begins with an inner ring\n");
+							if (!force) {
+								exit(EXIT_FAILURE);
+							}
+
+							warned = true;
 						}
 					}
 
