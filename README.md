@@ -431,6 +431,9 @@ The options are:
  * `-pk`: Don't skip tiles larger than 500K.
  * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-A` *attribution*: Set the attribution string.
+ * `-n` *name*: Set the tileset name.
+ * `-N` *description*: Set the tileset description.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
@@ -519,3 +522,4 @@ resolutions.
  * `-Z` _minzoom_: Specify the lowest zoom level to decode from the tileset
  * `-l` _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
  * `-c`: Include each feature's layer and zoom level as part of its `tippecanoe` object rather than as a FeatureCollection wrapper
+ * `-f`: Decode tiles even if polygon ring order or closure problems are detected

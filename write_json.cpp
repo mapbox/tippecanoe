@@ -24,7 +24,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -232,6 +232,21 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 						rings[n].push_back(ops[i]);
 					}
 				}
+
+				if (i + 1 >= ops.size() || ops[i + 1].op == VT_MOVETO) {
+					if (ops[i].op != VT_CLOSEPATH) {
+						static bool warned = false;
+
+						if (!warned) {
+							fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
+							if (complain) {
+								exit(EXIT_FAILURE);
+							}
+
+							warned = true;
+						}
+					}
+				}
 			}
 
 			int outer = 0;
@@ -262,6 +277,19 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 
 			int state = 0;
 			for (size_t i = 0; i < rings.size(); i++) {
+				if (i == 0 && areas[i] < 0) {
+					static bool warned = false;
+
+					if (!warned) {
+						fprintf(stderr, "Polygon begins with an inner ring\n");
+						if (complain) {
+							exit(EXIT_FAILURE);
+						}
+
+						warned = true;
+					}
+				}
+
 				if (areas[i] >= 0) {
 					if (state != 0) {
 						// new multipolygon

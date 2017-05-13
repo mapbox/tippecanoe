@@ -1,12 +1,12 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-122.334735,37.877356,-122.281639,37.898925",
+"bounds": "-122.343750,37.857507,-122.255859,37.926868",
 "center": "-122.299805,37.892187,12",
 "description": "tests/join-population/tabblock_06001420.mbtiles",
 "format": "pbf",
 "json": "{\"vector_layers\": [ { \"id\": \"tabblock_06001420\", \"description\": \"\", \"minzoom\": 3, \"maxzoom\": 12, \"fields\": {\"ALAND10\": \"Number\", \"AWATER10\": \"Number\", \"BLOCKCE10\": \"String\", \"COUNTYFP10\": \"String\", \"FUNCSTAT10\": \"String\", \"INTPTLAT10\": \"String\", \"INTPTLON10\": \"String\", \"MTFCC10\": \"String\", \"NAME10\": \"String\", \"STATEFP10\": \"String\", \"TRACTCE10\": \"String\", \"UACE10\": \"String\", \"UATYP10\": \"String\", \"UR10\": \"String\", \"population\": \"Number\"} } ] }",
 "maxzoom": "12",
 "minzoom": "0",
-"name": "tests/join-population/joined.mbtiles",
+"name": "tests/join-population/tabblock_06001420.mbtiles",
 "type": "overlay",
 "version": "2"
 }, "features": [

@@ -52,7 +52,7 @@ void *run_writer(void *a) {
 	}
 
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, 0, 0, 0);
+		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, 0, 0, 0, false);
 	}
 
 	if (fclose(fp) != 0) {

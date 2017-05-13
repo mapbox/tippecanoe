@@ -505,6 +505,12 @@ The options are:
 \fB\fC\-l\fR \fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
 .IP \(bu 2
 \fB\fC\-L\fR \fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
+.IP \(bu 2
+\fB\fC\-A\fR \fIattribution\fP: Set the attribution string.
+.IP \(bu 2
+\fB\fC\-n\fR \fIname\fP: Set the tileset name.
+.IP \(bu 2
+\fB\fC\-N\fR \fIdescription\fP: Set the tileset description.
 .RE
 .PP
 Because tile\-join just copies the geometries to the new .mbtiles without processing them
@@ -612,4 +618,6 @@ resolutions.
 \fB\fC\-l\fR \fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
 .IP \(bu 2
 \fB\fC\-c\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
+.IP \(bu 2
+\fB\fC\-f\fR: Decode tiles even if polygon ring order or closure problems are detected
 .RE

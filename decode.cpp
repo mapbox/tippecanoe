@@ -20,13 +20,15 @@
 
 int minzoom = 0;
 int maxzoom = 32;
+bool force = false;
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
 	int within = 0;
 	mvt_tile tile;
+	bool was_compressed;
 
 	try {
-		if (!tile.decode(message)) {
+		if (!tile.decode(message, was_compressed)) {
 			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
@@ -39,7 +41,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		printf("{ \"type\": \"FeatureCollection\"");
 
 		if (describe) {
-			printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d }", z, x, y);
+			printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d", z, x, y);
+			if (!was_compressed) {
+				printf(", \"compressed\": false");
+			}
+			printf(" }");
 
 			if (projection != projections) {
 				printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
@@ -77,7 +83,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 			}
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0);
+		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
 
 		if (!pipeline) {
 			if (describe) {
@@ -253,7 +259,7 @@ int main(int argc, char **argv) {
 	std::set<std::string> to_decode;
 	bool pipeline = false;
 
-	while ((i = getopt(argc, argv, "t:Z:z:l:c")) != -1) {
+	while ((i = getopt(argc, argv, "t:Z:z:l:cf")) != -1) {
 		switch (i) {
 		case 't':
 			set_projection_or_exit(optarg);
@@ -273,6 +279,10 @@ int main(int argc, char **argv) {
 
 		case 'c':
 			pipeline = true;
+			break;
+
+		case 'f':
+			force = true;
 			break;
 
 		default:

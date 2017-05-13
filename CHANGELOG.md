@@ -1,3 +1,24 @@
+## 1.18.1
+
+* Only warn once about invalid polygons in tippecanoe-decode
+
+## 1.18.0
+
+* Fix compression of tiles in tile-join
+* Calculate the tileset bounding box in tile-join from the tile boundaries
+
+## 1.17.7
+
+* Enforce polygon winding and closure rules in tippecanoe-decode
+
+## 1.17.6
+
+* Add tile-join options to set name, attribution, description
+
+## 1.17.5
+
+* Preserve the tileset names from the source mbtiles in tile-join
+
 ## 1.17.4
 
 * Fix RFC 8142 support: Don't try to split *all* memory mapped files
