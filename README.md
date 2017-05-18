@@ -52,6 +52,24 @@ You can concatenate multiple GeoJSON features or files together,
 and it will parse out the features and ignore whatever other objects
 it encounters.
 
+Docker Image
+------------
+
+A tippecanoe Docker image can be built from source and executed as a task to
+automatically install dependencies and allow tippecanoe to run on any system
+supported by Docker.
+
+```docker
+$ docker build -t tippecanoe:latest .
+$ docker run -it --rm \
+  -v /tiledata:/data \
+  tippecanoe:latest \
+  tippecanoe --output=/data/output.mbtiles /data/example.geojson
+```
+
+The commands above will build a Docker image from the source and compile the
+latest version. The image supports all tippecanoe flags and options.
+
 Options
 -------
 
