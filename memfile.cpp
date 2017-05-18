@@ -53,7 +53,7 @@ int memfile_write(struct memfile *file, void *s, long long len) {
 			return -1;
 		}
 
-		file->len += INCREMENT;
+		file->len += (len + INCREMENT + 1) / INCREMENT * INCREMENT;
 
 		if (ftruncate(file->fd, file->len) != 0) {
 			return -1;

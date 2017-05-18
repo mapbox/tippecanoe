@@ -1,3 +1,7 @@
+## 1.18.2
+
+* Fix crash with very long (>128K) attribute values
+
 ## 1.18.1
 
 * Only warn once about invalid polygons in tippecanoe-decode
