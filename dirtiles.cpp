@@ -2,9 +2,9 @@
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
-#include "rawtiles.hpp"
+#include "dirtiles.hpp"
 
-void write_raw_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
+void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string curdir(outdir);
 	std::string slash("/");
