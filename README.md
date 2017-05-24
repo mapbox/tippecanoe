@@ -402,12 +402,14 @@ the same tiles, the layers or tiles are merged.
 
 The options are:
 
- * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file
- * `-f`: Remove *out.mbtiles* if it already exists
+ * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file.
+ * `-e` *directory*: Write the new tiles to the specified directory instead of to an mbtiles file.
+ * `-f`: Remove *out.mbtiles* if it already exists.
  * `-c` *match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
  * `-x` *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * `-i`: Only include features that matched the CSV.
  * `-pk`: Don't skip tiles larger than 500K.
+ * `-pC`: Don't compress the PBF vector tile data.
  * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution*: Set the attribution string.

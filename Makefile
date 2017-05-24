@@ -55,7 +55,7 @@ tippecanoe-enumerate: enumerate.o
 tippecanoe-decode: decode.o projection.o mvt.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o
+tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 unit: unit.o text.o
@@ -116,7 +116,7 @@ parallel-test:
 
 raw-tiles-test:	
 	./tippecanoe -e tests/raw-tiles/raw-tiles tests/raw-tiles/hackspots.geojson -pC
-	diff -x '.*' -rq tests/raw-tiles/raw-tiles tests/raw-tiles/compare
+	diff -rq tests/raw-tiles/raw-tiles tests/raw-tiles/compare
 	rm -rf tests/raw-tiles/raw-tiles
 
 decode-test:
@@ -162,8 +162,11 @@ join-test:
 	./tippecanoe-decode tests/join-population/just-macarthur.mbtiles > tests/join-population/just-macarthur.mbtiles.json.check
 	./tippecanoe-decode tests/join-population/no-macarthur.mbtiles > tests/join-population/no-macarthur.mbtiles.json.check
 	cmp tests/join-population/just-macarthur.mbtiles.json.check tests/join-population/just-macarthur.mbtiles.json
-	cmp tests/join-population/no-macarthur.mbtiles.json.check tests/join-population/no-macarthur.mbtiles.json
+	cmp tests/join-population/no-macarthur.mbtiles.json.check tests/join-population/no-macarthur.mbtiles.json	
+	./tile-join -pC -e tests/join-population/raw-merged-folder tests/join-population/tabblock_06001420.mbtiles tests/join-population/macarthur.mbtiles tests/join-population/macarthur2.mbtiles
+	diff -rq tests/join-population/raw-merged-folder tests/join-population/raw-merged-folder-compare
 	rm tests/join-population/tabblock_06001420.mbtiles tests/join-population/joined.mbtiles tests/join-population/joined-i.mbtiles tests/join-population/joined.mbtiles.json.check tests/join-population/joined-i.mbtiles.json.check tests/join-population/macarthur.mbtiles tests/join-population/merged.mbtiles tests/join-population/merged.mbtiles.json.check tests/join-population/macarthur2.mbtiles tests/join-population/windows.mbtiles tests/join-population/windows.mbtiles.json.check tests/join-population/just-macarthur.mbtiles tests/join-population/no-macarthur.mbtiles tests/join-population/just-macarthur.mbtiles.json.check tests/join-population/no-macarthur.mbtiles.json.check
+	rm -rf tests/join-population/raw-merged-folder
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output

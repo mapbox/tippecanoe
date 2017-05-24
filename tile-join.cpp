@@ -16,10 +16,12 @@
 #include "pool.hpp"
 #include "mbtiles.hpp"
 #include "geometry.hpp"
+#include "dirtiles.hpp"
 
 std::string dequote(std::string s);
 
 bool pk = false;
+bool pC = false;
 size_t CPUS;
 
 struct stats {
@@ -405,7 +407,12 @@ void *join_worker(void *v) {
 		if (anything) {
 			std::string pbf = tile.encode();
 			std::string compressed;
-			compress(pbf, compressed);
+
+			if (!pC) {
+				compress(pbf, compressed);
+			} else {
+				compressed = pbf;
+			}
 
 			if (!pk && compressed.size() > 500000) {
 				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
@@ -418,7 +425,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -462,12 +469,16 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		}
 
 		for (auto ai = args[i].outputs.begin(); ai != args[i].outputs.end(); ++ai) {
-			mbtiles_write_tile(outdb, ai->first.z, ai->first.x, ai->first.y, ai->second.data(), ai->second.size());
+			if (outdb != NULL) {
+				mbtiles_write_tile(outdb, ai->first.z, ai->first.x, ai->first.y, ai->second.data(), ai->second.size());
+			} else if (outdir != NULL) {
+				dir_write_tile(outdir, ai->first.z, ai->first.x, ai->first.y, ai->second);
+			}
 		}
 	}
 }
 
-void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -512,7 +523,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
-				handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
 				tasks.clear();
 			}
 		}
@@ -548,7 +559,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 	st->minlat = min(minlat, st->minlat);
 	st->maxlat = max(maxlat, st->maxlat);
 
-	handle_tasks(tasks, layermaps, outdb, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
 	layermap = merge_layermaps(layermaps);
 
 	struct reader *next;
@@ -622,7 +633,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -705,7 +716,9 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 }
 
 int main(int argc, char **argv) {
-	char *outfile = NULL;
+	char *out_mbtiles = NULL;
+	char *out_dir = NULL;
+	sqlite3 *outdb = NULL;
 	char *csv = NULL;
 	int force = 0;
 	int ifmatched = 0;
@@ -728,10 +741,14 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:c:x:ip:l:L:A:N:n:")) != -1) {
+	while ((i = getopt(argc, argv, "fo:e:c:x:ip:l:L:A:N:n:")) != -1) {
 		switch (i) {
 		case 'o':
-			outfile = optarg;
+			out_mbtiles = optarg;
+			break;
+
+		case 'e':
+			out_dir = optarg;
 			break;
 
 		case 'f':
@@ -757,6 +774,8 @@ int main(int argc, char **argv) {
 		case 'p':
 			if (strcmp(optarg, "k") == 0) {
 				pk = true;
+			} else if (strcmp(optarg, "C") == 0) {
+				pC = true;
 			} else {
 				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
 				exit(EXIT_FAILURE);
@@ -790,15 +809,27 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (argc - optind < 1 || outfile == NULL) {
+	if (argc - optind < 1) {
 		usage(argv);
 	}
 
-	if (force) {
-		unlink(outfile);
+	if (out_mbtiles == NULL && out_dir == NULL) {
+		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
+		usage(argv);
 	}
 
-	sqlite3 *outdb = mbtiles_open(outfile, argv, 0);
+	if (out_mbtiles != NULL && out_dir != NULL) {
+		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
+		usage(argv);
+	}
+
+	if (out_mbtiles != NULL) {
+		if (force) {
+			unlink(out_mbtiles);
+		}
+		outdb = mbtiles_open(out_mbtiles, argv, 0);
+	}
+
 	struct stats st;
 	memset(&st, 0, sizeof(st));
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
@@ -825,7 +856,7 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, layermap, outdb, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name);
+	decode(readers, csv, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name);
 
 	if (set_attribution.size() != 0) {
 		attribution = set_attribution;
@@ -837,8 +868,11 @@ int main(int argc, char **argv) {
 		name = set_name;
 	}
 
-	mbtiles_write_metadata(outdb, NULL, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
-	mbtiles_close(outdb, argv);
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
+
+	if (outdb != NULL) {
+		mbtiles_close(outdb, argv);
+	}
 
 	return 0;
 }
