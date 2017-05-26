@@ -1,8 +1,18 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <sys/stat.h>
 #include "dirtiles.hpp"
+
+std::string dir_read_tile(std::string pbfPath) {
+	std::ifstream pbfFile(pbfPath, std::ios::in | std::ios::binary);
+	std::ostringstream contents;
+	contents << pbfFile.rdbuf();
+	pbfFile.close();
+
+	return (contents.str());
+}
 
 void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);

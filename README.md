@@ -392,13 +392,18 @@ The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyl
 tile-join
 =========
 
-Tile-join is a tool for joining new attributes from a CSV file to features that
-have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
-file, matches them against the records of the CSV, and writes out a new tileset.
+Tile-join is a tool for joining new attributes from a CSV file to features
+that have already been tiled with tippecanoe. It reads the tiles from an 
+existing .mbtiles file or a directory of tiles, matches them against the
+records of the CSV, and writes out a new tileset.
 
-If you specify multiple source mbtiles files, they are all read and their combined
-contents are written to the new mbtiles output. If they define the same layers or
-the same tiles, the layers or tiles are merged.
+If you specify multiple source mbtiles files or source directories of tiles,
+all the sources are read and their combined contents are written to the new 
+mbtiles output. If they define the same layers or the same tiles, the layers
+or tiles are merged.
+
+You can use the `-e` flag to output a directory of tiles rather than a
+.mbtiles file.
 
 The options are:
 
