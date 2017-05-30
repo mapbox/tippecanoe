@@ -1,6 +1,7 @@
 #define _DEFAULT_SOURCE
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -472,6 +473,7 @@ struct reader *begin_reading(char *fname) {
 		r->sorty = (1LL << r->zoom) - 1 - r->y;
 		r->data = dir_read_tile(r->pbf_path[0]);
 		path_parts.clear();
+		closedir(dir);
 	} else {
 		sqlite3 *db;
 
