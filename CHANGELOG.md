@@ -1,3 +1,8 @@
+## 1.19.0
+
+* Tile-join can merge and create directories, not only mbtiles
+* Maxzoom guessing (-zg) takes into account resolution within each feature
+
 ## 1.18.2
 
 * Fix crash with very long (>128K) attribute values
