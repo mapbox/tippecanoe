@@ -372,7 +372,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -385,11 +385,15 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		}
 	}
 
+	double dist_sums[CPUS];
+	size_t dist_counts[CPUS];
+
 	volatile long long layer_seq[CPUS];
 	for (size_t i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
 		layer_seq[i] = segs[i] + initial_offset;
+		dist_sums[i] = dist_counts[i] = 0;
 	}
 
 	struct parse_json_args pja[CPUS];
@@ -431,6 +435,8 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].layername = &layername;
 		pja[i].uses_gamma = uses_gamma;
 		pja[i].attribute_types = attribute_types;
+		pja[i].dist_sum = &(dist_sums[i]);
+		pja[i].dist_count = &(dist_counts[i]);
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -444,6 +450,9 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		if (pthread_join(pthreads[i], &retval) != 0) {
 			perror("pthread_join 370");
 		}
+
+		*dist_sum += dist_sums[i];
+		*dist_count += dist_counts[i];
 
 		json_end_map(pja[i].jp);
 	}
@@ -476,6 +485,8 @@ struct read_parallel_arg {
 	std::string layername;
 	bool uses_gamma;
 	std::map<std::string, int> const *attribute_types;
+	double *dist_sum;
+	size_t *dist_count;
 };
 
 void *run_read_parallel(void *v) {
@@ -497,7 +508,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->reader, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator, rpa->dist_sum, rpa->dist_count);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -514,7 +525,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *reader, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -553,6 +564,8 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->layername = layername;
 	rpa->uses_gamma = uses_gamma;
 	rpa->attribute_types = attribute_types;
+	rpa->dist_sum = dist_sum;
+	rpa->dist_count = dist_count;
 
 	if (pthread_create(parallel_parser, NULL, run_read_parallel, rpa) != 0) {
 		perror("pthread_create");
@@ -1173,6 +1186,8 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 	}
 
 	long overall_offset = 0;
+	double dist_sum = 0;
+	size_t dist_count = 0;
 
 	size_t nsources = sources.size();
 	for (size_t source = 0; source < nsources; source++) {
@@ -1235,7 +1250,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 		}
 
 		if (map != NULL && map != MAP_FAILED && read_parallel_this) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this, &dist_sum, &dist_count);
 			overall_offset += st.st_size - off;
 			checkdisk(reader, CPUS);
 
@@ -1311,7 +1326,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1348,7 +1363,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), reader, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1365,7 +1380,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types);
+				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, &dist_sum, &dist_count);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
@@ -1618,6 +1633,11 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 			}
 		}
 
+		if (count == 0 && dist_count == 0) {
+			fprintf(stderr, "Can't guess maxzoom (-zg) without at least two distinct feature locations\n");
+			exit(EXIT_FAILURE);
+		}
+
 		if (count > 0) {
 			// Geometric mean is appropriate because distances between features
 			// are typically lognormally distributed
@@ -1625,7 +1645,8 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 			// Convert approximately from tile units to feet
 			double dist_ft = sqrt(avg) / 33;
-			double want = dist_ft / 250;
+			// Factor of 8 (3 zooms) beyond minimum required to distinguish features
+			double want = dist_ft / 8;
 
 			maxzoom = ceil(log(360 / (.00000274 * want)) / log(2) - full_detail);
 			if (maxzoom < 0) {
@@ -1638,9 +1659,25 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 			if (!quiet) {
 				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet apart\n", maxzoom, (int) ceil(dist_ft));
 			}
-		} else {
-			fprintf(stderr, "Can't guess maxzoom (-zg) without at least two distinct feature locations\n");
-			exit(EXIT_FAILURE);
+		}
+
+		if (dist_count != 0) {
+			double want2 = exp(dist_sum / dist_count) / 8;
+			int mz = ceil(log(360 / (.00000274 * want2)) / log(2) - full_detail);
+
+			if (mz < 0) {
+				mz = 0;
+			}
+			if (mz > MAX_ZOOM) {
+				mz = MAX_ZOOM;
+			}
+
+			if (mz > maxzoom || count <= 0) {
+				if (!quiet) {
+					fprintf(stderr, "Choosing a maxzoom of -z%d for resolution of about %d feet within features\n", mz, (int) exp(dist_sum / dist_count));
+				}
+				maxzoom = mz;
+			}
 		}
 
 		if (maxzoom < minzoom) {
