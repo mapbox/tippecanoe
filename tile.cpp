@@ -22,7 +22,7 @@
 #include <time.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
-#include "rawtiles.hpp"
+#include "dirtiles.hpp"
 #include "geometry.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -1921,7 +1921,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					if (outdb != NULL) {
 						mbtiles_write_tile(outdb, z, tx, ty, compressed.data(), compressed.size());
 					} else if (outdir != NULL) {
-						write_raw_tile(outdir, z, tx, ty, compressed);
+						dir_write_tile(outdir, z, tx, ty, compressed);
 					}
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {
