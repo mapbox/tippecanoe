@@ -344,7 +344,7 @@ int filter(const struct dirent *dir) {
 struct reader *read_dir(struct reader *readers, const char *name, int level, int zoom_range) {
 	struct dirent **namelist;
 	struct stat buf;
-	char path[1024];
+	std::string path;
 	int i = 0;
 	int n = scandir(name, &namelist, filter, alphasort);
 	std::vector<std::string> path_parts1, path_parts2;
@@ -352,9 +352,9 @@ struct reader *read_dir(struct reader *readers, const char *name, int level, int
 
 	if (n > 0) {
 		while (i < n) {
-			snprintf(path, sizeof(path), "%s/%s", name, namelist[i]->d_name);
+			path = std::string(name) + "/" + std::string(namelist[i]->d_name);
 
-			if (stat(path, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+			if (stat(path.c_str(), &buf) == 0 && S_ISDIR(buf.st_mode)) {
 				if (level == 0) {
 					if (std::stoi(namelist[i]->d_name) <= 9) {
 						zoom_range = 0;
@@ -381,7 +381,7 @@ struct reader *read_dir(struct reader *readers, const char *name, int level, int
 					readers->pbf_count = 0;
 				}
 
-				read_dir(readers, path, level + 1, zoom_range);
+				read_dir(readers, path.c_str(), level + 1, zoom_range);
 			} else {
 				if (level == 0) {
 					fprintf(stderr, "ERROR: Directory structure in '%s' should be zoom/x/y\n", name);
@@ -394,7 +394,7 @@ struct reader *read_dir(struct reader *readers, const char *name, int level, int
 				}
 
 				if (zoom_range == 0) {
-					readers->pbf_path.push_back(std::string(path));
+					readers->pbf_path.push_back(path);
 
 					if (readers->pbf_path.size() > 1) {
 						path_parts1 = split_slash(readers->pbf_path[readers->pbf_path.size() - 1]);
@@ -411,7 +411,7 @@ struct reader *read_dir(struct reader *readers, const char *name, int level, int
 						path_parts2.clear();
 					}
 				} else {
-					readers->large_zoom.push_back(std::string(path));
+					readers->large_zoom.push_back(path);
 
 					if (readers->large_zoom.size() > 1) {
 						path_parts1 = split_slash(readers->large_zoom[readers->large_zoom.size() - 1]);
