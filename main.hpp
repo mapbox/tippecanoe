@@ -16,3 +16,5 @@ extern size_t CPUS;
 extern size_t TEMP_FILES;
 
 extern size_t max_tile_size;
+
+#define MAX_ZOOM 24

@@ -75,8 +75,6 @@ size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
 
-#define MAX_ZOOM 24
-
 struct reader {
 	int metafd;
 	int poolfd;
@@ -2090,6 +2088,7 @@ int main(int argc, char **argv) {
 		{"Zoom levels", 0, 0, 0},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"extend-zooms-if-still-dropping", no_argument, &additional[A_EXTEND_ZOOMS], 1},
 
 		{"Tile resolution", 0, 0, 0},
 		{"full-detail", required_argument, 0, 'd'},

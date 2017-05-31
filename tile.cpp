@@ -254,7 +254,7 @@ static int is_integer(const char *s, long long *v) {
 }
 
 void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int line_detail, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
-	if (geom.size() > 0 && nextzoom <= maxzoom) {
+	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
 
@@ -1221,6 +1221,8 @@ struct write_tile_args {
 	long long minextent_out;
 	double fraction;
 	double fraction_out;
+	bool still_dropping;
+	int wrote_zoom;
 };
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, write_tile_args *arg) {
@@ -1791,6 +1793,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					if (gamma > arg->gamma_out) {
 						arg->gamma_out = gamma;
+						arg->still_dropping = true;
 					}
 
 					if (!quiet) {
@@ -1800,9 +1803,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					continue;
 				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
-					mingap = choose_mingap(indices, mingap_fraction);
+					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					if (mg <= mingap) {
+						mg = mingap * 1.5;
+					}
+					mingap = mg;
 					if (mingap > arg->mingap_out) {
 						arg->mingap_out = mingap;
+						arg->still_dropping = true;
 					}
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
@@ -1816,6 +1824,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						minextent = m;
 						if (minextent > arg->minextent_out) {
 							arg->minextent_out = minextent;
+							arg->still_dropping = true;
 						}
 						if (!quiet) {
 							fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
@@ -1830,6 +1839,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					if (additional[A_DROP_FRACTION_AS_NEEDED] && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
+						arg->still_dropping = true;
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
@@ -1868,6 +1878,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					if (gamma > arg->gamma_out) {
 						arg->gamma_out = gamma;
+						arg->still_dropping = true;
 					}
 
 					if (!quiet) {
@@ -1876,9 +1887,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
-					mingap = choose_mingap(indices, mingap_fraction);
+					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					if (mg <= mingap) {
+						mg = mingap * 1.5;
+					}
+					mingap = mg;
 					if (mingap > arg->mingap_out) {
 						arg->mingap_out = mingap;
+						arg->still_dropping = true;
 					}
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
@@ -1891,6 +1907,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						minextent = m;
 						if (minextent > arg->minextent_out) {
 							arg->minextent_out = minextent;
+							arg->still_dropping = true;
 						}
 						if (!quiet) {
 							fprintf(stderr, "Going to try keeping the biggest %0.2f%% of the features to make it fit\n", minextent_fraction * 100.0);
@@ -1908,6 +1925,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					if (additional[A_DROP_FRACTION_AS_NEEDED] && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
+						arg->still_dropping = true;
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
@@ -1982,6 +2000,8 @@ void *run_thread(void *vargs) {
 			deserialize_uint_io(geom, &x, &geompos);
 			deserialize_uint_io(geom, &y, &geompos);
 
+			arg->wrote_zoom = z;
+
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
 			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->basezoom, arg->outdb, arg->outdir, arg->droprate, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg);
@@ -2049,7 +2069,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int maxzoom, int minzoom, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps) {
 	// Table to map segment and layer number back to layer name
 	std::vector<std::vector<std::string>> layer_unmaps;
 	for (size_t seg = 0; seg < layermaps.size(); seg++) {
@@ -2222,6 +2242,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].running = &running;
 				args[thread].pass = pass;
 				args[thread].passes = 2 - start;
+				args[thread].wrote_zoom = -1;
+				args[thread].still_dropping = false;
 
 				if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 					perror("pthread_create");
@@ -2251,6 +2273,15 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				}
 				if (args[thread].fraction_out < zoom_fraction) {
 					zoom_fraction = args[thread].fraction_out;
+				}
+
+				// Zoom counter might be lower than reality if zooms are being skipped
+				if (args[thread].wrote_zoom > i) {
+					i = args[thread].wrote_zoom;
+				}
+
+				if (additional[A_EXTEND_ZOOMS] && i == maxzoom && args[thread].still_dropping && maxzoom < MAX_ZOOM) {
+					maxzoom++;
 				}
 			}
 		}
