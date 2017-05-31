@@ -135,6 +135,9 @@ than at all newlines.
  * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
  * `-zg` or `--maximum-zoom=g`: Guess what is probably a reasonable maxzoom based on the spacing of features.
  * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+ * `-ae` or `--extend-zooms-if-still-dropping`: Increase the maxzoom if features are still being dropped at that zoom level.
+   The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
+   specified maximum zoom and to any levels added beyond that.
 
 ### Tile resolution
 
@@ -393,12 +396,12 @@ tile-join
 =========
 
 Tile-join is a tool for joining new attributes from a CSV file to features
-that have already been tiled with tippecanoe. It reads the tiles from an 
+that have already been tiled with tippecanoe. It reads the tiles from an
 existing .mbtiles file or a directory of tiles, matches them against the
 records of the CSV, and writes out a new tileset.
 
 If you specify multiple source mbtiles files or source directories of tiles,
-all the sources are read and their combined contents are written to the new 
+all the sources are read and their combined contents are written to the new
 mbtiles output. If they define the same layers or the same tiles, the layers
 or tiles are merged.
 
