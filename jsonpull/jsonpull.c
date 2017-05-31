@@ -1,4 +1,3 @@
-#define _GNU_SOURCE  // for asprintf()
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -734,11 +733,9 @@ static void json_print_one(struct string *val, json_object *o) {
 				string_append(val, '\\');
 				string_append(val, *cp);
 			} else if (*cp >= 0 && *cp < ' ') {
-				char *s;
-				if (asprintf(&s, "\\u%04x", *cp) >= 0) {
-					string_append_string(val, s);
-					free(s);
-				}
+				char s[7];
+				sprintf(s, "\\u%04x", *cp);
+				string_append_string(val, s);
 			} else {
 				string_append(val, *cp);
 			}
