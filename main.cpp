@@ -118,10 +118,12 @@ void checkdisk(struct reader *r, int nreader) {
 	}
 };
 
-void init_cpus() {
+void init_cpus(size_t cpus) {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
-	if (TIPPECANOE_MAX_THREADS != NULL) {
+	if (cpus > 0) {
+		CPUS = cpus;
+	} else if (TIPPECANOE_MAX_THREADS != NULL) {
 		CPUS = atoi(TIPPECANOE_MAX_THREADS);
 	} else {
 		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1222,7 +1224,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 		int read_parallel_this = read_parallel ? '\n' : 0;
 
-		if (1) {
+		if (!prevent[P_MEMORY_MAP]) {
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
@@ -1298,7 +1300,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 				unlink(readname);
 
 				volatile int is_parsing = 0;
-				long long ahead = 0;
+				size_t ahead = 0;
 				long long initial_offset = overall_offset;
 				pthread_t parallel_parser;
 				bool parser_created = false;
@@ -1307,19 +1309,28 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 #define PARSE_MIN 10000000
 #define PARSE_MAX (1LL * 1024 * 1024 * 1024)
 
-				char buf[READ_BUF];
+				size_t parse_min = PARSE_MIN;
+				size_t read_buf = READ_BUF;
+				size_t parse_max = PARSE_MAX;
+				if (prevent[P_MEMORY_MAP]) {
+					parse_min = 2000;
+					read_buf = 5;
+					parse_max = 5;
+				}
+
+				char buf[read_buf];
 				int n;
 
-				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
+				while ((n = fread(buf, sizeof(char), read_buf, fp)) > 0) {
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
-					if (buf[n - 1] == read_parallel_this && ahead > PARSE_MIN) {
+					if (buf[n - 1] == read_parallel_this && ahead > parse_min) {
 						// Don't let the streaming reader get too far ahead of the parsers.
 						// If the buffered input gets huge, even if the parsers are still running,
 						// wait for the parser thread instead of continuing to stream input.
 
-						if (is_parsing == 0 || ahead >= PARSE_MAX) {
+						if (is_parsing == 0 || ahead >= parse_max) {
 							if (parser_created) {
 								if (pthread_join(parallel_parser, NULL) != 0) {
 									perror("pthread_join 1088");
@@ -2028,8 +2039,6 @@ int main(int argc, char **argv) {
 	mtrace();
 #endif
 
-	init_cpus();
-
 	extern int optind;
 	extern char *optarg;
 	int i;
@@ -2053,6 +2062,7 @@ int main(int argc, char **argv) {
 	const char *attribution = NULL;
 	std::vector<source> sources;
 	bool guess_maxzoom = false;
+	size_t cpus = 0;
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
@@ -2151,8 +2161,9 @@ int main(int argc, char **argv) {
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 
-		{"Temporary storage", 0, 0, 0},
+		{"System parameters", 0, 0, 0},
 		{"temporary-directory", required_argument, 0, 't'},
+		{"cpus", required_argument, 0, 'j'},
 
 		{"Progress indicator", 0, 0, 0},
 		{"quiet", no_argument, 0, 'q'},
@@ -2164,6 +2175,8 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
+		{"tag-sequence", no_argument, &additional[A_TAG_SEQUENCE], 1},
+		{"no-memory-mapping", no_argument, &prevent[P_MEMORY_MAP], 1},
 
 		{0, 0, 0, 0},
 	};
@@ -2347,6 +2360,10 @@ int main(int argc, char **argv) {
 			}
 			break;
 
+		case 'j':
+			cpus = atoi(optarg);
+			break;
+
 		case 'g':
 			gamma = atof(optarg);
 			break;
@@ -2440,6 +2457,8 @@ int main(int argc, char **argv) {
 		}
 		}
 	}
+
+	init_cpus(cpus);
 
 	files_open_at_start = open("/dev/null", O_RDONLY);
 	close(files_open_at_start);

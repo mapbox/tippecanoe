@@ -1730,6 +1730,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 
+				if (additional[A_TAG_SEQUENCE]) {
+					mvt_value v;
+					v.type = mvt_sint;
+					v.numeric_value.sint_value = layer_features[x].original_seq;
+					layer.tag(feature, "tippecanoe_sequence", v);
+				}
+
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 					int glow = 255;
 					if (layer_features[x].spacing > 0) {

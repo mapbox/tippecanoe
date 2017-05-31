@@ -14,6 +14,7 @@
 #define A_DROP_SMALLEST_AS_NEEDED ((int) 'n')
 #define A_GRID_LOW_ZOOMS ((int) 'L')
 #define A_DETECT_WRAPAROUND ((int) 'w')
+#define A_TAG_SEQUENCE ((int) 'S')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')
@@ -26,6 +27,7 @@
 #define P_DUPLICATION ((int) 'D')
 #define P_TINY_POLYGON_REDUCTION ((int) 't')
 #define P_TILE_COMPRESSION ((int) 'C')
+#define P_MEMORY_MAP ((int) 'M')
 
 extern int prevent[256];
 extern int additional[256];
