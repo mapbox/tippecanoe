@@ -1,3 +1,7 @@
+## 1.19.1
+
+* Add an option to increase maxzoom if features are still being dropped
+
 ## 1.19.0
 
 * Tile-join can merge and create directories, not only mbtiles

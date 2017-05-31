@@ -1803,7 +1803,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					continue;
 				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
-					mingap = choose_mingap(indices, mingap_fraction);
+					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					if (mg <= mingap) {
+						mg = mingap * 1.5;
+					}
+					mingap = mg;
 					if (mingap > arg->mingap_out) {
 						arg->mingap_out = mingap;
 						arg->still_dropping = true;
@@ -1883,7 +1887,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
-					mingap = choose_mingap(indices, mingap_fraction);
+					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					if (mg <= mingap) {
+						mg = mingap * 1.5;
+					}
+					mingap = mg;
 					if (mingap > arg->mingap_out) {
 						arg->mingap_out = mingap;
 						arg->still_dropping = true;
@@ -2272,7 +2280,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 					i = args[thread].wrote_zoom;
 				}
 
-				if (i == maxzoom && args[thread].still_dropping && maxzoom < MAX_ZOOM) {
+				if (additional[A_EXTEND_ZOOMS] && i == maxzoom && args[thread].still_dropping && maxzoom < MAX_ZOOM) {
 					maxzoom++;
 				}
 			}
