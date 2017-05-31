@@ -1834,7 +1834,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
 				} else {
-					fprintf(stderr, "Try using -B (and --drop-lines or --drop-polygons if needed) to set a higher base zoom level.\n");
+					fprintf(stderr, "Try using --drop-fraction-as-needed or --drop-densest-as-needed.\n");
 					return -1;
 				}
 			}
