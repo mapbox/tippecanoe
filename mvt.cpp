@@ -416,7 +416,10 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_int && numeric_value.int_value < o.numeric_value.int_value) ||
 		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
 		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
-		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value)) {
+		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value) ||
+		    (type == mvt_list && list_value < o.list_value) ||
+		    (type == mvt_hash && list_value < o.list_value) ||
+		    (type == mvt_null && numeric_value.int_value < o.numeric_value.int_value)) {
 			return true;
 		}
 	}

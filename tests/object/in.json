@@ -7,7 +7,8 @@
 		"true": true,
 		"false": false,
 		"array": [
-			"string", 10, null, true, false
-		]
+			"string", 10, null, true, false, [ 1, 2, 3 ], { "this": "that" }
+		],
+		"nest": { "something": "else" }
 	}
 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ]} }
