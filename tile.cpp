@@ -183,9 +183,12 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 			tv.type = mvt_double;
 			tv.numeric_value.double_value = atof(j->string);
 		}
-	} else if (j->type == JSON_TRUE || j->type == JSON_FALSE) {
+	} else if (j->type == JSON_TRUE) {
 		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = (j->string[0] == 't');
+		tv.numeric_value.bool_value = 1;
+	} else if (j->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 0;
 	} else if (j->type == JSON_STRING) {
 		tv.type = mvt_string;
 		tv.string_value = std::string(j->string);

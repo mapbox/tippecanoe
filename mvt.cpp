@@ -115,6 +115,9 @@ bool mvt_tile::decode(std::string &message) {
 					protozero::pbf_reader value_reader(layer_reader.get_message());
 					mvt_value value;
 
+					value.type = mvt_null;
+					value.numeric_value.int_value = 0;
+
 					while (value_reader.next()) {
 						switch (value_reader.tag()) {
 						case 1: /* string */
@@ -170,11 +173,6 @@ bool mvt_tile::decode(std::string &message) {
 									value.list_value.push_back(*it);
 								}
 							}
-							break;
-
-						case 10: /* null */
-							value.type = mvt_null;
-							value.numeric_value.int_value = value_reader.get_int64();
 							break;
 
 						default:
@@ -326,7 +324,7 @@ std::string mvt_tile::encode() {
 			} else if (pbv.type == mvt_list) {
 				value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
 			} else if (pbv.type == mvt_null) {
-				value_writer.add_int64(10, 0);
+				;  // Don't write anything for null
 			} else {
 				fprintf(stderr, "Unknown value type\n");
 				exit(EXIT_FAILURE);

@@ -1,0 +1,13 @@
+{ "type": "Feature", "properties": { 
+	"null": null,
+	"compound": {
+		"string": "string",
+		"number": 10,
+		"null": null,
+		"true": true,
+		"false": false,
+		"array": [
+			"string", 10, null, true, false
+		]
+	}
+}, "geometry": { "type": "Point", "coordinates": [ 0,0 ]} }

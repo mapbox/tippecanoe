@@ -15,6 +15,8 @@ message tile {
         // Variant type encoding
         message value {
                 // Exactly one of these values may be present in a valid message
+                // If no value is written, the message is null.
+
                 optional string string_value = 1;
                 optional float float_value = 2;
                 optional double double_value = 3;
@@ -30,10 +32,7 @@ message tile {
                 // Each element refers to the nth value in the layer's values list
                 repeated uint32 list_value = 9 [ packed = true ];
 
-                // The actual number written is unused; any value counts as a null value
-                optional int64 null_value = 10;
-
-                extensions 11 to max;
+                extensions 10 to max;
         }
 
         message feature {
