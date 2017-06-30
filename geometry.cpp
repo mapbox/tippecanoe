@@ -13,7 +13,7 @@
 #include <mapbox/geometry/multi_polygon.hpp>
 #include <mapbox/geometry/wagyu/wagyu.hpp>
 #include <mapbox/geometry/wagyu/quick_clip.hpp>
-#include <mapbox/geometry/snap_rounding.hpp>
+#include "mapbox/geometry/snap_rounding.hpp"
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "serial.hpp"

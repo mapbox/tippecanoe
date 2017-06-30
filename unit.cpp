@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#include "catch/catch.hpp"
+#include <catch.hpp>
 #include "text.hpp"
 
 TEST_CASE("UTF-8 enforcement", "[utf8]") {
