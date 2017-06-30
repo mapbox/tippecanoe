@@ -1,4 +1,9 @@
+## 1.19.3
+
+* Upgrade protozero to version 1.5.2
+
 ## 1.19.2
+
 * Ignore UTF-8 byte order mark if present
 
 ## 1.19.1
