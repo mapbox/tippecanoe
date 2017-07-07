@@ -1,3 +1,24 @@
+## 1.19.3
+
+* Upgrade protozero to version 1.5.2
+
+## 1.19.2
+
+* Ignore UTF-8 byte order mark if present
+
+## 1.19.1
+
+* Add an option to increase maxzoom if features are still being dropped
+
+## 1.19.0
+
+* Tile-join can merge and create directories, not only mbtiles
+* Maxzoom guessing (-zg) takes into account resolution within each feature
+
+## 1.18.2
+
+* Fix crash with very long (>128K) attribute values
+
 ## 1.18.1
 
 * Only warn once about invalid polygons in tippecanoe-decode

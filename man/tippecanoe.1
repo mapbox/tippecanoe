@@ -48,6 +48,24 @@ The GeoJSON features need not be wrapped in a FeatureCollection.
 You can concatenate multiple GeoJSON features or files together,
 and it will parse out the features and ignore whatever other objects
 it encounters.
+.SH Docker Image
+.PP
+A tippecanoe Docker image can be built from source and executed as a task to
+automatically install dependencies and allow tippecanoe to run on any system
+supported by Docker.
+.PP
+.RS
+.nf
+$ docker build \-t tippecanoe:latest .
+$ docker run \-it \-\-rm \\
+  \-v /tiledata:/data \\
+  tippecanoe:latest \\
+  tippecanoe \-\-output=/data/output.mbtiles /data/example.geojson
+.fi
+.RE
+.PP
+The commands above will build a Docker image from the source and compile the
+latest version. The image supports all tippecanoe flags and options.
 .SH Options
 .PP
 There are a lot of options. A lot of the time you won't want to use any of them
@@ -126,6 +144,10 @@ than at all newlines.
 \fB\fC\-zg\fR or \fB\fC\-\-maximum\-zoom=g\fR: Guess what is probably a reasonable maxzoom based on the spacing of features.
 .IP \(bu 2
 \fB\fC\-Z\fR \fIzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+.IP \(bu 2
+\fB\fC\-ae\fR or \fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: Increase the maxzoom if features are still being dropped at that zoom level.
+The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
+specified maximum zoom and to any levels added beyond that.
 .RE
 .SS Tile resolution
 .RS
@@ -479,20 +501,27 @@ Check out some examples of maps made with tippecanoe \[la]MADE_WITH.md\[ra]
 The name is a joking reference \[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.
 .SH tile\-join
 .PP
-Tile\-join is a tool for joining new attributes from a CSV file to features that
-have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
-file, matches them against the records of the CSV, and writes out a new tileset.
+Tile\-join is a tool for joining new attributes from a CSV file to features
+that have already been tiled with tippecanoe. It reads the tiles from an
+existing .mbtiles file or a directory of tiles, matches them against the
+records of the CSV, and writes out a new tileset.
 .PP
-If you specify multiple source mbtiles files, they are all read and their combined
-contents are written to the new mbtiles output. If they define the same layers or
-the same tiles, the layers or tiles are merged.
+If you specify multiple source mbtiles files or source directories of tiles,
+all the sources are read and their combined contents are written to the new
+mbtiles output. If they define the same layers or the same tiles, the layers
+or tiles are merged.
+.PP
+You can use the \fB\fC\-e\fR flag to output a directory of tiles rather than a
+\&.mbtiles file.
 .PP
 The options are:
 .RS
 .IP \(bu 2
-\fB\fC\-o\fR \fIout.mbtiles\fP: Write the new tiles to the specified .mbtiles file
+\fB\fC\-o\fR \fIout.mbtiles\fP: Write the new tiles to the specified .mbtiles file.
 .IP \(bu 2
-\fB\fC\-f\fR: Remove \fIout.mbtiles\fP if it already exists
+\fB\fC\-e\fR \fIdirectory\fP: Write the new tiles to the specified directory instead of to an mbtiles file.
+.IP \(bu 2
+\fB\fC\-f\fR: Remove \fIout.mbtiles\fP if it already exists.
 .IP \(bu 2
 \fB\fC\-c\fR \fImatch\fP\fB\fC\&.csv\fR: Use \fImatch\fP\fB\fC\&.csv\fR as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
 .IP \(bu 2
@@ -501,6 +530,8 @@ The options are:
 \fB\fC\-i\fR: Only include features that matched the CSV.
 .IP \(bu 2
 \fB\fC\-pk\fR: Don't skip tiles larger than 500K.
+.IP \(bu 2
+\fB\fC\-pC\fR: Don't compress the PBF vector tile data.
 .IP \(bu 2
 \fB\fC\-l\fR \fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
 .IP \(bu 2

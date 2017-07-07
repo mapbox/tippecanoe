@@ -52,6 +52,24 @@ You can concatenate multiple GeoJSON features or files together,
 and it will parse out the features and ignore whatever other objects
 it encounters.
 
+Docker Image
+------------
+
+A tippecanoe Docker image can be built from source and executed as a task to
+automatically install dependencies and allow tippecanoe to run on any system
+supported by Docker.
+
+```docker
+$ docker build -t tippecanoe:latest .
+$ docker run -it --rm \
+  -v /tiledata:/data \
+  tippecanoe:latest \
+  tippecanoe --output=/data/output.mbtiles /data/example.geojson
+```
+
+The commands above will build a Docker image from the source and compile the
+latest version. The image supports all tippecanoe flags and options.
+
 Options
 -------
 
@@ -117,6 +135,9 @@ than at all newlines.
  * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
  * `-zg` or `--maximum-zoom=g`: Guess what is probably a reasonable maxzoom based on the spacing of features.
  * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
+ * `-ae` or `--extend-zooms-if-still-dropping`: Increase the maxzoom if features are still being dropped at that zoom level.
+   The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
+   specified maximum zoom and to any levels added beyond that.
 
 ### Tile resolution
 
@@ -413,22 +434,29 @@ The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyl
 tile-join
 =========
 
-Tile-join is a tool for joining new attributes from a CSV file to features that
-have already been tiled with tippecanoe. It reads the tiles from an existing .mbtiles
-file, matches them against the records of the CSV, and writes out a new tileset.
+Tile-join is a tool for joining new attributes from a CSV file to features
+that have already been tiled with tippecanoe. It reads the tiles from an
+existing .mbtiles file or a directory of tiles, matches them against the
+records of the CSV, and writes out a new tileset.
 
-If you specify multiple source mbtiles files, they are all read and their combined
-contents are written to the new mbtiles output. If they define the same layers or
-the same tiles, the layers or tiles are merged.
+If you specify multiple source mbtiles files or source directories of tiles,
+all the sources are read and their combined contents are written to the new
+mbtiles output. If they define the same layers or the same tiles, the layers
+or tiles are merged.
+
+You can use the `-e` flag to output a directory of tiles rather than a
+.mbtiles file.
 
 The options are:
 
- * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file
- * `-f`: Remove *out.mbtiles* if it already exists
+ * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file.
+ * `-e` *directory*: Write the new tiles to the specified directory instead of to an mbtiles file.
+ * `-f`: Remove *out.mbtiles* if it already exists.
  * `-c` *match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
  * `-x` *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * `-i`: Only include features that matched the CSV.
  * `-pk`: Don't skip tiles larger than 500K.
+ * `-pC`: Don't compress the PBF vector tile data.
  * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution*: Set the attribution string.

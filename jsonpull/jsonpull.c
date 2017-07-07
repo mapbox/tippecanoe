@@ -36,14 +36,14 @@ json_pull *json_begin(ssize_t (*read)(struct json_pull *, char *buffer, size_t n
 
 static inline int peek(json_pull *j) {
 	if (j->buffer_head < j->buffer_tail) {
-		return j->buffer[j->buffer_head];
+		return (unsigned char) j->buffer[j->buffer_head];
 	} else {
 		j->buffer_head = 0;
 		j->buffer_tail = j->read(j, j->buffer, BUFFER);
 		if (j->buffer_head >= j->buffer_tail) {
 			return EOF;
 		}
-		return j->buffer[j->buffer_head];
+		return (unsigned char) j->buffer[j->buffer_head];
 	}
 }
 
@@ -293,6 +293,22 @@ again:
 				j->error = "Reached EOF without all containers being closed";
 			}
 
+			return NULL;
+		}
+
+		// Byte-order mark
+		if (c == 0xEF) {
+			int c2 = peek(j);
+			if (c2 == 0xBB) {
+				c2 = read_wrap(j);
+				c2 = peek(j);
+				if (c2 == 0xBF) {
+					c2 = read_wrap(j);
+					c = ' ';
+					continue;
+				}
+			}
+			j->error = "Corrupt byte-order mark found";
 			return NULL;
 		}
 	} while (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == 0x1E);
