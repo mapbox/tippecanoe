@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <limits.h>
+#include <getopt.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -32,9 +33,10 @@ extern "C" {
 
 std::string dequote(std::string s);
 
-bool pk = false;
-bool pC = false;
+int pk = false;
+int pC = false;
 size_t CPUS;
+int quiet = false;
 
 struct stats {
 	int minzoom;
@@ -626,7 +628,9 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		count = (count + 1) % CPUS;
 
 		if (ai == tasks.begin()) {
-			fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+			if (!quiet) {
+				fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+			}
 		}
 	}
 
@@ -1006,12 +1010,47 @@ int main(int argc, char **argv) {
 
 	std::string set_name, set_description, set_attribution;
 
+	struct option long_options[] = {
+		{"output", required_argument, 0, 'o'},
+		{"output-to-directory", required_argument, 0, 'e'},
+		{"force", no_argument, 0, 'f'},
+		{"if-matched", no_argument, 0, 'i'},
+		{"attribution", required_argument, 0, 'A'},
+		{"name", required_argument, 0, 'n'},
+		{"description", required_argument, 0, 'N'},
+		{"prevent", required_argument, 0, 'p'},
+		{"csv", required_argument, 0, 'c'},
+		{"exclude", required_argument, 0, 'x'},
+		{"layer", required_argument, 0, 'l'},
+		{"exclude-layer", required_argument, 0, 'L'},
+		{"quiet", no_argument, 0, 'q'},
+
+		{"no-tile-size-limit", no_argument, &pk, 1},
+		{"no-tile-compression", no_argument, &pC, 1},
+
+		{0, 0, 0, 0},
+	};
+
+	std::string getopt_str;
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].val > ' ') {
+			getopt_str.push_back(long_options[lo].val);
+
+			if (long_options[lo].has_arg == required_argument) {
+				getopt_str.push_back(':');
+			}
+		}
+	}
+
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:e:c:x:ip:l:L:A:N:n:")) != -1) {
+	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
+		case 0:
+			break;
+
 		case 'o':
 			out_mbtiles = optarg;
 			break;
@@ -1071,6 +1110,10 @@ int main(int argc, char **argv) {
 
 		case 'L':
 			remove_layers.insert(std::string(optarg));
+			break;
+
+		case 'q':
+			quiet = true;
 			break;
 
 		default:

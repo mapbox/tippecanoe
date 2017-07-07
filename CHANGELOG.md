@@ -1,3 +1,7 @@
+## 1.20.0
+
+* Add long options to tippecanoe-decode and tile-join. Add --quiet to tile-join.
+
 ## 1.19.3
 
 * Upgrade protozero to version 1.5.2
