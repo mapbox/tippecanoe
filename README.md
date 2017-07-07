@@ -410,19 +410,19 @@ You can use the `-e` flag to output a directory of tiles rather than a
 
 The options are:
 
- * `-o` *out.mbtiles*: Write the new tiles to the specified .mbtiles file.
- * `-e` *directory*: Write the new tiles to the specified directory instead of to an mbtiles file.
- * `-f`: Remove *out.mbtiles* if it already exists.
- * `-c` *match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
- * `-x` *key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
- * `-i`: Only include features that matched the CSV.
- * `-pk`: Don't skip tiles larger than 500K.
- * `-pC`: Don't compress the PBF vector tile data.
- * `-l` *layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
- * `-L` *layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
- * `-A` *attribution*: Set the attribution string.
- * `-n` *name*: Set the tileset name.
- * `-N` *description*: Set the tileset description.
+ * `-o` *out.mbtiles* or `--output=`*out.mbtiles*: Write the new tiles to the specified .mbtiles file.
+ * `-e` *directory* or `--output-to-directory=`*directory*: Write the new tiles to the specified directory instead of to an mbtiles file.
+ * `-f` or `--force`: Remove *out.mbtiles* if it already exists.
+ * `-c` *match*`.csv` or `--csv=`*match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+ * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * `-i` or `--if-matched`: Only include features that matched the CSV.
+ * `-pk` or `--no-tile-size-limit`: Don't skip tiles larger than 500K.
+ * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+ * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
+ * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-A` *attribution* or `--attribution=`*attribution*: Set the attribution string.
+ * `-n` *name* or `--name=`*name*: Set the tileset name.
+ * `-N` *description* or `--description=`*description*: Set the tileset description.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
@@ -506,8 +506,8 @@ resolutions.
 
 ### Options
 
- * `-t` _projection_: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
- * `-z` _maxzoom_: Specify the highest zoom level to decode from the tileset
- * `-Z` _minzoom_: Specify the lowest zoom level to decode from the tileset
- * `-l` _layer_: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
- * `-f`: Decode tiles even if polygon ring order or closure problems are detected
+ * `-s` _projection_ or `--projection=`*projection*: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+ * `-z` _maxzoom_ or `--maximum-zoom=`*maxzoom*: Specify the highest zoom level to decode from the tileset
+ * `-Z` _minzoom_ or `--minimum-zoom=`*minzoom*: Specify the lowest zoom level to decode from the tileset
+ * `-l` _layer_ or `--layer=`*layer*: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
+ * `-f` or `--force`: Decode tiles even if polygon ring order or closure problems are detected
