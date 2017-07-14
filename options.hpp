@@ -1,3 +1,6 @@
+#ifndef OPTIONS_HPP
+#define OPTIONS_HPP
+
 #define A_COALESCE ((int) 'c')
 #define A_REVERSE ((int) 'r')
 #define A_REORDER ((int) 'o')
@@ -30,3 +33,5 @@
 
 extern int prevent[256];
 extern int additional[256];
+
+#endif

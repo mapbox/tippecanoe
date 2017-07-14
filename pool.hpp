@@ -1,3 +1,6 @@
+#ifndef POOL_HPP
+#define POOL_HPP
+
 struct stringpool {
 	long long left;
 	long long right;
@@ -5,3 +8,5 @@ struct stringpool {
 };
 
 long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
+
+#endif

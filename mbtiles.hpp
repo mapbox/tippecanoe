@@ -1,6 +1,17 @@
+#ifndef MBTILES_HPP
+#define MBTILES_HPP
+
+#include <math.h>
+#include "mvt.hpp"
+
 struct type_and_string {
 	int type;
 	std::string string;
+
+	size_t attribute_count = 0;
+	std::vector<mvt_value> sample_values;
+	double min = INFINITY;
+	double max = -INFINITY;
 
 	bool operator<(const type_and_string &o) const;
 };
@@ -10,6 +21,7 @@ struct layermap_entry {
 	std::set<type_and_string> file_keys;
 	int minzoom;
 	int maxzoom;
+	size_t feature_count = 0;
 
 	layermap_entry(size_t _id) {
 		id = _id;
@@ -27,3 +39,5 @@ void mbtiles_close(sqlite3 *outdb, char **argv);
 void aprintf(std::string *buf, const char *format, ...);
 
 std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps);
+
+#endif

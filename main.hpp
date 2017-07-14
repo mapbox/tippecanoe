@@ -1,3 +1,8 @@
+#ifndef MAIN_HPP
+#define MAIN_HPP
+
+#include <stddef.h>
+
 struct index {
 	long long start;
 	long long end;
@@ -18,3 +23,5 @@ extern size_t TEMP_FILES;
 extern size_t max_tile_size;
 
 #define MAX_ZOOM 24
+
+#endif

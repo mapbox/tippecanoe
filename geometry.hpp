@@ -1,3 +1,9 @@
+#ifndef GEOMETRY_HPP
+#define GEOMETRY_HPP
+
+#include <vector>
+#include <sqlite3.h>
+
 #define VT_POINT 1
 #define VT_LINE 2
 #define VT_POLYGON 3
@@ -68,3 +74,5 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom, drawvec &before);
 double get_area(drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
+
+#endif

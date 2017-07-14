@@ -26,10 +26,7 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
 
 std::string dequote(std::string s);
 

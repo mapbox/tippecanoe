@@ -36,10 +36,7 @@
 #include <sys/statfs.h>
 #endif
 
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "mbtiles.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
