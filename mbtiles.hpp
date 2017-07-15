@@ -9,7 +9,7 @@ struct type_and_string {
 	std::string string;
 
 	size_t attribute_count = 0;
-	std::vector<mvt_value> sample_values;
+	std::set<mvt_value> sample_values;
 	double min = INFINITY;
 	double max = -INFINITY;
 
@@ -21,7 +21,10 @@ struct layermap_entry {
 	std::set<type_and_string> file_keys;
 	int minzoom;
 	int maxzoom;
-	size_t feature_count = 0;
+
+	size_t points = 0;
+	size_t lines = 0;
+	size_t polygons = 0;
 
 	layermap_entry(size_t _id) {
 		id = _id;

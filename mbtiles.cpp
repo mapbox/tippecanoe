@@ -378,6 +378,12 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 			if (map->second.maxzoom > out_entry->second.maxzoom) {
 				out_entry->second.maxzoom = map->second.maxzoom;
 			}
+
+			out_entry->second.points += map->second.points;
+			out_entry->second.lines += map->second.lines;
+			out_entry->second.polygons += map->second.polygons;
+
+			printf("%zu %zu %zu\n", out_entry->second.points, out_entry->second.lines, out_entry->second.polygons);
 		}
 	}
 
