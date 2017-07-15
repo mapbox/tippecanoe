@@ -349,6 +349,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 			metakey[m] = properties->keys[i]->string;
 
+			bool track = false;
 			if (properties->values[i] != NULL) {
 				int vt = properties->values[i]->type;
 				std::string val;
@@ -407,26 +408,38 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 						exit(EXIT_FAILURE);
 					}
 					m++;
+					track = true;
 				} else if (vt == JSON_NUMBER) {
 					tas.type = metatype[m] = mvt_double;
 					metaval[m] = val;
 					m++;
+					track = true;
 				} else if (vt == JSON_TRUE || vt == JSON_FALSE) {
 					tas.type = metatype[m] = mvt_bool;
 					metaval[m] = val;
 					m++;
+					track = true;
 				} else if (vt == JSON_NULL) {
 					;
 				} else {
 					tas.type = metatype[m] = mvt_string;
 					metaval[m] = val;
 					m++;
+					track = true;
 				}
 			}
 
 			if (tas.type >= 0) {
 				auto fk = layermap->find(layername);
 				fk->second.file_keys.insert(tas);
+			}
+
+			if (track) {
+				type_and_string attrib;
+				attrib.type = metatype[m - 1];
+				attrib.string = metaval[m - 1];
+
+				// XXX increment in type_and_string_stats.sample_values
 			}
 		}
 	}

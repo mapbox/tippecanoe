@@ -8,17 +8,18 @@ struct type_and_string {
 	int type;
 	std::string string;
 
-	size_t attribute_count = 0;
-	std::set<mvt_value> sample_values;
+	bool operator<(const type_and_string &o) const;
+};
+
+struct type_and_string_stats {
+	std::set<type_and_string> sample_values;
 	double min = INFINITY;
 	double max = -INFINITY;
-
-	bool operator<(const type_and_string &o) const;
 };
 
 struct layermap_entry {
 	size_t id;
-	std::set<type_and_string> file_keys;
+	std::set<type_and_string> file_keys;  // XXX map to type_and_string_stats
 	int minzoom;
 	int maxzoom;
 
