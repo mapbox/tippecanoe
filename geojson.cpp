@@ -429,17 +429,42 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				}
 			}
 
+			// XXX tilestats: tas.type shouldn't be used since, type is also tracked as variant inside it
+
 			if (tas.type >= 0) {
 				auto fk = layermap->find(layername);
 				fk->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
-			}
 
-			if (track) {
-				type_and_string attrib;
-				attrib.type = metatype[m - 1];
-				attrib.string = metaval[m - 1];
+				if (track) {
+					auto fka = fk->second.file_keys.find(tas);
+					if (fka == fk->second.file_keys.end()) {
+						fprintf(stderr, "Can't happen (tilestats)\n");
+						exit(EXIT_FAILURE);
+					}
 
-				// XXX increment in type_and_string_stats.sample_values
+					type_and_string attrib;
+					attrib.type = metatype[m - 1];
+					attrib.string = metaval[m - 1];
+
+					if (attrib.type == mvt_double) {
+						double d = atof(attrib.string.c_str());
+
+						if (d < fka->second.min) {
+							fka->second.min = d;
+						}
+						if (d > fka->second.max) {
+							fka->second.max = d;
+						}
+					}
+
+					if (!fka->second.sample_values.count(attrib)) {
+						if (fka->second.sample_values.size() < 1000) {
+							fka->second.sample_values.insert(attrib);
+						}
+					}
+
+					fka->second.type |= (1 << attrib.type);
+				}
 			}
 		}
 	}

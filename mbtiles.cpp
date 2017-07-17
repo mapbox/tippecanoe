@@ -367,6 +367,8 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				exit(EXIT_FAILURE);
 			}
 
+			// XXX tilestats: merge file-keys
+
 			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
 				out_entry->second.file_keys.insert(*fk);
 			}
@@ -381,8 +383,6 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 			out_entry->second.points += map->second.points;
 			out_entry->second.lines += map->second.lines;
 			out_entry->second.polygons += map->second.polygons;
-
-			printf("%zu %zu %zu\n", out_entry->second.points, out_entry->second.lines, out_entry->second.polygons);
 		}
 	}
 

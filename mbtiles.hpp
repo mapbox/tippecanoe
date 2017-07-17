@@ -16,6 +16,7 @@ struct type_and_string_stats {
 	std::set<type_and_string> sample_values;
 	double min = INFINITY;
 	double max = -INFINITY;
+	int type = 0;
 };
 
 struct layermap_entry {
