@@ -257,9 +257,8 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			quote(&buf, lnames[i].c_str());
 			aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
-			std::set<type_and_string>::iterator j;
 			bool first = true;
-			for (j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
+			for (auto j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
 				if (first) {
 					first = false;
 				} else {
@@ -267,15 +266,15 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				}
 
 				aprintf(&buf, "\"");
-				quote(&buf, j->string.c_str());
+				quote(&buf, j->first.string.c_str());
 
-				if (j->type == mvt_double ||
-				    j->type == mvt_float ||
-				    j->type == mvt_double ||
-				    j->type == mvt_uint ||
-				    j->type == mvt_sint) {
+				if (j->first.type == mvt_double ||
+				    j->first.type == mvt_float ||
+				    j->first.type == mvt_double ||
+				    j->first.type == mvt_uint ||
+				    j->first.type == mvt_sint) {
 					aprintf(&buf, "\": \"Number\"");
-				} else if (j->type == mvt_bool) {
+				} else if (j->first.type == mvt_bool) {
 					aprintf(&buf, "\": \"Boolean\"");
 				} else {
 					aprintf(&buf, "\": \"String\"");

@@ -210,7 +210,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				tas.string = tp.first;
 				tas.type = tp.second;
 
-				file_keys->second.file_keys.insert(tas);
+				file_keys->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
 			}
 
 			// To keep attributes in their original order instead of alphabetical

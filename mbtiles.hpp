@@ -2,6 +2,7 @@
 #define MBTILES_HPP
 
 #include <math.h>
+#include <map>
 #include "mvt.hpp"
 
 struct type_and_string {
@@ -19,7 +20,7 @@ struct type_and_string_stats {
 
 struct layermap_entry {
 	size_t id;
-	std::set<type_and_string> file_keys;  // XXX map to type_and_string_stats
+	std::map<type_and_string, type_and_string_stats> file_keys;
 	int minzoom;
 	int maxzoom;
 

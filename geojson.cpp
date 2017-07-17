@@ -431,7 +431,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 			if (tas.type >= 0) {
 				auto fk = layermap->find(layername);
-				fk->second.file_keys.insert(tas);
+				fk->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
 			}
 
 			if (track) {

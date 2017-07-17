@@ -1967,7 +1967,7 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 			type_and_string tas;
 			tas.type = mvt_double;
 			tas.string = "tippecanoe_feature_density";
-			ai->second.file_keys.insert(tas);
+			ai->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
 		}
 	}
 
