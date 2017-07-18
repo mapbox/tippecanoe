@@ -181,6 +181,9 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
 
 		size_t attrs = 0;
 		for (auto attribute : layer.second.file_keys) {
+			if (attrs == 100) {
+				break;
+			}
 			if (attrs != 0) {
 				out.append(",\n");
 			}
@@ -201,6 +204,64 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
 			out.append(std::to_string(val_count));
 			out.append(",\n");
 
+			int type = 0;
+			for (auto s : attribute.second.sample_values) {
+				type |= (1 << s.type);
+			}
+
+			std::string type_str;
+			// No "null" because null attributes are dropped
+			if (type == (1 << mvt_double)) {
+				type_str = "number";
+			} else if (type == (1 << mvt_bool)) {
+				type_str = "boolean";
+			} else if (type == (1 << mvt_string)) {
+				type_str = "string";
+			} else {
+				type_str = "mixed";
+			}
+
+			out.append("\t\t\t\t\t\"type\": \"");
+			quote(&out, type_str.c_str());
+			out.append("\",\n");
+
+			out.append("\t\t\t\t\t\"values\": [\n");
+
+			size_t vals = 0;
+			for (auto value : attribute.second.sample_values) {
+				if (vals == 100) {
+					break;
+				}
+				if (vals != 0) {
+					out.append(",\n");
+				}
+				vals++;
+
+				if (value.type == mvt_double || value.type == mvt_bool) {
+					out.append("\t\t\t\t\t\t");
+					out.append(value.string);
+				} else {
+					out.append("\t\t\t\t\t\t\"");
+					quote(&out, value.string.c_str());
+					out.append("\"");
+				}
+			}
+
+			out.append("\n");
+			out.append("\t\t\t\t\t]");
+
+			if ((type & (1 << mvt_double)) != 0) {
+				out.append(",\n");
+
+				out.append("\t\t\t\t\t\"min\": ");
+				out.append(std::to_string(attribute.second.min));
+				out.append(",\n");
+
+				out.append("\t\t\t\t\t\"max\": ");
+				out.append(std::to_string(attribute.second.max));
+			}
+
+			out.append("\n");
 			out.append("\t\t\t\t}");
 		}
 
