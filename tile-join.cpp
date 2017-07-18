@@ -153,6 +153,29 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 					types.insert(std::pair<std::string, int>(key, type));
 					key_order.push_back(key);
+
+					auto st = file_keys->second.file_keys.find(key);
+					if (st == file_keys->second.file_keys.end()) {
+						file_keys->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(key, type_and_string_stats()));
+						st = file_keys->second.file_keys.find(key);
+					}
+
+					if (type == mvt_double) {
+						double d = atof(value.c_str());
+						if (d < st->second.min) {
+							st->second.min = d;
+						}
+						if (d > st->second.max) {
+							st->second.max = d;
+						}
+					}
+
+					if (st->second.sample_values.size() < 1000) {
+						type_and_string tas;
+						tas.type = type;
+						tas.string = value;
+						st->second.sample_values.insert(tas);
+					}
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
@@ -199,24 +222,33 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								attributes.insert(std::pair<std::string, mvt_value>(sjoinkey, outval));
 								types.insert(std::pair<std::string, int>(sjoinkey, attr_type));
 								key_order.push_back(sjoinkey);
+
+								auto st = file_keys->second.file_keys.find(joinkey);
+								if (st == file_keys->second.file_keys.end()) {
+									file_keys->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(joinkey, type_and_string_stats()));
+									st = file_keys->second.file_keys.find(joinkey);
+								}
+
+								if (st->second.sample_values.size() < 1000) {
+									type_and_string tas;
+									tas.type = outval.type;
+									tas.string = joinval;
+									st->second.sample_values.insert(tas);
+								}
+
+								if (outval.type == mvt_double) {
+									double d = atof(joinval.c_str());
+									if (d < st->second.min) {
+										st->second.min = d;
+									}
+									if (d > st->second.max) {
+										st->second.max = d;
+									}
+								}
 							}
 						}
 					}
 				}
-			}
-
-			for (auto tp : types) {
-				type_and_string_stats st;
-				st.type = tp.second;
-
-				if (st.sample_values.size() < 1000) {
-					type_and_string tas;
-					tas.type = tp.second;
-					tas.string = "XXX";  // XXX tilestats: provide actual values
-					st.sample_values.insert(tas);
-				}
-
-				file_keys->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(tp.first, st));
 			}
 
 			// To keep attributes in their original order instead of alphabetical
