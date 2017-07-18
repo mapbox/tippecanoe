@@ -2293,10 +2293,26 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'o':
+			if (out_mbtiles != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
+				exit(EXIT_FAILURE);
+			}
+			if (out_directory != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_directory, optarg);
+				exit(EXIT_FAILURE);
+			}
 			out_mbtiles = optarg;
 			break;
 
 		case 'e':
+			if (out_mbtiles != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
+				exit(EXIT_FAILURE);
+			}
+			if (out_directory != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_directory, optarg);
+				exit(EXIT_FAILURE);
+			}
 			out_directory = optarg;
 			break;
 
