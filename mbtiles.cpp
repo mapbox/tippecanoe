@@ -131,8 +131,94 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
+std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
+	std::string out = "{\n";
+
+	out.append("\t\"layerCount\": ");
+	out.append(std::to_string(layermap.size()));
+	out.append(",\n");
+
+	out.append("\t\"layers\": [\n");
+
+	bool first = true;
+	for (auto layer : layermap) {
+		if (!first) {
+			out.append(",\n");
+		}
+		first = false;
+
+		out.append("\t\t{\n");
+
+		out.append("\t\t\t\"layer\": \"");
+		quote(&out, layer.first.c_str());
+		out.append("\",\n");
+
+		out.append("\t\t\t\"count\": ");
+		out.append(std::to_string(layer.second.points + layer.second.lines + layer.second.polygons));
+		out.append(",\n");
+
+		std::string geomtype = "Polygon";
+		if (layer.second.points >= layer.second.lines && layer.second.points >= layer.second.polygons) {
+			geomtype = "Point";
+		} else if (layer.second.lines >= layer.second.polygons && layer.second.lines >= layer.second.points) {
+			geomtype = "LineString";
+		}
+
+		out.append("\t\t\t\"geometry\": \"");
+		quote(&out, geomtype.c_str());
+		out.append("\",\n");
+
+		size_t attrib_count = layer.second.file_keys.size();
+		if (attrib_count > 1000) {
+			attrib_count = 1000;
+		}
+
+		out.append("\t\t\t\"attributeCount\": ");
+		out.append(std::to_string(attrib_count));
+		out.append(",\n");
+
+		out.append("\t\t\t\"attributes\": [\n");
+
+		size_t attrs = 0;
+		for (auto attribute : layer.second.file_keys) {
+			if (attrs != 0) {
+				out.append(",\n");
+			}
+			attrs++;
+
+			out.append("\t\t\t\t{\n");
+
+			out.append("\t\t\t\t\t\"attribute\": \"");
+			quote(&out, attribute.first.c_str());
+			out.append("\",\n");
+
+			size_t val_count = attribute.second.sample_values.size();
+			if (val_count > 1000) {
+				val_count = 1000;
+			}
+
+			out.append("\t\t\t\t\t\"count\": ");
+			out.append(std::to_string(val_count));
+			out.append(",\n");
+
+			out.append("\t\t\t\t}");
+		}
+
+		out.append("\n\t\t\t]\n");
+		out.append("\t\t}");
+	}
+
+	out.append("\n");
+	out.append("\t]\n");
+	out.append("}");
+
+	return out;
+}
+
 void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description) {
 	char *sql, *err;
+
+	printf("%s\n", tilestats(layermap).c_str());
 
 	sqlite3 *db = outdb;
 	if (outdb == NULL) {
