@@ -206,11 +206,17 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			for (auto tp : types) {
-				type_and_string tas;
-				tas.string = tp.first;
-				tas.type = tp.second;
+				type_and_string_stats st;
+				st.type = tp.second;
 
-				file_keys->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
+				if (st.sample_values.size() < 1000) {
+					type_and_string tas;
+					tas.type = tp.second;
+					tas.string = "XXX";  // XXX tilestats: provide actual values
+					st.sample_values.insert(tas);
+				}
+
+				file_keys->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(tp.first, st));
 			}
 
 			// To keep attributes in their original order instead of alphabetical

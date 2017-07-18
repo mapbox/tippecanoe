@@ -266,18 +266,21 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				}
 
 				aprintf(&buf, "\"");
-				quote(&buf, j->first.string.c_str());
+				quote(&buf, j->first.c_str());
 
-				if (j->first.type == mvt_double ||
-				    j->first.type == mvt_float ||
-				    j->first.type == mvt_double ||
-				    j->first.type == mvt_uint ||
-				    j->first.type == mvt_sint) {
+				int type = 0;
+				for (auto s : j->second.sample_values) {
+					type |= (1 << s.type);
+				}
+
+				if (type == (1 << mvt_double)) {
 					aprintf(&buf, "\": \"Number\"");
-				} else if (j->first.type == mvt_bool) {
+				} else if (type == (1 << mvt_bool)) {
 					aprintf(&buf, "\": \"Boolean\"");
-				} else {
+				} else if (type == (1 << mvt_string)) {
 					aprintf(&buf, "\": \"String\"");
+				} else {
+					aprintf(&buf, "\": \"Composite\"");  // XXX tilestats: composite?
 				}
 			}
 
@@ -367,10 +370,25 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				exit(EXIT_FAILURE);
 			}
 
-			// XXX tilestats: merge file-keys
-
 			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
-				out_entry->second.file_keys.insert(*fk);
+				auto fk2 = out_entry->second.file_keys.find(fk->first);
+
+				if (fk2 == out_entry->second.file_keys.end()) {
+					out_entry->second.file_keys.insert(*fk);
+				} else {
+					for (auto s : fk->second.sample_values) {
+						fk2->second.sample_values.insert(s);
+					}
+
+					fk2->second.type |= fk->second.type;
+
+					if (fk->second.min < fk2->second.min) {
+						fk2->second.min = fk->second.min;
+					}
+					if (fk->second.max > fk2->second.max) {
+						fk2->second.max = fk->second.max;
+					}
+				}
 			}
 
 			if (map->second.minzoom < out_entry->second.minzoom) {

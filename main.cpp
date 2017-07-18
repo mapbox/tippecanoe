@@ -1176,8 +1176,10 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 	std::map<std::string, layermap_entry> layermap;
 	for (size_t l = 0; l < nlayers; l++) {
-		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, layermap_entry(l)));
+		layermap_entry e = layermap_entry(l);
+		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, e));
 	}
+
 	std::vector<std::map<std::string, layermap_entry> > layermaps;
 	for (size_t l = 0; l < CPUS; l++) {
 		layermaps.push_back(layermap);
@@ -1962,18 +1964,24 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 	}
 
 	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
-	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
-			type_and_string tas;
-			tas.type = mvt_double;
-			tas.string = "tippecanoe_feature_density";
-			ai->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
-		}
-	}
 
 	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
+
+		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+			type_and_string_stats tss;
+
+			for (size_t i = 0; i < 256; i++) {
+				type_and_string tas;
+				tas.type = mvt_double;
+				tas.string = std::to_string(i);
+
+				tss.sample_values.insert(tas);
+			}
+
+			ai->second.file_keys.insert(std::pair<std::string, type_and_string_stats>("tippecanoe_feature_density", tss));
+		}
 	}
 
 	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);

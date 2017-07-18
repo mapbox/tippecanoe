@@ -429,14 +429,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				}
 			}
 
-			// XXX tilestats: tas.type shouldn't be used since, type is also tracked as variant inside it
-
 			if (tas.type >= 0) {
 				auto fk = layermap->find(layername);
-				fk->second.file_keys.insert(std::pair<type_and_string, type_and_string_stats>(tas, type_and_string_stats()));
+				fk->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(tas.string, type_and_string_stats()));
 
 				if (track) {
-					auto fka = fk->second.file_keys.find(tas);
+					auto fka = fk->second.file_keys.find(tas.string);
 					if (fka == fk->second.file_keys.end()) {
 						fprintf(stderr, "Can't happen (tilestats)\n");
 						exit(EXIT_FAILURE);
