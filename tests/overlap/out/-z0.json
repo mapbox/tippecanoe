@@ -7,6 +7,7 @@
 "maxzoom": "0",
 "minzoom": "0",
 "name": "tests/overlap/out/-z0.json.check.mbtiles",
+"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Polygon\",\"attributeCount\": 0,\"attributes\": []}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

@@ -7,6 +7,7 @@
 "maxzoom": "4",
 "minzoom": "0",
 "name": "tests/nullisland/out/-b0_-z4_-NNullIsland.json.check.mbtiles",
+"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 13,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

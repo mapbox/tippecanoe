@@ -7,6 +7,7 @@
 "maxzoom": "3",
 "minzoom": "0",
 "name": "tests/stable/out/-z3_-B0.json.check.mbtiles",
+"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 15,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"order\",\"count\": 9,\"type\": \"string\",\"values\": [\"eight\",\"five\",\"four\",\"nine\",\"one\",\"seven\",\"six\",\"three\",\"two\"]}]}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

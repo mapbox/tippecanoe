@@ -273,13 +273,19 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
 	out.append("\t]\n");
 	out.append("}");
 
-	return out;
+	std::string out2;
+
+	for (size_t i = 0; i < out.size(); i++) {
+		if (out[i] != '\t' && out[i] != '\n') {
+			out2.push_back(out[i]);
+		}
+	}
+
+	return out2;
 }
 
 void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description) {
 	char *sql, *err;
-
-	printf("%s\n", tilestats(layermap).c_str());
 
 	sqlite3 *db = outdb;
 	if (outdb == NULL) {
@@ -439,6 +445,15 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set json: %s\n", err);
+			if (!forcetable) {
+				exit(EXIT_FAILURE);
+			}
+		}
+		sqlite3_free(sql);
+
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('tilestats', %Q);", tilestats(layermap).c_str());
+		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set tilestats: %s\n", err);
 			if (!forcetable) {
 				exit(EXIT_FAILURE);
 			}

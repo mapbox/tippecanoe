@@ -7,6 +7,7 @@
 "maxzoom": "14",
 "minzoom": "0",
 "name": "tests/empty-linestring/out/-ac.json.check.mbtiles",
+"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 5,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

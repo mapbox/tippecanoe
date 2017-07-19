@@ -7,6 +7,7 @@
 "maxzoom": "20",
 "minzoom": "0",
 "name": "tests/highzoom/out/-z30.json.check.mbtiles",
+"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"name\",\"count\": 2,\"type\": \"string\",\"values\": [\"London\",\"Santa Cruz\"]}]}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [
