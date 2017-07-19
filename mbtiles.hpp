@@ -14,7 +14,7 @@ struct type_and_string {
 };
 
 struct type_and_string_stats {
-	std::vector<type_and_string> sample_values; // sorted
+	std::vector<type_and_string> sample_values;  // sorted
 	double min = INFINITY;
 	double max = -INFINITY;
 	int type = 0;

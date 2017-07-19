@@ -105,6 +105,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			mvt_feature outfeature;
 			int matched = 0;
 
+			std::map<std::string, type_and_string> for_tilestats;
+
 			if (feat.has_id) {
 				outfeature.has_id = true;
 				outfeature.id = feat.id;
@@ -158,7 +160,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					tas.type = type;
 					tas.string = value;
 
-					add_to_file_keys(file_keys->second.file_keys, key, tas);
+					for_tilestats.insert(std::pair<std::string, type_and_string>(key, tas));
 				}
 
 				if (header.size() > 0 && strcmp(key, header[0].c_str()) == 0) {
@@ -210,7 +212,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								tas.type = outval.type;
 								tas.string = joinval;
 
-								add_to_file_keys(file_keys->second.file_keys, joinkey, tas);
+								for_tilestats.insert(std::pair<std::string, type_and_string>(joinkey, tas));
 							}
 						}
 					}
@@ -240,6 +242,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				features_added++;
 				outlayer.features.push_back(outfeature);
+
+				for (auto attr : for_tilestats) {
+					add_to_file_keys(file_keys->second.file_keys, attr.first, attr.second);
+				}
 
 				if (z < file_keys->second.minzoom) {
 					file_keys->second.minzoom = z;

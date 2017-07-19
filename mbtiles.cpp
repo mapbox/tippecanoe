@@ -550,7 +550,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				} else {
 					for (auto val : fk->second.sample_values) {
 						auto pt = std::lower_bound(fk2->second.sample_values.begin(), fk2->second.sample_values.end(), val);
-						if (pt == fk2->second.sample_values.end() || *pt != val) { // not found
+						if (pt == fk2->second.sample_values.end() || *pt != val) {  // not found
 							fk2->second.sample_values.insert(pt, val);
 
 							if (fk2->second.sample_values.size() > 1000) {
@@ -610,7 +610,7 @@ void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, s
 	}
 
 	auto pt = std::lower_bound(fka->second.sample_values.begin(), fka->second.sample_values.end(), val);
-	if (pt == fka->second.sample_values.end() || *pt != val) { // not found
+	if (pt == fka->second.sample_values.end() || *pt != val) {  // not found
 		fka->second.sample_values.insert(pt, val);
 
 		if (fka->second.sample_values.size() > 1000) {
