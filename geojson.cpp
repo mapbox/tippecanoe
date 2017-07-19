@@ -434,43 +434,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			}
 
 			if (tas.type >= 0) {
+				type_and_string attrib;
+				attrib.type = metatype[m - 1];
+				attrib.string = metaval[m - 1];
+
 				auto fk = layermap->find(layername);
-
-				auto fka = fk->second.file_keys.find(tas.string);
-				if (fka == fk->second.file_keys.end()) {
-					fk->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(tas.string, type_and_string_stats()));
-					fka = fk->second.file_keys.find(tas.string);
-				}
-
-				if (track) {
-					if (fka == fk->second.file_keys.end()) {
-						fprintf(stderr, "Can't happen (tilestats)\n");
-						exit(EXIT_FAILURE);
-					}
-
-					type_and_string attrib;
-					attrib.type = metatype[m - 1];
-					attrib.string = metaval[m - 1];
-
-					if (attrib.type == mvt_double) {
-						double d = atof(attrib.string.c_str());
-
-						if (d < fka->second.min) {
-							fka->second.min = d;
-						}
-						if (d > fka->second.max) {
-							fka->second.max = d;
-						}
-					}
-
-					if (!fka->second.sample_values.count(attrib)) {
-						if (fka->second.sample_values.size() < 1000) {
-							fka->second.sample_values.insert(attrib);
-						}
-					}
-
-					fka->second.type |= (1 << attrib.type);
-				}
+				add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
 			}
 		}
 	}

@@ -568,3 +568,35 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 
 	return out;
 }
+
+void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, std::string const &attrib, type_and_string const &val) {
+	auto fka = file_keys.find(attrib);
+	if (fka == file_keys.end()) {
+		file_keys.insert(std::pair<std::string, type_and_string_stats>(attrib, type_and_string_stats()));
+		fka = file_keys.find(attrib);
+	}
+
+	if (fka == file_keys.end()) {
+		fprintf(stderr, "Can't happen (tilestats)\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (val.type == mvt_double) {
+		double d = atof(val.string.c_str());
+
+		if (d < fka->second.min) {
+			fka->second.min = d;
+		}
+		if (d > fka->second.max) {
+			fka->second.max = d;
+		}
+	}
+
+	if (!fka->second.sample_values.count(val)) {
+		if (fka->second.sample_values.size() < 1000) {
+			fka->second.sample_values.insert(val);
+		}
+	}
+
+	fka->second.type |= (1 << val.type);
+}
