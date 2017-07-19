@@ -10,10 +10,11 @@ struct type_and_string {
 	std::string string;
 
 	bool operator<(const type_and_string &o) const;
+	bool operator!=(const type_and_string &o) const;
 };
 
 struct type_and_string_stats {
-	std::set<type_and_string> sample_values;
+	std::vector<type_and_string> sample_values; // sorted
 	double min = INFINITY;
 	double max = -INFINITY;
 	int type = 0;

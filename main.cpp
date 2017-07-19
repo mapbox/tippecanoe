@@ -1970,17 +1970,13 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 		ai->second.maxzoom = maxzoom;
 
 		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-			type_and_string_stats tss;
-
 			for (size_t i = 0; i < 256; i++) {
 				type_and_string tas;
 				tas.type = mvt_double;
 				tas.string = std::to_string(i);
 
-				tss.sample_values.insert(tas);
+				add_to_file_keys(ai->second.file_keys, "tippecanoe_feature_density", tas);
 			}
-
-			ai->second.file_keys.insert(std::pair<std::string, type_and_string_stats>("tippecanoe_feature_density", tss));
 		}
 	}
 

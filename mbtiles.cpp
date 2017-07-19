@@ -131,6 +131,16 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
+bool type_and_string::operator!=(const type_and_string &o) const {
+	if (type != o.type) {
+		return true;
+	}
+	if (string != o.string) {
+		return true;
+	}
+	return false;
+}
+
 std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
 	std::string out = "{\n";
 
@@ -538,8 +548,15 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				if (fk2 == out_entry->second.file_keys.end()) {
 					out_entry->second.file_keys.insert(*fk);
 				} else {
-					for (auto s : fk->second.sample_values) {
-						fk2->second.sample_values.insert(s);
+					for (auto val : fk->second.sample_values) {
+						auto pt = std::lower_bound(fk2->second.sample_values.begin(), fk2->second.sample_values.end(), val);
+						if (pt == fk2->second.sample_values.end() || *pt != val) { // not found
+							fk2->second.sample_values.insert(pt, val);
+
+							if (fk2->second.sample_values.size() > 1000) {
+								fk2->second.sample_values.pop_back();
+							}
+						}
 					}
 
 					fk2->second.type |= fk->second.type;
@@ -592,9 +609,12 @@ void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, s
 		}
 	}
 
-	if (!fka->second.sample_values.count(val)) {
-		if (fka->second.sample_values.size() < 1000) {
-			fka->second.sample_values.insert(val);
+	auto pt = std::lower_bound(fka->second.sample_values.begin(), fka->second.sample_values.end(), val);
+	if (pt == fka->second.sample_values.end() || *pt != val) { // not found
+		fka->second.sample_values.insert(pt, val);
+
+		if (fka->second.sample_values.size() > 1000) {
+			fka->second.sample_values.pop_back();
 		}
 	}
 
