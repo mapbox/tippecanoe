@@ -49,6 +49,7 @@
 #include "serial.hpp"
 #include "options.hpp"
 #include "mvt.hpp"
+#include "dirtiles.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -2037,7 +2038,7 @@ int main(int argc, char **argv) {
 	char *description = NULL;
 	char *layername = NULL;
 	char *out_mbtiles = NULL;
-	char *out_directory = NULL;
+	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
@@ -2293,8 +2294,8 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
 				exit(EXIT_FAILURE);
 			}
-			if (out_directory != NULL) {
-				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_directory, optarg);
+			if (out_dir != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_dir, optarg);
 				exit(EXIT_FAILURE);
 			}
 			out_mbtiles = optarg;
@@ -2305,11 +2306,11 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
 				exit(EXIT_FAILURE);
 			}
-			if (out_directory != NULL) {
-				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_directory, optarg);
+			if (out_dir != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_dir, optarg);
 				exit(EXIT_FAILURE);
 			}
-			out_directory = optarg;
+			out_dir = optarg;
 			break;
 
 		case 'x':
@@ -2508,12 +2509,12 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
 	}
 
-	if (out_mbtiles == NULL && out_directory == NULL) {
+	if (out_mbtiles == NULL && out_dir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	if (out_mbtiles != NULL && out_directory != NULL) {
+	if (out_mbtiles != NULL && out_dir != NULL) {
 		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -2524,6 +2525,12 @@ int main(int argc, char **argv) {
 		}
 
 		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
+	}
+	if (out_dir != NULL) {
+		if (force) {
+			check_dir(out_dir, true);
+		}
+		check_dir(out_dir, false);
 	}
 
 	int ret = EXIT_SUCCESS;
@@ -2550,7 +2557,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_directory, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_directory, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv);

@@ -461,6 +461,11 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		}
 		sqlite3_free(sql);
 
+		FILE *f = fopen("/tmp/stats.json", "w");
+		std::string st = tilestats(layermap);
+		fprintf(f, "%s\n", st.c_str());
+		fclose(f);
+
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('tilestats', %Q);", tilestats(layermap).c_str());
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set tilestats: %s\n", err);

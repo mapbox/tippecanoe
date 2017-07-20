@@ -1148,6 +1148,12 @@ int main(int argc, char **argv) {
 		}
 		outdb = mbtiles_open(out_mbtiles, argv, 0);
 	}
+	if (out_dir != NULL) {
+		if (force) {
+			check_dir(out_dir, true);
+		}
+		check_dir(out_dir, false);
+	}
 
 	struct stats st;
 	memset(&st, 0, sizeof(st));
