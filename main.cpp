@@ -1023,7 +1023,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *reader, unsigned *iz
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types) {
+int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader reader[CPUS];
@@ -1600,6 +1600,9 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 	if (indexpos == 0) {
 		fprintf(stderr, "Did not read any valid geometries\n");
+		if (outdb != NULL) {
+			mbtiles_close(outdb, pgm);
+		}
 		exit(EXIT_FAILURE);
 	}
 
@@ -1636,6 +1639,9 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 		if (count == 0 && dist_count == 0) {
 			fprintf(stderr, "Can't guess maxzoom (-zg) without at least two distinct feature locations\n");
+			if (outdb != NULL) {
+				mbtiles_close(outdb, pgm);
+			}
 			exit(EXIT_FAILURE);
 		}
 
@@ -2557,10 +2563,10 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types, argv[0]);
 
 	if (outdb != NULL) {
-		mbtiles_close(outdb, argv);
+		mbtiles_close(outdb, argv[0]);
 	}
 
 #ifdef MTRACE

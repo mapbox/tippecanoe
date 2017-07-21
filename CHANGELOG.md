@@ -1,3 +1,7 @@
+## 1.20.1
+
+* Close mbtiles file properly when there are no valid features in the input
+
 ## 1.20.0
 
 * Add long options to tippecanoe-decode and tile-join. Add --quiet to tile-join.

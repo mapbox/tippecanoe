@@ -526,15 +526,15 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	}
 }
 
-void mbtiles_close(sqlite3 *outdb, char **argv) {
+void mbtiles_close(sqlite3 *outdb, const char *pgm) {
 	char *err;
 
 	if (sqlite3_exec(outdb, "ANALYZE;", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: ANALYZE failed: %s\n", argv[0], err);
+		fprintf(stderr, "%s: ANALYZE failed: %s\n", pgm, err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_close(outdb) != SQLITE_OK) {
-		fprintf(stderr, "%s: could not close database: %s\n", argv[0], sqlite3_errmsg(outdb));
+		fprintf(stderr, "%s: could not close database: %s\n", pgm, sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
 	}
 }
