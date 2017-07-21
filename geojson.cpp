@@ -349,7 +349,6 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 			metakey[m] = properties->keys[i]->string;
 
-			bool track = false;
 			if (properties->values[i] != NULL) {
 				int vt = properties->values[i]->type;
 				std::string val;
@@ -412,24 +411,20 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 						exit(EXIT_FAILURE);
 					}
 					m++;
-					track = true;
 				} else if (vt == JSON_NUMBER) {
 					tas.type = metatype[m] = mvt_double;
 					metaval[m] = val;
 					m++;
-					track = true;
 				} else if (vt == JSON_TRUE || vt == JSON_FALSE) {
 					tas.type = metatype[m] = mvt_bool;
 					metaval[m] = val;
 					m++;
-					track = true;
 				} else if (vt == JSON_NULL) {
 					;
 				} else {
 					tas.type = metatype[m] = mvt_string;
 					metaval[m] = val;
 					m++;
-					track = true;
 				}
 			}
 

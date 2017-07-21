@@ -13,6 +13,7 @@
 #include <map>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
+#include "text.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -251,9 +252,13 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
 					out.append("\t\t\t\t\t\t");
 					out.append(value.string);
 				} else {
-					out.append("\t\t\t\t\t\t\"");
-					quote(&out, value.string.c_str());
-					out.append("\"");
+					std::string trunc = truncate16(value.string, 256);
+
+					if (trunc.size() == value.string.size()) {
+						out.append("\t\t\t\t\t\t\"");
+						quote(&out, value.string.c_str());
+						out.append("\"");
+					}
 				}
 			}
 

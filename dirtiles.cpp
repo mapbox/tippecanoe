@@ -2,10 +2,11 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <sys/stat.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #include "dirtiles.hpp"
 
 std::string dir_read_tile(std::string pbfPath) {
