@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
+#include <string.h>
 #include <unistd.h>
 #include <dirent.h>
 #include "dirtiles.hpp"
