@@ -142,7 +142,12 @@ bool type_and_string::operator!=(const type_and_string &o) const {
 	return false;
 }
 
-std::string tilestats(std::map<std::string, layermap_entry> const &layermap) {
+std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
+	// Consolidate layers/attributes whose names are truncated
+	std::vector<std::map<std::string, layermap_entry>> lmv;
+	lmv.push_back(layermap1);
+	std::map<std::string, layermap_entry> layermap = merge_layermaps(lmv, true);
+
 	std::string out = "{\n";
 
 	out.append("\t\"layerCount\": ");
@@ -534,29 +539,43 @@ void mbtiles_close(sqlite3 *outdb, char **argv) {
 	}
 }
 
-std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps) {
+std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry>> const &maps) {
+	return merge_layermaps(maps, false);
+}
+
+std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry>> const &maps, bool trunc) {
 	std::map<std::string, layermap_entry> out;
 
 	for (size_t i = 0; i < maps.size(); i++) {
 		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
-			if (out.count(map->first) == 0) {
-				out.insert(std::pair<std::string, layermap_entry>(map->first, layermap_entry(out.size())));
-				auto out_entry = out.find(map->first);
+			std::string layername = map->first;
+			if (trunc) {
+				layername = truncate16(layername, 256);
+			}
+
+			if (out.count(layername) == 0) {
+				out.insert(std::pair<std::string, layermap_entry>(layername, layermap_entry(out.size())));
+				auto out_entry = out.find(layername);
 				out_entry->second.minzoom = map->second.minzoom;
 				out_entry->second.maxzoom = map->second.maxzoom;
 			}
 
-			auto out_entry = out.find(map->first);
+			auto out_entry = out.find(layername);
 			if (out_entry == out.end()) {
 				fprintf(stderr, "Internal error merging layers\n");
 				exit(EXIT_FAILURE);
 			}
 
 			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
-				auto fk2 = out_entry->second.file_keys.find(fk->first);
+				std::string attribname = fk->first;
+				if (trunc) {
+					attribname = truncate16(attribname, 256);
+				}
+
+				auto fk2 = out_entry->second.file_keys.find(attribname);
 
 				if (fk2 == out_entry->second.file_keys.end()) {
-					out_entry->second.file_keys.insert(*fk);
+					out_entry->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(attribname, fk->second));
 				} else {
 					for (auto val : fk->second.sample_values) {
 						auto pt = std::lower_bound(fk2->second.sample_values.begin(), fk2->second.sample_values.end(), val);
