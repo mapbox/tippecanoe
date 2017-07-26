@@ -3,11 +3,10 @@
 "center": "-151.875000,64.059828,5",
 "description": "tests/dateline/out/-z5.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 5, \"fields\": {\"boolean\": \"Boolean\", \"escape\": \"String\", \"otherboolean\": \"Boolean\", \"prêt\": \"String\", \"stringify\": \"String\", \"zoom\": \"String\"} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 5, \"fields\": {\"boolean\": \"Boolean\", \"escape\": \"String\", \"otherboolean\": \"Boolean\", \"prêt\": \"String\", \"stringify\": \"String\", \"zoom\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 3,\"geometry\": \"LineString\",\"attributeCount\": 6,\"attributes\": [{\"attribute\": \"boolean\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]},{\"attribute\": \"escape\",\"count\": 1,\"type\": \"string\",\"values\": [\"foo\\u0001bar,ü\\\"\\\\/\\u0008\\u000c\\u000a\\u000d\\u0009→\"]},{\"attribute\": \"otherboolean\",\"count\": 1,\"type\": \"boolean\",\"values\": [false]},{\"attribute\": \"prêt\",\"count\": 1,\"type\": \"string\",\"values\": [\"ready\"]},{\"attribute\": \"stringify\",\"count\": 1,\"type\": \"string\",\"values\": [\"[\\\"yes\\\",27.00000000,27,1.4e27,{\\\"foo\\\":\\\"bar\\\"}]\"]},{\"attribute\": \"zoom\",\"count\": 2,\"type\": \"string\",\"values\": [\"3-5\",\"z0-2\"]}]}]}}",
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/dateline/out/-z5.json.check.mbtiles",
-"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 3,\"geometry\": \"LineString\",\"attributeCount\": 6,\"attributes\": [{\"attribute\": \"boolean\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]},{\"attribute\": \"escape\",\"count\": 1,\"type\": \"string\",\"values\": [\"foo\\u0001bar,ü\\\"\\\\/\\u0008\\u000c\\u000a\\u000d\\u0009→\"]},{\"attribute\": \"otherboolean\",\"count\": 1,\"type\": \"boolean\",\"values\": [false]},{\"attribute\": \"prêt\",\"count\": 1,\"type\": \"string\",\"values\": [\"ready\"]},{\"attribute\": \"stringify\",\"count\": 1,\"type\": \"string\",\"values\": [\"[\\\"yes\\\",27.00000000,27,1.4e27,{\\\"foo\\\":\\\"bar\\\"}]\"]},{\"attribute\": \"zoom\",\"count\": 2,\"type\": \"string\",\"values\": [\"3-5\",\"z0-2\"]}]}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

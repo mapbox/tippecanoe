@@ -3,11 +3,10 @@
 "center": "6.000000,6.000000,6",
 "description": "tests/minzoom/out/-z6.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 6, \"fields\": {} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 6, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 6,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "6",
 "minzoom": "0",
 "name": "tests/minzoom/out/-z6.json.check.mbtiles",
-"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 6,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

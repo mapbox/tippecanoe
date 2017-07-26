@@ -3,11 +3,10 @@
 "center": "-121.999912,37.000000,20",
 "description": "tests/highzoom/out/-z30.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 20, \"fields\": {\"name\": \"String\"} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 20, \"fields\": {\"name\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"name\",\"count\": 2,\"type\": \"string\",\"values\": [\"London\",\"Santa Cruz\"]}]}]}}",
 "maxzoom": "20",
 "minzoom": "0",
 "name": "tests/highzoom/out/-z30.json.check.mbtiles",
-"tilestats": "{\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"name\",\"count\": 2,\"type\": \"string\",\"values\": [\"London\",\"Santa Cruz\"]}]}]}",
 "type": "overlay",
 "version": "2"
 }, "features": [

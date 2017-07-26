@@ -453,27 +453,20 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				} else if (type == (1 << mvt_string)) {
 					aprintf(&buf, "\": \"String\"");
 				} else {
-					aprintf(&buf, "\": \"Composite\"");  // XXX tilestats: composite?
+					aprintf(&buf, "\": \"Mixed\"");
 				}
 			}
 
 			aprintf(&buf, "} }");
 		}
 
-		aprintf(&buf, " ] }");
+		aprintf(&buf, " ],");
+		aprintf(&buf, "\"tilestats\": %s", tilestats(layermap).c_str());
+		aprintf(&buf, "}");
 
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set json: %s\n", err);
-			if (!forcetable) {
-				exit(EXIT_FAILURE);
-			}
-		}
-		sqlite3_free(sql);
-
-		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('tilestats', %Q);", tilestats(layermap).c_str());
-		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set tilestats: %s\n", err);
 			if (!forcetable) {
 				exit(EXIT_FAILURE);
 			}
