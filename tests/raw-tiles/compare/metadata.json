@@ -8,5 +8,5 @@
     "bounds": "-122.682427,45.512332,-122.654961,45.569975",
     "type": "overlay",
     "format": "pbf",
-    "json": "{\"vector_layers\": [ { \"id\": \"hackspotsgeojson\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {\"Address\": \"String\", \"Name\": \"String\", \"Notes\": \"String\"} } ] }"
+    "json": "{\"vector_layers\": [ { \"id\": \"hackspotsgeojson\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {\"Address\": \"String\", \"Name\": \"String\", \"Notes\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"hackspotsgeojson\",\"count\": 4,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"Address\",\"count\": 4,\"type\": \"string\",\"values\": [\"1507 N Rosa Parks Way  Portland, OR 97217\",\"201 SE 12th Ave, Portland, OR 97214\",\"4637 N Albina Ave  Portland, OR 97217\",\"915 SE Hawthorne Blvd. Portland, OR 97214\"]},{\"attribute\": \"Name\",\"count\": 4,\"type\": \"string\",\"values\": [\"Albina Press\",\"Arbor Lodge\",\"Lucky Labrador Brew Pub\",\"Three Friends Coffeehouse\"]},{\"attribute\": \"Notes\",\"count\": 3,\"type\": \"string\",\"values\": [\"\",\"Dog friendly\",\"usually busy, outlets on side wall only\"]}]}]}}"
 }

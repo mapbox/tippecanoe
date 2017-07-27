@@ -36,10 +36,7 @@
 #include <sys/statfs.h>
 #endif
 
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "mbtiles.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -52,6 +49,7 @@ extern "C" {
 #include "serial.hpp"
 #include "options.hpp"
 #include "mvt.hpp"
+#include "dirtiles.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -1179,8 +1177,10 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 
 	std::map<std::string, layermap_entry> layermap;
 	for (size_t l = 0; l < nlayers; l++) {
-		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, layermap_entry(l)));
+		layermap_entry e = layermap_entry(l);
+		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, e));
 	}
+
 	std::vector<std::map<std::string, layermap_entry> > layermaps;
 	for (size_t l = 0; l < CPUS; l++) {
 		layermaps.push_back(layermap);
@@ -1971,18 +1971,20 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 	}
 
 	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
-	if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-		for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
-			type_and_string tas;
-			tas.type = mvt_double;
-			tas.string = "tippecanoe_feature_density";
-			ai->second.file_keys.insert(tas);
-		}
-	}
 
 	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
+
+		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
+			for (size_t i = 0; i < 256; i++) {
+				type_and_string tas;
+				tas.type = mvt_double;
+				tas.string = std::to_string(i);
+
+				add_to_file_keys(ai->second.file_keys, "tippecanoe_feature_density", tas);
+			}
+		}
 	}
 
 	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
@@ -2042,7 +2044,7 @@ int main(int argc, char **argv) {
 	char *description = NULL;
 	char *layername = NULL;
 	char *out_mbtiles = NULL;
-	char *out_directory = NULL;
+	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	int maxzoom = 14;
 	int minzoom = 0;
@@ -2294,11 +2296,27 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'o':
+			if (out_mbtiles != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
+				exit(EXIT_FAILURE);
+			}
+			if (out_dir != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_dir, optarg);
+				exit(EXIT_FAILURE);
+			}
 			out_mbtiles = optarg;
 			break;
 
 		case 'e':
-			out_directory = optarg;
+			if (out_mbtiles != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_mbtiles, optarg);
+				exit(EXIT_FAILURE);
+			}
+			if (out_dir != NULL) {
+				fprintf(stderr, "%s: Can't specify both %s and %s as output\n", argv[0], out_dir, optarg);
+				exit(EXIT_FAILURE);
+			}
+			out_dir = optarg;
 			break;
 
 		case 'x':
@@ -2497,12 +2515,12 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Forcing -g0 since -B or -r is not known\n");
 	}
 
-	if (out_mbtiles == NULL && out_directory == NULL) {
+	if (out_mbtiles == NULL && out_dir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
-	if (out_mbtiles != NULL && out_directory != NULL) {
+	if (out_mbtiles != NULL && out_dir != NULL) {
 		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -2513,6 +2531,12 @@ int main(int argc, char **argv) {
 		}
 
 		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
+	}
+	if (out_dir != NULL) {
+		if (force) {
+			check_dir(out_dir, true);
+		}
+		check_dir(out_dir, false);
 	}
 
 	int ret = EXIT_SUCCESS;
@@ -2539,7 +2563,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_directory, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_directory, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types, argv[0]);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, description, guess_maxzoom, &attribute_types, argv[0]);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

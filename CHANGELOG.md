@@ -1,3 +1,7 @@
+## 1.21.0
+
+* Generate layer, feature, and attribute statistics as part of tileset metadata
+
 ## 1.20.1
 
 * Close mbtiles file properly when there are no valid features in the input

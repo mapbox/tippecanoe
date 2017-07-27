@@ -24,11 +24,7 @@
 #include <set>
 #include <map>
 #include <string>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "pool.hpp"
 #include "projection.hpp"
 #include "memfile.hpp"
@@ -299,9 +295,28 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		if (ai != layermap->end()) {
 			layer = ai->second.id;
 			layername = tippecanoe_layername;
+
+			if (mb_geometry[t] == VT_POINT) {
+				ai->second.points++;
+			} else if (mb_geometry[t] == VT_LINE) {
+				ai->second.lines++;
+			} else if (mb_geometry[t] == VT_POLYGON) {
+				ai->second.polygons++;
+			}
 		} else {
 			fprintf(stderr, "Internal error: can't find layer name %s\n", tippecanoe_layername.c_str());
 			exit(EXIT_FAILURE);
+		}
+	} else {
+		auto fk = layermap->find(layername);
+		if (fk != layermap->end()) {
+			if (mb_geometry[t] == VT_POINT) {
+				fk->second.points++;
+			} else if (mb_geometry[t] == VT_LINE) {
+				fk->second.lines++;
+			} else if (mb_geometry[t] == VT_POLYGON) {
+				fk->second.polygons++;
+			}
 		}
 	}
 
@@ -358,8 +373,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 						vt = JSON_STRING;
 					} else if (a->second == mvt_float) {
 						vt = JSON_NUMBER;
+						val = std::to_string(atof(val.c_str()));
 					} else if (a->second == mvt_int) {
 						vt = JSON_NUMBER;
+						if (val.size() == 0) {
+							val = "0";
+						}
 
 						for (size_t ii = 0; ii < val.size(); ii++) {
 							char c = val[ii];
@@ -410,8 +429,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 			}
 
 			if (tas.type >= 0) {
+				type_and_string attrib;
+				attrib.type = metatype[m - 1];
+				attrib.string = metaval[m - 1];
+
 				auto fk = layermap->find(layername);
-				fk->second.file_keys.insert(tas);
+				add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
 			}
 		}
 	}
