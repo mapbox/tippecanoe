@@ -203,6 +203,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-b` _pixels_ or `--buffer=`_pixels_: Buffer size where features are duplicated from adjacent tiles. Units are "screen pixels"—1/256th of the tile width or height. (default 5)
  * `-pc` or `--no-clipping`: Don't clip features to the size of the tile. If a feature overlaps the tile's bounds or buffer at all, it is included completely. Be careful: this can produce very large tilesets, especially with large polygons.
  * `-pD` or `--no-duplication`: As with `--no-clipping`, each feature is included intact instead of cut to tile boundaries. In addition, it is included only in a single tile per zoom level rather than potentially in multiple copies. Clients of the tileset must check adjacent tiles (possibly some distance away) to ensure they have all features.
+ * `-ph` or `--exclude-huge-geometries`: Leave out any `--no-clipping` or `--no-duplication` features whose coordinates are too large to be displayed correctly by Mapbox GL.
 
 ### Reordering features within each tile
 
