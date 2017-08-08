@@ -1,0 +1,28 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "0.000000,0.000000,0.000000,0.000000",
+"center": "0.000000,0.000000,0",
+"description": "tests/longlayer/out/-z0.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_1\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} }, { \"id\": \"ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_2\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} }, { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_1\": \"Number\", \"ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_2\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 2,\"layers\": [{\"layer\": \"ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongN\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHas\",\"count\": 2,\"type\": \"number\",\"values\": [12,13],\"min\": 12.000000,\"max\": 13.000000}]}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/longlayer/out/-z0.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_1", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_ThisLayerHasAVeryLongName_2", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_1": 12 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_ThisAttributeHasAVeryLongName_2": 13 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+] }
+] }
+] }

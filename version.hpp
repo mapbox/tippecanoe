@@ -1,1 +1,6 @@
-#define VERSION "tippecanoe v1.19.3\n"
+#ifndef VERSION_HPP
+#define VERSION_HPP
+
+#define VERSION "tippecanoe v1.21.0\n"
+
+#endif

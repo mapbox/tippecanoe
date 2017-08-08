@@ -24,11 +24,7 @@
 #include <set>
 #include <map>
 #include <string>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "pool.hpp"
 #include "projection.hpp"
 #include "memfile.hpp"
@@ -213,9 +209,28 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		if (ai != layermap->end()) {
 			layer = ai->second.id;
 			layername = tippecanoe_layername;
+
+			if (mb_geometry[t] == VT_POINT) {
+				ai->second.points++;
+			} else if (mb_geometry[t] == VT_LINE) {
+				ai->second.lines++;
+			} else if (mb_geometry[t] == VT_POLYGON) {
+				ai->second.polygons++;
+			}
 		} else {
 			fprintf(stderr, "Internal error: can't find layer name %s\n", tippecanoe_layername.c_str());
 			exit(EXIT_FAILURE);
+		}
+	} else {
+		auto fk = layermap->find(layername);
+		if (fk != layermap->end()) {
+			if (mb_geometry[t] == VT_POINT) {
+				fk->second.points++;
+			} else if (mb_geometry[t] == VT_LINE) {
+				fk->second.lines++;
+			} else if (mb_geometry[t] == VT_POLYGON) {
+				fk->second.polygons++;
+			}
 		}
 	}
 
@@ -252,12 +267,12 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				metaval[m] = val;
 				m++;
 
-				type_and_string tas;
-				tas.string = s;
-				tas.type = type;
+				type_and_string attrib;
+				attrib.type = metatype[m - 1];
+				attrib.string = metaval[m - 1];
 
 				auto fk = layermap->find(layername);
-				fk->second.file_keys.insert(tas);
+				add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
 			}
 		}
 	}

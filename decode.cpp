@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include <getopt.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -248,7 +249,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] [-l layer ...] file.mbtiles [zoom x y]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-s projection] [-Z minzoom] [-z maxzoom] [-l layer ...] file.mbtiles [zoom x y]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -259,9 +260,33 @@ int main(int argc, char **argv) {
 	std::set<std::string> to_decode;
 	bool pipeline = false;
 
-	while ((i = getopt(argc, argv, "t:Z:z:l:cf")) != -1) {
+	struct option long_options[] = {
+		{"projection", required_argument, 0, 's'},
+		{"maximum-zoom", required_argument, 0, 'z'},
+		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"layer", required_argument, 0, 'l'},
+		{"tag-layer-and-zoom", no_argument, 0, 'c'},
+		{"force", no_argument, 0, 'f'},
+		{0, 0, 0, 0},
+	};
+
+	std::string getopt_str;
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].val > ' ') {
+			getopt_str.push_back(long_options[lo].val);
+
+			if (long_options[lo].has_arg == required_argument) {
+				getopt_str.push_back(':');
+			}
+		}
+	}
+
+	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
-		case 't':
+		case 0:
+			break;
+
+		case 's':
 			set_projection_or_exit(optarg);
 			break;
 

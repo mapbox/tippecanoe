@@ -1,3 +1,8 @@
+#ifndef MAIN_HPP
+#define MAIN_HPP
+
+#include <stddef.h>
+
 struct index {
 	long long start;
 	long long end;
@@ -21,3 +26,5 @@ int mkstemp_cloexec(char *name);
 FILE *fopen_oflag(const char *name, const char *mode, int oflag);
 
 #define MAX_ZOOM 24
+
+#endif

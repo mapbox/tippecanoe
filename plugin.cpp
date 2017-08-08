@@ -250,11 +250,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
-					type_and_string tas;
-					tas.string = std::string(properties->keys[i]->string);
-					tas.type = tp;
+					type_and_string attrib;
+					attrib.type = tp;
+					attrib.string = s;
 
-					fk->second.file_keys.insert(tas);
+					add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
 				}
 			}
 
@@ -466,11 +466,11 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));
 					sf.full_values.push_back(v);
 
-					type_and_string tas;
-					tas.string = std::string(properties->keys[i]->string);
-					tas.type = v.type;
+					type_and_string attrib;
+					attrib.string = v.s;
+					attrib.type = v.type;
 
-					fk->second.file_keys.insert(tas);
+					add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
 				}
 			}
 

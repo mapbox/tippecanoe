@@ -1,3 +1,10 @@
+#ifndef JSONPULL_H
+#define JSONPULL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum json_type {
 	// These types can be returned by json_read()
 	JSON_HASH,
@@ -65,3 +72,9 @@ void json_disconnect(json_object *j);
 json_object *json_hash_get(json_object *o, const char *s);
 
 char *json_stringify(json_object *o);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

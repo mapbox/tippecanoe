@@ -333,6 +333,16 @@ intersect the bounding box of Germany \[la]https://www.flickr.com/places/info/23
 tippecanoe \-o countries.mbtiles \-z5 \-C './filters/limit\-tiles\-to\-bbox 5.8662 47.2702 15.0421 55.0581 $*' ne_10m_admin_0_countries.json
 .fi
 .RE
+.RS
+.IP \(bu 2
+Make a tileset of TIGER roads in Tippecanoe County, leaving out all but primary and secondary roads (as classified by TIGER \[la]https://www.census.gov/geo/reference/mtfcc.html\[ra]) below zoom level 11.
+.RE
+.PP
+.RS
+.nf
+tippecanoe \-o roads.mbtiles \-c 'if [ $1 \-lt 11 ]; then grep "\\"MTFCC\\": \\"S1[12]00\\""; else cat; fi' tl_2016_18157_roads.json
+.fi
+.RE
 .SH Environment
 .PP
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
@@ -517,31 +527,31 @@ You can use the \fB\fC\-e\fR flag to output a directory of tiles rather than a
 The options are:
 .RS
 .IP \(bu 2
-\fB\fC\-o\fR \fIout.mbtiles\fP: Write the new tiles to the specified .mbtiles file.
+\fB\fC\-o\fR \fIout.mbtiles\fP or \fB\fC\-\-output=\fR\fIout.mbtiles\fP: Write the new tiles to the specified .mbtiles file.
 .IP \(bu 2
-\fB\fC\-e\fR \fIdirectory\fP: Write the new tiles to the specified directory instead of to an mbtiles file.
+\fB\fC\-e\fR \fIdirectory\fP or \fB\fC\-\-output\-to\-directory=\fR\fIdirectory\fP: Write the new tiles to the specified directory instead of to an mbtiles file.
 .IP \(bu 2
-\fB\fC\-f\fR: Remove \fIout.mbtiles\fP if it already exists.
+\fB\fC\-f\fR or \fB\fC\-\-force\fR: Remove \fIout.mbtiles\fP if it already exists.
 .IP \(bu 2
-\fB\fC\-c\fR \fImatch\fP\fB\fC\&.csv\fR: Use \fImatch\fP\fB\fC\&.csv\fR as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+\fB\fC\-c\fR \fImatch\fP\fB\fC\&.csv\fR or \fB\fC\-\-csv=\fR\fImatch\fP\fB\fC\&.csv\fR: Use \fImatch\fP\fB\fC\&.csv\fR as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
 .IP \(bu 2
-\fB\fC\-x\fR \fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+\fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
 .IP \(bu 2
-\fB\fC\-i\fR: Only include features that matched the CSV.
+\fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
 .IP \(bu 2
-\fB\fC\-pk\fR: Don't skip tiles larger than 500K.
+\fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't skip tiles larger than 500K.
 .IP \(bu 2
-\fB\fC\-pC\fR: Don't compress the PBF vector tile data.
+\fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
 .IP \(bu 2
-\fB\fC\-l\fR \fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
+\fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
 .IP \(bu 2
-\fB\fC\-L\fR \fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
+\fB\fC\-L\fR \fIlayer\fP or \fB\fC\-\-exclude\-layer=\fR\fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
 .IP \(bu 2
-\fB\fC\-A\fR \fIattribution\fP: Set the attribution string.
+\fB\fC\-A\fR \fIattribution\fP or \fB\fC\-\-attribution=\fR\fIattribution\fP: Set the attribution string.
 .IP \(bu 2
-\fB\fC\-n\fR \fIname\fP: Set the tileset name.
+\fB\fC\-n\fR \fIname\fP or \fB\fC\-\-name=\fR\fIname\fP: Set the tileset name.
 .IP \(bu 2
-\fB\fC\-N\fR \fIdescription\fP: Set the tileset description.
+\fB\fC\-N\fR \fIdescription\fP or \fB\fC\-\-description=\fR\fIdescription\fP: Set the tileset description.
 .RE
 .PP
 Because tile\-join just copies the geometries to the new .mbtiles without processing them
@@ -640,15 +650,15 @@ resolutions.
 .SS Options
 .RS
 .IP \(bu 2
-\fB\fC\-t\fR \fIprojection\fP: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
+\fB\fC\-s\fR \fIprojection\fP or \fB\fC\-\-projection=\fR\fIprojection\fP: Specify the projection of the output data. Currently supported are EPSG:4326 (WGS84, the default) and EPSG:3857 (Web Mercator).
 .IP \(bu 2
-\fB\fC\-z\fR \fImaxzoom\fP: Specify the highest zoom level to decode from the tileset
+\fB\fC\-z\fR \fImaxzoom\fP or \fB\fC\-\-maximum\-zoom=\fR\fImaxzoom\fP: Specify the highest zoom level to decode from the tileset
 .IP \(bu 2
-\fB\fC\-Z\fR \fIminzoom\fP: Specify the lowest zoom level to decode from the tileset
+\fB\fC\-Z\fR \fIminzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIminzoom\fP: Specify the lowest zoom level to decode from the tileset
 .IP \(bu 2
-\fB\fC\-l\fR \fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
+\fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
 .IP \(bu 2
-\fB\fC\-c\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
+\fB\fC\-c\fR or \fB\fC\-\-tag\-layer\-and\-zoom\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
 .IP \(bu 2
-\fB\fC\-f\fR: Decode tiles even if polygon ring order or closure problems are detected
+\fB\fC\-f\fR or \fB\fC\-\-force\fR: Decode tiles even if polygon ring order or closure problems are detected
 .RE

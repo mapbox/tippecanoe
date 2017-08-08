@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <limits.h>
+#include <getopt.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -25,16 +26,14 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
 
 std::string dequote(std::string s);
 
-bool pk = false;
-bool pC = false;
+int pk = false;
+int pC = false;
 size_t CPUS;
+int quiet = false;
 
 struct stats {
 	int minzoom;
@@ -111,8 +110,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.id = feat.id;
 			}
 
-			std::map<std::string, mvt_value> attributes;
-			std::map<std::string, int> types;
+			std::map<std::string, std::pair<mvt_value, type_and_string>> attributes;
 			std::vector<std::string> key_order;
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
@@ -151,8 +149,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				if (exclude.count(std::string(key)) == 0) {
-					attributes.insert(std::pair<std::string, mvt_value>(key, val));
-					types.insert(std::pair<std::string, int>(key, type));
+					type_and_string tas;
+					tas.type = type;
+					tas.string = value;
+
+					attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(key, std::pair<mvt_value, type_and_string>(val, tas)));
 					key_order.push_back(key);
 				}
 
@@ -192,39 +193,31 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								if (fa != attributes.end()) {
 									attributes.erase(fa);
 								}
-								auto ft = types.find(sjoinkey);
-								if (ft != types.end()) {
-									types.erase(ft);
-								}
 
-								attributes.insert(std::pair<std::string, mvt_value>(sjoinkey, outval));
-								types.insert(std::pair<std::string, int>(sjoinkey, attr_type));
-								key_order.push_back(sjoinkey);
+								type_and_string tas;
+								tas.type = outval.type;
+								tas.string = joinval;
+
+								attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(joinkey, std::pair<mvt_value, type_and_string>(outval, tas)));
+								key_order.push_back(joinkey);
 							}
 						}
 					}
 				}
 			}
 
-			for (auto tp : types) {
-				type_and_string tas;
-				tas.string = tp.first;
-				tas.type = tp.second;
-
-				file_keys->second.file_keys.insert(tas);
-			}
-
-			// To keep attributes in their original order instead of alphabetical
-			for (auto k : key_order) {
-				auto fa = attributes.find(k);
-
-				if (fa != attributes.end()) {
-					outlayer.tag(outfeature, k, fa->second);
-					attributes.erase(fa);
-				}
-			}
-
 			if (matched || !ifmatched) {
+				// To keep attributes in their original order instead of alphabetical
+				for (auto k : key_order) {
+					auto fa = attributes.find(k);
+
+					if (fa != attributes.end()) {
+						outlayer.tag(outfeature, k, fa->second.first);
+						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
+						attributes.erase(fa);
+					}
+				}
+
 				outfeature.type = feat.type;
 				outfeature.geometry = feat.geometry;
 
@@ -626,7 +619,9 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		count = (count + 1) % CPUS;
 
 		if (ai == tasks.begin()) {
-			fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+			if (!quiet) {
+				fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+			}
 		}
 	}
 
@@ -996,6 +991,11 @@ int main(int argc, char **argv) {
 	int ifmatched = 0;
 
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+
+	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
+	if (TIPPECANOE_MAX_THREADS != NULL) {
+		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+	}
 	if (CPUS < 1) {
 		CPUS = 1;
 	}
@@ -1009,12 +1009,47 @@ int main(int argc, char **argv) {
 
 	std::string set_name, set_description, set_attribution;
 
+	struct option long_options[] = {
+		{"output", required_argument, 0, 'o'},
+		{"output-to-directory", required_argument, 0, 'e'},
+		{"force", no_argument, 0, 'f'},
+		{"if-matched", no_argument, 0, 'i'},
+		{"attribution", required_argument, 0, 'A'},
+		{"name", required_argument, 0, 'n'},
+		{"description", required_argument, 0, 'N'},
+		{"prevent", required_argument, 0, 'p'},
+		{"csv", required_argument, 0, 'c'},
+		{"exclude", required_argument, 0, 'x'},
+		{"layer", required_argument, 0, 'l'},
+		{"exclude-layer", required_argument, 0, 'L'},
+		{"quiet", no_argument, 0, 'q'},
+
+		{"no-tile-size-limit", no_argument, &pk, 1},
+		{"no-tile-compression", no_argument, &pC, 1},
+
+		{0, 0, 0, 0},
+	};
+
+	std::string getopt_str;
+	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
+		if (long_options[lo].val > ' ') {
+			getopt_str.push_back(long_options[lo].val);
+
+			if (long_options[lo].has_arg == required_argument) {
+				getopt_str.push_back(':');
+			}
+		}
+	}
+
 	extern int optind;
 	extern char *optarg;
 	int i;
 
-	while ((i = getopt(argc, argv, "fo:e:c:x:ip:l:L:A:N:n:")) != -1) {
+	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
+		case 0:
+			break;
+
 		case 'o':
 			out_mbtiles = optarg;
 			break;
@@ -1076,6 +1111,10 @@ int main(int argc, char **argv) {
 			remove_layers.insert(std::string(optarg));
 			break;
 
+		case 'q':
+			quiet = true;
+			break;
+
 		default:
 			usage(argv);
 		}
@@ -1100,6 +1139,12 @@ int main(int argc, char **argv) {
 			unlink(out_mbtiles);
 		}
 		outdb = mbtiles_open(out_mbtiles, argv, 0);
+	}
+	if (out_dir != NULL) {
+		if (force) {
+			check_dir(out_dir, true);
+		}
+		check_dir(out_dir, false);
 	}
 
 	struct stats st;
@@ -1143,7 +1188,7 @@ int main(int argc, char **argv) {
 	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
 
 	if (outdb != NULL) {
-		mbtiles_close(outdb, argv);
+		mbtiles_close(outdb, argv[0]);
 	}
 
 	return 0;

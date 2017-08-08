@@ -1,3 +1,11 @@
+#ifndef SERIAL_HPP
+#define SERIAL_HPP
+
+#include <stddef.h>
+#include <stdio.h>
+#include <vector>
+#include "geometry.hpp"
+
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
 void serialize_int(FILE *out, int n, long long *fpos, const char *fname);
@@ -58,3 +66,5 @@ struct serial_feature {
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
 serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+
+#endif

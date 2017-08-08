@@ -1,3 +1,12 @@
+#ifndef MVT_HPP
+#define MVT_HPP
+
+#include <sqlite3.h>
+#include <string>
+#include <map>
+#include <set>
+#include <vector>
+
 struct mvt_value;
 struct mvt_layer;
 
@@ -100,3 +109,4 @@ int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);
+#endif

@@ -3,7 +3,7 @@
 "center": "-78.750000,31.461472,4",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ] }",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 110,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "4",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.check.mbtiles",

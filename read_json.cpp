@@ -131,8 +131,12 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 				vt = JSON_STRING;
 			} else if (a->second == mvt_float) {
 				vt = JSON_NUMBER;
+				val = std::to_string(atof(val.c_str()));
 			} else if (a->second == mvt_int) {
 				vt = JSON_NUMBER;
+				if (val.size() == 0) {
+					val = "0";
+				}
 
 				for (size_t ii = 0; ii < val.size(); ii++) {
 					char c = val[ii];
