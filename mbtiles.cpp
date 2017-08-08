@@ -531,6 +531,10 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 
 	for (size_t i = 0; i < maps.size(); i++) {
 		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
+			if (map->second.points + map->second.lines + map->second.polygons == 0) {
+				continue;
+			}
+
 			std::string layername = map->first;
 			if (trunc) {
 				layername = truncate16(layername, 256);

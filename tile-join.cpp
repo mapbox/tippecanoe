@@ -237,6 +237,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				if (z > file_keys->second.maxzoom) {
 					file_keys->second.maxzoom = z;
 				}
+
+				if (feat.type == mvt_point) {
+					file_keys->second.points++;
+				} else if (feat.type == mvt_linestring) {
+					file_keys->second.lines++;
+				} else if (feat.type == mvt_polygon) {
+					file_keys->second.polygons++;
+				}
 			}
 		}
 	}

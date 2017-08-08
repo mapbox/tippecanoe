@@ -234,11 +234,23 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			}
 
 			auto fk = layermap.find(layername);
+			if (fk == layermap.end()) {
+				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
+				exit(EXIT_FAILURE);
+			}
 			if (z < fk->second.minzoom) {
 				fk->second.minzoom = z;
 			}
 			if (z > fk->second.maxzoom) {
 				fk->second.maxzoom = z;
+			}
+
+			if (feature.type == mvt_point) {
+				fk->second.points++;
+			} else if (feature.type == mvt_linestring) {
+				fk->second.lines++;
+			} else if (feature.type == mvt_polygon) {
+				fk->second.polygons++;
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
@@ -448,6 +460,10 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			}
 
 			auto fk = layermap.find(layername);
+			if (fk == layermap.end()) {
+				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
+				exit(EXIT_FAILURE);
+			}
 			sf.layer = fk->second.id;
 
 			if (z < fk->second.minzoom) {
@@ -455,6 +471,16 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			}
 			if (z > fk->second.maxzoom) {
 				fk->second.maxzoom = z;
+			}
+
+			if (!postfilter) {
+				if (sf.t == mvt_point) {
+					fk->second.points++;
+				} else if (sf.t == mvt_linestring) {
+					fk->second.lines++;
+				} else if (sf.t == mvt_polygon) {
+					fk->second.polygons++;
+				}
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
