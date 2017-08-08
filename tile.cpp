@@ -1355,6 +1355,10 @@ void *run_prefilter(void *v) {
 		tmp_layer.extent = 1LL << 32;
 		tmp_layer.name = (*(rpa->layer_unmaps))[sf.segment][sf.layer];
 
+		if (sf.t == VT_POLYGON) {
+			sf.geometry = close_poly(sf.geometry);
+		}
+
 		mvt_feature tmp_feature;
 		tmp_feature.type = sf.t;
 		tmp_feature.geometry = to_feature(sf.geometry);
@@ -1375,7 +1379,7 @@ void *run_prefilter(void *v) {
 		decode_meta(sf.m, sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
-		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, sf.index, sf.seq, sf.extent, false);
+		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, sf.index, sf.seq, sf.extent, true);
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {
