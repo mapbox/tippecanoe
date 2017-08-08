@@ -82,6 +82,7 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	return out;
 }
 
+// Reads from the postfilter
 std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	std::map<std::string, mvt_layer> ret;
 
@@ -277,7 +278,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 	return final;
 }
 
-serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps) {
+// Reads from the prefilter
+serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
 	serial_feature sf;
 
 	while (1) {
@@ -470,7 +472,9 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					attrib.string = v.s;
 					attrib.type = v.type;
 
-					add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+					if (!postfilter) {
+						add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+					}
 				}
 			}
 
@@ -597,7 +601,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 		exit(EXIT_FAILURE);
 	}
 
-	layers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
+	std::vector<mvt_layer> nlayers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
 
 	while (1) {
 		int stat_loc;
@@ -616,5 +620,5 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 		exit(EXIT_FAILURE);
 	}
 
-	return layers;
+	return nlayers;
 }

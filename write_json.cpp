@@ -96,11 +96,11 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			}
 
 			if (feat.tags[t] >= layer.keys.size()) {
-				fprintf(stderr, "Error: out of bounds feature key\n");
+				fprintf(stderr, "Error: out of bounds feature key (%u in %zu)\n", feat.tags[t], layer.keys.size());
 				exit(EXIT_FAILURE);
 			}
 			if (feat.tags[t + 1] >= layer.values.size()) {
-				fprintf(stderr, "Error: out of bounds feature value\n");
+				fprintf(stderr, "Error: out of bounds feature value (%u in %zu)\n", feat.tags[t + 1], layer.values.size());
 				exit(EXIT_FAILURE);
 			}
 
