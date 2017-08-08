@@ -45,6 +45,7 @@
 #include "memfile.hpp"
 #include "main.hpp"
 #include "geojson.hpp"
+#include "geobuf.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
 #include "options.hpp"
@@ -1376,13 +1377,18 @@ int read_input(std::vector<source> &sources, char *fname, int &maxzoom, int minz
 					overall_offset += ahead;
 					checkdisk(reader, CPUS);
 				}
-			} else {
+			} else if (c == '{') {
 				// Plain serial reading
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
 				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, &dist_sum, &dist_count, guess_maxzoom);
 				json_end(jp);
+				overall_offset = layer_seq;
+				checkdisk(reader, CPUS);
+			} else {
+				long long layer_seq = overall_offset;
+				parse_geobuf(fp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, &dist_sum, &dist_count, guess_maxzoom);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
 			}
