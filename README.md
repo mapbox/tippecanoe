@@ -236,6 +236,51 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-q` or `--quiet`: Work quietly instead of reporting progress
  * `-v` or `--version`: Report Tippecanoe's version number
 
+### Filters
+
+ * `-C` _command_ or `--prefilter=`_command_: Specify a shell filter command to be run at the start of assembling each tile
+ * `-c` _command_ or `--postfilter=`_command_: Specify a shell filter command to be run at the end of assembling each tile
+
+The pre- and post-filter commands allow you to do optional filtering or transformation on the features of each tile
+as it is created. They are shell commands, run with the zoom level, X, and Y as the `$1`, `$2`, and `$3` arguments.
+Future versions of Tippecanoe may add additional arguments for more context.
+
+The features are provided to the filter
+as a series of newline-delimited GeoJSON objects on the standard input, and `tippecanoe` expects to read another
+set of GeoJSON features from the filter's standard output.
+
+The prefilter receives the features at the highest available resolution, before line simplification,
+polygon topology repair, gamma calculation, dynamic feature dropping, or other internal processing.
+The postfilter receives the features at tile resolution, after simplification, cleaning, and dropping.
+
+The layer name is provided as part of the `tippecanoe` element of the feature and must be passed through
+to keep the feature in its correct layer. In the case of the prefilter, the `tippecanoe` element may also
+contain `index`, `sequence`, and `extent` elements, which must be passed through for internal operations like
+`--drop-densest-as-needed`, `--drop-smallest-as-needed`, and `--preserve-input-order` to work.
+
+#### Examples:
+
+ * Make a tileset of the Natural Earth countries to zoom level 5, and also copy the GeoJSON features
+   to files in a `tiles/z/x/y.geojson` directory hierarchy.
+
+```
+tippecanoe -o countries.mbtiles -z5 -C 'mkdir -p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
+```
+
+ * Make a tileset of the Natural Earth countries to zoom level 5, but including only those tiles that
+   intersect the [bounding box of Germany](https://www.flickr.com/places/info/23424829).
+   (The `limit-tiles-to-bbox` script is [in the Tippecanoe source directory](filters/limit-tiles-to-bbox).)
+
+```
+tippecanoe -o countries.mbtiles -z5 -C './filters/limit-tiles-to-bbox 5.8662 47.2702 15.0421 55.0581 $*' ne_10m_admin_0_countries.json
+```
+
+ * Make a tileset of TIGER roads in Tippecanoe County, leaving out all but primary and secondary roads (as [classified by TIGER](https://www.census.gov/geo/reference/mtfcc.html)) below zoom level 11.
+
+```
+tippecanoe -o roads.mbtiles -c 'if [ $1 -lt 11 ]; then grep "\"MTFCC\": \"S1[12]00\""; else cat; fi' tl_2016_18157_roads.json
+```
+
 Environment
 -----------
 
@@ -510,4 +555,5 @@ resolutions.
  * `-z` _maxzoom_ or `--maximum-zoom=`*maxzoom*: Specify the highest zoom level to decode from the tileset
  * `-Z` _minzoom_ or `--minimum-zoom=`*minzoom*: Specify the lowest zoom level to decode from the tileset
  * `-l` _layer_ or `--layer=`*layer*: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
+ * `-c` or `--tag-layer-and-zoom`: Include each feature's layer and zoom level as part of its `tippecanoe` object rather than as a FeatureCollection wrapper
  * `-f` or `--force`: Decode tiles even if polygon ring order or closure problems are detected

@@ -92,12 +92,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 		}
 
-		if (layermap.count(layer.name) == 0) {
-			layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
-			auto file_keys = layermap.find(layer.name);
-			file_keys->second.minzoom = z;
-			file_keys->second.maxzoom = z;
-		}
 		auto file_keys = layermap.find(layer.name);
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
@@ -207,6 +201,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			if (matched || !ifmatched) {
+				if (file_keys == layermap.end()) {
+					layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
+					file_keys = layermap.find(layer.name);
+					file_keys->second.minzoom = z;
+					file_keys->second.maxzoom = z;
+				}
+
 				// To keep attributes in their original order instead of alphabetical
 				for (auto k : key_order) {
 					auto fa = attributes.find(k);
@@ -236,6 +237,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 				if (z > file_keys->second.maxzoom) {
 					file_keys->second.maxzoom = z;
+				}
+
+				if (feat.type == mvt_point) {
+					file_keys->second.points++;
+				} else if (feat.type == mvt_linestring) {
+					file_keys->second.lines++;
+				} else if (feat.type == mvt_polygon) {
+					file_keys->second.polygons++;
 				}
 			}
 		}
@@ -976,7 +985,10 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 		}
 	}
 
-	fclose(f);
+	if (fclose(f) != 0) {
+		perror("fclose");
+		exit(EXIT_FAILURE);
+	}
 }
 
 int main(int argc, char **argv) {

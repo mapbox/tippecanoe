@@ -230,3 +230,83 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
 	}
 }
+
+serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+	serial_feature sf;
+
+	deserialize_byte_io(geoms, &sf.t, geompos_in);
+	if (sf.t < 0) {
+		return sf;
+	}
+
+	deserialize_long_long_io(geoms, &sf.layer, geompos_in);
+
+	sf.seq = 0;
+	if (sf.layer & (1 << 5)) {
+		deserialize_long_long_io(geoms, &sf.seq, geompos_in);
+	}
+
+	sf.tippecanoe_minzoom = -1;
+	sf.tippecanoe_maxzoom = -1;
+	sf.id = 0;
+	sf.has_id = false;
+	if (sf.layer & (1 << 1)) {
+		deserialize_int_io(geoms, &sf.tippecanoe_minzoom, geompos_in);
+	}
+	if (sf.layer & (1 << 0)) {
+		deserialize_int_io(geoms, &sf.tippecanoe_maxzoom, geompos_in);
+	}
+	if (sf.layer & (1 << 2)) {
+		sf.has_id = true;
+		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
+	}
+
+	deserialize_int_io(geoms, &sf.segment, geompos_in);
+
+	sf.index = 0;
+	sf.extent = 0;
+
+	sf.geometry = decode_geometry(geoms, geompos_in, z, tx, ty, sf.bbox, initial_x[sf.segment], initial_y[sf.segment]);
+	if (sf.layer & (1 << 4)) {
+		deserialize_ulong_long_io(geoms, &sf.index, geompos_in);
+	}
+	if (sf.layer & (1 << 3)) {
+		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
+	}
+
+	sf.layer >>= 6;
+
+	sf.metapos = 0;
+	{
+		int m;
+		deserialize_int_io(geoms, &m, geompos_in);
+		sf.m = m;
+	}
+	if (sf.m != 0) {
+		deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
+	}
+
+	if (sf.metapos >= 0) {
+		char *meta = metabase + sf.metapos + meta_off[sf.segment];
+
+		for (size_t i = 0; i < sf.m; i++) {
+			long long k, v;
+			deserialize_long_long(&meta, &k);
+			deserialize_long_long(&meta, &v);
+			sf.keys.push_back(k);
+			sf.values.push_back(v);
+		}
+	} else {
+		for (size_t i = 0; i < sf.m; i++) {
+			long long k, v;
+			deserialize_long_long_io(geoms, &k, geompos_in);
+			deserialize_long_long_io(geoms, &v, geompos_in);
+			sf.keys.push_back(k);
+			sf.values.push_back(v);
+		}
+	}
+
+	deserialize_byte_io(geoms, &sf.feature_minzoom, geompos_in);
+
+	return sf;
+}

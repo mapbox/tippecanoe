@@ -17,8 +17,8 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
-	int x;
-	int y;
+	long long x;
+	long long y;
 	int /* mvt_operation */ op;
 
 	mvt_geometry(int op, long long x, long long y);
@@ -86,7 +86,7 @@ struct mvt_layer {
 	std::vector<mvt_feature> features;
 	std::vector<std::string> keys;
 	std::vector<mvt_value> values;
-	int extent;
+	long long extent;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
@@ -108,4 +108,5 @@ int decompress(std::string const &input, std::string &output);
 int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
+mvt_value stringified_to_mvt_value(int type, const char *s);
 #endif

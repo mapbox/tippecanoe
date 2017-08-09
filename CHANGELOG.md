@@ -1,3 +1,7 @@
+## 1.22.0
+
+* Add options to filter each tile's contents through a shell pipeline
+
 ## 1.21.0
 
 * Generate layer, feature, and attribute statistics as part of tileset metadata
