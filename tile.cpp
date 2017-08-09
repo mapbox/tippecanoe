@@ -1680,6 +1680,26 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			signed char t = partials[i].t;
 			long long original_seq = partials[i].original_seq;
 
+			bool skip = false;
+			if (prevent[P_EXCLUDE_HUGE_GEOMETRIES]) {
+				for (size_t j = 0; j < pgeoms.size(); j++) {
+					for (size_t k = 0; k < pgeoms[j].size(); k++) {
+						if (pgeoms[j][k].op == VT_MOVETO || pgeoms[j][k].op == VT_LINETO) {
+							long long x = pgeoms[j][k].x * 8192 / (1 << line_detail);
+							long long y = pgeoms[j][k].y * 8192 / (1 << line_detail);
+
+							if (x >= 16384 || y >= 16384 || x <= -16383 || y <= -16383) {
+								skip = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (skip) {
+				continue;
+			}
+
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
 			for (size_t j = 0; j < pgeoms.size(); j++) {
