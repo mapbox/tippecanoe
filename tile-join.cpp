@@ -92,12 +92,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 		}
 
-		if (layermap.count(layer.name) == 0) {
-			layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
-			auto file_keys = layermap.find(layer.name);
-			file_keys->second.minzoom = z;
-			file_keys->second.maxzoom = z;
-		}
 		auto file_keys = layermap.find(layer.name);
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
@@ -207,6 +201,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			if (matched || !ifmatched) {
+				if (file_keys == layermap.end()) {
+					layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
+					file_keys = layermap.find(layer.name);
+					file_keys->second.minzoom = z;
+					file_keys->second.maxzoom = z;
+				}
+
 				// To keep attributes in their original order instead of alphabetical
 				for (auto k : key_order) {
 					auto fa = attributes.find(k);

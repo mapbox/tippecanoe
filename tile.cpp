@@ -1468,8 +1468,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		FILE *prefilter_fp = NULL;
 		pthread_t prefilter_writer;
 		run_prefilter_args rpa;  // here so it stays in scope until joined
-		FILE *prefilter_read_fp;
-		json_pull *prefilter_jp;
+		FILE *prefilter_read_fp = NULL;
+		json_pull *prefilter_jp = NULL;
 
 		if (prefilter != NULL) {
 			setup_filter(prefilter, &prefilter_write, &prefilter_read, &prefilter_pid, z, tx, ty);

@@ -24,7 +24,6 @@ int maxzoom = 32;
 bool force = false;
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
-	int within = 0;
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -80,7 +79,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 				printf(", \"features\": [\n");
 
 				first_layer = false;
-				within = 0;
 			}
 		}
 
