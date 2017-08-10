@@ -17,43 +17,13 @@
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
+#include "write_json.hpp"
 
 int minzoom = 0;
 int maxzoom = 32;
 bool force = false;
 
-void printq(const char *s) {
-	putchar('"');
-	for (; *s; s++) {
-		if (*s == '\\' || *s == '"') {
-			printf("\\%c", *s);
-		} else if (*s >= 0 && *s < ' ') {
-			printf("\\u%04x", *s);
-		} else {
-			putchar(*s);
-		}
-	}
-	putchar('"');
-}
-
-struct lonlat {
-	int op;
-	double lon;
-	double lat;
-	int x;
-	int y;
-
-	lonlat(int nop, double nlon, double nlat, int nx, int ny) {
-		this->op = nop;
-		this->lon = nlon;
-		this->lat = nlat;
-		this->x = nx;
-		this->y = ny;
-	}
-};
-
-void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode) {
-	int within = 0;
+void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -67,321 +37,71 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		exit(EXIT_FAILURE);
 	}
 
-	printf("{ \"type\": \"FeatureCollection\"");
+	if (!pipeline) {
+		printf("{ \"type\": \"FeatureCollection\"");
 
-	if (describe) {
-		printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d", z, x, y);
-		if (!was_compressed) {
-			printf(", \"compressed\": false");
+		if (describe) {
+			printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d", z, x, y);
+			if (!was_compressed) {
+				printf(", \"compressed\": false");
+			}
+			printf(" }");
+
+			if (projection != projections) {
+				printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
+				fprintq(stdout, projection->alias);
+				printf(" } }");
+			}
 		}
 
-		printf(" }");
-
-		if (projection != projections) {
-			printf(", \"crs\": { \"type\": \"name\", \"properties\": { \"name\": ");
-			printq(projection->alias);
-			printf(" } }");
-		}
+		printf(", \"features\": [\n");
 	}
-
-	printf(", \"features\": [\n");
 
 	bool first_layer = true;
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
-		int extent = layer.extent;
 
 		if (to_decode.size() != 0 && !to_decode.count(layer.name)) {
 			continue;
 		}
 
-		if (describe) {
-			if (!first_layer) {
-				printf(",\n");
+		if (!pipeline) {
+			if (describe) {
+				if (!first_layer) {
+					printf(",\n");
+				}
+
+				printf("{ \"type\": \"FeatureCollection\"");
+				printf(", \"properties\": { \"layer\": ");
+				fprintq(stdout, layer.name.c_str());
+				printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
+				printf(" }");
+				printf(", \"features\": [\n");
+
+				first_layer = false;
 			}
-
-			printf("{ \"type\": \"FeatureCollection\"");
-			printf(", \"properties\": { \"layer\": ");
-			printq(layer.name.c_str());
-			printf(", \"version\": %d, \"extent\": %d", layer.version, layer.extent);
-			printf(" }");
-			printf(", \"features\": [\n");
-
-			first_layer = false;
-			within = 0;
 		}
 
-		for (size_t f = 0; f < layer.features.size(); f++) {
-			mvt_feature &feat = layer.features[f];
+		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
 
-			if (within) {
-				printf(",\n");
+		if (!pipeline) {
+			if (describe) {
+				printf("] }\n");
 			}
-			within = 1;
-
-			printf("{ \"type\": \"Feature\"");
-
-			if (feat.has_id) {
-				printf(", \"id\": %llu", feat.id);
-			}
-
-			printf(", \"properties\": { ");
-
-			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
-				if (t != 0) {
-					printf(", ");
-				}
-
-				if (feat.tags[t] >= layer.keys.size()) {
-					fprintf(stderr, "Error: out of bounds feature key\n");
-					exit(EXIT_FAILURE);
-				}
-				if (feat.tags[t + 1] >= layer.values.size()) {
-					fprintf(stderr, "Error: out of bounds feature value\n");
-					exit(EXIT_FAILURE);
-				}
-
-				const char *key = layer.keys[feat.tags[t]].c_str();
-				mvt_value const &val = layer.values[feat.tags[t + 1]];
-
-				if (val.type == mvt_string) {
-					printq(key);
-					printf(": ");
-					printq(val.string_value.c_str());
-				} else if (val.type == mvt_int) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.int_value);
-				} else if (val.type == mvt_double) {
-					printq(key);
-					double v = val.numeric_value.double_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_float) {
-					printq(key);
-					double v = val.numeric_value.float_value;
-					if (v == (long long) v) {
-						printf(": %lld", (long long) v);
-					} else {
-						printf(": %g", v);
-					}
-				} else if (val.type == mvt_sint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.sint_value);
-				} else if (val.type == mvt_uint) {
-					printq(key);
-					printf(": %lld", (long long) val.numeric_value.uint_value);
-				} else if (val.type == mvt_bool) {
-					printq(key);
-					printf(": %s", val.numeric_value.bool_value ? "true" : "false");
-				}
-			}
-
-			printf(" }, \"geometry\": { ");
-
-			std::vector<lonlat> ops;
-
-			for (size_t g = 0; g < feat.geometry.size(); g++) {
-				int op = feat.geometry[g].op;
-				long long px = feat.geometry[g].x;
-				long long py = feat.geometry[g].y;
-
-				if (op == VT_MOVETO || op == VT_LINETO) {
-					long long scale = 1LL << (32 - z);
-					long long wx = scale * x + (scale / extent) * px;
-					long long wy = scale * y + (scale / extent) * py;
-
-					double lat, lon;
-					projection->unproject(wx, wy, 32, &lon, &lat);
-
-					ops.push_back(lonlat(op, lon, lat, px, py));
-				} else {
-					ops.push_back(lonlat(op, 0, 0, 0, 0));
-				}
-			}
-
-			if (feat.type == VT_POINT) {
-				if (ops.size() == 1) {
-					printf("\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
-				} else {
-					printf("\"type\": \"MultiPoint\", \"coordinates\": [ ");
-					for (size_t i = 0; i < ops.size(); i++) {
-						if (i != 0) {
-							printf(", ");
-						}
-						printf("[ %f, %f ]", ops[i].lon, ops[i].lat);
-					}
-					printf(" ]");
-				}
-			} else if (feat.type == VT_LINE) {
-				int movetos = 0;
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (ops[i].op == VT_MOVETO) {
-						movetos++;
-					}
-				}
-
-				if (movetos < 2) {
-					printf("\"type\": \"LineString\", \"coordinates\": [ ");
-					for (size_t i = 0; i < ops.size(); i++) {
-						if (i != 0) {
-							printf(", ");
-						}
-						printf("[ %f, %f ]", ops[i].lon, ops[i].lat);
-					}
-					printf(" ]");
-				} else {
-					printf("\"type\": \"MultiLineString\", \"coordinates\": [ [ ");
-					int state = 0;
-					for (size_t i = 0; i < ops.size(); i++) {
-						if (ops[i].op == VT_MOVETO) {
-							if (state == 0) {
-								printf("[ %f, %f ]", ops[i].lon, ops[i].lat);
-								state = 1;
-							} else {
-								printf(" ], [ ");
-								printf("[ %f, %f ]", ops[i].lon, ops[i].lat);
-								state = 1;
-							}
-						} else {
-							printf(", [ %f, %f ]", ops[i].lon, ops[i].lat);
-						}
-					}
-					printf(" ] ]");
-				}
-			} else if (feat.type == VT_POLYGON) {
-				std::vector<std::vector<lonlat> > rings;
-				std::vector<double> areas;
-
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (ops[i].op == VT_MOVETO) {
-						rings.push_back(std::vector<lonlat>());
-						areas.push_back(0);
-					}
-
-					int n = rings.size() - 1;
-					if (n >= 0) {
-						if (ops[i].op == VT_CLOSEPATH) {
-							rings[n].push_back(rings[n][0]);
-						} else {
-							rings[n].push_back(ops[i]);
-						}
-					}
-
-					if (i + 1 >= ops.size() || ops[i + 1].op == VT_MOVETO) {
-						if (ops[i].op != VT_CLOSEPATH) {
-							static bool warned = false;
-
-							if (!warned) {
-								fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
-								if (!force) {
-									exit(EXIT_FAILURE);
-								}
-
-								warned = true;
-							}
-						}
-					}
-				}
-
-				int outer = 0;
-
-				for (size_t i = 0; i < rings.size(); i++) {
-					long double area = 0;
-					for (size_t k = 0; k < rings[i].size(); k++) {
-						if (rings[i][k].op != VT_CLOSEPATH) {
-							area += rings[i][k].x * rings[i][(k + 1) % rings[i].size()].y;
-							area -= rings[i][k].y * rings[i][(k + 1) % rings[i].size()].x;
-						}
-					}
-
-					areas[i] = area;
-					if (areas[i] >= 0 || i == 0) {
-						outer++;
-					}
-
-					// printf("area %f\n", area / .00000274 / .00000274);
-				}
-
-				if (outer > 1) {
-					printf("\"type\": \"MultiPolygon\", \"coordinates\": [ [ [ ");
-				} else {
-					printf("\"type\": \"Polygon\", \"coordinates\": [ [ ");
-				}
-
-				int state = 0;
-				for (size_t i = 0; i < rings.size(); i++) {
-					if (i == 0 && areas[i] < 0) {
-						static bool warned = false;
-
-						if (!warned) {
-							fprintf(stderr, "Polygon begins with an inner ring\n");
-							if (!force) {
-								exit(EXIT_FAILURE);
-							}
-
-							warned = true;
-						}
-					}
-
-					if (areas[i] >= 0) {
-						if (state != 0) {
-							// new multipolygon
-							printf(" ] ], [ [ ");
-						}
-						state = 1;
-					}
-
-					if (state == 2) {
-						// new ring in the same polygon
-						printf(" ], [ ");
-					}
-
-					for (size_t j = 0; j < rings[i].size(); j++) {
-						if (rings[i][j].op != VT_CLOSEPATH) {
-							if (j != 0) {
-								printf(", ");
-							}
-
-							printf("[ %f, %f ]", rings[i][j].lon, rings[i][j].lat);
-						} else {
-							if (j != 0) {
-								printf(", ");
-							}
-
-							printf("[ %f, %f ]", rings[i][0].lon, rings[i][0].lat);
-						}
-					}
-
-					state = 2;
-				}
-
-				if (outer > 1) {
-					printf(" ] ] ]");
-				} else {
-					printf(" ] ]");
-				}
-			}
-
-			printf(" } }\n");
-		}
-
-		if (describe) {
-			printf("] }\n");
 		}
 	}
 
-	printf("] }\n");
+	if (!pipeline) {
+		printf("] }\n");
+	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline) {
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
 
-	int fd = open(fname, O_RDONLY);
+	int fd = open(fname, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		struct stat st;
 		if (fstat(fd, &st) == 0) {
@@ -391,7 +111,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, 1, to_decode);
+							handle(s, z, x, y, 1, to_decode, pipeline);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -405,7 +125,10 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		} else {
 			perror("fstat");
 		}
-		close(fd);
+		if (close(fd) != 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		perror(fname);
 	}
@@ -416,31 +139,34 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	}
 
 	if (z < 0) {
-		printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
-
-		const char *sql2 = "SELECT name, value from metadata order by name;";
-		sqlite3_stmt *stmt2;
-		if (sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL) != SQLITE_OK) {
-			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
-			exit(EXIT_FAILURE);
-		}
-
 		int within = 0;
-		while (sqlite3_step(stmt2) == SQLITE_ROW) {
-			if (within) {
-				printf(",\n");
+
+		if (!pipeline) {
+			printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
+
+			const char *sql2 = "SELECT name, value from metadata order by name;";
+			sqlite3_stmt *stmt2;
+			if (sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL) != SQLITE_OK) {
+				fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
+				exit(EXIT_FAILURE);
 			}
-			within = 1;
 
-			const unsigned char *name = sqlite3_column_text(stmt2, 0);
-			const unsigned char *value = sqlite3_column_text(stmt2, 1);
+			while (sqlite3_step(stmt2) == SQLITE_ROW) {
+				if (within) {
+					printf(",\n");
+				}
+				within = 1;
 
-			printq((char *) name);
-			printf(": ");
-			printq((char *) value);
+				const unsigned char *name = sqlite3_column_text(stmt2, 0);
+				const unsigned char *value = sqlite3_column_text(stmt2, 1);
+
+				fprintq(stdout, (char *) name);
+				printf(": ");
+				fprintq(stdout, (char *) value);
+			}
+
+			sqlite3_finalize(stmt2);
 		}
-
-		sqlite3_finalize(stmt2);
 
 		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
@@ -452,14 +178,18 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		sqlite3_bind_int(stmt, 1, minzoom);
 		sqlite3_bind_int(stmt, 2, maxzoom);
 
-		printf("\n}, \"features\": [\n");
+		if (!pipeline) {
+			printf("\n}, \"features\": [\n");
+		}
 
 		within = 0;
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			if (within) {
-				printf(",\n");
+			if (!pipeline) {
+				if (within) {
+					printf(",\n");
+				}
+				within = 1;
 			}
-			within = 1;
 
 			int len = sqlite3_column_bytes(stmt, 0);
 			int tz = sqlite3_column_int(stmt, 1);
@@ -468,10 +198,12 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), tz, tx, ty, 1, to_decode);
+			handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline);
 		}
 
-		printf("] }\n");
+		if (!pipeline) {
+			printf("] }\n");
+		}
 
 		sqlite3_finalize(stmt);
 	} else {
@@ -496,7 +228,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, 0, to_decode);
+				handle(std::string(s, len), z, x, y, 0, to_decode, pipeline);
 				handled = 1;
 			}
 
@@ -515,7 +247,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-t projection] [-Z minzoom] [-z maxzoom] [-l layer ...] file.mbtiles [zoom x y]\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-s projection] [-Z minzoom] [-z maxzoom] [-l layer ...] file.mbtiles [zoom x y]\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -524,12 +256,14 @@ int main(int argc, char **argv) {
 	extern char *optarg;
 	int i;
 	std::set<std::string> to_decode;
+	bool pipeline = false;
 
 	struct option long_options[] = {
 		{"projection", required_argument, 0, 's'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"layer", required_argument, 0, 'l'},
+		{"tag-layer-and-zoom", no_argument, 0, 'c'},
 		{"force", no_argument, 0, 'f'},
 		{0, 0, 0, 0},
 	};
@@ -566,6 +300,10 @@ int main(int argc, char **argv) {
 			to_decode.insert(optarg);
 			break;
 
+		case 'c':
+			pipeline = true;
+			break;
+
 		case 'f':
 			force = true;
 			break;
@@ -576,9 +314,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode);
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1, to_decode);
+		decode(argv[optind], -1, -1, -1, to_decode, pipeline);
 	} else {
 		usage(argv);
 	}

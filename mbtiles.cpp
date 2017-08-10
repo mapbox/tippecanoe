@@ -85,26 +85,21 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-static void quote(std::string *buf, const char *s) {
-	char tmp[strlen(s) * 8 + 1];
-	char *out = tmp;
-
-	for (; *s != '\0'; s++) {
-		unsigned char ch = (unsigned char) *s;
+static void quote(std::string &buf, std::string const &s) {
+	for (size_t i = 0; i < s.size(); i++) {
+		unsigned char ch = s[i];
 
 		if (ch == '\\' || ch == '\"') {
-			*out++ = '\\';
-			*out++ = ch;
+			buf.push_back('\\');
+			buf.push_back(ch);
 		} else if (ch < ' ') {
-			sprintf(out, "\\u%04x", ch);
-			out = out + strlen(out);
+			char tmp[7];
+			sprintf(tmp, "\\u%04x", ch);
+			buf.append(std::string(tmp));
 		} else {
-			*out++ = ch;
+			buf.push_back(ch);
 		}
 	}
-
-	*out = '\0';
-	buf->append(tmp, strlen(tmp));
 }
 
 void aprintf(std::string *buf, const char *format, ...) {
@@ -166,7 +161,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 		out.append("\t\t{\n");
 
 		out.append("\t\t\t\"layer\": \"");
-		quote(&out, layer.first.c_str());
+		quote(out, layer.first.c_str());
 		out.append("\",\n");
 
 		out.append("\t\t\t\"count\": ");
@@ -181,7 +176,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 		}
 
 		out.append("\t\t\t\"geometry\": \"");
-		quote(&out, geomtype.c_str());
+		quote(out, geomtype.c_str());
 		out.append("\",\n");
 
 		size_t attrib_count = layer.second.file_keys.size();
@@ -208,7 +203,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 			out.append("\t\t\t\t{\n");
 
 			out.append("\t\t\t\t\t\"attribute\": \"");
-			quote(&out, attribute.first.c_str());
+			quote(out, attribute.first.c_str());
 			out.append("\",\n");
 
 			size_t val_count = attribute.second.sample_values.size();
@@ -238,7 +233,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 			}
 
 			out.append("\t\t\t\t\t\"type\": \"");
-			quote(&out, type_str.c_str());
+			quote(out, type_str.c_str());
 			out.append("\",\n");
 
 			out.append("\t\t\t\t\t\"values\": [\n");
@@ -261,7 +256,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 
 					if (trunc.size() == value.string.size()) {
 						out.append("\t\t\t\t\t\t\"");
-						quote(&out, value.string.c_str());
+						quote(out, value.string.c_str());
 						out.append("\"");
 					}
 				}
@@ -427,7 +422,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 			auto fk = layermap.find(lnames[i]);
 			aprintf(&buf, "{ \"id\": \"");
-			quote(&buf, lnames[i].c_str());
+			quote(buf, lnames[i]);
 			aprintf(&buf, "\", \"description\": \"\", \"minzoom\": %d, \"maxzoom\": %d, \"fields\": {", fk->second.minzoom, fk->second.maxzoom);
 
 			bool first = true;
@@ -439,7 +434,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				}
 
 				aprintf(&buf, "\"");
-				quote(&buf, j->first.c_str());
+				quote(buf, j->first.c_str());
 
 				int type = 0;
 				for (auto s : j->second.sample_values) {
@@ -490,8 +485,8 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				std::string key, value;
 
-				quote(&key, (const char *) sqlite3_column_text(stmt, 0));
-				quote(&value, (const char *) sqlite3_column_text(stmt, 1));
+				quote(key, (const char *) sqlite3_column_text(stmt, 0));
+				quote(value, (const char *) sqlite3_column_text(stmt, 1));
 
 				if (!first) {
 					fprintf(fp, ",\n");
@@ -536,6 +531,10 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 
 	for (size_t i = 0; i < maps.size(); i++) {
 		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
+			if (map->second.points + map->second.lines + map->second.polygons == 0) {
+				continue;
+			}
+
 			std::string layername = map->first;
 			if (trunc) {
 				layername = truncate16(layername, 256);

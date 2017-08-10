@@ -4,7 +4,10 @@
 #include <vector>
 #include <map>
 #include <zlib.h>
+#include <errno.h>
+#include <limits.h>
 #include "mvt.hpp"
+#include "geometry.hpp"
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
@@ -415,4 +418,70 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 
 	feature.tags.push_back(ko);
 	feature.tags.push_back(vo);
+}
+
+static int is_integer(const char *s, long long *v) {
+	errno = 0;
+	char *endptr;
+
+	*v = strtoll(s, &endptr, 0);
+	if (*v == 0 && errno != 0) {
+		return 0;
+	}
+	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE)) {
+		return 0;
+	}
+	if (*endptr != '\0') {
+		// Special case: If it is an integer followed by .0000 or similar,
+		// it is still an integer
+
+		if (*endptr != '.') {
+			return 0;
+		}
+		endptr++;
+		for (; *endptr != '\0'; endptr++) {
+			if (*endptr != '0') {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	return 1;
+}
+
+mvt_value stringified_to_mvt_value(int type, const char *s) {
+	mvt_value tv;
+
+	if (type == mvt_double) {
+		long long v;
+		if (is_integer(s, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			double d = atof(s);
+
+			if (d == (float) d) {
+				tv.type = mvt_float;
+				tv.numeric_value.float_value = d;
+			} else {
+				tv.type = mvt_double;
+				tv.numeric_value.double_value = d;
+			}
+		}
+	} else if (type == mvt_bool) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = (s[0] == 't');
+	} else {
+		tv.type = mvt_string;
+		tv.string_value = s;
+	}
+
+	return tv;
 }

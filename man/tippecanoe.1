@@ -285,6 +285,64 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .IP \(bu 2
 \fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
 .RE
+.SS Filters
+.RS
+.IP \(bu 2
+\fB\fC\-C\fR \fIcommand\fP or \fB\fC\-\-prefilter=\fR\fIcommand\fP: Specify a shell filter command to be run at the start of assembling each tile
+.IP \(bu 2
+\fB\fC\-c\fR \fIcommand\fP or \fB\fC\-\-postfilter=\fR\fIcommand\fP: Specify a shell filter command to be run at the end of assembling each tile
+.RE
+.PP
+The pre\- and post\-filter commands allow you to do optional filtering or transformation on the features of each tile
+as it is created. They are shell commands, run with the zoom level, X, and Y as the \fB\fC$1\fR, \fB\fC$2\fR, and \fB\fC$3\fR arguments.
+Future versions of Tippecanoe may add additional arguments for more context.
+.PP
+The features are provided to the filter
+as a series of newline\-delimited GeoJSON objects on the standard input, and \fB\fCtippecanoe\fR expects to read another
+set of GeoJSON features from the filter's standard output.
+.PP
+The prefilter receives the features at the highest available resolution, before line simplification,
+polygon topology repair, gamma calculation, dynamic feature dropping, or other internal processing.
+The postfilter receives the features at tile resolution, after simplification, cleaning, and dropping.
+.PP
+The layer name is provided as part of the \fB\fCtippecanoe\fR element of the feature and must be passed through
+to keep the feature in its correct layer. In the case of the prefilter, the \fB\fCtippecanoe\fR element may also
+contain \fB\fCindex\fR, \fB\fCsequence\fR, and \fB\fCextent\fR elements, which must be passed through for internal operations like
+\fB\fC\-\-drop\-densest\-as\-needed\fR, \fB\fC\-\-drop\-smallest\-as\-needed\fR, and \fB\fC\-\-preserve\-input\-order\fR to work.
+.SS Examples:
+.RS
+.IP \(bu 2
+Make a tileset of the Natural Earth countries to zoom level 5, and also copy the GeoJSON features
+to files in a \fB\fCtiles/z/x/y.geojson\fR directory hierarchy.
+.RE
+.PP
+.RS
+.nf
+tippecanoe \-o countries.mbtiles \-z5 \-C 'mkdir \-p tiles/$1/$2; tee tiles/$1/$2/$3.geojson' ne_10m_admin_0_countries.json
+.fi
+.RE
+.RS
+.IP \(bu 2
+Make a tileset of the Natural Earth countries to zoom level 5, but including only those tiles that
+intersect the bounding box of Germany \[la]https://www.flickr.com/places/info/23424829\[ra]\&.
+(The \fB\fClimit\-tiles\-to\-bbox\fR script is in the Tippecanoe source directory \[la]filters/limit-tiles-to-bbox\[ra]\&.)
+.RE
+.PP
+.RS
+.nf
+tippecanoe \-o countries.mbtiles \-z5 \-C './filters/limit\-tiles\-to\-bbox 5.8662 47.2702 15.0421 55.0581 $*' ne_10m_admin_0_countries.json
+.fi
+.RE
+.RS
+.IP \(bu 2
+Make a tileset of TIGER roads in Tippecanoe County, leaving out all but primary and secondary roads (as classified by TIGER \[la]https://www.census.gov/geo/reference/mtfcc.html\[ra]) below zoom level 11.
+.RE
+.PP
+.RS
+.nf
+tippecanoe \-o roads.mbtiles \-c 'if [ $1 \-lt 11 ]; then grep "\\"MTFCC\\": \\"S1[12]00\\""; else cat; fi' tl_2016_18157_roads.json
+.fi
+.RE
 .SH Environment
 .PP
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
@@ -599,6 +657,8 @@ resolutions.
 \fB\fC\-Z\fR \fIminzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIminzoom\fP: Specify the lowest zoom level to decode from the tileset
 .IP \(bu 2
 \fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
+.IP \(bu 2
+\fB\fC\-c\fR or \fB\fC\-\-tag\-layer\-and\-zoom\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
 .IP \(bu 2
 \fB\fC\-f\fR or \fB\fC\-\-force\fR: Decode tiles even if polygon ring order or closure problems are detected
 .RE
