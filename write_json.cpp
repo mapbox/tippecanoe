@@ -24,6 +24,75 @@ struct lonlat {
 	}
 };
 
+void layer_to_geojson(FILE *fp, vtzero::layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
+	bool first = true;
+	for (auto feat = layer.begin(); feat != layer.end(); ++feat) {
+		if (comma && !first) {
+			fprintf(fp, ",\n");
+		}
+
+		fprintf(fp, "{ \"type\": \"Feature\"");
+
+		if ((*feat).has_id()) {
+			fprintf(fp, ", \"id\": %llu", (*feat).id());
+		}
+
+		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
+			bool need_comma = false;
+
+			fprintf(fp, ", \"tippecanoe\": { ");
+
+			if (name) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"layer\": ");
+				fprintq(fp, std::string{layer.name()}.c_str());
+				need_comma = true;
+			}
+
+			if (zoom) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"minzoom\": %u, ", z);
+				fprintf(fp, "\"maxzoom\": %u", z);
+				need_comma = true;
+			}
+
+			if (index != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"index\": %llu", index);
+				need_comma = true;
+			}
+
+			if (sequence != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"sequence\": %lld", sequence);
+				need_comma = true;
+			}
+
+			if (extent != 0) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"extent\": %lld", extent);
+				need_comma = true;
+			}
+
+			fprintf(fp, " }");
+		}
+
+		fprintf(fp, ", \"properties\": { ");
+
+		first = false;
+	}
+}
+
 void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];

@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <protozero/pbf_reader.hpp>
+#include <vtzero/reader.hpp>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
@@ -24,18 +25,21 @@ int maxzoom = 32;
 bool force = false;
 
 void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
-	mvt_tile tile;
-	bool was_compressed;
+	std::string data;
+	bool was_compressed = false;
 
-	try {
-		if (!tile.decode(message, was_compressed)) {
+	if (is_compressed(message)) {
+		if (decompress(message, data) == 0) {
 			fprintf(stderr, "Couldn't parse tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}
-	} catch (protozero::unknown_pbf_wire_type_exception e) {
-		fprintf(stderr, "PBF decoding error in tile %d/%u/%u\n", z, x, y);
-		exit(EXIT_FAILURE);
+
+		was_compressed = true;
+	} else {
+		data = message;
 	}
+
+	vtzero::vector_tile tile{data};
 
 	if (!pipeline) {
 		printf("{ \"type\": \"FeatureCollection\"");
@@ -58,10 +62,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	}
 
 	bool first_layer = true;
-	for (size_t l = 0; l < tile.layers.size(); l++) {
-		mvt_layer &layer = tile.layers[l];
-
-		if (to_decode.size() != 0 && !to_decode.count(layer.name)) {
+	for (auto layer = tile.begin(); layer != tile.end(); ++layer) {
+		if (to_decode.size() != 0 && !to_decode.count(std::string{(*layer).name()})) {
 			continue;
 		}
 
@@ -73,8 +75,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 
 				printf("{ \"type\": \"FeatureCollection\"");
 				printf(", \"properties\": { \"layer\": ");
-				fprintq(stdout, layer.name.c_str());
-				printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
+				fprintq(stdout, std::string{(*layer).name()}.c_str());
+				printf(", \"version\": %d, \"extent\": %u", (*layer).version(), (*layer).extent());
 				printf(" }");
 				printf(", \"features\": [\n");
 
@@ -82,7 +84,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 			}
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
+		layer_to_geojson(stdout, *layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
 
 		if (!pipeline) {
 			if (describe) {
