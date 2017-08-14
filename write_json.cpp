@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <sstream>
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "mvt.hpp"
@@ -23,6 +24,59 @@ struct lonlat {
 		this->y = ny;
 	}
 };
+
+struct print_value {
+	FILE *fp;
+
+	template <typename T>
+	void operator()(const T &value) const {
+		std::ostringstream oss;
+		oss << value;
+		fprintf(fp, "%s", oss.str().c_str());
+	}
+
+	void operator()(const vtzero::data_view &value) const {
+		std::ostringstream oss;
+		oss << '"';
+		oss.write(value.data(), value.size());
+		oss << '"';
+		fprintf(fp, "%s", oss.str().c_str());
+	}
+};
+
+/*
+			if (val.type == mvt_string) {
+				fprintq(fp, val.string_value.c_str());
+			} else if (val.type == mvt_int) {
+				fprintq(fp, key);
+				fprintf(fp, ": %lld", (long long) val.numeric_value.int_value);
+			} else if (val.type == mvt_double) {
+				fprintq(fp, key);
+				double v = val.numeric_value.double_value;
+				if (v == (long long) v) {
+					fprintf(fp, ": %lld", (long long) v);
+				} else {
+					fprintf(fp, ": %g", v);
+				}
+			} else if (val.type == mvt_float) {
+				fprintq(fp, key);
+				double v = val.numeric_value.float_value;
+				if (v == (long long) v) {
+					fprintf(fp, ": %lld", (long long) v);
+				} else {
+					fprintf(fp, ": %g", v);
+				}
+			} else if (val.type == mvt_sint) {
+				fprintq(fp, key);
+				fprintf(fp, ": %lld", (long long) val.numeric_value.sint_value);
+			} else if (val.type == mvt_uint) {
+				fprintq(fp, key);
+				fprintf(fp, ": %lld", (long long) val.numeric_value.uint_value);
+			} else if (val.type == mvt_bool) {
+				fprintq(fp, key);
+				fprintf(fp, ": %s", val.numeric_value.bool_value ? "true" : "false");
+			}
+*/
 
 void layer_to_geojson(FILE *fp, vtzero::layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
 	bool first = true;
@@ -88,6 +142,25 @@ void layer_to_geojson(FILE *fp, vtzero::layer const &layer, unsigned z, unsigned
 		}
 
 		fprintf(fp, ", \"properties\": { ");
+
+		bool first_tag = true;
+		for (auto tag : (*feat).tags(layer)) {
+			if (!first_tag) {
+				fprintf(fp, ", ");
+			}
+			first_tag = false;
+
+			std::string keystr = std::string(tag.key().data(), tag.key().size());
+			const char *key = keystr.c_str();
+			fprintq(fp, key);
+			fprintf(fp, ": ");
+
+			print_value pv;
+			pv.fp = fp;
+			vtzero::value_visit(pv, tag.value());
+		}
+
+		fprintf(fp, " }, \"geometry\": { ");
 
 		first = false;
 	}
