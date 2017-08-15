@@ -299,7 +299,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1) {
 	return out2;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -455,8 +455,12 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			aprintf(&buf, "} }");
 		}
 
-		aprintf(&buf, " ],");
-		aprintf(&buf, "\"tilestats\": %s", tilestats(layermap).c_str());
+		aprintf(&buf, " ]");
+
+		if (do_tilestats) {
+			aprintf(&buf, ",\"tilestats\": %s", tilestats(layermap).c_str());
+		}
+
 		aprintf(&buf, "}");
 
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());

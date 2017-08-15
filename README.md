@@ -225,6 +225,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
  * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+ * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
 
 ### Temporary storage
 
@@ -463,6 +464,7 @@ The options are:
  * `-i` or `--if-matched`: Only include features that matched the CSV.
  * `-pk` or `--no-tile-size-limit`: Don't skip tiles larger than 500K.
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+ * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
  * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution* or `--attribution=`*attribution*: Set the attribution string.

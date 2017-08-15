@@ -271,6 +271,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't limit tiles to 500K bytes
 .IP \(bu 2
 \fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+.IP \(bu 2
+\fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
 .RE
 .SS Temporary storage
 .RS
@@ -542,6 +544,8 @@ The options are:
 \fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't skip tiles larger than 500K.
 .IP \(bu 2
 \fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+.IP \(bu 2
+\fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
 .IP \(bu 2
 \fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
 .IP \(bu 2

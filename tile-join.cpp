@@ -32,6 +32,7 @@ std::string dequote(std::string s);
 
 int pk = false;
 int pC = false;
+int pg = false;
 size_t CPUS;
 int quiet = false;
 
@@ -1035,6 +1036,7 @@ int main(int argc, char **argv) {
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
+		{"no-tile-stats", no_argument, &pg, 1},
 
 		{0, 0, 0, 0},
 	};
@@ -1092,6 +1094,8 @@ int main(int argc, char **argv) {
 				pk = true;
 			} else if (strcmp(optarg, "C") == 0) {
 				pC = true;
+			} else if (strcmp(optarg, "g") == 0) {
+				pg = true;
 			} else {
 				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
 				exit(EXIT_FAILURE);
@@ -1194,7 +1198,7 @@ int main(int argc, char **argv) {
 		name = set_name;
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
