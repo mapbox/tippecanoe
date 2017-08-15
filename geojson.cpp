@@ -38,6 +38,8 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
+int serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox);
+
 static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
 	parse_geometry(t, j, geom, op, fname, line, feature);
 
@@ -291,11 +293,44 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		dv = fix_polygon(dv);
 	}
 
+	serial_feature sf;
+	sf.layer = layer;
+	sf.segment = segment;
+	sf.t = mb_geometry[t];
+	sf.has_id = has_id;
+	sf.id = id_value;
+	sf.has_tippecanoe_minzoom = (tippecanoe_minzoom != -1);
+	sf.tippecanoe_minzoom = tippecanoe_minzoom;
+	sf.has_tippecanoe_maxzoom = (tippecanoe_maxzoom != -1);
+	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
+	sf.geometry = dv;
+	sf.m = m;
+	sf.feature_minzoom = 0;  // Will be filled in during index merging
+	sf.seq = *layer_seq;
+
+	for (size_t i = 0; i < 4; i++) {
+		sf.bbox[i] = bbox[i];
+	}
+
+	for (size_t i = 0; i < m; i++) {
+		sf.full_keys.push_back(metakey[i]);
+
+		serial_val sv;
+		sv.type = metatype[i];
+		sv.s = metaval[i];
+
+		sf.full_values.push_back(sv);
+	}
+
+	return serialize_feature(geomfile, &sf, geompos, fname, initial_x, initial_y, want_dist, filters);
+}
+
+int serialize_feature(FILE *geomfile, serial_feature &sf, long long *geompos, const char *fname, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox) {
 	if (want_dist) {
 		std::vector<unsigned long long> locs;
-		for (size_t i = 0; i < dv.size(); i++) {
-			if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
-				locs.push_back(encode(dv[i].x << geometry_scale, dv[i].y << geometry_scale));
+		for (size_t i = 0; i < sf.geometry.size(); i++) {
+			if (sf.geometry[i].op == VT_MOVETO || sf.geometry[i].op == VT_LINETO) {
+				locs.push_back(encode(sf.geometry[i].x << geometry_scale, sf.geometry[i].y << geometry_scale));
 			}
 		}
 		std::sort(locs.begin(), locs.end());
@@ -320,15 +355,15 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 	bool inline_meta = true;
 	// Don't inline metadata for features that will span several tiles at maxzoom
-	if (g > 0 && (bbox[2] < bbox[0] || bbox[3] < bbox[1])) {
-		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
+		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
 	}
-	if (bbox[2] - bbox[0] > (2LL << (32 - maxzoom)) || bbox[3] - bbox[1] > (2LL << (32 - maxzoom))) {
+	if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - maxzoom))) {
 		inline_meta = false;
 
 		if (prevent[P_CLIPPING]) {
 			static volatile long long warned = 0;
-			long long extent = ((bbox[2] - bbox[0]) / ((1LL << (32 - maxzoom)) + 1)) * ((bbox[3] - bbox[1]) / ((1LL << (32 - maxzoom)) + 1));
+			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - maxzoom)) + 1));
 			if (extent > warned) {
 				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", fname, line, extent);
 				warned = extent;
@@ -344,58 +379,42 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	double extent = 0;
 	if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 		if (mb_geometry[t] == VT_POLYGON) {
-			for (size_t i = 0; i < dv.size(); i++) {
-				if (dv[i].op == VT_MOVETO) {
+			for (size_t i = 0; i < sf.geometry.size(); i++) {
+				if (sf.geometry[i].op == VT_MOVETO) {
 					size_t j;
-					for (j = i + 1; j < dv.size(); j++) {
-						if (dv[j].op != VT_LINETO) {
+					for (j = i + 1; j < sf.geometry.size(); j++) {
+						if (sf.geometry[j].op != VT_LINETO) {
 							break;
 						}
 					}
 
-					extent += get_area(dv, i, j);
+					extent += get_area(sf.geometry, i, j);
 					i = j - 1;
 				}
 			}
 		} else if (mb_geometry[t] == VT_LINE) {
-			for (size_t i = 1; i < dv.size(); i++) {
-				if (dv[i].op == VT_LINETO) {
-					double xd = dv[i].x - dv[i - 1].x;
-					double yd = dv[i].y - dv[i - 1].y;
+			for (size_t i = 1; i < sf.geometry.size(); i++) {
+				if (sf.geometry[i].op == VT_LINETO) {
+					double xd = sf.geometry[i].x - sf.geometry[i - 1].x;
+					double yd = sf.geometry[i].y - sf.geometry[i - 1].y;
 					extent += sqrt(xd * xd + yd * yd);
 				}
 			}
 		}
 	}
 
-	long long geomstart = *geompos;
-	long long bbox_index;
-
-	serial_feature sf;
-	sf.layer = layer;
-	sf.segment = segment;
-	sf.t = mb_geometry[t];
-	sf.has_id = has_id;
-	sf.id = id_value;
-	sf.has_tippecanoe_minzoom = (tippecanoe_minzoom != -1);
-	sf.tippecanoe_minzoom = tippecanoe_minzoom;
-	sf.has_tippecanoe_maxzoom = (tippecanoe_maxzoom != -1);
-	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
-	sf.geometry = dv;
-	sf.m = m;
-	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.extent = (long long) extent;
 
-	if (prevent[P_INPUT_ORDER]) {
-		sf.seq = *layer_seq;
-	} else {
+	if (!prevent[P_INPUT_ORDER]) {
 		sf.seq = 0;
 	}
 
+	long long bbox_index;
+
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
-	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
-	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
+	long long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
+	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
 	bbox_index = encode(midx, midy);
 
 	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || uses_gamma) {
@@ -418,6 +437,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
+	long long geomstart = *geompos;
 	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale, false);
 
 	struct index index;
@@ -432,13 +452,13 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	*indexpos += sizeof(struct index);
 
 	for (size_t i = 0; i < 2; i++) {
-		if (bbox[i] < file_bbox[i]) {
-			file_bbox[i] = bbox[i];
+		if (sf.bbox[i] < file_bbox[i]) {
+			file_bbox[i] = sf.bbox[i];
 		}
 	}
 	for (size_t i = 2; i < 4; i++) {
-		if (bbox[i] > file_bbox[i]) {
-			file_bbox[i] = bbox[i];
+		if (sf.bbox[i] > file_bbox[i]) {
+			file_bbox[i] = sf.bbox[i];
 		}
 	}
 
