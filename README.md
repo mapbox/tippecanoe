@@ -441,35 +441,48 @@ The name is [a joking reference](http://en.wikipedia.org/wiki/Tippecanoe_and_Tyl
 tile-join
 =========
 
-Tile-join is a tool for joining new attributes from a CSV file to features
-that have already been tiled with tippecanoe. It reads the tiles from an
+Tile-join is a tool for copying and merging vector mbtiles files and for
+joining new attributes from a CSV file to existing features in them.
+
+It reads the tiles from an
 existing .mbtiles file or a directory of tiles, matches them against the
-records of the CSV, and writes out a new tileset.
+records of the CSV (if one is specified), and writes out a new tileset.
 
 If you specify multiple source mbtiles files or source directories of tiles,
 all the sources are read and their combined contents are written to the new
 mbtiles output. If they define the same layers or the same tiles, the layers
 or tiles are merged.
 
-You can use the `-e` flag to output a directory of tiles rather than a
-.mbtiles file.
-
 The options are:
+
+### Output tileset
 
  * `-o` *out.mbtiles* or `--output=`*out.mbtiles*: Write the new tiles to the specified .mbtiles file.
  * `-e` *directory* or `--output-to-directory=`*directory*: Write the new tiles to the specified directory instead of to an mbtiles file.
  * `-f` or `--force`: Remove *out.mbtiles* if it already exists.
- * `-c` *match*`.csv` or `--csv=`*match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
- * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
- * `-i` or `--if-matched`: Only include features that matched the CSV.
- * `-pk` or `--no-tile-size-limit`: Don't skip tiles larger than 500K.
- * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
- * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
+
+### Tileset description and attribution
+
  * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
  * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution* or `--attribution=`*attribution*: Set the attribution string.
  * `-n` *name* or `--name=`*name*: Set the tileset name.
  * `-N` *description* or `--description=`*description*: Set the tileset description.
+
+### Merging attributes from a CSV file
+
+ * `-c` *match*`.csv` or `--csv=`*match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+
+### Filtering features and feature attributes
+
+ * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * `-i` or `--if-matched`: Only include features that matched the CSV.
+
+### Setting or disabling tile size limits
+
+ * `-pk` or `--no-tile-size-limit`: Don't skip tiles larger than 500K.
+ * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+ * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
