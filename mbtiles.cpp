@@ -416,7 +416,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		size_t elements = 100;
 		std::string buf;
 
-		while (1) {
+		{
 			buf = "{";
 			aprintf(&buf, "\"vector_layers\": [ ");
 
@@ -472,13 +472,6 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			}
 
 			aprintf(&buf, "}");
-
-			if (buf.size() >= 60 * 1024 && elements > 0) {
-				elements = elements / 2;
-				continue;
-			} else {
-				break;
-			}
 		}
 
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
