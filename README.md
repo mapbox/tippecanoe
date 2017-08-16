@@ -469,6 +469,11 @@ The options are:
  * `-n` *name* or `--name=`*name*: Set the tileset name.
  * `-N` *description* or `--description=`*description*: Set the tileset description.
 
+### Zoom levels
+
+ * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Don't copy tiles from higher zoom levels than the specified zoom
+ * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Don't copy tiles from lower zoom levels than the specified zoom
+
 ### Merging attributes from a CSV file
 
  * `-c` *match*`.csv` or `--csv=`*match*`.csv`: Use *match*`.csv` as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
