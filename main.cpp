@@ -2000,7 +2000,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 	}
 
-	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description);
+	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS]);
 
 	return ret;
 }
@@ -2176,6 +2176,7 @@ int main(int argc, char **argv) {
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
+		{"no-tile-stats", no_argument, &prevent[P_TILE_STATS], 1},
 
 		{"Temporary storage", 0, 0, 0},
 		{"temporary-directory", required_argument, 0, 't'},
