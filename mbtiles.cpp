@@ -1,8 +1,3 @@
-// for vasprintf() on Linux
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,21 +95,6 @@ static void quote(std::string &buf, std::string const &s) {
 			buf.push_back(ch);
 		}
 	}
-}
-
-void aprintf(std::string *buf, const char *format, ...) {
-	va_list ap;
-	char *tmp;
-
-	va_start(ap, format);
-	if (vasprintf(&tmp, format, ap) < 0) {
-		fprintf(stderr, "memory allocation failure\n");
-		exit(EXIT_FAILURE);
-	}
-	va_end(ap);
-
-	buf->append(tmp, strlen(tmp));
-	free(tmp);
 }
 
 bool type_and_string::operator<(const type_and_string &o) const {

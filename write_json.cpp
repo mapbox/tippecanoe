@@ -7,6 +7,7 @@
 #include "geometry.hpp"
 #include "mvt.hpp"
 #include "write_json.hpp"
+#include "text.hpp"
 
 struct lonlat {
 	int op;
@@ -25,49 +26,74 @@ struct lonlat {
 };
 
 void print_val(FILE *fp, mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
+	std::string s;
+	stringify_val(s, feature, layer, val, vo);
+	fprintf(fp, "%s", s.c_str());
+}
+
+static void quote(std::string &buf, std::string const &s) {
+	buf.push_back('"');
+	for (size_t i = 0; i < s.size(); i++) {
+		unsigned char ch = s[i];
+
+		if (ch == '\\' || ch == '\"') {
+			buf.push_back('\\');
+			buf.push_back(ch);
+		} else if (ch < ' ') {
+			char tmp[7];
+			sprintf(tmp, "\\u%04x", ch);
+			buf.append(std::string(tmp));
+		} else {
+			buf.push_back(ch);
+		}
+	}
+	buf.push_back('"');
+}
+
+void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
 	if (val.type == mvt_string) {
-		fprintq(fp, val.string_value.c_str());
+		quote(out, val.string_value);
 	} else if (val.type == mvt_int) {
-		fprintf(fp, "%lld", (long long) val.numeric_value.int_value);
+		out.append(std::to_string((long long) val.numeric_value.int_value));
 	} else if (val.type == mvt_double) {
 		double v = val.numeric_value.double_value;
 		if (v == (long long) v) {
-			fprintf(fp, "%lld", (long long) v);
+			out.append(std::to_string((long long) v));
 		} else {
-			fprintf(fp, "%g", v);
+			aprintf(&out, "%g", v);
 		}
 	} else if (val.type == mvt_float) {
 		double v = val.numeric_value.float_value;
 		if (v == (long long) v) {
-			fprintf(fp, "%lld", (long long) v);
+			out.append(std::to_string((long long) v));
 		} else {
-			fprintf(fp, "%g", v);
+			aprintf(&out, "%g", v);
 		}
 	} else if (val.type == mvt_sint) {
-		fprintf(fp, "%lld", (long long) val.numeric_value.sint_value);
+		out.append(std::to_string((long long) val.numeric_value.sint_value));
 	} else if (val.type == mvt_uint) {
-		fprintf(fp, "%lld", (long long) val.numeric_value.uint_value);
+		out.append(std::to_string((long long) val.numeric_value.uint_value));
 	} else if (val.type == mvt_bool) {
-		fprintf(fp, "%s", val.numeric_value.bool_value ? "true" : "false");
+		out.append(val.numeric_value.bool_value ? "true" : "false");
 	} else if (val.type == mvt_list) {
-		fprintf(fp, "[");
+		out.push_back('[');
 		for (size_t i = 0; i < val.list_value.size(); i++) {
 			if (i != 0) {
-				fprintf(fp, ",");
+				out.push_back(',');
 			}
 			if (val.list_value[i] >= vo || val.list_value[i] >= layer.values.size()) {
 				fprintf(stderr, "Invalid value reference in list (%lu from %lu within %lu)\n", val.list_value[i], vo,
 					layer.values.size());
 				exit(EXIT_FAILURE);
 			}
-			print_val(fp, feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
+			stringify_val(out, feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
 		}
-		fprintf(fp, "]");
+		out.push_back(']');
 	} else if (val.type == mvt_hash) {
-		fprintf(fp, "{");
+		out.push_back('{');
 		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
 			if (i != 0) {
-				fprintf(fp, ",");
+				out.push_back(',');
 			}
 			if (val.list_value[i] >= layer.keys.size()) {
 				fprintf(stderr, "Invalid key reference in hash (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.keys.size());
@@ -78,13 +104,13 @@ void print_val(FILE *fp, mvt_feature const &feature, mvt_layer const &layer, mvt
 					vo, layer.values.size());
 				exit(EXIT_FAILURE);
 			}
-			fprintq(fp, layer.keys[val.list_value[i]].c_str());
-			fprintf(fp, ":");
-			print_val(fp, feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
+			quote(out, layer.keys[val.list_value[i]]);
+			out.push_back(':');
+			stringify_val(out, feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
 		}
-		fprintf(fp, "}");
+		out.push_back('}');
 	} else if (val.type == mvt_null) {
-		fprintf(fp, "null");
+		out.append("null");
 	}
 }
 

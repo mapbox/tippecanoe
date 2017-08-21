@@ -22,6 +22,8 @@
 #include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "dirtiles.hpp"
+#include "write_json.hpp"
+#include "text.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -171,6 +173,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					type = mvt_double;
 				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
 					type = mvt_hash;
+					stringify_val(value, feat, layer, val, feat.tags[t + 1]);
 				} else {
 					continue;
 				}
@@ -250,7 +253,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					auto fa = attributes.find(k);
 
 					if (fa != attributes.end()) {
-						outlayer.tag(outfeature, k, fa->second.first);
+						if (fa->second.first.type == mvt_hash) {
+							copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
+						} else {
+							outlayer.tag(outfeature, k, fa->second.first);
+						}
+
 						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
 						attributes.erase(fa);
 					}

@@ -1,5 +1,11 @@
+// for vasprintf() on Linux
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "text.hpp"
 #include <stdio.h>
+#include <stdlib.h>
 
 /**
  * Returns an empty string if `s` is valid utf8;
@@ -121,4 +127,19 @@ std::string truncate16(std::string const &s, size_t runes) {
 	}
 
 	return std::string(s, 0, lastgood - start);
+}
+
+void aprintf(std::string *buf, const char *format, ...) {
+	va_list ap;
+	char *tmp;
+
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
+
+	buf->append(tmp, strlen(tmp));
+	free(tmp);
 }

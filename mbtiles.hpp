@@ -43,8 +43,6 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 void mbtiles_close(sqlite3 *outdb, const char *pgm);
 
-void aprintf(std::string *buf, const char *format, ...);
-
 std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps);
 std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry> > const &maps, bool trunc);
 
