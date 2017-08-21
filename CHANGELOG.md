@@ -1,3 +1,201 @@
+## 1.22.1
+
+* Fix tilestats generation when long string attribute values are elided
+* Add option not to produce tilestats
+* Add tile-join options to select zoom levels to copy
+
+## 1.22.0
+
+* Add options to filter each tile's contents through a shell pipeline
+
+## 1.21.0
+
+* Generate layer, feature, and attribute statistics as part of tileset metadata
+
+## 1.20.1
+
+* Close mbtiles file properly when there are no valid features in the input
+
+## 1.20.0
+
+* Add long options to tippecanoe-decode and tile-join. Add --quiet to tile-join.
+
+## 1.19.3
+
+* Upgrade protozero to version 1.5.2
+
+## 1.19.2
+
+* Ignore UTF-8 byte order mark if present
+
+## 1.19.1
+
+* Add an option to increase maxzoom if features are still being dropped
+
+## 1.19.0
+
+* Tile-join can merge and create directories, not only mbtiles
+* Maxzoom guessing (-zg) takes into account resolution within each feature
+
+## 1.18.2
+
+* Fix crash with very long (>128K) attribute values
+
+## 1.18.1
+
+* Only warn once about invalid polygons in tippecanoe-decode
+
+## 1.18.0
+
+* Fix compression of tiles in tile-join
+* Calculate the tileset bounding box in tile-join from the tile boundaries
+
+## 1.17.7
+
+* Enforce polygon winding and closure rules in tippecanoe-decode
+
+## 1.17.6
+
+* Add tile-join options to set name, attribution, description
+
+## 1.17.5
+
+* Preserve the tileset names from the source mbtiles in tile-join
+
+## 1.17.4
+
+* Fix RFC 8142 support: Don't try to split *all* memory mapped files
+
+## 1.17.3
+
+* Support RFC 8142 GeoJSON text sequences
+
+## 1.17.2
+
+* Organize usage output the same way as in the README
+
+## 1.17.1
+
+* Add -T option to coerce the types of feature attributes
+
+## 1.17.0
+
+* Add -zg option to guess an appropriate maxzoom
+
+## 1.16.17
+
+* Clean up JSON parsing at the end of each FeatureCollection
+  to avoid running out of memory
+
+## 1.16.16
+
+* Add tile-join options to include or exclude specific layers
+
+## 1.16.15
+
+* Add --output-to-directory and --no-tile-compression options
+
+## 1.16.14
+
+* Add --description option for mbtiles metadata
+* Clean up some utility functions
+
+## 1.16.13
+
+* Add --detect-longitude-wraparound option
+
+## 1.16.12
+
+* Stop processing higher zooms when a feature reaches its explicit maxzoom tag
+
+## 1.16.11
+
+* Remove polygon splitting, since polygon cleaning is now fast enough
+
+## 1.16.10
+
+* Add a tippecanoe-decode option to specify layer names
+
+## 1.16.9
+
+* Clean up layer name handling to fix layer merging crash
+
+## 1.16.8
+
+* Fix some code that could sometimes try to divide by zero
+* Add check for $TIPPECANOE_MAX_THREADS environmental variable
+
+## 1.16.7
+
+* Fix area of placeholders for degenerate multipolygons
+
+## 1.16.6
+
+* Upgrade Wagyu to 0.3.0; downgrade C++ requirement to C++ 11
+
+## 1.16.5
+
+* Add -z and -Z options to tippecanoe-decode
+
+## 1.16.4
+
+* Use Wagyu's quick_lr_clip() instead of a separate implementation
+
+## 1.16.3
+
+* Upgrade Wagyu to bfbf2893
+
+## 1.16.2
+
+* Associate attributes with the right layer when explicitly tagged
+
+## 1.16.1
+
+* Choose a deeper starting tile than 0/0/0 if there is one that contains
+  all the features
+
+## 1.16.0
+
+* Switch from Clipper to Wagyu for polygon topology correction
+
+## 1.15.4
+
+* Dot-dropping with -r/-B doesn't apply if there is a per-feature minzoom tag
+
+## 1.15.3
+
+* Round coordinates in low-zoom grid math instead of truncating
+
+## 1.15.2
+
+* Add --grid-low-zooms option to snap low-zoom features to the tile grid
+
+## 1.15.1
+
+* Stop --drop-smallest-as-needed from always dropping all points
+
+## 1.15.0
+
+* New strategies for making tiles smaller, with uniform behavior across
+  the whole zoom level: --increase-gamma-as-needed,
+  --drop-densest-as-needed, --drop-fraction-as-needed,
+  --drop-smallest-as-needed.
+* Option to specify the maximum tile size in bytes
+* Option to turn off tiny polygon reduction
+* Better error checking in JSON parsing
+
+## 1.14.4
+
+* Make -B/-r feature-dropping consistent between tiles and zoom levels
+
+## 1.14.3
+
+* Add --detect-shared-borders option for better polygon simplification
+
+## 1.14.2
+
+* Enforce that string feature attributes must be encoded as UTF-8
+
 ## 1.14.1
 
 * Whitespace after commas in tile-join .csv input is no longer significant

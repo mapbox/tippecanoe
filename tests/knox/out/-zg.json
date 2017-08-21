@@ -1,0 +1,1144 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-87.564090,38.490831,-87.251603,38.902199",
+"center": "-87.363281,38.685378,10",
+"description": "tests/knox/out/-zg.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 10, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 53,\"geometry\": \"LineString\",\"attributeCount\": 4,\"attributes\": [{\"attribute\": \"FULLNAME\",\"count\": 9,\"type\": \"string\",\"values\": [\"E Old US Hwy 150\",\"E US Hwy 50\",\"E US Hwy 50-150\",\"N US Hwy 41\",\"Old US Hwy 41\",\"US Hwy 150\",\"US Hwy 41\",\"US Hwy 41 S\",\"US Hwy 50\"]},{\"attribute\": \"LINEARID\",\"count\": 53,\"type\": \"string\",\"values\": [\"110170070259\",\"110170070260\",\"110170070261\",\"110170070271\",\"110170070272\",\"110170070276\",\"110170070277\",\"110170070318\",\"110170070320\",\"110170071138\",\"110170072467\",\"1104257570399\",\"1104257599171\",\"1104257610285\",\"1104257610358\",\"1104257616296\",\"1104257622329\",\"1104257624305\",\"1104257624535\",\"1104257624536\",\"1104257624538\",\"1104257624700\",\"1104257627422\",\"1104257627423\",\"1104257640853\",\"1104257690581\",\"1104469553886\",\"1104469613150\",\"1104469613492\",\"1104471568916\",\"1104471680885\",\"1104471685645\",\"1104471685646\",\"1104471685675\",\"1104471685676\",\"1104471686635\",\"1104471686636\",\"1104472002543\",\"1104485818173\",\"1104485818174\",\"1104485838817\",\"1104485841551\",\"1104485841552\",\"1104485841553\",\"1104485841554\",\"1104485841555\",\"1104485841556\",\"1104485841662\",\"1104485841663\",\"1104485841664\",\"1104485841665\",\"1104485841666\",\"1104485841667\"]},{\"attribute\": \"MTFCC\",\"count\": 2,\"type\": \"string\",\"values\": [\"S1200\",\"S1400\"]},{\"attribute\": \"RTTYP\",\"count\": 2,\"type\": \"string\",\"values\": [\"M\",\"U\"]}]}]}}",
+"maxzoom": "10",
+"minzoom": "0",
+"name": "tests/knox/out/-zg.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.822591 ], [ -87.451172, 38.959409 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.626953, 38.548165 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.626953, 38.548165 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.754083 ], [ -87.451172, 38.959409 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.754083 ], [ -87.451172, 38.959409 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.754083 ], [ -87.451172, 38.959409 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.754083 ], [ -87.451172, 38.959409 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.822591 ], [ -87.539062, 38.754083 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.754083 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.539062, 38.754083 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.539062, 38.754083 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.539062, 38.754083 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.626953, 38.548165 ], [ -87.539062, 38.754083 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.626953, 38.548165 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.275391, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.275391, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.788345 ], [ -87.451172, 38.925229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.451172, 38.856820 ], [ -87.451172, 38.891033 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.513788 ], [ -87.539062, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.513788 ], [ -87.539062, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.451172, 38.925229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.451172, 38.925229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.451172, 38.925229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.451172, 38.925229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.539062, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.788345 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.719805 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.513788 ], [ -87.495117, 38.719805 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.513788 ], [ -87.539062, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.319336, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.363281, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.363281, 38.685510 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.319336, 38.651198 ], [ -87.319336, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.319336, 38.651198 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 2, "x": 1, "y": 1 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.771216 ], [ -87.451172, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.451172, 38.839708 ], [ -87.451172, 38.873929 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.496594 ], [ -87.539062, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.496594 ], [ -87.539062, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.719805 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.517090, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.771216 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.517090, 38.702659 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.517090, 38.702659 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.517090, 38.668356 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.496594 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.583008, 38.496594 ], [ -87.517090, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.341309, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.341309, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.341309, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.668356 ], [ -87.319336, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.341309, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.341309, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.668356 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.668356 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.297363, 38.651198 ], [ -87.319336, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.297363, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.253418, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.253418, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 2, "y": 3 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.762650 ], [ -87.440186, 38.873929 ], [ -87.440186, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.451172, 38.839708 ], [ -87.451172, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.572021, 38.496594 ], [ -87.539062, 38.530979 ], [ -87.528076, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.572021, 38.496594 ], [ -87.539062, 38.530979 ], [ -87.528076, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.831150 ], [ -87.440186, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.831150 ], [ -87.440186, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.831150 ], [ -87.440186, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.451172, 38.831150 ], [ -87.440186, 38.908133 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.528076, 38.711233 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.528076, 38.711233 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.506104, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.762650 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.506104, 38.694085 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.506104, 38.694085 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.694085 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.694085 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.694085 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.702659 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.685510 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.517090, 38.668356 ], [ -87.495117, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.625454 ], [ -87.539062, 38.634036 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.495117, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.685510 ], [ -87.495117, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.685510 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.484131, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.676933 ], [ -87.484131, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.572021, 38.496594 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.651198 ], [ -87.495117, 38.685510 ], [ -87.495117, 38.702659 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.572021, 38.496594 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.616870 ], [ -87.517090, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.341309, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.685510 ], [ -87.341309, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.676933 ], [ -87.484131, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.685510 ], [ -87.341309, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.330322, 38.668356 ], [ -87.319336, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.341309, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.341309, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.668356 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.341309, 38.668356 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.286377, 38.651198 ], [ -87.308350, 38.659778 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.286377, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.253418, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.651198 ], [ -87.253418, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.651198 ], [ -87.275391, 38.651198 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 4, "x": 4, "y": 6 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.762650 ], [ -87.434692, 38.869652 ], [ -87.445679, 38.891033 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.451172, 38.835429 ], [ -87.451172, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.612578 ], [ -87.528076, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.612578 ], [ -87.528076, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.484131, 38.702659 ], [ -87.484131, 38.741231 ], [ -87.445679, 38.822591 ], [ -87.434692, 38.869652 ], [ -87.445679, 38.891033 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.484131, 38.706946 ], [ -87.484131, 38.741231 ], [ -87.467651, 38.796908 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.445679, 38.891033 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.484131, 38.706946 ], [ -87.484131, 38.741231 ], [ -87.467651, 38.796908 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.445679, 38.891033 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.484131, 38.706946 ], [ -87.484131, 38.741231 ], [ -87.467651, 38.796908 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.445679, 38.891033 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.522583, 38.711233 ], [ -87.506104, 38.706946 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.522583, 38.711233 ], [ -87.506104, 38.706946 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.500610, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.478638, 38.758367 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.500610, 38.694085 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.500610, 38.694085 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.694085 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.689798 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.689798 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.698372 ], [ -87.489624, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.681222 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.511597, 38.664067 ], [ -87.495117, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.539062, 38.621162 ], [ -87.533569, 38.629745 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672645 ], [ -87.495117, 38.689798 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.489624, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.681222 ], [ -87.495117, 38.689798 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.681222 ], [ -87.495117, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.681222 ], [ -87.489624, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.681222 ], [ -87.489624, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.489624, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.489624, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.676933 ], [ -87.484131, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.676933 ], [ -87.484131, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.612578 ], [ -87.533569, 38.651198 ], [ -87.495117, 38.681222 ], [ -87.495117, 38.698372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.530979 ], [ -87.539062, 38.612578 ], [ -87.533569, 38.651198 ], [ -87.511597, 38.664067 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.681222 ], [ -87.456665, 38.676933 ], [ -87.407227, 38.681222 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.681222 ], [ -87.456665, 38.676933 ], [ -87.407227, 38.681222 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.672645 ], [ -87.412720, 38.681222 ], [ -87.484131, 38.681222 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.681222 ], [ -87.407227, 38.681222 ], [ -87.335815, 38.672645 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324829, 38.668356 ], [ -87.319336, 38.664067 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.335815, 38.672645 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.335815, 38.672645 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.286377, 38.651198 ], [ -87.302856, 38.659778 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.280884, 38.651198 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.253418, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.253418, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.269897, 38.646908 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 5, "x": 8, "y": 12 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.760509 ], [ -87.464905, 38.794768 ], [ -87.448425, 38.818311 ], [ -87.434692, 38.867513 ], [ -87.442932, 38.886757 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.451172, 38.833289 ], [ -87.445679, 38.854681 ], [ -87.448425, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.528830 ], [ -87.539062, 38.610432 ], [ -87.528076, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.541809, 38.522384 ], [ -87.539062, 38.528830 ], [ -87.539062, 38.610432 ], [ -87.528076, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.484131, 38.702659 ], [ -87.484131, 38.736946 ], [ -87.464905, 38.792627 ], [ -87.445679, 38.820451 ], [ -87.434692, 38.869652 ], [ -87.442932, 38.886757 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.484131, 38.704803 ], [ -87.484131, 38.736946 ], [ -87.464905, 38.792627 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.442932, 38.886757 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.484131, 38.704803 ], [ -87.484131, 38.736946 ], [ -87.464905, 38.792627 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.442932, 38.886757 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.484131, 38.704803 ], [ -87.484131, 38.736946 ], [ -87.464905, 38.792627 ], [ -87.445679, 38.818311 ], [ -87.434692, 38.869652 ], [ -87.442932, 38.886757 ], [ -87.440186, 38.903858 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.709089 ], [ -87.503357, 38.706946 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.709089 ], [ -87.503357, 38.706946 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.497864, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.475891, 38.756225 ], [ -87.484131, 38.734804 ], [ -87.484131, 38.702659 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497864, 38.694085 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497864, 38.694085 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.694085 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.687654 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.687654 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.696229 ], [ -87.489624, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.679078 ], [ -87.489624, 38.681222 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.511597, 38.661922 ], [ -87.492371, 38.674789 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.536316, 38.621162 ], [ -87.533569, 38.629745 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672645 ], [ -87.492371, 38.679078 ], [ -87.492371, 38.689798 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.489624, 38.681222 ], [ -87.489624, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.679078 ], [ -87.492371, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.679078 ], [ -87.492371, 38.685510 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.679078 ], [ -87.489624, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.679078 ], [ -87.489624, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.674789 ], [ -87.489624, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.674789 ], [ -87.489624, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.481384, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.674789 ], [ -87.481384, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.528830 ], [ -87.539062, 38.610432 ], [ -87.530823, 38.646908 ], [ -87.492371, 38.676933 ], [ -87.495117, 38.696229 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.566528, 38.492294 ], [ -87.561035, 38.513788 ], [ -87.539062, 38.526682 ], [ -87.539062, 38.612578 ], [ -87.530823, 38.649053 ], [ -87.511597, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.679078 ], [ -87.456665, 38.674789 ], [ -87.409973, 38.681222 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.489624, 38.679078 ], [ -87.456665, 38.674789 ], [ -87.409973, 38.681222 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.670501 ], [ -87.409973, 38.681222 ], [ -87.456665, 38.674789 ], [ -87.484131, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.484131, 38.679078 ], [ -87.456665, 38.674789 ], [ -87.409973, 38.681222 ], [ -87.335815, 38.670501 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324829, 38.666212 ], [ -87.319336, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.294617, 38.651198 ], [ -87.335815, 38.670501 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.294617, 38.651198 ], [ -87.335815, 38.670501 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.291870, 38.651198 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.291870, 38.651198 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.283630, 38.649053 ], [ -87.300110, 38.657633 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.280884, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.253418, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.253418, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.253418, 38.646908 ], [ -87.267151, 38.646908 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 6, "x": 16, "y": 24 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.760509 ], [ -87.463531, 38.792627 ], [ -87.447052, 38.817241 ], [ -87.434692, 38.867513 ], [ -87.434692, 38.872859 ], [ -87.442932, 38.885688 ], [ -87.438812, 38.902790 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449799, 38.832220 ], [ -87.445679, 38.853612 ], [ -87.448425, 38.856820 ], [ -87.448425, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.565155, 38.491219 ], [ -87.561035, 38.512714 ], [ -87.541809, 38.522384 ], [ -87.539062, 38.527756 ], [ -87.539062, 38.610432 ], [ -87.533569, 38.624381 ], [ -87.528076, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.565155, 38.491219 ], [ -87.559662, 38.512714 ], [ -87.541809, 38.522384 ], [ -87.539062, 38.526682 ], [ -87.539062, 38.610432 ], [ -87.533569, 38.625454 ], [ -87.528076, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.484131, 38.702659 ], [ -87.482758, 38.735875 ], [ -87.467651, 38.777640 ], [ -87.463531, 38.791557 ], [ -87.447052, 38.818311 ], [ -87.433319, 38.868583 ], [ -87.434692, 38.872859 ], [ -87.442932, 38.885688 ], [ -87.438812, 38.902790 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.484131, 38.702659 ], [ -87.482758, 38.735875 ], [ -87.466278, 38.776570 ], [ -87.463531, 38.791557 ], [ -87.445679, 38.818311 ], [ -87.433319, 38.868583 ], [ -87.442932, 38.886757 ], [ -87.438812, 38.902790 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.484131, 38.702659 ], [ -87.482758, 38.735875 ], [ -87.466278, 38.776570 ], [ -87.463531, 38.791557 ], [ -87.445679, 38.818311 ], [ -87.433319, 38.868583 ], [ -87.442932, 38.886757 ], [ -87.438812, 38.902790 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.484131, 38.702659 ], [ -87.482758, 38.735875 ], [ -87.466278, 38.776570 ], [ -87.463531, 38.791557 ], [ -87.445679, 38.818311 ], [ -87.433319, 38.868583 ], [ -87.442932, 38.886757 ], [ -87.438812, 38.902790 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.708018 ], [ -87.507477, 38.708018 ], [ -87.501984, 38.705874 ], [ -87.496490, 38.701588 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.708018 ], [ -87.508850, 38.708018 ], [ -87.501984, 38.705874 ], [ -87.497864, 38.701588 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.497864, 38.694085 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.475891, 38.755154 ], [ -87.482758, 38.734804 ], [ -87.484131, 38.702659 ], [ -87.486877, 38.698372 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497864, 38.694085 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497864, 38.694085 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.693013 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490997, 38.687654 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490997, 38.687654 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.488251, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482758, 38.678006 ], [ -87.488251, 38.681222 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.510223, 38.661922 ], [ -87.492371, 38.674789 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.536316, 38.620089 ], [ -87.533569, 38.629745 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672645 ], [ -87.490997, 38.679078 ], [ -87.492371, 38.689798 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.488251, 38.680150 ], [ -87.489624, 38.684438 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482758, 38.678006 ], [ -87.486877, 38.681222 ], [ -87.490997, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.679078 ], [ -87.490997, 38.684438 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482758, 38.678006 ], [ -87.488251, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482758, 38.678006 ], [ -87.488251, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.674789 ], [ -87.488251, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.674789 ], [ -87.488251, 38.679078 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.486877, 38.676933 ], [ -87.481384, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.471771, 38.674789 ], [ -87.481384, 38.676933 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.565155, 38.491219 ], [ -87.561035, 38.512714 ], [ -87.541809, 38.522384 ], [ -87.539062, 38.527756 ], [ -87.539062, 38.610432 ], [ -87.533569, 38.624381 ], [ -87.529449, 38.645836 ], [ -87.526703, 38.651198 ], [ -87.493744, 38.674789 ], [ -87.490997, 38.679078 ], [ -87.490997, 38.685510 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.565155, 38.491219 ], [ -87.559662, 38.512714 ], [ -87.541809, 38.522384 ], [ -87.539062, 38.526682 ], [ -87.539062, 38.611505 ], [ -87.533569, 38.625454 ], [ -87.529449, 38.647981 ], [ -87.510223, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.679078 ], [ -87.475891, 38.675861 ], [ -87.458038, 38.674789 ], [ -87.429199, 38.675861 ], [ -87.409973, 38.680150 ], [ -87.370148, 38.675861 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.679078 ], [ -87.475891, 38.675861 ], [ -87.458038, 38.674789 ], [ -87.429199, 38.675861 ], [ -87.409973, 38.680150 ], [ -87.370148, 38.675861 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.669428 ], [ -87.371521, 38.675861 ], [ -87.409973, 38.680150 ], [ -87.427826, 38.675861 ], [ -87.455292, 38.674789 ], [ -87.474518, 38.675861 ], [ -87.482758, 38.678006 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482758, 38.678006 ], [ -87.474518, 38.675861 ], [ -87.455292, 38.674789 ], [ -87.427826, 38.675861 ], [ -87.409973, 38.680150 ], [ -87.371521, 38.675861 ], [ -87.335815, 38.669428 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324829, 38.665139 ], [ -87.317963, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.294617, 38.651198 ], [ -87.326202, 38.666212 ], [ -87.335815, 38.669428 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.294617, 38.651198 ], [ -87.326202, 38.666212 ], [ -87.335815, 38.669428 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.326202, 38.666212 ], [ -87.291870, 38.650126 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.326202, 38.666212 ], [ -87.291870, 38.650126 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.282257, 38.649053 ], [ -87.298737, 38.656561 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.267151, 38.645836 ], [ -87.280884, 38.647981 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.252045, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.252045, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.265778, 38.645836 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 7, "x": 32, "y": 49 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.759973 ], [ -87.466278, 38.778711 ], [ -87.463531, 38.792627 ], [ -87.447739, 38.814031 ], [ -87.444992, 38.822591 ], [ -87.434006, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.447052, 38.848264 ], [ -87.444992, 38.853077 ], [ -87.448425, 38.856285 ], [ -87.447739, 38.864840 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564468, 38.491219 ], [ -87.561722, 38.507878 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541809, 38.522384 ], [ -87.538376, 38.527219 ], [ -87.539062, 38.609896 ], [ -87.533569, 38.624381 ], [ -87.530136, 38.644763 ], [ -87.528076, 38.649053 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564468, 38.491219 ], [ -87.561722, 38.508953 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541809, 38.521847 ], [ -87.538376, 38.526682 ], [ -87.539062, 38.610432 ], [ -87.533569, 38.624918 ], [ -87.529449, 38.644763 ], [ -87.528076, 38.648517 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.484131, 38.701588 ], [ -87.484818, 38.723019 ], [ -87.482071, 38.736946 ], [ -87.466965, 38.777105 ], [ -87.463531, 38.792627 ], [ -87.447739, 38.814031 ], [ -87.444992, 38.822591 ], [ -87.434006, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.484131, 38.702123 ], [ -87.484131, 38.722483 ], [ -87.482071, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.462845, 38.792092 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.434006, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.484131, 38.702123 ], [ -87.484131, 38.722483 ], [ -87.482071, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.462845, 38.792092 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.434006, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.484131, 38.702123 ], [ -87.484131, 38.722483 ], [ -87.482071, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.462845, 38.792092 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.434006, 38.865375 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.707482 ], [ -87.509537, 38.708018 ], [ -87.502670, 38.706410 ], [ -87.497177, 38.702123 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519836, 38.707482 ], [ -87.509537, 38.708018 ], [ -87.502670, 38.706410 ], [ -87.497177, 38.701588 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.497177, 38.693549 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.475204, 38.755154 ], [ -87.482758, 38.734804 ], [ -87.484818, 38.723019 ], [ -87.484131, 38.702123 ], [ -87.486877, 38.698372 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497177, 38.693549 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497177, 38.693549 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493057, 38.693013 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490997, 38.687654 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490997, 38.687654 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.695157 ], [ -87.490997, 38.687118 ], [ -87.490311, 38.681758 ], [ -87.488251, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482071, 38.678006 ], [ -87.487564, 38.681222 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.509537, 38.661922 ], [ -87.492371, 38.674789 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.535629, 38.620089 ], [ -87.533569, 38.625454 ], [ -87.533569, 38.629209 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672645 ], [ -87.493057, 38.674789 ], [ -87.490311, 38.679078 ], [ -87.491684, 38.689262 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.489624, 38.676397 ], [ -87.488251, 38.679078 ], [ -87.489624, 38.684438 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482071, 38.678006 ], [ -87.486877, 38.680686 ], [ -87.490997, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.678542 ], [ -87.490311, 38.681222 ], [ -87.490311, 38.683902 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482071, 38.678006 ], [ -87.488251, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482071, 38.678006 ], [ -87.488251, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493057, 38.674789 ], [ -87.490997, 38.677469 ], [ -87.488251, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493057, 38.674789 ], [ -87.490997, 38.677469 ], [ -87.488251, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492371, 38.674789 ], [ -87.486877, 38.676933 ], [ -87.480698, 38.676397 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.471771, 38.674789 ], [ -87.480698, 38.676397 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564468, 38.491219 ], [ -87.561722, 38.507878 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541809, 38.522384 ], [ -87.538376, 38.527219 ], [ -87.539062, 38.609896 ], [ -87.533569, 38.624381 ], [ -87.529449, 38.645836 ], [ -87.526016, 38.650662 ], [ -87.493057, 38.674789 ], [ -87.490311, 38.679078 ], [ -87.490311, 38.685510 ], [ -87.493744, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564468, 38.491219 ], [ -87.561722, 38.508953 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541809, 38.521847 ], [ -87.538376, 38.526144 ], [ -87.539062, 38.610969 ], [ -87.533569, 38.624918 ], [ -87.528763, 38.647445 ], [ -87.526016, 38.650126 ], [ -87.509537, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.678542 ], [ -87.485504, 38.677469 ], [ -87.475891, 38.675325 ], [ -87.457352, 38.674253 ], [ -87.428513, 38.675861 ], [ -87.412720, 38.680150 ], [ -87.409286, 38.680150 ], [ -87.369461, 38.675325 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.488251, 38.678542 ], [ -87.485504, 38.677469 ], [ -87.475891, 38.675325 ], [ -87.457352, 38.674253 ], [ -87.428513, 38.675861 ], [ -87.412720, 38.680150 ], [ -87.409286, 38.680150 ], [ -87.369461, 38.675325 ], [ -87.335815, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335129, 38.668892 ], [ -87.371521, 38.675861 ], [ -87.409286, 38.680150 ], [ -87.412720, 38.680150 ], [ -87.427826, 38.675861 ], [ -87.455292, 38.674253 ], [ -87.473831, 38.675325 ], [ -87.482071, 38.678006 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.482071, 38.678006 ], [ -87.473831, 38.675325 ], [ -87.455292, 38.674253 ], [ -87.427826, 38.675861 ], [ -87.412720, 38.680150 ], [ -87.409286, 38.680150 ], [ -87.371521, 38.675861 ], [ -87.335129, 38.668892 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324829, 38.665139 ], [ -87.317963, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.286377, 38.648517 ], [ -87.293930, 38.651198 ], [ -87.325516, 38.666212 ], [ -87.335129, 38.668892 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646908 ], [ -87.286377, 38.648517 ], [ -87.293930, 38.651198 ], [ -87.325516, 38.666212 ], [ -87.335129, 38.668892 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.326202, 38.665675 ], [ -87.291183, 38.649590 ], [ -87.275391, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335815, 38.668356 ], [ -87.326202, 38.665675 ], [ -87.291183, 38.649590 ], [ -87.275391, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.281570, 38.648517 ], [ -87.285690, 38.651198 ], [ -87.294617, 38.653343 ], [ -87.298737, 38.656561 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.267151, 38.645836 ], [ -87.280197, 38.647445 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.266464, 38.645836 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646908 ], [ -87.266464, 38.645836 ], [ -87.275391, 38.646908 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646372 ], [ -87.265778, 38.645836 ], [ -87.252045, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275391, 38.646372 ], [ -87.265778, 38.645836 ], [ -87.252045, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646372 ], [ -87.265778, 38.645836 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 7, "x": 32, "y": 48 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.465591, 38.779781 ], [ -87.463531, 38.792627 ], [ -87.447739, 38.814031 ], [ -87.444992, 38.822591 ], [ -87.433319, 38.868048 ], [ -87.434692, 38.872325 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.885688 ], [ -87.442932, 38.891033 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.447052, 38.848264 ], [ -87.444992, 38.853077 ], [ -87.448425, 38.856285 ], [ -87.447739, 38.864840 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.465591, 38.779781 ], [ -87.463531, 38.792627 ], [ -87.447739, 38.814031 ], [ -87.444992, 38.822591 ], [ -87.433319, 38.868048 ], [ -87.434692, 38.872325 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.885688 ], [ -87.442932, 38.891033 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.465591, 38.779781 ], [ -87.462845, 38.792627 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.433319, 38.868048 ], [ -87.434006, 38.872859 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.886223 ], [ -87.442245, 38.891033 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.465591, 38.779781 ], [ -87.462845, 38.792627 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.433319, 38.868048 ], [ -87.434006, 38.872859 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.886223 ], [ -87.442245, 38.891033 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.465591, 38.779781 ], [ -87.462845, 38.792627 ], [ -87.447739, 38.812961 ], [ -87.444305, 38.822591 ], [ -87.433319, 38.868048 ], [ -87.434006, 38.872859 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.886223 ], [ -87.442245, 38.891033 ], [ -87.438126, 38.902255 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 8, "x": 65, "y": 98 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.759706 ], [ -87.465935, 38.778443 ], [ -87.464218, 38.789148 ], [ -87.463188, 38.792359 ], [ -87.447395, 38.814031 ], [ -87.444649, 38.822591 ], [ -87.439499, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.447395, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561722, 38.507878 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541466, 38.522115 ], [ -87.539406, 38.524264 ], [ -87.538376, 38.526950 ], [ -87.539062, 38.609627 ], [ -87.533569, 38.624381 ], [ -87.529793, 38.644763 ], [ -87.527733, 38.648785 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561378, 38.508684 ], [ -87.560005, 38.511639 ], [ -87.558289, 38.513520 ], [ -87.555885, 38.515131 ], [ -87.541466, 38.521847 ], [ -87.539406, 38.523727 ], [ -87.538033, 38.526682 ], [ -87.539062, 38.610164 ], [ -87.533226, 38.624649 ], [ -87.529449, 38.644495 ], [ -87.527733, 38.648517 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.486877, 38.698372 ], [ -87.484131, 38.701588 ], [ -87.483788, 38.703999 ], [ -87.484474, 38.722751 ], [ -87.482071, 38.736946 ], [ -87.466621, 38.777105 ], [ -87.463188, 38.792359 ], [ -87.447395, 38.814031 ], [ -87.444649, 38.822591 ], [ -87.439499, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.485161, 38.699980 ], [ -87.483788, 38.702123 ], [ -87.483444, 38.704803 ], [ -87.484131, 38.722483 ], [ -87.481728, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.463188, 38.791557 ], [ -87.461472, 38.794768 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.439156, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.485161, 38.699980 ], [ -87.483788, 38.702123 ], [ -87.483444, 38.704803 ], [ -87.484131, 38.722483 ], [ -87.481728, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.463188, 38.791557 ], [ -87.461472, 38.794768 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.439156, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695157 ], [ -87.486877, 38.698372 ], [ -87.485161, 38.699980 ], [ -87.483788, 38.702123 ], [ -87.483444, 38.704803 ], [ -87.484131, 38.722483 ], [ -87.481728, 38.736946 ], [ -87.466278, 38.776570 ], [ -87.463188, 38.791557 ], [ -87.461472, 38.794768 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.439156, 38.843986 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519493, 38.707482 ], [ -87.509193, 38.708018 ], [ -87.505760, 38.707482 ], [ -87.502327, 38.706410 ], [ -87.498894, 38.704267 ], [ -87.496834, 38.702123 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519493, 38.707214 ], [ -87.509193, 38.707750 ], [ -87.505417, 38.707214 ], [ -87.502327, 38.706142 ], [ -87.499237, 38.704267 ], [ -87.496834, 38.701588 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485838817", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497177, 38.693281 ], [ -87.496834, 38.693549 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.497177, 38.693281 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.474861, 38.755154 ], [ -87.482758, 38.734804 ], [ -87.484474, 38.722751 ], [ -87.484131, 38.702123 ], [ -87.485161, 38.699980 ], [ -87.486877, 38.698372 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841555", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841666", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496834, 38.693549 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496834, 38.693549 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493057, 38.692745 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490654, 38.687654 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490654, 38.687654 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.490654, 38.686850 ], [ -87.489967, 38.681490 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481728, 38.677738 ], [ -87.485504, 38.679346 ], [ -87.487221, 38.680954 ], [ -87.489967, 38.686314 ], [ -87.493401, 38.695157 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.509537, 38.661922 ], [ -87.492027, 38.674521 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.535629, 38.620089 ], [ -87.533569, 38.625186 ], [ -87.533569, 38.628941 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672377 ], [ -87.492714, 38.674789 ], [ -87.490311, 38.679078 ], [ -87.490311, 38.685510 ], [ -87.491684, 38.689262 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492027, 38.674521 ], [ -87.489281, 38.676397 ], [ -87.487907, 38.679078 ], [ -87.487907, 38.681222 ], [ -87.489281, 38.684170 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481728, 38.677738 ], [ -87.484474, 38.678810 ], [ -87.486877, 38.680418 ], [ -87.490654, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.489967, 38.680954 ], [ -87.490311, 38.683902 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481728, 38.677738 ], [ -87.484818, 38.678810 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481728, 38.677738 ], [ -87.484818, 38.678810 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492714, 38.674789 ], [ -87.490654, 38.677469 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492714, 38.674789 ], [ -87.490654, 38.677469 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492027, 38.674521 ], [ -87.488937, 38.676129 ], [ -87.486877, 38.676933 ], [ -87.484131, 38.676933 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.471428, 38.674789 ], [ -87.475548, 38.675057 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561722, 38.507878 ], [ -87.560349, 38.511639 ], [ -87.556229, 38.515400 ], [ -87.541466, 38.522115 ], [ -87.539406, 38.524264 ], [ -87.538376, 38.526950 ], [ -87.539062, 38.609627 ], [ -87.533569, 38.624381 ], [ -87.529449, 38.645568 ], [ -87.528076, 38.648249 ], [ -87.526016, 38.650662 ], [ -87.503357, 38.666212 ], [ -87.492714, 38.674789 ], [ -87.490311, 38.679078 ], [ -87.490311, 38.684974 ], [ -87.490997, 38.687386 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561378, 38.508684 ], [ -87.560005, 38.511639 ], [ -87.558289, 38.513520 ], [ -87.555885, 38.515131 ], [ -87.541466, 38.521847 ], [ -87.539406, 38.523727 ], [ -87.538376, 38.525876 ], [ -87.538719, 38.610969 ], [ -87.533226, 38.624649 ], [ -87.529449, 38.644495 ], [ -87.528419, 38.647176 ], [ -87.526016, 38.650126 ], [ -87.509537, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.485504, 38.677201 ], [ -87.475548, 38.675057 ], [ -87.457008, 38.673985 ], [ -87.428169, 38.675593 ], [ -87.412720, 38.679882 ], [ -87.408943, 38.680150 ], [ -87.369461, 38.675325 ], [ -87.335472, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.485504, 38.677201 ], [ -87.475548, 38.675057 ], [ -87.457008, 38.673985 ], [ -87.428169, 38.675593 ], [ -87.412720, 38.679882 ], [ -87.408943, 38.680150 ], [ -87.369461, 38.675325 ], [ -87.335472, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335129, 38.668624 ], [ -87.371178, 38.675861 ], [ -87.409286, 38.680150 ], [ -87.412720, 38.679882 ], [ -87.427826, 38.675861 ], [ -87.455292, 38.674253 ], [ -87.473488, 38.675057 ], [ -87.476921, 38.675861 ], [ -87.481728, 38.677738 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481728, 38.677738 ], [ -87.476921, 38.675861 ], [ -87.473488, 38.675057 ], [ -87.455292, 38.674253 ], [ -87.427826, 38.675861 ], [ -87.412720, 38.679882 ], [ -87.409286, 38.680150 ], [ -87.371178, 38.675861 ], [ -87.335129, 38.668624 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324486, 38.665139 ], [ -87.317619, 38.661922 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646640 ], [ -87.286034, 38.648517 ], [ -87.293587, 38.650930 ], [ -87.325516, 38.665944 ], [ -87.329292, 38.667284 ], [ -87.335129, 38.668624 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646640 ], [ -87.286034, 38.648517 ], [ -87.293587, 38.650930 ], [ -87.325516, 38.665944 ], [ -87.329292, 38.667284 ], [ -87.335129, 38.668624 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335472, 38.668356 ], [ -87.326546, 38.665944 ], [ -87.295303, 38.651466 ], [ -87.290840, 38.649590 ], [ -87.282257, 38.647445 ], [ -87.275047, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335472, 38.668356 ], [ -87.326546, 38.665944 ], [ -87.295303, 38.651466 ], [ -87.290840, 38.649590 ], [ -87.282257, 38.647445 ], [ -87.275047, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.281570, 38.648517 ], [ -87.285347, 38.650930 ], [ -87.294617, 38.653343 ], [ -87.298737, 38.656292 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646640 ], [ -87.267151, 38.645836 ], [ -87.271957, 38.646104 ], [ -87.279854, 38.647445 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646640 ], [ -87.266464, 38.645836 ], [ -87.275047, 38.646640 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.252045, 38.646640 ], [ -87.266464, 38.645836 ], [ -87.275047, 38.646640 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646372 ], [ -87.265434, 38.645568 ], [ -87.251701, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646372 ], [ -87.265434, 38.645568 ], [ -87.251701, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251701, 38.646372 ], [ -87.265434, 38.645568 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 8, "x": 65, "y": 97 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.456665, 38.801189 ], [ -87.447395, 38.814031 ], [ -87.444649, 38.822591 ], [ -87.433319, 38.867781 ], [ -87.433662, 38.870186 ], [ -87.434692, 38.872859 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.885688 ], [ -87.442589, 38.890766 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.447052, 38.847997 ], [ -87.444649, 38.852542 ], [ -87.444992, 38.853612 ], [ -87.448425, 38.856285 ], [ -87.447739, 38.864573 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.456665, 38.801189 ], [ -87.447395, 38.814031 ], [ -87.444649, 38.822591 ], [ -87.433319, 38.867781 ], [ -87.433662, 38.870186 ], [ -87.434692, 38.872859 ], [ -87.440872, 38.880343 ], [ -87.442932, 38.885688 ], [ -87.442589, 38.890766 ], [ -87.438126, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.456322, 38.801189 ], [ -87.447739, 38.813229 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.868048 ], [ -87.434006, 38.872592 ], [ -87.440872, 38.880343 ], [ -87.442589, 38.885955 ], [ -87.442245, 38.890766 ], [ -87.437782, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.456322, 38.801189 ], [ -87.447739, 38.813229 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.868048 ], [ -87.434006, 38.872592 ], [ -87.440872, 38.880343 ], [ -87.442589, 38.885955 ], [ -87.442245, 38.890766 ], [ -87.437782, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.456322, 38.801189 ], [ -87.447739, 38.813229 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.868048 ], [ -87.434006, 38.872592 ], [ -87.440872, 38.880343 ], [ -87.442589, 38.885955 ], [ -87.442245, 38.890766 ], [ -87.437782, 38.902255 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 9, "x": 131, "y": 196 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473145, 38.759572 ], [ -87.469368, 38.768941 ], [ -87.465935, 38.778309 ], [ -87.464046, 38.789014 ], [ -87.463017, 38.792226 ], [ -87.461472, 38.794901 ], [ -87.449112, 38.811356 ], [ -87.447395, 38.813897 ], [ -87.446194, 38.816974 ], [ -87.444649, 38.822591 ], [ -87.441902, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.449112, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561722, 38.507878 ], [ -87.561207, 38.509624 ], [ -87.560177, 38.511639 ], [ -87.558117, 38.513788 ], [ -87.556057, 38.515266 ], [ -87.542839, 38.521310 ], [ -87.541466, 38.522115 ], [ -87.539406, 38.524130 ], [ -87.538376, 38.526816 ], [ -87.539062, 38.609627 ], [ -87.538548, 38.612042 ], [ -87.533569, 38.624247 ], [ -87.529793, 38.644629 ], [ -87.529106, 38.646506 ], [ -87.527733, 38.648651 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561378, 38.508550 ], [ -87.559834, 38.511505 ], [ -87.558289, 38.513385 ], [ -87.555714, 38.515131 ], [ -87.541466, 38.521847 ], [ -87.539406, 38.523727 ], [ -87.538548, 38.525204 ], [ -87.538033, 38.526547 ], [ -87.538891, 38.610030 ], [ -87.538376, 38.612042 ], [ -87.533913, 38.622101 ], [ -87.533226, 38.624515 ], [ -87.529449, 38.644495 ], [ -87.528934, 38.646238 ], [ -87.527561, 38.648383 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.486877, 38.698372 ], [ -87.485161, 38.699980 ], [ -87.484131, 38.701588 ], [ -87.483788, 38.703865 ], [ -87.484303, 38.722751 ], [ -87.482758, 38.734000 ], [ -87.482071, 38.736946 ], [ -87.469368, 38.768941 ], [ -87.466450, 38.776971 ], [ -87.465420, 38.780718 ], [ -87.463875, 38.789683 ], [ -87.463017, 38.792226 ], [ -87.461472, 38.794901 ], [ -87.449112, 38.811356 ], [ -87.447395, 38.813897 ], [ -87.446194, 38.816974 ], [ -87.444649, 38.822591 ], [ -87.441902, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695023 ], [ -87.486706, 38.698372 ], [ -87.484989, 38.699980 ], [ -87.483788, 38.701989 ], [ -87.483444, 38.704669 ], [ -87.484131, 38.722349 ], [ -87.482414, 38.734402 ], [ -87.481728, 38.736946 ], [ -87.469025, 38.769075 ], [ -87.466278, 38.776570 ], [ -87.465076, 38.780718 ], [ -87.463703, 38.789416 ], [ -87.463017, 38.791557 ], [ -87.461300, 38.794634 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.441559, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695023 ], [ -87.486706, 38.698372 ], [ -87.484989, 38.699980 ], [ -87.483788, 38.701989 ], [ -87.483444, 38.704669 ], [ -87.484131, 38.722349 ], [ -87.482414, 38.734402 ], [ -87.481728, 38.736946 ], [ -87.469025, 38.769075 ], [ -87.466278, 38.776570 ], [ -87.465076, 38.780718 ], [ -87.463703, 38.789416 ], [ -87.463017, 38.791557 ], [ -87.461300, 38.794634 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.441559, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493401, 38.695023 ], [ -87.486706, 38.698372 ], [ -87.484989, 38.699980 ], [ -87.483788, 38.701989 ], [ -87.483444, 38.704669 ], [ -87.484131, 38.722349 ], [ -87.482414, 38.734402 ], [ -87.481728, 38.736946 ], [ -87.469025, 38.769075 ], [ -87.466278, 38.776570 ], [ -87.465076, 38.780718 ], [ -87.463703, 38.789416 ], [ -87.463017, 38.791557 ], [ -87.461300, 38.794634 ], [ -87.447739, 38.812961 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.441559, 38.833289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519321, 38.707482 ], [ -87.509193, 38.707884 ], [ -87.505760, 38.707482 ], [ -87.502327, 38.706410 ], [ -87.498894, 38.704267 ], [ -87.496662, 38.702123 ], [ -87.495289, 38.699712 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519321, 38.707214 ], [ -87.509193, 38.707750 ], [ -87.505417, 38.707214 ], [ -87.502155, 38.706008 ], [ -87.499237, 38.704267 ], [ -87.496662, 38.701588 ], [ -87.495632, 38.699712 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485838817", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497005, 38.693281 ], [ -87.496662, 38.693415 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.497005, 38.693281 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.474861, 38.755020 ], [ -87.481899, 38.737749 ], [ -87.482758, 38.734670 ], [ -87.484303, 38.722751 ], [ -87.483788, 38.703865 ], [ -87.483959, 38.701989 ], [ -87.485161, 38.699980 ], [ -87.486877, 38.698372 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841555", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841666", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496662, 38.693415 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496662, 38.693415 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492886, 38.692745 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490654, 38.687654 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490654, 38.687654 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.490654, 38.686850 ], [ -87.489967, 38.681356 ], [ -87.489109, 38.679882 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677604 ], [ -87.485332, 38.679212 ], [ -87.487221, 38.680954 ], [ -87.489967, 38.686180 ], [ -87.493401, 38.695023 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.509365, 38.661788 ], [ -87.503529, 38.665675 ], [ -87.491856, 38.674387 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.535629, 38.619955 ], [ -87.533569, 38.625052 ], [ -87.533226, 38.627197 ], [ -87.533569, 38.628807 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672377 ], [ -87.492542, 38.674655 ], [ -87.490654, 38.677604 ], [ -87.490311, 38.678944 ], [ -87.490311, 38.685510 ], [ -87.491512, 38.689262 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.491856, 38.674387 ], [ -87.489109, 38.676397 ], [ -87.488251, 38.677604 ], [ -87.487736, 38.678944 ], [ -87.487736, 38.681222 ], [ -87.489109, 38.684170 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677604 ], [ -87.484474, 38.678676 ], [ -87.486706, 38.680418 ], [ -87.489281, 38.684840 ], [ -87.490654, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.489109, 38.679882 ], [ -87.489796, 38.680954 ], [ -87.490311, 38.683768 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677604 ], [ -87.484818, 38.678676 ], [ -87.486191, 38.678810 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677604 ], [ -87.484818, 38.678676 ], [ -87.486191, 38.678810 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492542, 38.674655 ], [ -87.490482, 38.677335 ], [ -87.489109, 38.678140 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492542, 38.674655 ], [ -87.490482, 38.677335 ], [ -87.489109, 38.678140 ], [ -87.487907, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.491856, 38.674387 ], [ -87.488937, 38.676129 ], [ -87.486706, 38.676799 ], [ -87.484131, 38.676799 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.471256, 38.674789 ], [ -87.475376, 38.675057 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561722, 38.507878 ], [ -87.561207, 38.509624 ], [ -87.560177, 38.511639 ], [ -87.558117, 38.513788 ], [ -87.556057, 38.515266 ], [ -87.542839, 38.521310 ], [ -87.541466, 38.522115 ], [ -87.539406, 38.524130 ], [ -87.538376, 38.526816 ], [ -87.539062, 38.609627 ], [ -87.538548, 38.612042 ], [ -87.533569, 38.624247 ], [ -87.529449, 38.645568 ], [ -87.528076, 38.648115 ], [ -87.525845, 38.650528 ], [ -87.516575, 38.657231 ], [ -87.503357, 38.666078 ], [ -87.493744, 38.673315 ], [ -87.492542, 38.674655 ], [ -87.490654, 38.677604 ], [ -87.490311, 38.678944 ], [ -87.490311, 38.684974 ], [ -87.490826, 38.687386 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490951 ], [ -87.561378, 38.508550 ], [ -87.559834, 38.511505 ], [ -87.558289, 38.513385 ], [ -87.555714, 38.515131 ], [ -87.541466, 38.521847 ], [ -87.539406, 38.523727 ], [ -87.538204, 38.525876 ], [ -87.538033, 38.529367 ], [ -87.538891, 38.600103 ], [ -87.538891, 38.609225 ], [ -87.538548, 38.610969 ], [ -87.533913, 38.622101 ], [ -87.533226, 38.624515 ], [ -87.529449, 38.644495 ], [ -87.528419, 38.647176 ], [ -87.527390, 38.648785 ], [ -87.526016, 38.649992 ], [ -87.516918, 38.656695 ], [ -87.509537, 38.661788 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.485332, 38.677201 ], [ -87.475376, 38.675057 ], [ -87.457008, 38.673985 ], [ -87.428169, 38.675593 ], [ -87.425251, 38.676129 ], [ -87.412720, 38.679748 ], [ -87.408943, 38.680016 ], [ -87.395897, 38.678274 ], [ -87.374783, 38.675861 ], [ -87.369289, 38.675191 ], [ -87.335300, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487907, 38.678542 ], [ -87.485332, 38.677201 ], [ -87.475376, 38.675057 ], [ -87.457008, 38.673985 ], [ -87.428169, 38.675593 ], [ -87.425251, 38.676129 ], [ -87.412720, 38.679748 ], [ -87.408943, 38.680016 ], [ -87.395897, 38.678274 ], [ -87.374783, 38.675861 ], [ -87.369289, 38.675191 ], [ -87.335300, 38.668356 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335129, 38.668490 ], [ -87.371178, 38.675727 ], [ -87.395897, 38.678408 ], [ -87.409286, 38.680150 ], [ -87.412720, 38.679882 ], [ -87.425079, 38.676397 ], [ -87.427654, 38.675861 ], [ -87.455292, 38.674253 ], [ -87.460957, 38.674253 ], [ -87.473316, 38.675057 ], [ -87.476749, 38.675861 ], [ -87.481556, 38.677604 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677604 ], [ -87.476749, 38.675861 ], [ -87.473316, 38.675057 ], [ -87.460957, 38.674253 ], [ -87.455292, 38.674253 ], [ -87.427654, 38.675861 ], [ -87.425079, 38.676397 ], [ -87.412720, 38.679882 ], [ -87.409286, 38.680150 ], [ -87.395897, 38.678408 ], [ -87.371178, 38.675727 ], [ -87.335129, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324314, 38.665139 ], [ -87.317448, 38.661788 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646506 ], [ -87.285862, 38.648383 ], [ -87.289467, 38.649456 ], [ -87.293415, 38.650796 ], [ -87.325516, 38.665810 ], [ -87.329292, 38.667284 ], [ -87.335129, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.275047, 38.646506 ], [ -87.285862, 38.648383 ], [ -87.289467, 38.649456 ], [ -87.293415, 38.650796 ], [ -87.325516, 38.665810 ], [ -87.329292, 38.667284 ], [ -87.335129, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335300, 38.668356 ], [ -87.329121, 38.667016 ], [ -87.326374, 38.665944 ], [ -87.295303, 38.651332 ], [ -87.290668, 38.649456 ], [ -87.285862, 38.648115 ], [ -87.282257, 38.647445 ], [ -87.274876, 38.646238 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335300, 38.668356 ], [ -87.329121, 38.667016 ], [ -87.326374, 38.665944 ], [ -87.295303, 38.651332 ], [ -87.290668, 38.649456 ], [ -87.285862, 38.648115 ], [ -87.282257, 38.647445 ], [ -87.274876, 38.646238 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.281399, 38.648517 ], [ -87.283115, 38.649724 ], [ -87.285347, 38.650930 ], [ -87.292042, 38.652405 ], [ -87.294445, 38.653209 ], [ -87.296333, 38.654282 ], [ -87.298737, 38.656292 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251873, 38.646640 ], [ -87.267151, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.279682, 38.647310 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251873, 38.646640 ], [ -87.266464, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.275047, 38.646506 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251873, 38.646640 ], [ -87.266464, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.275047, 38.646506 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274876, 38.646238 ], [ -87.271786, 38.645836 ], [ -87.265434, 38.645568 ], [ -87.251701, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274876, 38.646238 ], [ -87.271786, 38.645836 ], [ -87.265434, 38.645568 ], [ -87.251701, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251701, 38.646372 ], [ -87.265434, 38.645568 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 9, "x": 131, "y": 195 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.448597, 38.811891 ], [ -87.446537, 38.815770 ], [ -87.444649, 38.822591 ], [ -87.433319, 38.867781 ], [ -87.433491, 38.870186 ], [ -87.434521, 38.872726 ], [ -87.435894, 38.874597 ], [ -87.439499, 38.878339 ], [ -87.440872, 38.880209 ], [ -87.442245, 38.882882 ], [ -87.442932, 38.885688 ], [ -87.442932, 38.888093 ], [ -87.442417, 38.890766 ], [ -87.437954, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832220 ], [ -87.446880, 38.847997 ], [ -87.444477, 38.852542 ], [ -87.444820, 38.853478 ], [ -87.447910, 38.855483 ], [ -87.448425, 38.856152 ], [ -87.448082, 38.863103 ], [ -87.447739, 38.864439 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.448597, 38.811891 ], [ -87.446537, 38.815770 ], [ -87.444649, 38.822591 ], [ -87.433319, 38.867781 ], [ -87.433491, 38.870186 ], [ -87.434521, 38.872726 ], [ -87.435894, 38.874597 ], [ -87.439499, 38.878339 ], [ -87.440872, 38.880209 ], [ -87.442245, 38.882882 ], [ -87.442932, 38.885688 ], [ -87.442932, 38.888093 ], [ -87.442417, 38.890766 ], [ -87.437954, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.448254, 38.811891 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.434006, 38.872592 ], [ -87.435379, 38.874329 ], [ -87.438984, 38.878205 ], [ -87.440701, 38.880343 ], [ -87.441902, 38.882882 ], [ -87.442589, 38.885822 ], [ -87.442589, 38.888761 ], [ -87.442074, 38.890766 ], [ -87.437611, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.448254, 38.811891 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.434006, 38.872592 ], [ -87.435379, 38.874329 ], [ -87.438984, 38.878205 ], [ -87.440701, 38.880343 ], [ -87.441902, 38.882882 ], [ -87.442589, 38.885822 ], [ -87.442589, 38.888761 ], [ -87.442074, 38.890766 ], [ -87.437611, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.448254, 38.811891 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.434006, 38.872592 ], [ -87.435379, 38.874329 ], [ -87.438984, 38.878205 ], [ -87.440701, 38.880343 ], [ -87.441902, 38.882882 ], [ -87.442589, 38.885822 ], [ -87.442589, 38.888761 ], [ -87.442074, 38.890766 ], [ -87.437611, 38.902255 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 10, "x": 262, "y": 393 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490883 ], [ -87.561636, 38.507811 ], [ -87.561035, 38.510027 ], [ -87.559834, 38.511975 ], [ -87.558117, 38.513721 ], [ -87.556057, 38.515199 ], [ -87.542839, 38.521243 ], [ -87.541809, 38.521847 ], [ -87.540092, 38.523257 ], [ -87.539062, 38.524533 ], [ -87.538548, 38.525809 ], [ -87.538204, 38.527622 ], [ -87.538462, 38.551186 ], [ -87.538633, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564039, 38.490883 ], [ -87.561293, 38.508483 ], [ -87.560778, 38.509826 ], [ -87.559834, 38.511505 ], [ -87.558203, 38.513385 ], [ -87.556486, 38.514661 ], [ -87.554340, 38.515736 ], [ -87.541981, 38.521511 ], [ -87.540522, 38.522518 ], [ -87.539749, 38.523324 ], [ -87.539062, 38.524130 ], [ -87.538204, 38.525876 ], [ -87.537947, 38.527756 ], [ -87.538118, 38.550246 ], [ -87.538290, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564125, 38.490883 ], [ -87.561636, 38.507811 ], [ -87.561035, 38.510027 ], [ -87.559834, 38.511975 ], [ -87.558117, 38.513721 ], [ -87.556057, 38.515199 ], [ -87.542839, 38.521243 ], [ -87.541809, 38.521847 ], [ -87.540092, 38.523257 ], [ -87.539062, 38.524533 ], [ -87.538548, 38.525809 ], [ -87.538204, 38.527622 ], [ -87.538462, 38.551186 ], [ -87.538633, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.564039, 38.490883 ], [ -87.561293, 38.508483 ], [ -87.560778, 38.509826 ], [ -87.559834, 38.511505 ], [ -87.558203, 38.513385 ], [ -87.556486, 38.514661 ], [ -87.554340, 38.515736 ], [ -87.541981, 38.521511 ], [ -87.540522, 38.522518 ], [ -87.539749, 38.523324 ], [ -87.539062, 38.524130 ], [ -87.538204, 38.525876 ], [ -87.537947, 38.527756 ], [ -87.538118, 38.550246 ], [ -87.538290, 38.553535 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 10, "x": 262, "y": 392 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538290, 38.542795 ], [ -87.538462, 38.551186 ], [ -87.538633, 38.554274 ], [ -87.538633, 38.575011 ], [ -87.538805, 38.591919 ], [ -87.539062, 38.599164 ], [ -87.539062, 38.609024 ], [ -87.538977, 38.610566 ], [ -87.538548, 38.612042 ], [ -87.534685, 38.620827 ], [ -87.533484, 38.624180 ], [ -87.533054, 38.625722 ], [ -87.532196, 38.630349 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538033, 38.542795 ], [ -87.538118, 38.550246 ], [ -87.538376, 38.555146 ], [ -87.538376, 38.574005 ], [ -87.538633, 38.594602 ], [ -87.538805, 38.600036 ], [ -87.538805, 38.609158 ], [ -87.538548, 38.610969 ], [ -87.538290, 38.611975 ], [ -87.533913, 38.622101 ], [ -87.533398, 38.623576 ], [ -87.532883, 38.625521 ], [ -87.532196, 38.628740 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.535543, 38.619955 ], [ -87.534170, 38.623107 ], [ -87.533569, 38.625052 ], [ -87.533226, 38.627130 ], [ -87.533569, 38.628740 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538290, 38.542795 ], [ -87.538462, 38.551186 ], [ -87.538633, 38.554274 ], [ -87.538633, 38.575011 ], [ -87.538805, 38.591919 ], [ -87.539062, 38.599164 ], [ -87.539062, 38.609024 ], [ -87.538977, 38.610566 ], [ -87.538548, 38.612042 ], [ -87.534685, 38.620827 ], [ -87.533484, 38.624180 ], [ -87.533054, 38.625722 ], [ -87.532196, 38.630349 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538033, 38.542795 ], [ -87.538118, 38.550246 ], [ -87.538376, 38.555146 ], [ -87.538376, 38.574005 ], [ -87.538633, 38.594602 ], [ -87.538805, 38.600036 ], [ -87.538805, 38.609158 ], [ -87.538548, 38.610969 ], [ -87.538290, 38.611975 ], [ -87.533913, 38.622101 ], [ -87.533398, 38.623576 ], [ -87.532883, 38.625521 ], [ -87.532196, 38.628740 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 10, "x": 263, "y": 393 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.545929, 38.519832 ], [ -87.542496, 38.521444 ], [ -87.541466, 38.522115 ], [ -87.540092, 38.523257 ], [ -87.539062, 38.524533 ], [ -87.538548, 38.525809 ], [ -87.538204, 38.527622 ], [ -87.538376, 38.548165 ], [ -87.538633, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.545929, 38.519564 ], [ -87.542839, 38.521041 ], [ -87.541466, 38.521780 ], [ -87.539749, 38.523324 ], [ -87.539062, 38.524130 ], [ -87.538204, 38.525876 ], [ -87.537947, 38.527756 ], [ -87.538118, 38.548165 ], [ -87.538290, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.545929, 38.519832 ], [ -87.542496, 38.521444 ], [ -87.541466, 38.522115 ], [ -87.540092, 38.523257 ], [ -87.539062, 38.524533 ], [ -87.538548, 38.525809 ], [ -87.538204, 38.527622 ], [ -87.538376, 38.548165 ], [ -87.538633, 38.553535 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.545929, 38.519564 ], [ -87.542839, 38.521041 ], [ -87.541466, 38.521780 ], [ -87.539749, 38.523324 ], [ -87.539062, 38.524130 ], [ -87.538204, 38.525876 ], [ -87.537947, 38.527756 ], [ -87.538118, 38.548165 ], [ -87.538290, 38.553535 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 10, "x": 263, "y": 392 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.473059, 38.759505 ], [ -87.469282, 38.768941 ], [ -87.465935, 38.778309 ], [ -87.465334, 38.780718 ], [ -87.464046, 38.789014 ], [ -87.463617, 38.790754 ], [ -87.463017, 38.792226 ], [ -87.461386, 38.794901 ], [ -87.449026, 38.811356 ], [ -87.447395, 38.813897 ], [ -87.446108, 38.816907 ], [ -87.444649, 38.822591 ], [ -87.443275, 38.827940 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624536", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538290, 38.542795 ], [ -87.538376, 38.548165 ], [ -87.538633, 38.554274 ], [ -87.538633, 38.575011 ], [ -87.538805, 38.591919 ], [ -87.539062, 38.599164 ], [ -87.539062, 38.609024 ], [ -87.538977, 38.610566 ], [ -87.538548, 38.612042 ], [ -87.534685, 38.620827 ], [ -87.533484, 38.624247 ], [ -87.532711, 38.627399 ], [ -87.529707, 38.644629 ], [ -87.529106, 38.646506 ], [ -87.527733, 38.648584 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624538", "FULLNAME": "US Hwy 41 S", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538033, 38.542795 ], [ -87.538118, 38.548165 ], [ -87.538376, 38.555146 ], [ -87.538376, 38.574005 ], [ -87.538633, 38.594602 ], [ -87.538805, 38.600036 ], [ -87.538805, 38.609963 ], [ -87.538290, 38.611975 ], [ -87.533913, 38.622101 ], [ -87.533140, 38.624448 ], [ -87.532625, 38.626661 ], [ -87.529449, 38.644495 ], [ -87.528934, 38.646171 ], [ -87.527561, 38.648316 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.488251, 38.697568 ], [ -87.486877, 38.698305 ], [ -87.486019, 38.698975 ], [ -87.485075, 38.699980 ], [ -87.484131, 38.701588 ], [ -87.483873, 38.702458 ], [ -87.483702, 38.703798 ], [ -87.484303, 38.722684 ], [ -87.482758, 38.734000 ], [ -87.482071, 38.736946 ], [ -87.469282, 38.768941 ], [ -87.466364, 38.776904 ], [ -87.465334, 38.780718 ], [ -87.463875, 38.789683 ], [ -87.463017, 38.792226 ], [ -87.461386, 38.794901 ], [ -87.449026, 38.811356 ], [ -87.447395, 38.813897 ], [ -87.446108, 38.816907 ], [ -87.444649, 38.822591 ], [ -87.443275, 38.827940 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493315, 38.694956 ], [ -87.487564, 38.697702 ], [ -87.486706, 38.698305 ], [ -87.485590, 38.699243 ], [ -87.484903, 38.699980 ], [ -87.484303, 38.700784 ], [ -87.483788, 38.701989 ], [ -87.483530, 38.702793 ], [ -87.483444, 38.704602 ], [ -87.484131, 38.722349 ], [ -87.482586, 38.733598 ], [ -87.481728, 38.736946 ], [ -87.468939, 38.769008 ], [ -87.466192, 38.776570 ], [ -87.464991, 38.780651 ], [ -87.463617, 38.789349 ], [ -87.462931, 38.791557 ], [ -87.462072, 38.793229 ], [ -87.461300, 38.794567 ], [ -87.448854, 38.811088 ], [ -87.447653, 38.812894 ], [ -87.446709, 38.814566 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.442932, 38.827940 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493315, 38.694956 ], [ -87.487564, 38.697702 ], [ -87.486706, 38.698305 ], [ -87.485590, 38.699243 ], [ -87.484903, 38.699980 ], [ -87.484303, 38.700784 ], [ -87.483788, 38.701989 ], [ -87.483530, 38.702793 ], [ -87.483444, 38.704602 ], [ -87.484131, 38.722349 ], [ -87.482586, 38.733598 ], [ -87.481728, 38.736946 ], [ -87.468939, 38.769008 ], [ -87.466192, 38.776570 ], [ -87.464991, 38.780651 ], [ -87.463617, 38.789349 ], [ -87.462931, 38.791557 ], [ -87.462072, 38.793229 ], [ -87.461300, 38.794567 ], [ -87.448854, 38.811088 ], [ -87.447653, 38.812894 ], [ -87.446709, 38.814566 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.442932, 38.827940 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493315, 38.694956 ], [ -87.487564, 38.697702 ], [ -87.486706, 38.698305 ], [ -87.485590, 38.699243 ], [ -87.484903, 38.699980 ], [ -87.484303, 38.700784 ], [ -87.483788, 38.701989 ], [ -87.483530, 38.702793 ], [ -87.483444, 38.704602 ], [ -87.484131, 38.722349 ], [ -87.482586, 38.733598 ], [ -87.481728, 38.736946 ], [ -87.468939, 38.769008 ], [ -87.466192, 38.776570 ], [ -87.464991, 38.780651 ], [ -87.463617, 38.789349 ], [ -87.462931, 38.791557 ], [ -87.462072, 38.793229 ], [ -87.461300, 38.794567 ], [ -87.448854, 38.811088 ], [ -87.447653, 38.812894 ], [ -87.446709, 38.814566 ], [ -87.446022, 38.816171 ], [ -87.444305, 38.822591 ], [ -87.442932, 38.827940 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624700", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519236, 38.707415 ], [ -87.510910, 38.707884 ], [ -87.509108, 38.707884 ], [ -87.505760, 38.707482 ], [ -87.503872, 38.706946 ], [ -87.502327, 38.706410 ], [ -87.500696, 38.705539 ], [ -87.498808, 38.704267 ], [ -87.497435, 38.703061 ], [ -87.496662, 38.702056 ], [ -87.495203, 38.699712 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469553886", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.519236, 38.707214 ], [ -87.510996, 38.707616 ], [ -87.509108, 38.707683 ], [ -87.506704, 38.707415 ], [ -87.505417, 38.707147 ], [ -87.503099, 38.706410 ], [ -87.502155, 38.706008 ], [ -87.500782, 38.705339 ], [ -87.499237, 38.704200 ], [ -87.497778, 38.702927 ], [ -87.496576, 38.701521 ], [ -87.495546, 38.699712 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485838817", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.497005, 38.693281 ], [ -87.496576, 38.693415 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818173", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493744, 38.694889 ], [ -87.497005, 38.693281 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841552", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.474861, 38.755020 ], [ -87.481813, 38.737683 ], [ -87.482672, 38.734603 ], [ -87.484303, 38.722684 ], [ -87.483702, 38.703798 ], [ -87.483959, 38.701922 ], [ -87.484474, 38.700918 ], [ -87.485075, 38.699980 ], [ -87.486019, 38.698975 ], [ -87.486877, 38.698305 ], [ -87.488251, 38.697568 ], [ -87.493744, 38.694889 ], [ -87.493658, 38.694822 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841663", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493658, 38.694822 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841555", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493658, 38.694822 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841666", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493658, 38.694822 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841667", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496576, 38.693415 ], [ -87.493658, 38.694822 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841556", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.496576, 38.693415 ], [ -87.493658, 38.694822 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257622329", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492800, 38.692678 ], [ -87.493744, 38.694889 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841665", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490568, 38.687654 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257599171", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.490568, 38.687654 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841553", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.493658, 38.694822 ], [ -87.490568, 38.686850 ], [ -87.490311, 38.685443 ], [ -87.490139, 38.682428 ], [ -87.489882, 38.681356 ], [ -87.489109, 38.679882 ], [ -87.487822, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841551", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677537 ], [ -87.484388, 38.678609 ], [ -87.485247, 38.679145 ], [ -87.486362, 38.680016 ], [ -87.487135, 38.680954 ], [ -87.489023, 38.684170 ], [ -87.489967, 38.686180 ], [ -87.493315, 38.694956 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627422", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.509365, 38.661788 ], [ -87.503529, 38.665675 ], [ -87.491856, 38.674320 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070259", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.535543, 38.619955 ], [ -87.534170, 38.623107 ], [ -87.533569, 38.625052 ], [ -87.533226, 38.627130 ], [ -87.533569, 38.628740 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624305", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.495117, 38.672310 ], [ -87.493744, 38.673315 ], [ -87.492542, 38.674588 ], [ -87.490654, 38.677604 ], [ -87.490225, 38.678944 ], [ -87.490311, 38.685443 ], [ -87.490740, 38.687319 ], [ -87.491426, 38.689195 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257627423", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.491856, 38.674320 ], [ -87.490225, 38.675392 ], [ -87.489109, 38.676330 ], [ -87.488251, 38.677537 ], [ -87.487736, 38.678877 ], [ -87.487564, 38.679681 ], [ -87.487650, 38.681155 ], [ -87.487993, 38.682227 ], [ -87.489023, 38.684170 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070271", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677537 ], [ -87.484388, 38.678609 ], [ -87.485247, 38.679145 ], [ -87.486706, 38.680351 ], [ -87.487650, 38.681758 ], [ -87.489281, 38.684773 ], [ -87.490568, 38.687654 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070276", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487822, 38.678542 ], [ -87.489109, 38.679882 ], [ -87.489710, 38.680954 ], [ -87.490139, 38.682428 ], [ -87.490225, 38.683701 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070320", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677537 ], [ -87.484818, 38.678609 ], [ -87.486105, 38.678743 ], [ -87.487822, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070272", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677537 ], [ -87.484818, 38.678609 ], [ -87.486105, 38.678743 ], [ -87.487822, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070318", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492542, 38.674655 ], [ -87.490997, 38.676732 ], [ -87.490396, 38.677335 ], [ -87.489109, 38.678073 ], [ -87.487822, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070277", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.492542, 38.674655 ], [ -87.490997, 38.676732 ], [ -87.490396, 38.677335 ], [ -87.489109, 38.678073 ], [ -87.487822, 38.678542 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257616296", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.491856, 38.674320 ], [ -87.488937, 38.676062 ], [ -87.487650, 38.676464 ], [ -87.486620, 38.676732 ], [ -87.485676, 38.676799 ], [ -87.484131, 38.676799 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170071138", "FULLNAME": "E US Hwy 50-150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.471170, 38.674722 ], [ -87.475376, 38.675057 ], [ -87.480354, 38.676129 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841662", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538290, 38.542795 ], [ -87.538376, 38.548165 ], [ -87.538633, 38.554274 ], [ -87.538633, 38.575011 ], [ -87.538805, 38.591919 ], [ -87.539062, 38.599164 ], [ -87.539062, 38.609024 ], [ -87.538977, 38.610566 ], [ -87.538548, 38.612042 ], [ -87.534685, 38.620827 ], [ -87.533484, 38.624247 ], [ -87.532711, 38.627399 ], [ -87.529707, 38.644629 ], [ -87.529106, 38.646506 ], [ -87.528076, 38.648115 ], [ -87.527218, 38.649120 ], [ -87.525759, 38.650461 ], [ -87.516575, 38.657164 ], [ -87.503357, 38.666078 ], [ -87.493744, 38.673315 ], [ -87.492542, 38.674588 ], [ -87.490654, 38.677604 ], [ -87.490225, 38.679413 ], [ -87.490311, 38.684907 ], [ -87.490482, 38.686515 ], [ -87.491426, 38.689195 ], [ -87.493658, 38.694822 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257624535", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.538033, 38.542795 ], [ -87.538118, 38.548165 ], [ -87.538376, 38.555146 ], [ -87.538376, 38.574005 ], [ -87.538548, 38.591986 ], [ -87.538805, 38.600036 ], [ -87.538805, 38.609158 ], [ -87.538548, 38.610969 ], [ -87.538290, 38.611975 ], [ -87.533913, 38.622101 ], [ -87.533140, 38.624448 ], [ -87.532625, 38.626661 ], [ -87.529449, 38.644495 ], [ -87.529278, 38.645433 ], [ -87.528419, 38.647109 ], [ -87.527304, 38.648718 ], [ -87.526016, 38.649925 ], [ -87.516832, 38.656695 ], [ -87.509451, 38.661721 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613150", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487822, 38.678542 ], [ -87.486534, 38.677738 ], [ -87.485247, 38.677201 ], [ -87.475376, 38.675057 ], [ -87.473917, 38.674856 ], [ -87.460957, 38.674052 ], [ -87.456923, 38.673918 ], [ -87.428083, 38.675593 ], [ -87.425251, 38.676062 ], [ -87.412634, 38.679681 ], [ -87.410660, 38.679949 ], [ -87.408943, 38.679949 ], [ -87.395897, 38.678207 ], [ -87.374783, 38.675861 ], [ -87.369289, 38.675124 ], [ -87.356844, 38.672645 ], [ -87.335300, 38.668289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104469613492", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.487822, 38.678542 ], [ -87.486534, 38.677738 ], [ -87.485247, 38.677201 ], [ -87.475376, 38.675057 ], [ -87.473917, 38.674856 ], [ -87.460957, 38.674052 ], [ -87.456923, 38.673918 ], [ -87.428083, 38.675593 ], [ -87.425251, 38.676062 ], [ -87.412634, 38.679681 ], [ -87.410660, 38.679949 ], [ -87.408943, 38.679949 ], [ -87.395897, 38.678207 ], [ -87.374783, 38.675861 ], [ -87.369289, 38.675124 ], [ -87.356844, 38.672645 ], [ -87.335300, 38.668289 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610285", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335043, 38.668490 ], [ -87.371178, 38.675660 ], [ -87.374268, 38.676129 ], [ -87.395811, 38.678408 ], [ -87.402849, 38.679413 ], [ -87.409201, 38.680150 ], [ -87.410831, 38.680150 ], [ -87.412720, 38.679882 ], [ -87.425079, 38.676330 ], [ -87.427654, 38.675861 ], [ -87.455292, 38.674186 ], [ -87.458725, 38.674119 ], [ -87.460957, 38.674253 ], [ -87.473230, 38.675057 ], [ -87.475376, 38.675459 ], [ -87.476664, 38.675794 ], [ -87.481556, 38.677537 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257610358", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.481556, 38.677537 ], [ -87.476664, 38.675794 ], [ -87.475376, 38.675459 ], [ -87.473230, 38.675057 ], [ -87.460957, 38.674253 ], [ -87.458725, 38.674119 ], [ -87.455292, 38.674186 ], [ -87.427654, 38.675861 ], [ -87.425079, 38.676330 ], [ -87.412720, 38.679882 ], [ -87.410831, 38.680150 ], [ -87.409201, 38.680150 ], [ -87.402849, 38.679413 ], [ -87.395811, 38.678408 ], [ -87.374268, 38.676129 ], [ -87.371178, 38.675660 ], [ -87.335043, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257640853", "FULLNAME": "E US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.324314, 38.665072 ], [ -87.317362, 38.661721 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685675", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274961, 38.646439 ], [ -87.283630, 38.647914 ], [ -87.285862, 38.648383 ], [ -87.289467, 38.649388 ], [ -87.293415, 38.650729 ], [ -87.297535, 38.652673 ], [ -87.325430, 38.665810 ], [ -87.329292, 38.667217 ], [ -87.335043, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686635", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274961, 38.646439 ], [ -87.283630, 38.647914 ], [ -87.285862, 38.648383 ], [ -87.289467, 38.649388 ], [ -87.293415, 38.650729 ], [ -87.297535, 38.652673 ], [ -87.325430, 38.665810 ], [ -87.329292, 38.667217 ], [ -87.335043, 38.668490 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471686636", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335300, 38.668289 ], [ -87.331781, 38.667619 ], [ -87.329121, 38.666949 ], [ -87.326374, 38.665944 ], [ -87.316246, 38.661252 ], [ -87.295218, 38.651265 ], [ -87.290583, 38.649456 ], [ -87.285862, 38.648115 ], [ -87.282257, 38.647377 ], [ -87.274876, 38.646238 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685676", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.335300, 38.668289 ], [ -87.331781, 38.667619 ], [ -87.329121, 38.666949 ], [ -87.326374, 38.665944 ], [ -87.316246, 38.661252 ], [ -87.295218, 38.651265 ], [ -87.290583, 38.649456 ], [ -87.285862, 38.648115 ], [ -87.282257, 38.647377 ], [ -87.274876, 38.646238 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685645", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.281313, 38.648450 ], [ -87.283115, 38.649724 ], [ -87.283974, 38.650260 ], [ -87.285347, 38.650863 ], [ -87.286978, 38.651332 ], [ -87.292042, 38.652338 ], [ -87.294359, 38.653142 ], [ -87.296247, 38.654282 ], [ -87.298737, 38.656225 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471685646", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251787, 38.646640 ], [ -87.265005, 38.645769 ], [ -87.267151, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.279596, 38.647243 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104472002543", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251787, 38.646640 ], [ -87.266378, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.274961, 38.646439 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471680885", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251787, 38.646640 ], [ -87.266378, 38.645702 ], [ -87.271786, 38.645970 ], [ -87.274961, 38.646439 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104257570399", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274876, 38.646238 ], [ -87.271700, 38.645769 ], [ -87.265434, 38.645501 ], [ -87.251616, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104471568916", "FULLNAME": "US Hwy 50", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.274876, 38.646238 ], [ -87.271700, 38.645769 ], [ -87.265434, 38.645501 ], [ -87.251616, 38.646372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170072467", "FULLNAME": "E Old US Hwy 150", "RTTYP": "M", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.251616, 38.646372 ], [ -87.265434, 38.645501 ] ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 10, "x": 263, "y": 391 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104257690581", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.446022, 38.817241 ], [ -87.444649, 38.822591 ], [ -87.433662, 38.865976 ], [ -87.433319, 38.867714 ], [ -87.433319, 38.868984 ], [ -87.433491, 38.870186 ], [ -87.433920, 38.871590 ], [ -87.434521, 38.872726 ], [ -87.435808, 38.874530 ], [ -87.439413, 38.878272 ], [ -87.440786, 38.880143 ], [ -87.442160, 38.882815 ], [ -87.442846, 38.885621 ], [ -87.442846, 38.888093 ], [ -87.442331, 38.890766 ], [ -87.437868, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070260", "FULLNAME": "Old US Hwy 41", "RTTYP": "U", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.449112, 38.832153 ], [ -87.449112, 38.833022 ], [ -87.446795, 38.847930 ], [ -87.446280, 38.848933 ], [ -87.444477, 38.852008 ], [ -87.444391, 38.852542 ], [ -87.444477, 38.852943 ], [ -87.444820, 38.853478 ], [ -87.447824, 38.855417 ], [ -87.448339, 38.856152 ], [ -87.447996, 38.863036 ], [ -87.447653, 38.864372 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485818174", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.446022, 38.817241 ], [ -87.444649, 38.822591 ], [ -87.433662, 38.865976 ], [ -87.433319, 38.867714 ], [ -87.433319, 38.868984 ], [ -87.433491, 38.870186 ], [ -87.433920, 38.871590 ], [ -87.434521, 38.872726 ], [ -87.435808, 38.874530 ], [ -87.439413, 38.878272 ], [ -87.440786, 38.880143 ], [ -87.442160, 38.882815 ], [ -87.442846, 38.885621 ], [ -87.442846, 38.888093 ], [ -87.442331, 38.890766 ], [ -87.437868, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841554", "FULLNAME": "US Hwy 150", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.445679, 38.817241 ], [ -87.444305, 38.822591 ], [ -87.433405, 38.865642 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.433491, 38.871256 ], [ -87.434006, 38.872525 ], [ -87.435293, 38.874329 ], [ -87.438984, 38.878138 ], [ -87.440615, 38.880276 ], [ -87.441816, 38.882815 ], [ -87.442245, 38.884152 ], [ -87.442503, 38.885822 ], [ -87.442503, 38.888695 ], [ -87.442074, 38.890699 ], [ -87.437525, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104485841664", "FULLNAME": "US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.445679, 38.817241 ], [ -87.444305, 38.822591 ], [ -87.433405, 38.865642 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.433491, 38.871256 ], [ -87.434006, 38.872525 ], [ -87.435293, 38.874329 ], [ -87.438984, 38.878138 ], [ -87.440615, 38.880276 ], [ -87.441816, 38.882815 ], [ -87.442245, 38.884152 ], [ -87.442503, 38.885822 ], [ -87.442503, 38.888695 ], [ -87.442074, 38.890699 ], [ -87.437525, 38.902255 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "110170070261", "FULLNAME": "N US Hwy 41", "RTTYP": "U", "MTFCC": "S1200" }, "geometry": { "type": "LineString", "coordinates": [ [ -87.445679, 38.817241 ], [ -87.444305, 38.822591 ], [ -87.433405, 38.865642 ], [ -87.432976, 38.867914 ], [ -87.433147, 38.870186 ], [ -87.433491, 38.871256 ], [ -87.434006, 38.872525 ], [ -87.435293, 38.874329 ], [ -87.438984, 38.878138 ], [ -87.440615, 38.880276 ], [ -87.441816, 38.882815 ], [ -87.442245, 38.884152 ], [ -87.442503, 38.885822 ], [ -87.442503, 38.888695 ], [ -87.442074, 38.890699 ], [ -87.437525, 38.902255 ] ] } }
+] }
+] }
+] }

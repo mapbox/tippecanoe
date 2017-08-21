@@ -11,7 +11,7 @@ void enumerate(char *fname) {
 		exit(EXIT_FAILURE);
 	}
 
-	const char *sql = "SELECT zoom_level, tile_column, tile_row from tiles;";
+	const char *sql = "SELECT zoom_level, tile_column, tile_row from tiles order by zoom_level, tile_column, tile_row;";
 
 	sqlite3_stmt *stmt;
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {

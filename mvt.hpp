@@ -1,3 +1,12 @@
+#ifndef MVT_HPP
+#define MVT_HPP
+
+#include <sqlite3.h>
+#include <string>
+#include <map>
+#include <set>
+#include <vector>
+
 struct mvt_value;
 struct mvt_layer;
 
@@ -8,11 +17,23 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
-	int x;
-	int y;
+	long long x;
+	long long y;
 	int /* mvt_operation */ op;
 
 	mvt_geometry(int op, long long x, long long y);
+
+	bool operator<(mvt_geometry const &s) const {
+		if (y < s.y || (y == s.y && x < s.x)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool operator==(mvt_geometry const &s) const {
+		return y == s.y && x == s.x;
+	}
 };
 
 enum mvt_geometry_type {
@@ -69,7 +90,7 @@ struct mvt_layer {
 	std::vector<mvt_feature> features;
 	std::vector<std::string> keys;
 	std::vector<mvt_value> values;
-	int extent;
+	long long extent;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
@@ -85,10 +106,14 @@ struct mvt_tile {
 	std::vector<mvt_layer> layers;
 
 	std::string encode();
-	bool decode(std::string &message);
+	bool decode(std::string &message, bool &was_compressed);
 };
 
 bool is_compressed(std::string const &data);
 int decompress(std::string const &input, std::string &output);
 int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
+
+mvt_value stringified_to_mvt_value(int type, const char *s);
+bool is_integer(const char *s, long long *v);
+#endif

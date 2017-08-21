@@ -20,17 +20,13 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <vector>
+#include <algorithm>
 #include <set>
 #include <map>
 #include <string>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "pool.hpp"
 #include "projection.hpp"
-#include "version.hpp"
 #include "memfile.hpp"
 #include "main.hpp"
 #include "mbtiles.hpp"
@@ -38,82 +34,32 @@ extern "C" {
 #include "geometry.hpp"
 #include "options.hpp"
 #include "serial.hpp"
+#include "text.hpp"
+#include "read_json.hpp"
+#include "mvt.hpp"
 
-#define GEOM_POINT 0	   /* array of positions */
-#define GEOM_MULTIPOINT 1      /* array of arrays of positions */
-#define GEOM_LINESTRING 2      /* array of arrays of positions */
-#define GEOM_MULTILINESTRING 3 /* array of arrays of arrays of positions */
-#define GEOM_POLYGON 4	 /* array of arrays of arrays of positions */
-#define GEOM_MULTIPOLYGON 5    /* array of arrays of arrays of arrays of positions */
-#define GEOM_TYPES 6
+static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
+	parse_geometry(t, j, geom, op, fname, line, feature);
 
-static const char *geometry_names[GEOM_TYPES] = {
-	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
-};
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
+			long long x = geom[i].x;
+			long long y = geom[i].y;
 
-static int geometry_within[GEOM_TYPES] = {
-	-1,		 /* point */
-	GEOM_POINT,      /* multipoint */
-	GEOM_POINT,      /* linestring */
-	GEOM_LINESTRING, /* multilinestring */
-	GEOM_LINESTRING, /* polygon */
-	GEOM_POLYGON,    /* multipolygon */
-};
-
-static int mb_geometry[GEOM_TYPES] = {
-	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
-};
-
-void json_context(json_object *j) {
-	char *s = json_stringify(j);
-
-	if (strlen(s) >= 500) {
-		sprintf(s + 497, "...");
-	}
-
-	fprintf(stderr, "In JSON object %s\n", s);
-	free(s);  // stringify
-}
-
-long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature) {
-	long long g = 0;
-
-	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
-		json_context(feature);
-		return g;
-	}
-
-	int within = geometry_within[t];
-	if (within >= 0) {
-		size_t i;
-		for (i = 0; i < j->length; i++) {
-			if (within == GEOM_POINT) {
-				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
-					op = VT_MOVETO;
-				} else {
-					op = VT_LINETO;
+			if (additional[A_DETECT_WRAPAROUND]) {
+				x += offset;
+				if (has_prev) {
+					if (x - prev > (1LL << 31)) {
+						offset -= 1LL << 32;
+						x -= 1LL << 32;
+					} else if (prev - x > (1LL << 31)) {
+						offset += 1LL << 32;
+						x += 1LL << 32;
+					}
 				}
-			}
 
-			g += parse_geometry(within, j->array[i], bbox, out, op, fname, line, initialized, initial_x, initial_y, feature);
-		}
-	} else {
-		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			long long x, y;
-			double lon = j->array[0]->number;
-			double lat = j->array[1]->number;
-			projection->project(lon, lat, 32, &x, &y);
-
-			if (j->length > 2) {
-				static int warned = 0;
-
-				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
-					json_context(j);
-					json_context(feature);
-					warned = 1;
-				}
+				has_prev = true;
+				prev = x;
 			}
 
 			if (x < bbox[0]) {
@@ -141,33 +87,15 @@ long long parse_geometry(int t, json_object *j, long long *bbox, drawvec &out, i
 				*initialized = 1;
 			}
 
-			draw d(op, (x >> geometry_scale), (y >> geometry_scale));
-			out.push_back(d);
-			g++;
-		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
-			json_context(j);
-			json_context(feature);
+			geom[i].x = x >> geometry_scale;
+			geom[i].y = y >> geometry_scale;
 		}
 	}
 
-	if (t == GEOM_POLYGON) {
-		// Note that this is not using the correct meaning of closepath.
-		//
-		// We are using it here to close an entire Polygon, to distinguish
-		// the Polygons within a MultiPolygon from each other.
-		//
-		// This will be undone in fix_polygon(), which needs to know which
-		// rings come from which Polygons so that it can make the winding order
-		// of the outer ring be the opposite of the order of the inner rings.
-
-		out.push_back(draw(VT_CLOSEPATH, 0, 0));
-	}
-
-	return g;
+	return geom.size();
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, json_object *id, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string const &layername) {
+int serialize_geometry(json_object *geometry, json_object *properties, json_object *id, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -241,21 +169,72 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				id_value = strtoull(id->string, &err, 10);
 
 				if (err != NULL && *err != '\0') {
-					fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+					static bool warned_frac = false;
+
+					if (!warned_frac) {
+						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+						warned_frac = true;
+					}
 				} else {
 					has_id = true;
 				}
 			} else {
-				fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+				static bool warned_neg = false;
+
+				if (!warned_neg) {
+					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+					warned_neg = true;
+				}
 			}
 		} else {
-			char *s = json_stringify(id);
-			fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
-			free(s);  // stringify
+			static bool warned_nan = false;
+
+			if (!warned_nan) {
+				char *s = json_stringify(id);
+				fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
+				free(s);  // stringify
+				warned_nan = true;
+			}
 		}
 	}
 
 	long long bbox[] = {LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN};
+
+	if (!filters) {
+		if (tippecanoe_layername.size() != 0) {
+			if (layermap->count(tippecanoe_layername) == 0) {
+				layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
+			}
+
+			auto ai = layermap->find(tippecanoe_layername);
+			if (ai != layermap->end()) {
+				layer = ai->second.id;
+				layername = tippecanoe_layername;
+
+				if (mb_geometry[t] == VT_POINT) {
+					ai->second.points++;
+				} else if (mb_geometry[t] == VT_LINE) {
+					ai->second.lines++;
+				} else if (mb_geometry[t] == VT_POLYGON) {
+					ai->second.polygons++;
+				}
+			} else {
+				fprintf(stderr, "Internal error: can't find layer name %s\n", tippecanoe_layername.c_str());
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			auto fk = layermap->find(layername);
+			if (fk != layermap->end()) {
+				if (mb_geometry[t] == VT_POINT) {
+					fk->second.points++;
+				} else if (mb_geometry[t] == VT_LINE) {
+					fk->second.lines++;
+				} else if (mb_geometry[t] == VT_POLYGON) {
+					fk->second.polygons++;
+				}
+			}
+		}
+	}
 
 	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
@@ -280,45 +259,63 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 				continue;
 			}
 
-			type_and_string tas;
-			tas.string = s;
-			tas.type = -1;
+			int type = -1;
+			std::string val;
+			stringify_value(properties->values[i], type, val, reading, line, feature, properties->keys[i]->string, attribute_types);
 
-			metakey[m] = properties->keys[i]->string;
+			if (type >= 0) {
+				metakey[m] = properties->keys[i]->string;
+				metatype[m] = type;
+				metaval[m] = val;
+				m++;
 
-			if (properties->values[i] != NULL && properties->values[i]->type == JSON_STRING) {
-				tas.type = metatype[m] = VT_STRING;
-				metaval[m] = std::string(properties->values[i]->string);
-				m++;
-			} else if (properties->values[i] != NULL && properties->values[i]->type == JSON_NUMBER) {
-				tas.type = metatype[m] = VT_NUMBER;
-				metaval[m] = std::string(properties->values[i]->string);
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_TRUE || properties->values[i]->type == JSON_FALSE)) {
-				tas.type = metatype[m] = VT_BOOLEAN;
-				metaval[m] = std::string(properties->values[i]->type == JSON_TRUE ? "true" : "false");
-				m++;
-			} else if (properties->values[i] != NULL && (properties->values[i]->type == JSON_NULL)) {
-				;
-			} else {
-				tas.type = metatype[m] = VT_OBJECT;
-				const char *v = json_stringify(properties->values[i]);
-				metaval[m] = std::string(v);
-				free((void *) v);  // stringify
-				m++;
-			}
+				type_and_string attrib;
+				attrib.type = metatype[m - 1];
+				attrib.string = metaval[m - 1];
 
-			if (tas.type >= 0) {
-				auto fk = layermap->find(layername);
-				fk->second.file_keys.insert(tas);
+				if (!filters) {
+					auto fk = layermap->find(layername);
+					add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
+				}
 			}
 		}
 	}
 
+	bool has_prev = false;
+	long long prev = 0;
+	long long offset = 0;
+
 	drawvec dv;
-	long long g = parse_geometry(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature);
+	long long g = parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
+	}
+
+	if (want_dist) {
+		std::vector<unsigned long long> locs;
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
+				locs.push_back(encode(dv[i].x << geometry_scale, dv[i].y << geometry_scale));
+			}
+		}
+		std::sort(locs.begin(), locs.end());
+		size_t n = 0;
+		double sum = 0;
+		for (size_t i = 1; i < locs.size(); i++) {
+			if (locs[i - 1] != locs[i]) {
+				sum += log(locs[i] - locs[i - 1]);
+				n++;
+			}
+		}
+		if (n > 0) {
+			double avg = exp(sum / n);
+			// Convert approximately from tile units to feet
+			double dist_ft = sqrt(avg) / 33;
+
+			*dist_sum += log(dist_ft) * n;
+			*dist_count += n;
+		}
+		locs.clear();
 	}
 
 	bool inline_meta = true;
@@ -344,54 +341,39 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 
-	/*
-	 * Note that feature_minzoom for lines is the dimension
-	 * of the geometry in world coordinates, but
-	 * for points is the lowest zoom level (in tiles,
-	 * not in pixels) at which it should be drawn.
-	 *
-	 * So a line that is too small for, say, z8
-	 * will have feature_minzoom of 18 (if tile detail is 10),
-	 * not 8.
-	 */
-	int feature_minzoom = 0;
-	if (mb_geometry[t] == VT_LINE) {
-		// Skip z0 check because everything is always in the one z0 tile
-		for (feature_minzoom = 1; feature_minzoom < 31; feature_minzoom++) {
-			unsigned mask = 1 << (32 - (feature_minzoom + 1));
+	double extent = 0;
+	if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (mb_geometry[t] == VT_POLYGON) {
+			for (size_t i = 0; i < dv.size(); i++) {
+				if (dv[i].op == VT_MOVETO) {
+					size_t j;
+					for (j = i + 1; j < dv.size(); j++) {
+						if (dv[j].op != VT_LINETO) {
+							break;
+						}
+					}
 
-			if (((bbox[0] & mask) != (bbox[2] & mask)) || ((bbox[1] & mask) != (bbox[3] & mask))) {
-				break;
+					extent += get_area(dv, i, j);
+					i = j - 1;
+				}
 			}
-		}
-	} else if (mb_geometry[t] == VT_POINT) {
-		double r = ((double) rand()) / RAND_MAX;
-		if (r == 0) {
-			r = .00000001;
-		}
-		feature_minzoom = basezoom - floor(log(r) / -log(droprate));
-	}
-
-	if (tippecanoe_layername.size() != 0) {
-		if (layermap->count(tippecanoe_layername) == 0) {
-			layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
-		}
-
-		auto ai = layermap->find(tippecanoe_layername);
-		if (ai != layermap->end()) {
-			layer = ai->second.id;
-		} else {
-			fprintf(stderr, "Internal error: can't find layer name %s\n", tippecanoe_layername.c_str());
-			exit(EXIT_FAILURE);
+		} else if (mb_geometry[t] == VT_LINE) {
+			for (size_t i = 1; i < dv.size(); i++) {
+				if (dv[i].op == VT_LINETO) {
+					double xd = dv[i].x - dv[i - 1].x;
+					double yd = dv[i].y - dv[i - 1].y;
+					extent += sqrt(xd * xd + yd * yd);
+				}
+			}
 		}
 	}
 
 	long long geomstart = *geompos;
+	long long bbox_index;
 
 	serial_feature sf;
 	sf.layer = layer;
 	sf.segment = segment;
-	sf.seq = *layer_seq;
 	sf.t = mb_geometry[t];
 	sf.has_id = has_id;
 	sf.id = id_value;
@@ -401,35 +383,50 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 	sf.geometry = dv;
 	sf.m = m;
-	sf.feature_minzoom = feature_minzoom;
+	sf.feature_minzoom = 0;  // Will be filled in during index merging
+	sf.extent = (long long) extent;
+
+	if (prevent[P_INPUT_ORDER]) {
+		sf.seq = *layer_seq;
+	} else {
+		sf.seq = 0;
+	}
+
+	// Calculate the center even if off the edge of the plane,
+	// and then mask to bring it back into the addressable area
+	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
+	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
+	bbox_index = encode(midx, midy);
+
+	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || uses_gamma) {
+		sf.index = bbox_index;
+	} else {
+		sf.index = 0;
+	}
 
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < m; i++) {
-			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], VT_STRING));
+			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], mvt_string));
 			sf.values.push_back(addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]));
 		}
 	} else {
 		sf.metapos = *metapos;
 		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], VT_STRING), metapos, fname);
+			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], mvt_string), metapos, fname);
 			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
 		}
 	}
 
-	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale);
+	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale, false);
 
 	struct index index;
 	index.start = geomstart;
 	index.end = *geompos;
 	index.segment = segment;
 	index.seq = *layer_seq;
-
-	// Calculate the center even if off the edge of the plane,
-	// and then mask to bring it back into the addressable area
-	long long midx = (bbox[0] / 2 + bbox[2] / 2) & ((1LL << 32) - 1);
-	long long midy = (bbox[1] / 2 + bbox[3] / 2) & ((1LL << 32) - 1);
-	index.index = encode(midx, midy);
+	index.t = sf.t;
+	index.index = bbox_index;
 
 	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
 	*indexpos += sizeof(struct index);
@@ -465,14 +462,15 @@ void check_crs(json_object *j, const char *reading) {
 			json_object *name = json_hash_get(properties, "name");
 			if (name->type == JSON_STRING) {
 				if (strcmp(name->string, projection->alias) != 0) {
-					fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not \"%s\".\n", reading, name->string, projection->alias);
+					fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
+					fprintf(stderr, "%s: If \"%s\" is not the expected projection, use -s to specify the right one.\n", reading, projection->alias);
 				}
 			}
 		}
 	}
 }
 
-void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername) {
+void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -540,7 +538,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername);
+				serialize_geometry(j, NULL, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
 				json_free(j);
 				continue;
 			}
@@ -549,6 +547,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		if (strcmp(type->string, "Feature") != 0) {
 			if (strcmp(type->string, "FeatureCollection") == 0) {
 				check_crs(j, reading);
+				json_free(j);
 			}
 
 			continue;
@@ -582,10 +581,10 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername);
+				serialize_geometry(geometries->array[g], properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
 			}
 		} else {
-			serialize_geometry(geometry, properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername);
+			serialize_geometry(geometry, properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
 		}
 
 		json_free(j);
@@ -597,7 +596,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = (struct parse_json_args *) v;
 
-	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y, pja->readers, pja->maxzoom, pja->layermap, *pja->layername);
+	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y, pja->readers, pja->maxzoom, pja->layermap, *pja->layername, pja->uses_gamma, pja->attribute_types, pja->dist_sum, pja->dist_count, pja->want_dist, pja->filters);
 
 	return NULL;
 }

@@ -27,7 +27,7 @@ void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
 }
 
 void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
-	unsigned long long zigzag = protozero::encode_zigzag32(n);
+	unsigned long long zigzag = protozero::encode_zigzag64(n);
 
 	serialize_ulong_long(out, zigzag, fpos, fname);
 }
@@ -73,7 +73,7 @@ void deserialize_int(char **f, int *n) {
 void deserialize_long_long(char **f, long long *n) {
 	unsigned long long zigzag = 0;
 	deserialize_ulong_long(f, &zigzag);
-	*n = protozero::decode_zigzag32(zigzag);
+	*n = protozero::decode_zigzag64(zigzag);
 }
 
 void deserialize_ulong_long(char **f, unsigned long long *zigzag) {
@@ -107,7 +107,7 @@ void deserialize_byte(char **f, signed char *n) {
 int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
 	unsigned long long zigzag = 0;
 	int ret = deserialize_ulong_long_io(f, &zigzag, geompos);
-	*n = protozero::decode_zigzag32(zigzag);
+	*n = protozero::decode_zigzag64(zigzag);
 	return ret;
 }
 
@@ -174,11 +174,22 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 	}
 }
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy) {
+void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
-	serialize_long_long(geomfile, sf->seq, geompos, fname);
 
-	serialize_long_long(geomfile, (sf->layer << 3) | (sf->has_id ? 4 : 0) | (sf->has_tippecanoe_minzoom ? 2 : 0) | (sf->has_tippecanoe_maxzoom ? 1 : 0), geompos, fname);
+	long long layer = 0;
+	layer |= sf->layer << 6;
+	layer |= (sf->seq != 0) << 5;
+	layer |= (sf->index != 0) << 4;
+	layer |= (sf->extent != 0) << 3;
+	layer |= sf->has_id << 2;
+	layer |= sf->has_tippecanoe_minzoom << 1;
+	layer |= sf->has_tippecanoe_maxzoom << 0;
+
+	serialize_long_long(geomfile, layer, geompos, fname);
+	if (sf->seq != 0) {
+		serialize_long_long(geomfile, sf->seq, geompos, fname);
+	}
 	if (sf->has_tippecanoe_minzoom) {
 		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
 	}
@@ -193,9 +204,17 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 
 	write_geometry(sf->geometry, geompos, geomfile, fname, wx, wy);
 	serialize_byte(geomfile, VT_END, geompos, fname);
+	if (sf->index != 0) {
+		serialize_ulong_long(geomfile, sf->index, geompos, fname);
+	}
+	if (sf->extent != 0) {
+		serialize_long_long(geomfile, sf->extent, geompos, fname);
+	}
 
 	serialize_int(geomfile, sf->m, geompos, fname);
-	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	if (sf->m != 0) {
+		serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
 		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());
@@ -207,5 +226,87 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_long_long(geomfile, sf->values[i], geompos, fname);
 	}
 
-	serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	if (include_minzoom) {
+		serialize_byte(geomfile, sf->feature_minzoom, geompos, fname);
+	}
+}
+
+serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+	serial_feature sf;
+
+	deserialize_byte_io(geoms, &sf.t, geompos_in);
+	if (sf.t < 0) {
+		return sf;
+	}
+
+	deserialize_long_long_io(geoms, &sf.layer, geompos_in);
+
+	sf.seq = 0;
+	if (sf.layer & (1 << 5)) {
+		deserialize_long_long_io(geoms, &sf.seq, geompos_in);
+	}
+
+	sf.tippecanoe_minzoom = -1;
+	sf.tippecanoe_maxzoom = -1;
+	sf.id = 0;
+	sf.has_id = false;
+	if (sf.layer & (1 << 1)) {
+		deserialize_int_io(geoms, &sf.tippecanoe_minzoom, geompos_in);
+	}
+	if (sf.layer & (1 << 0)) {
+		deserialize_int_io(geoms, &sf.tippecanoe_maxzoom, geompos_in);
+	}
+	if (sf.layer & (1 << 2)) {
+		sf.has_id = true;
+		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
+	}
+
+	deserialize_int_io(geoms, &sf.segment, geompos_in);
+
+	sf.index = 0;
+	sf.extent = 0;
+
+	sf.geometry = decode_geometry(geoms, geompos_in, z, tx, ty, sf.bbox, initial_x[sf.segment], initial_y[sf.segment]);
+	if (sf.layer & (1 << 4)) {
+		deserialize_ulong_long_io(geoms, &sf.index, geompos_in);
+	}
+	if (sf.layer & (1 << 3)) {
+		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
+	}
+
+	sf.layer >>= 6;
+
+	sf.metapos = 0;
+	{
+		int m;
+		deserialize_int_io(geoms, &m, geompos_in);
+		sf.m = m;
+	}
+	if (sf.m != 0) {
+		deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
+	}
+
+	if (sf.metapos >= 0) {
+		char *meta = metabase + sf.metapos + meta_off[sf.segment];
+
+		for (size_t i = 0; i < sf.m; i++) {
+			long long k, v;
+			deserialize_long_long(&meta, &k);
+			deserialize_long_long(&meta, &v);
+			sf.keys.push_back(k);
+			sf.values.push_back(v);
+		}
+	} else {
+		for (size_t i = 0; i < sf.m; i++) {
+			long long k, v;
+			deserialize_long_long_io(geoms, &k, geompos_in);
+			deserialize_long_long_io(geoms, &v, geompos_in);
+			sf.keys.push_back(k);
+			sf.values.push_back(v);
+		}
+	}
+
+	deserialize_byte_io(geoms, &sf.feature_minzoom, geompos_in);
+
+	return sf;
 }

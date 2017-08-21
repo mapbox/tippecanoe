@@ -1,0 +1,39 @@
+{ "type": "Feature", "properties": { "booltype": null, "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": "null", "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": "", "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": 0, "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": "0", "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": false, "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": "false", "expect": false }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": true, "expect": true }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": 1, "expect": true }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": 0.0, "expect": true }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": "yes", "expect": true }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "booltype": [ 2, 3 ], "expect": true }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": null, "expect": "null" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": 2, "expect": "2" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": 2.5, "expect": "2.5" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": true, "expect": "true" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": false, "expect": "false" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": "something", "expect": "something" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "stringtype": [ 2, 3 ], "expect": "[2,3]" }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": null, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": "5", "expect": 5 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": "5.6", "expect": 6 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": 5.6, "expect": 6 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": true, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": false, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": "", "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": "yes", "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": " 3", "expect": 3 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "inttype": [ 2, 3 ], "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": null, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": "5", "expect": 5 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": "5.6", "expect": 5.6 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": 5.6, "expect": 5.6 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": true, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": false, "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": "", "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": "yes", "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": " 3", "expect": 3 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }
+{ "type": "Feature", "properties": { "floattype": [ 2, 3 ], "expect": 0 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ] } }

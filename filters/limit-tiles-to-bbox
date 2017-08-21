@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+
+use Math::Trig;
+use strict;
+
+# http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+sub getTileNumber {
+	my ($lat, $lon, $zoom) = @_;
+	my $xtile = int(($lon + 180) / 360 * 2 ** $zoom);
+	my $ytile = int((1 - log(tan(deg2rad($lat)) + sec(deg2rad($lat))) / pi) / 2 * 2 ** $zoom);
+	return ($xtile, $ytile);
+}
+
+my ($minlon, $minlat, $maxlon, $maxlat, $z, $x, $y) = @ARGV;
+
+my ($x1, $y1) = getTileNumber($maxlat, $minlon, $z);
+my ($x2, $y2) = getTileNumber($minlat, $maxlon, $z);
+
+if ($x >= $x1 && $x <= $x2 && $y >= $y1 && $y <= $y2) {
+	while (<STDIN>) {
+		print;
+	}
+} else {
+	while (<STDIN>) {
+
+	}
+}
