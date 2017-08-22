@@ -1,3 +1,13 @@
+## 1.22.2
+
+* Add better diagnostics for NaN or Infinity in input JSON
+
+## 1.22.1
+
+* Fix tilestats generation when long string attribute values are elided
+* Add option not to produce tilestats
+* Add tile-join options to select zoom levels to copy
+
 ## 1.22.0
 
 * Add options to filter each tile's contents through a shell pipeline

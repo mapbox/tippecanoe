@@ -271,6 +271,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't limit tiles to 500K bytes
 .IP \(bu 2
 \fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+.IP \(bu 2
+\fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
 .RE
 .SS Temporary storage
 .RS
@@ -511,20 +513,20 @@ Check out some examples of maps made with tippecanoe \[la]MADE_WITH.md\[ra]
 The name is a joking reference \[la]http://en.wikipedia.org/wiki/Tippecanoe_and_Tyler_Too\[ra] to a "tiler" for making map tiles.
 .SH tile\-join
 .PP
-Tile\-join is a tool for joining new attributes from a CSV file to features
-that have already been tiled with tippecanoe. It reads the tiles from an
+Tile\-join is a tool for copying and merging vector mbtiles files and for
+joining new attributes from a CSV file to existing features in them.
+.PP
+It reads the tiles from an
 existing .mbtiles file or a directory of tiles, matches them against the
-records of the CSV, and writes out a new tileset.
+records of the CSV (if one is specified), and writes out a new tileset.
 .PP
 If you specify multiple source mbtiles files or source directories of tiles,
 all the sources are read and their combined contents are written to the new
 mbtiles output. If they define the same layers or the same tiles, the layers
 or tiles are merged.
 .PP
-You can use the \fB\fC\-e\fR flag to output a directory of tiles rather than a
-\&.mbtiles file.
-.PP
 The options are:
+.SS Output tileset
 .RS
 .IP \(bu 2
 \fB\fC\-o\fR \fIout.mbtiles\fP or \fB\fC\-\-output=\fR\fIout.mbtiles\fP: Write the new tiles to the specified .mbtiles file.
@@ -532,16 +534,9 @@ The options are:
 \fB\fC\-e\fR \fIdirectory\fP or \fB\fC\-\-output\-to\-directory=\fR\fIdirectory\fP: Write the new tiles to the specified directory instead of to an mbtiles file.
 .IP \(bu 2
 \fB\fC\-f\fR or \fB\fC\-\-force\fR: Remove \fIout.mbtiles\fP if it already exists.
-.IP \(bu 2
-\fB\fC\-c\fR \fImatch\fP\fB\fC\&.csv\fR or \fB\fC\-\-csv=\fR\fImatch\fP\fB\fC\&.csv\fR: Use \fImatch\fP\fB\fC\&.csv\fR as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
-.IP \(bu 2
-\fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
-.IP \(bu 2
-\fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
-.IP \(bu 2
-\fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't skip tiles larger than 500K.
-.IP \(bu 2
-\fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+.RE
+.SS Tileset description and attribution
+.RS
 .IP \(bu 2
 \fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
 .IP \(bu 2
@@ -552,6 +547,34 @@ The options are:
 \fB\fC\-n\fR \fIname\fP or \fB\fC\-\-name=\fR\fIname\fP: Set the tileset name.
 .IP \(bu 2
 \fB\fC\-N\fR \fIdescription\fP or \fB\fC\-\-description=\fR\fIdescription\fP: Set the tileset description.
+.RE
+.SS Zoom levels
+.RS
+.IP \(bu 2
+\fB\fC\-z\fR \fIzoom\fP or \fB\fC\-\-maximum\-zoom=\fR\fIzoom\fP: Don't copy tiles from higher zoom levels than the specified zoom
+.IP \(bu 2
+\fB\fC\-Z\fR \fIzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIzoom\fP: Don't copy tiles from lower zoom levels than the specified zoom
+.RE
+.SS Merging attributes from a CSV file
+.RS
+.IP \(bu 2
+\fB\fC\-c\fR \fImatch\fP\fB\fC\&.csv\fR or \fB\fC\-\-csv=\fR\fImatch\fP\fB\fC\&.csv\fR: Use \fImatch\fP\fB\fC\&.csv\fR as the source for new attributes to join to the features. The first line of the file should be the key names; the other lines are values. The first column is the one to match against the existing features; the other columns are the new data to add.
+.RE
+.SS Filtering features and feature attributes
+.RS
+.IP \(bu 2
+\fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+.IP \(bu 2
+\fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
+.RE
+.SS Setting or disabling tile size limits
+.RS
+.IP \(bu 2
+\fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't skip tiles larger than 500K.
+.IP \(bu 2
+\fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+.IP \(bu 2
+\fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
 .RE
 .PP
 Because tile\-join just copies the geometries to the new .mbtiles without processing them

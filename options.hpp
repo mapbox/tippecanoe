@@ -30,6 +30,7 @@
 #define P_DUPLICATION ((int) 'D')
 #define P_TINY_POLYGON_REDUCTION ((int) 't')
 #define P_TILE_COMPRESSION ((int) 'C')
+#define P_TILE_STATS ((int) 'g')
 
 extern int prevent[256];
 extern int additional[256];

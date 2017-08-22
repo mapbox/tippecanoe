@@ -32,8 +32,11 @@ std::string dequote(std::string s);
 
 int pk = false;
 int pC = false;
+int pg = false;
 size_t CPUS;
 int quiet = false;
+int maxzoom = 32;
+int minzoom = 0;
 
 struct stats {
 	int minzoom;
@@ -692,12 +695,14 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 		maxlat = max(lat1, maxlat);
 		maxlon = max(lon2, maxlon);
 
-		zxy tile = zxy(r->zoom, r->x, r->y);
-		if (tasks.count(tile) == 0) {
-			tasks.insert(std::pair<zxy, std::vector<std::string>>(tile, std::vector<std::string>()));
+		if (r->zoom >= minzoom && r->zoom <= maxzoom) {
+			zxy tile = zxy(r->zoom, r->x, r->y);
+			if (tasks.count(tile) == 0) {
+				tasks.insert(std::pair<zxy, std::vector<std::string>>(tile, std::vector<std::string>()));
+			}
+			auto f = tasks.find(tile);
+			f->second.push_back(r->data);
 		}
-		auto f = tasks.find(tile);
-		f->second.push_back(r->data);
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
@@ -766,15 +771,15 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					int minzoom = sqlite3_column_int(r->stmt, 0);
-					st->minzoom = min(st->minzoom, minzoom);
+					int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
+					st->minzoom = min(st->minzoom, minz);
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					int maxzoom = sqlite3_column_int(r->stmt, 0);
-					st->maxzoom = max(st->maxzoom, maxzoom);
+					int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
+					st->maxzoom = max(st->maxzoom, maxz);
 				}
 				sqlite3_finalize(r->stmt);
 			}
@@ -851,14 +856,14 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 				if (j->type == JSON_HASH) {
 					if ((k = json_hash_get(j, "minzoom")) != NULL) {
 						const std::string minzoom_tmp = k->string;
-						int minzoom = std::stoi(minzoom_tmp);
-						st->minzoom = min(st->minzoom, minzoom);
+						int minz = max(std::stoi(minzoom_tmp), minzoom);
+						st->minzoom = min(st->minzoom, minz);
 					}
 
 					if ((k = json_hash_get(j, "maxzoom")) != NULL) {
 						const std::string maxzoom_tmp = k->string;
-						int maxzoom = std::stoi(maxzoom_tmp);
-						st->maxzoom = max(st->maxzoom, maxzoom);
+						int maxz = min(std::stoi(maxzoom_tmp), maxzoom);
+						st->maxzoom = max(st->maxzoom, maxz);
 					}
 
 					if ((k = json_hash_get(j, "center")) != NULL) {
@@ -1032,9 +1037,12 @@ int main(int argc, char **argv) {
 		{"layer", required_argument, 0, 'l'},
 		{"exclude-layer", required_argument, 0, 'L'},
 		{"quiet", no_argument, 0, 'q'},
+		{"maximum-zoom", required_argument, 0, 'z'},
+		{"minimum-zoom", required_argument, 0, 'Z'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
+		{"no-tile-stats", no_argument, &pg, 1},
 
 		{0, 0, 0, 0},
 	};
@@ -1087,11 +1095,21 @@ int main(int argc, char **argv) {
 			set_description = optarg;
 			break;
 
+		case 'z':
+			maxzoom = atoi(optarg);
+			break;
+
+		case 'Z':
+			minzoom = atoi(optarg);
+			break;
+
 		case 'p':
 			if (strcmp(optarg, "k") == 0) {
 				pk = true;
 			} else if (strcmp(optarg, "C") == 0) {
 				pC = true;
+			} else if (strcmp(optarg, "g") == 0) {
+				pg = true;
 			} else {
 				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
 				exit(EXIT_FAILURE);
@@ -1194,7 +1212,7 @@ int main(int argc, char **argv) {
 		name = set_name;
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str());
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
