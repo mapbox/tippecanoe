@@ -38,7 +38,7 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox);
+int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *treefile, memfile *poolfile, serial_feature &sf, long long *geompos, long long *metapos, long long *indexpos, const char *fname, int line, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox, double *dist_sum, size_t *dist_count, int maxzoom, bool uses_gamma, size_t segment, struct reader *readers, volatile long long *layer_seq, volatile long long *progress_seq);
 
 static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
 	parse_geometry(t, j, geom, op, fname, line, feature);
@@ -288,7 +288,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	long long offset = 0;
 
 	drawvec dv;
-	long long g = parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
+	parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
 	}
@@ -322,10 +322,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		sf.full_values.push_back(sv);
 	}
 
-	return serialize_feature(geomfile, &sf, geompos, fname, initial_x, initial_y, want_dist, filters);
+	return serialize_feature(geomfile, metafile, indexfile, treefile, poolfile, sf, geompos, metapos, indexpos, fname, line, initial_x, initial_y, want_dist, filters, file_bbox, dist_sum, dist_count, maxzoom, uses_gamma, segment, readers, layer_seq, progress_seq);
 }
 
-int serialize_feature(FILE *geomfile, serial_feature &sf, long long *geompos, const char *fname, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox) {
+int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *treefile, memfile *poolfile, serial_feature &sf, long long *geompos, long long *metapos, long long *indexpos, const char *fname, int line, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox, double *dist_sum, size_t *dist_count, int maxzoom, bool uses_gamma, size_t segment, struct reader *readers, volatile long long *layer_seq, volatile long long *progress_seq) {
 	if (want_dist) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {
@@ -378,7 +378,7 @@ int serialize_feature(FILE *geomfile, serial_feature &sf, long long *geompos, co
 
 	double extent = 0;
 	if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
-		if (mb_geometry[t] == VT_POLYGON) {
+		if (sf.t == VT_POLYGON) {
 			for (size_t i = 0; i < sf.geometry.size(); i++) {
 				if (sf.geometry[i].op == VT_MOVETO) {
 					size_t j;
@@ -392,7 +392,7 @@ int serialize_feature(FILE *geomfile, serial_feature &sf, long long *geompos, co
 					i = j - 1;
 				}
 			}
-		} else if (mb_geometry[t] == VT_LINE) {
+		} else if (sf.t == VT_LINE) {
 			for (size_t i = 1; i < sf.geometry.size(); i++) {
 				if (sf.geometry[i].op == VT_LINETO) {
 					double xd = sf.geometry[i].x - sf.geometry[i - 1].x;
@@ -425,15 +425,15 @@ int serialize_feature(FILE *geomfile, serial_feature &sf, long long *geompos, co
 
 	if (inline_meta) {
 		sf.metapos = -1;
-		for (size_t i = 0; i < m; i++) {
-			sf.keys.push_back(addpool(poolfile, treefile, metakey[i], mvt_string));
-			sf.values.push_back(addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]));
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			sf.keys.push_back(addpool(poolfile, treefile, sf.full_keys[i].c_str(), mvt_string));
+			sf.values.push_back(addpool(poolfile, treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 		}
 	} else {
 		sf.metapos = *metapos;
-		for (size_t i = 0; i < m; i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, metakey[i], mvt_string), metapos, fname);
-			serialize_long_long(metafile, addpool(poolfile, treefile, metaval[i].c_str(), metatype[i]), metapos, fname);
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			serialize_long_long(metafile, addpool(poolfile, treefile, sf.full_keys[i].c_str(), mvt_string), metapos, fname);
+			serialize_long_long(metafile, addpool(poolfile, treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), metapos, fname);
 		}
 	}
 
