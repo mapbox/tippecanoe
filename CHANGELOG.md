@@ -1,3 +1,7 @@
+## 1.22.2
+
+* Add better diagnostics for NaN or Infinity in input JSON
+
 ## 1.22.1
 
 * Fix tilestats generation when long string attribute values are elided

@@ -400,6 +400,32 @@ again:
 		return add_object(j, JSON_NULL);
 	}
 
+	/////////////////////////// NaN
+
+	if (c == 'N') {
+		if (read_wrap(j) != 'a' || read_wrap(j) != 'N') {
+			j->error = "Found misspelling of NaN";
+			return NULL;
+		}
+
+		j->error = "JSON does not allow NaN";
+		return NULL;
+	}
+
+	/////////////////////////// Infinity
+
+	if (c == 'I') {
+		if (read_wrap(j) != 'n' || read_wrap(j) != 'f' || read_wrap(j) != 'i' ||
+		    read_wrap(j) != 'n' || read_wrap(j) != 'i' || read_wrap(j) != 't' ||
+		    read_wrap(j) != 'y') {
+			j->error = "Found misspelling of Infinity";
+			return NULL;
+		}
+
+		j->error = "JSON does not allow Infinity";
+		return NULL;
+	}
+
 	/////////////////////////// True
 
 	if (c == 't') {
@@ -740,7 +766,7 @@ void json_disconnect(json_object *o) {
 
 static void json_print_one(struct string *val, json_object *o) {
 	if (o == NULL) {
-		string_append_string(val, "NULL");
+		string_append_string(val, "...");
 	} else if (o->type == JSON_STRING) {
 		string_append(val, '\"');
 
@@ -779,7 +805,7 @@ static void json_print_one(struct string *val, json_object *o) {
 static void json_print(struct string *val, json_object *o) {
 	if (o == NULL) {
 		// Hash value in incompletely read hash
-		string_append_string(val, "NULL");
+		string_append_string(val, "...");
 	} else if (o->type == JSON_HASH) {
 		string_append(val, '{');
 
