@@ -326,6 +326,8 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 }
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma) {
+	struct reader *r = &(sst->readers[sst->segment]);
+
 	if (want_dist) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {
@@ -426,39 +428,39 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool 
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			sf.keys.push_back(addpool(sst->poolfile, sst->treefile, sf.full_keys[i].c_str(), mvt_string));
-			sf.values.push_back(addpool(sst->poolfile, sst->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
+			sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
+			sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 		}
 	} else {
-		sf.metapos = *(sst->metapos);
+		sf.metapos = r->metapos;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			serialize_long_long(sst->metafile, addpool(sst->poolfile, sst->treefile, sf.full_keys[i].c_str(), mvt_string), sst->metapos, sst->fname);
-			serialize_long_long(sst->metafile, addpool(sst->poolfile, sst->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), sst->metapos, sst->fname);
+			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
+			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
 		}
 	}
 
-	long long geomstart = *(sst->geompos);
-	serialize_feature(sst->geomfile, &sf, sst->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
+	long long geomstart = r->geompos;
+	serialize_feature(r->geomfile, &sf, &r->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
 
 	struct index index;
 	index.start = geomstart;
-	index.end = *(sst->geompos);
+	index.end = r->geompos;
 	index.segment = sst->segment;
 	index.seq = *(sst->layer_seq);
 	index.t = sf.t;
 	index.index = bbox_index;
 
-	fwrite_check(&index, sizeof(struct index), 1, sst->indexfile, sst->fname);
-	*(sst->indexpos) += sizeof(struct index);
+	fwrite_check(&index, sizeof(struct index), 1, r->indexfile, sst->fname);
+	r->indexpos += sizeof(struct index);
 
 	for (size_t i = 0; i < 2; i++) {
-		if (sf.bbox[i] < sst->file_bbox[i]) {
-			sst->file_bbox[i] = sf.bbox[i];
+		if (sf.bbox[i] < r->file_bbox[i]) {
+			r->file_bbox[i] = sf.bbox[i];
 		}
 	}
 	for (size_t i = 2; i < 4; i++) {
-		if (sf.bbox[i] > sst->file_bbox[i]) {
-			sst->file_bbox[i] = sf.bbox[i];
+		if (sf.bbox[i] > r->file_bbox[i]) {
+			r->file_bbox[i] = sf.bbox[i];
 		}
 	}
 
@@ -616,7 +618,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = (struct parse_json_args *) v;
 
-	parse_json(pja->jp, pja->reading, pja->layer_seq, pja->progress_seq, pja->metapos, pja->geompos, pja->indexpos, pja->exclude, pja->include, pja->exclude_all, pja->metafile, pja->geomfile, pja->indexfile, pja->poolfile, pja->treefile, pja->fname, pja->basezoom, pja->layer, pja->droprate, pja->file_bbox, pja->segment, pja->initialized, pja->initial_x, pja->initial_y, pja->readers, pja->maxzoom, pja->layermap, *pja->layername, pja->uses_gamma, pja->attribute_types, pja->dist_sum, pja->dist_count, pja->want_dist, pja->filters);
+	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, pja->droprate, pja->maxzoom, pja->layermap, *pja->layername, pja->uses_gamma, pja->attribute_types, pja->want_dist, pja->filters);
 
 	return NULL;
 }

@@ -79,31 +79,6 @@ size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
 
-struct reader {
-	int metafd;
-	int poolfd;
-	int treefd;
-	int geomfd;
-	int indexfd;
-
-	FILE *metafile;
-	struct memfile *poolfile;
-	struct memfile *treefile;
-	FILE *geomfile;
-	FILE *indexfile;
-
-	long long metapos;
-	long long geompos;
-	long long indexpos;
-
-	long long file_bbox[4];
-
-	struct stat geomst;
-	struct stat metast;
-
-	char *geom_map;
-};
-
 void checkdisk(struct reader *r, int nreader) {
 	long long used = 0;
 	int i;
@@ -399,6 +374,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	struct parse_json_args pja[CPUS];
+	struct serialization_state sst[CPUS];
 	pthread_t pthreads[CPUS];
 	std::vector<std::set<type_and_string> > file_subkeys;
 
@@ -407,40 +383,34 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	for (size_t i = 0; i < CPUS; i++) {
+		sst[i].fname = reading;
+		sst[i].line = 0;
+		sst[i].layer_seq = &layer_seq[i];
+		sst[i].progress_seq = progress_seq;
+		sst[i].readers = reader;
+		sst[i].segment = i;
+		sst[i].initialized = &initialized[i];
+		sst[i].initial_x = &initial_x[i];
+		sst[i].initial_y = &initial_y[i];
+		sst[i].dist_sum = &(dist_sums[i]);
+		sst[i].dist_count = &(dist_counts[i]);
+
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
-		pja[i].reading = reading;
-		pja[i].layer_seq = &layer_seq[i];
-		pja[i].progress_seq = progress_seq;
-		pja[i].metapos = &reader[i].metapos;
-		pja[i].geompos = &reader[i].geompos;
-		pja[i].indexpos = &reader[i].indexpos;
 		pja[i].exclude = exclude;
 		pja[i].include = include;
 		pja[i].exclude_all = exclude_all;
-		pja[i].metafile = reader[i].metafile;
-		pja[i].geomfile = reader[i].geomfile;
-		pja[i].indexfile = reader[i].indexfile;
-		pja[i].poolfile = reader[i].poolfile;
-		pja[i].treefile = reader[i].treefile;
-		pja[i].fname = fname;
 		pja[i].basezoom = basezoom;
 		pja[i].layer = source;
 		pja[i].droprate = droprate;
-		pja[i].file_bbox = reader[i].file_bbox;
-		pja[i].segment = i;
-		pja[i].initialized = &initialized[i];
-		pja[i].initial_x = &initial_x[i];
-		pja[i].initial_y = &initial_y[i];
-		pja[i].readers = reader;
 		pja[i].maxzoom = maxzoom;
 		pja[i].layermap = &(*layermaps)[i];
 		pja[i].layername = &layername;
 		pja[i].uses_gamma = uses_gamma;
 		pja[i].attribute_types = attribute_types;
-		pja[i].dist_sum = &(dist_sums[i]);
-		pja[i].dist_count = &(dist_counts[i]);
 		pja[i].want_dist = want_dist;
 		pja[i].filters = filters;
+
+		pja[i].sst = &sst[i];
 
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
@@ -1386,18 +1356,27 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					overall_offset += ahead;
 					checkdisk(reader, CPUS);
 				}
-			} else if (c == '{' || c == 0xEF || c == ' ') {  // XXX
+			} else {
 				// Plain serial reading
 
 				long long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
-				parse_json(jp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+				struct serialization_state sst;
+
+				sst.fname = reading.c_str();
+				sst.line = 0;
+				sst.layer_seq = &layer_seq;
+				sst.progress_seq = &progress_seq;
+				sst.readers = reader;
+				sst.segment = 0;
+				sst.initial_x = &initial_x[0];
+				sst.initial_y = &initial_y[0];
+				sst.initialized = &initialized[0];
+				sst.dist_sum = &dist_sum;
+				sst.dist_count = &dist_count;
+
+				parse_json(&sst, jp, exclude, include, exclude_all, basezoom, layer, droprate, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 				json_end(jp);
-				overall_offset = layer_seq;
-				checkdisk(reader, CPUS);
-			} else {
-				long long layer_seq = overall_offset;
-				parse_geobuf(fp, reading.c_str(), &layer_seq, &progress_seq, &reader[0].metapos, &reader[0].geompos, &reader[0].indexpos, exclude, include, exclude_all, reader[0].metafile, reader[0].geomfile, reader[0].indexfile, reader[0].poolfile, reader[0].treefile, fname, basezoom, layer, droprate, reader[0].file_bbox, 0, &initialized[0], &initial_x[0], &initial_y[0], reader, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, &dist_sum, &dist_count, guess_maxzoom);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);
 			}
