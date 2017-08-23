@@ -67,4 +67,36 @@ struct serial_feature {
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
 serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
 
+struct serialization_state {
+	const char *fname;  // source file name
+	int line;	   // user-oriented location within source for error reports
+
+	volatile long long *layer_seq;     // sequence within current layer
+	volatile long long *progress_seq;  // overall sequence for progress indicator
+
+	struct reader *readers;  // array of data for each input thread
+	int segment;		 // the current input thread
+
+	FILE *geomfile;  // main feature serialization; references metafile or poolfile
+	long long *geompos;
+
+	FILE *metafile;  // feature metadata; references poolfile
+	long long *metapos;
+
+	FILE *indexfile;  // quadkey index into geomfile
+	long long *indexpos;
+
+	struct memfile *poolfile;  // string pool for keys and values
+	struct memfile *treefile;  // index into poolfile
+
+	long long file_bbox[4];  // global bounding box
+
+	unsigned *initial_x;  // relative offset of all geometries
+	unsigned *initial_y;
+	int *initialized;
+
+	double *dist_sum;  // running tally for calculation of resolution within features
+	size_t *dist_count;
+};
+
 #endif

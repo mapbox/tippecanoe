@@ -1386,7 +1386,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					overall_offset += ahead;
 					checkdisk(reader, CPUS);
 				}
-			} else if (c == '{' || c == 0xEF || c == ' ') { // XXX
+			} else if (c == '{' || c == 0xEF || c == ' ') {  // XXX
 				// Plain serial reading
 
 				long long layer_seq = overall_offset;

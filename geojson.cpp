@@ -38,10 +38,10 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *treefile, memfile *poolfile, serial_feature &sf, long long *geompos, long long *metapos, long long *indexpos, const char *fname, int line, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox, double *dist_sum, size_t *dist_count, int maxzoom, bool uses_gamma, size_t segment, struct reader *readers, volatile long long *layer_seq, volatile long long *progress_seq);
+int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma);
 
-static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec &geom, int op, const char *fname, int line, int *initialized, unsigned *initial_x, unsigned *initial_y, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
-	parse_geometry(t, j, geom, op, fname, line, feature);
+static long long parse_geometry1(struct serialization_state *sst, int t, json_object *j, long long *bbox, drawvec &geom, int op, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
+	parse_geometry(t, j, geom, op, sst->fname, sst->line, feature);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
@@ -77,16 +77,16 @@ static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec
 				bbox[3] = y;
 			}
 
-			if (!*initialized) {
+			if (!*(sst->initialized)) {
 				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
-					*initial_x = 1LL << 31;
-					*initial_y = 1LL << 31;
+					*(sst->initial_x) = 1LL << 31;
+					*(sst->initial_y) = 1LL << 31;
 				} else {
-					*initial_x = (x >> geometry_scale) << geometry_scale;
-					*initial_y = (y >> geometry_scale) << geometry_scale;
+					*(sst->initial_x) = (x >> geometry_scale) << geometry_scale;
+					*(sst->initial_y) = (y >> geometry_scale) << geometry_scale;
 				}
 
-				*initialized = 1;
+				*(sst->initialized) = 1;
 			}
 
 			geom[i].x = x >> geometry_scale;
@@ -97,12 +97,12 @@ static long long parse_geometry1(int t, json_object *j, long long *bbox, drawvec
 	return geom.size();
 }
 
-int serialize_geometry(json_object *geometry, json_object *properties, json_object *id, const char *reading, int line, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, const char *fname, int basezoom, int layer, double droprate, long long *file_bbox, json_object *tippecanoe, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+int serialize_geometry(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, double droprate, json_object *tippecanoe, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, bool want_dist, bool filters) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
 		if (!warned) {
-			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", reading, line);
+			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", sst->fname, sst->line);
 			json_context(feature);
 			warned = 1;
 		}
@@ -111,14 +111,14 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	}
 
 	if (geometry_type->type != JSON_STRING) {
-		fprintf(stderr, "%s:%d: geometry type is not a string\n", reading, line);
+		fprintf(stderr, "%s:%d: geometry type is not a string\n", sst->fname, sst->line);
 		json_context(feature);
 		return 0;
 	}
 
 	json_object *coordinates = json_hash_get(geometry, "coordinates");
 	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: feature without coordinates array\n", reading, line);
+		fprintf(stderr, "%s:%d: feature without coordinates array\n", sst->fname, sst->line);
 		json_context(feature);
 		return 0;
 	}
@@ -130,7 +130,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", reading, line, geometry_type->string);
+		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string);
 		json_context(feature);
 		return 0;
 	}
@@ -263,7 +263,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 
 			int type = -1;
 			std::string val;
-			stringify_value(properties->values[i], type, val, reading, line, feature, properties->keys[i]->string, attribute_types);
+			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature, properties->keys[i]->string, attribute_types);
 
 			if (type >= 0) {
 				metakey[m] = properties->keys[i]->string;
@@ -288,14 +288,14 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	long long offset = 0;
 
 	drawvec dv;
-	parse_geometry1(t, coordinates, bbox, dv, VT_MOVETO, fname, line, initialized, initial_x, initial_y, feature, prev, offset, has_prev);
+	parse_geometry1(sst, t, coordinates, bbox, dv, VT_MOVETO, feature, prev, offset, has_prev);
 	if (mb_geometry[t] == VT_POLYGON) {
 		dv = fix_polygon(dv);
 	}
 
 	serial_feature sf;
 	sf.layer = layer;
-	sf.segment = segment;
+	sf.segment = sst->segment;
 	sf.t = mb_geometry[t];
 	sf.has_id = has_id;
 	sf.id = id_value;
@@ -306,7 +306,7 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 	sf.geometry = dv;
 	sf.m = m;
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
-	sf.seq = *layer_seq;
+	sf.seq = *(sst->layer_seq);
 
 	for (size_t i = 0; i < 4; i++) {
 		sf.bbox[i] = bbox[i];
@@ -322,10 +322,10 @@ int serialize_geometry(json_object *geometry, json_object *properties, json_obje
 		sf.full_values.push_back(sv);
 	}
 
-	return serialize_feature(geomfile, metafile, indexfile, treefile, poolfile, sf, geompos, metapos, indexpos, fname, line, initial_x, initial_y, want_dist, filters, file_bbox, dist_sum, dist_count, maxzoom, uses_gamma, segment, readers, layer_seq, progress_seq);
+	return serialize_feature(sst, sf, want_dist, filters, maxzoom, uses_gamma);
 }
 
-int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *treefile, memfile *poolfile, serial_feature &sf, long long *geompos, long long *metapos, long long *indexpos, const char *fname, int line, unsigned *initial_x, unsigned *initial_y, bool want_dist, bool filters, long long *file_bbox, double *dist_sum, size_t *dist_count, int maxzoom, bool uses_gamma, size_t segment, struct reader *readers, volatile long long *layer_seq, volatile long long *progress_seq) {
+int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma) {
 	if (want_dist) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {
@@ -347,8 +347,8 @@ int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *
 			// Convert approximately from tile units to feet
 			double dist_ft = sqrt(avg) / 33;
 
-			*dist_sum += log(dist_ft) * n;
-			*dist_count += n;
+			*(sst->dist_sum) += log(dist_ft) * n;
+			*(sst->dist_count) += n;
 		}
 		locs.clear();
 	}
@@ -365,7 +365,7 @@ int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *
 			static volatile long long warned = 0;
 			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - maxzoom)) + 1));
 			if (extent > warned) {
-				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", fname, line, extent);
+				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
 				warned = extent;
 
 				if (extent > 10000) {
@@ -426,50 +426,50 @@ int serialize_feature(FILE *geomfile, FILE *metafile, FILE *indexfile, memfile *
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			sf.keys.push_back(addpool(poolfile, treefile, sf.full_keys[i].c_str(), mvt_string));
-			sf.values.push_back(addpool(poolfile, treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
+			sf.keys.push_back(addpool(sst->poolfile, sst->treefile, sf.full_keys[i].c_str(), mvt_string));
+			sf.values.push_back(addpool(sst->poolfile, sst->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 		}
 	} else {
-		sf.metapos = *metapos;
+		sf.metapos = *(sst->metapos);
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			serialize_long_long(metafile, addpool(poolfile, treefile, sf.full_keys[i].c_str(), mvt_string), metapos, fname);
-			serialize_long_long(metafile, addpool(poolfile, treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), metapos, fname);
+			serialize_long_long(sst->metafile, addpool(sst->poolfile, sst->treefile, sf.full_keys[i].c_str(), mvt_string), sst->metapos, sst->fname);
+			serialize_long_long(sst->metafile, addpool(sst->poolfile, sst->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), sst->metapos, sst->fname);
 		}
 	}
 
-	long long geomstart = *geompos;
-	serialize_feature(geomfile, &sf, geompos, fname, *initial_x >> geometry_scale, *initial_y >> geometry_scale, false);
+	long long geomstart = *(sst->geompos);
+	serialize_feature(sst->geomfile, &sf, sst->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
 
 	struct index index;
 	index.start = geomstart;
-	index.end = *geompos;
-	index.segment = segment;
-	index.seq = *layer_seq;
+	index.end = *(sst->geompos);
+	index.segment = sst->segment;
+	index.seq = *(sst->layer_seq);
 	index.t = sf.t;
 	index.index = bbox_index;
 
-	fwrite_check(&index, sizeof(struct index), 1, indexfile, fname);
-	*indexpos += sizeof(struct index);
+	fwrite_check(&index, sizeof(struct index), 1, sst->indexfile, sst->fname);
+	*(sst->indexpos) += sizeof(struct index);
 
 	for (size_t i = 0; i < 2; i++) {
-		if (sf.bbox[i] < file_bbox[i]) {
-			file_bbox[i] = sf.bbox[i];
+		if (sf.bbox[i] < sst->file_bbox[i]) {
+			sst->file_bbox[i] = sf.bbox[i];
 		}
 	}
 	for (size_t i = 2; i < 4; i++) {
-		if (sf.bbox[i] > file_bbox[i]) {
-			file_bbox[i] = sf.bbox[i];
+		if (sf.bbox[i] > sst->file_bbox[i]) {
+			sst->file_bbox[i] = sf.bbox[i];
 		}
 	}
 
-	if (*progress_seq % 10000 == 0) {
-		checkdisk(readers, CPUS);
+	if (*(sst->progress_seq) % 10000 == 0) {
+		checkdisk(sst->readers, CPUS);
 		if (!quiet) {
-			fprintf(stderr, "Read %.2f million features\r", *progress_seq / 1000000.0);
+			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
 		}
 	}
-	(*progress_seq)++;
-	(*layer_seq)++;
+	(*(sst->progress_seq))++;
+	(*(sst->layer_seq))++;
 
 	return 1;
 }
@@ -490,7 +490,7 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, double droprate, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, bool want_dist, bool filters) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -499,7 +499,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", reading, jp->line, jp->error);
+				fprintf(stderr, "%s:%d: %s\n", sst->fname, jp->line, jp->error);
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
@@ -513,7 +513,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 			found_hashes++;
 
 			if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
-				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", reading, jp->line);
+				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
 			}
 		}
 
@@ -554,11 +554,11 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 
 			if (is_geometry) {
 				if (found_features != 0 && found_geometries == 0) {
-					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 				}
 				found_geometries++;
 
-				serialize_geometry(j, NULL, NULL, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, NULL, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
+				serialize_geometry(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, droprate, NULL, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
 				json_free(j);
 				continue;
 			}
@@ -566,7 +566,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 
 		if (strcmp(type->string, "Feature") != 0) {
 			if (strcmp(type->string, "FeatureCollection") == 0) {
-				check_crs(j, reading);
+				check_crs(j, sst->fname);
 				json_free(j);
 			}
 
@@ -574,13 +574,13 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		}
 
 		if (found_features == 0 && found_geometries != 0) {
-			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", reading, jp->line);
+			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 		}
 		found_features++;
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", reading, jp->line);
+			fprintf(stderr, "%s:%d: feature with no geometry\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;
@@ -588,7 +588,7 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", reading, jp->line);
+			fprintf(stderr, "%s:%d: feature without properties hash\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;
@@ -601,10 +601,10 @@ void parse_json(json_pull *jp, const char *reading, volatile long long *layer_se
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(geometries->array[g], properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
+				serialize_geometry(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, droprate, tippecanoe, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
 			}
 		} else {
-			serialize_geometry(geometry, properties, id, reading, jp->line, layer_seq, progress_seq, metapos, geompos, indexpos, exclude, include, exclude_all, metafile, geomfile, indexfile, poolfile, treefile, fname, basezoom, layer, droprate, file_bbox, tippecanoe, segment, initialized, initial_x, initial_y, readers, maxzoom, j, layermap, layername, uses_gamma, attribute_types, dist_sum, dist_count, want_dist, filters);
+			serialize_geometry(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, droprate, tippecanoe, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
 		}
 
 		json_free(j);
