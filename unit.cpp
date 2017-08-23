@@ -1,6 +1,13 @@
 #define CATCH_CONFIG_MAIN
 #include "catch/catch.hpp"
 #include "text.hpp"
+#include "mbgl/style/conversion.hpp"
+#include "mbgl/style/conversion/filter.hpp"
+#include "mbgl/style/filter.hpp"
+#include "mbgl/style/rapidjson_conversion.hpp"
+
+using namespace mbgl::style;
+using namespace mbgl;
 
 TEST_CASE("UTF-8 enforcement", "[utf8]") {
 	REQUIRE(check_utf8("") == std::string(""));
@@ -17,4 +24,10 @@ TEST_CASE("UTF-8 truncation", "[trunc]") {
 	REQUIRE(truncate16("0123456789😀😬😁😂😃😄😅😆", 16) == std::string("0123456789😀😬😁"));
 	REQUIRE(truncate16("0123456789😀😬😁😂😃😄😅😆", 17) == std::string("0123456789😀😬😁"));
 	REQUIRE(truncate16("0123456789あいうえおかきくけこさ", 16) == std::string("0123456789あいうえおか"));
+}
+
+TEST_CASE("JSON Filter Parsing", "[filter]") {
+	conversion::Error conversionError;
+	auto result = conversion::convert<Filter>("string", conversionError);
+	// REQUIRE(result == {});
 }
