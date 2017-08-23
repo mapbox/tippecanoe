@@ -40,8 +40,10 @@
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma);
 
-static long long parse_geometry1(struct serialization_state *sst, int t, json_object *j, long long *bbox, drawvec &geom, int op, json_object *feature, long long &prev, long long &offset, bool &has_prev) {
-	parse_geometry(t, j, geom, op, sst->fname, sst->line, feature);
+static long long scale_geometry(struct serialization_state *sst, long long *bbox, drawvec &geom) {
+	long long offset = 0;
+	long long prev = 0;
+	bool has_prev = false;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
@@ -200,8 +202,6 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 		}
 	}
 
-	long long bbox[] = {LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN};
-
 	if (!filters) {
 		if (tippecanoe_layername.size() != 0) {
 			if (layermap->count(tippecanoe_layername) == 0) {
@@ -283,15 +283,8 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 		}
 	}
 
-	bool has_prev = false;
-	long long prev = 0;
-	long long offset = 0;
-
 	drawvec dv;
-	parse_geometry1(sst, t, coordinates, bbox, dv, VT_MOVETO, feature, prev, offset, has_prev);
-	if (mb_geometry[t] == VT_POLYGON) {
-		dv = fix_polygon(dv);
-	}
+	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature);
 
 	serial_feature sf;
 	sf.layer = layer;
@@ -308,10 +301,6 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.seq = *(sst->layer_seq);
 
-	for (size_t i = 0; i < 4; i++) {
-		sf.bbox[i] = bbox[i];
-	}
-
 	for (size_t i = 0; i < m; i++) {
 		sf.full_keys.push_back(metakey[i]);
 
@@ -327,6 +316,18 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma) {
 	struct reader *r = &(sst->readers[sst->segment]);
+
+	sf.bbox[0] = LLONG_MAX;
+	sf.bbox[1] = LLONG_MAX;
+	sf.bbox[2] = LLONG_MIN;
+	sf.bbox[3] = LLONG_MIN;
+	scale_geometry(sst, sf.bbox, sf.geometry);
+
+	// This has to happen after scaling so that the wraparound detection has happened first.
+	// Otherwise the inner/outer calculation will be confused by bad geometries.
+	if (sf.t == VT_POLYGON) {
+		sf.geometry = fix_polygon(sf.geometry);
+	}
 
 	if (want_dist) {
 		std::vector<unsigned long long> locs;
