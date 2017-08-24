@@ -99,7 +99,7 @@ static long long scale_geometry(struct serialization_state *sst, long long *bbox
 	return geom.size();
 }
 
-int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, json_object *tippecanoe, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, std::map<std::string, int> const *attribute_types) {
+int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, json_object *tippecanoe, json_object *feature, std::string layername, std::map<std::string, int> const *attribute_types) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -202,42 +202,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		}
 	}
 
-	if (!sst->filters) {
-		if (tippecanoe_layername.size() != 0) {
-			if (layermap->count(tippecanoe_layername) == 0) {
-				layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
-			}
-
-			auto ai = layermap->find(tippecanoe_layername);
-			if (ai != layermap->end()) {
-				layer = ai->second.id;
-				layername = tippecanoe_layername;
-
-				if (mb_geometry[t] == VT_POINT) {
-					ai->second.points++;
-				} else if (mb_geometry[t] == VT_LINE) {
-					ai->second.lines++;
-				} else if (mb_geometry[t] == VT_POLYGON) {
-					ai->second.polygons++;
-				}
-			} else {
-				fprintf(stderr, "Internal error: can't find layer name %s\n", tippecanoe_layername.c_str());
-				exit(EXIT_FAILURE);
-			}
-		} else {
-			auto fk = layermap->find(layername);
-			if (fk != layermap->end()) {
-				if (mb_geometry[t] == VT_POINT) {
-					fk->second.points++;
-				} else if (mb_geometry[t] == VT_LINE) {
-					fk->second.lines++;
-				} else if (mb_geometry[t] == VT_POLYGON) {
-					fk->second.polygons++;
-				}
-			}
-		}
-	}
-
 	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
 		nprop = properties->length;
@@ -270,15 +234,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 				metatype[m] = type;
 				metaval[m] = val;
 				m++;
-
-				type_and_string attrib;
-				attrib.type = metatype[m - 1];
-				attrib.string = metaval[m - 1];
-
-				if (!sst->filters) {
-					auto fk = layermap->find(layername);
-					add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
-				}
 			}
 		}
 	}
@@ -300,6 +255,12 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	sf.m = m;
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.seq = *(sst->layer_seq);
+
+	if (tippecanoe_layername.size() != 0) {
+		sf.layername = tippecanoe_layername;
+	} else {
+		sf.layername = layername;
+	}
 
 	for (size_t i = 0; i < m; i++) {
 		sf.full_keys.push_back(metakey[i]);
@@ -426,6 +387,39 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.index = 0;
 	}
 
+	if (sst->layermap->count(sf.layername) == 0) {
+		sst->layermap->insert(std::pair<std::string, layermap_entry>(sf.layername, layermap_entry(sst->layermap->size())));
+	}
+
+	auto ai = sst->layermap->find(sf.layername);
+	if (ai != sst->layermap->end()) {
+		sf.layer = ai->second.id;
+
+		if (!sst->filters) {
+			if (sf.t == VT_POINT) {
+				ai->second.points++;
+			} else if (sf.t == VT_LINE) {
+				ai->second.lines++;
+			} else if (sf.t == VT_POLYGON) {
+				ai->second.polygons++;
+			}
+		}
+	} else {
+		fprintf(stderr, "Internal error: can't find layer name %s\n", sf.layername.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	if (!sst->filters) {
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			type_and_string attrib;
+			attrib.type = sf.full_values[i].type;
+			attrib.string = sf.full_values[i].s;
+
+			auto fk = sst->layermap->find(sf.layername);
+			add_to_file_keys(fk->second.file_keys, sf.full_keys[i], attrib);
+		}
+	}
+
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -493,7 +487,7 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, std::map<std::string, layermap_entry> *layermap, std::string layername, std::map<std::string, int> const *attribute_types) {
+void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, std::string layername, std::map<std::string, int> const *attribute_types) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -561,7 +555,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 				}
 				found_geometries++;
 
-				serialize_geojson_feature(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, NULL, j, layermap, layername, attribute_types);
+				serialize_geojson_feature(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, NULL, j, layername, attribute_types);
 				json_free(j);
 				continue;
 			}
@@ -604,10 +598,10 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geojson_feature(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layermap, layername, attribute_types);
+				serialize_geojson_feature(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layername, attribute_types);
 			}
 		} else {
-			serialize_geojson_feature(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layermap, layername, attribute_types);
+			serialize_geojson_feature(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layername, attribute_types);
 		}
 
 		json_free(j);
@@ -619,7 +613,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = (struct parse_json_args *) v;
 
-	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, pja->layermap, *pja->layername, pja->attribute_types);
+	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, *pja->layername, pja->attribute_types);
 
 	return NULL;
 }

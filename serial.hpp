@@ -6,6 +6,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include "geometry.hpp"
+#include "mbtiles.hpp"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
@@ -63,6 +64,7 @@ struct serial_feature {
 	long long bbox[4];
 	std::vector<std::string> full_keys;
 	std::vector<serial_val> full_values;
+	std::string layername;
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
@@ -114,6 +116,8 @@ struct serialization_state {
 	int maxzoom;
 	bool filters;
 	bool uses_gamma;
+
+	std::map<std::string, layermap_entry> *layermap;
 };
 
 #endif
