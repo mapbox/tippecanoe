@@ -109,6 +109,11 @@ struct serialization_state {
 
 	double *dist_sum;  // running tally for calculation of resolution within features
 	size_t *dist_count;
+	bool want_dist;
+
+	int maxzoom;
+	bool filters;
+	bool uses_gamma;
 };
 
 #endif

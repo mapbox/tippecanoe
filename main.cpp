@@ -394,6 +394,10 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].initial_y = &initial_y[i];
 		sst[i].dist_sum = &(dist_sums[i]);
 		sst[i].dist_count = &(dist_counts[i]);
+		sst[i].want_dist = want_dist;
+		sst[i].maxzoom = maxzoom;
+		sst[i].uses_gamma = uses_gamma;
+		sst[i].filters = filters;
 
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].exclude = exclude;
@@ -401,14 +405,9 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		pja[i].exclude_all = exclude_all;
 		pja[i].basezoom = basezoom;
 		pja[i].layer = source;
-		pja[i].droprate = droprate;
-		pja[i].maxzoom = maxzoom;
 		pja[i].layermap = &(*layermaps)[i];
 		pja[i].layername = &layername;
-		pja[i].uses_gamma = uses_gamma;
 		pja[i].attribute_types = attribute_types;
-		pja[i].want_dist = want_dist;
-		pja[i].filters = filters;
 
 		pja[i].sst = &sst[i];
 
@@ -1374,8 +1373,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.initialized = &initialized[0];
 				sst.dist_sum = &dist_sum;
 				sst.dist_count = &dist_count;
+				sst.want_dist = guess_maxzoom;
+				sst.maxzoom = maxzoom;
+				sst.filters = prefilter != NULL || postfilter != NULL;
+				sst.uses_gamma = uses_gamma;
 
-				parse_json(&sst, jp, exclude, include, exclude_all, basezoom, layer, droprate, maxzoom, &layermaps[0], sources[layer].layer, uses_gamma, attribute_types, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+				parse_json(&sst, jp, exclude, include, exclude_all, basezoom, layer, &layermaps[0], sources[layer].layer, attribute_types);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);

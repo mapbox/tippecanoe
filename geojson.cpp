@@ -38,7 +38,7 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma);
+int serialize_feature(struct serialization_state *sst, serial_feature &sf);
 
 static long long scale_geometry(struct serialization_state *sst, long long *bbox, drawvec &geom) {
 	long long offset = 0;
@@ -99,7 +99,7 @@ static long long scale_geometry(struct serialization_state *sst, long long *bbox
 	return geom.size();
 }
 
-int serialize_geometry(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, double droprate, json_object *tippecanoe, int maxzoom, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, bool want_dist, bool filters) {
+int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, json_object *tippecanoe, json_object *feature, std::map<std::string, layermap_entry> *layermap, std::string layername, std::map<std::string, int> const *attribute_types) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -202,7 +202,7 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 		}
 	}
 
-	if (!filters) {
+	if (!sst->filters) {
 		if (tippecanoe_layername.size() != 0) {
 			if (layermap->count(tippecanoe_layername) == 0) {
 				layermap->insert(std::pair<std::string, layermap_entry>(tippecanoe_layername, layermap_entry(layermap->size())));
@@ -275,7 +275,7 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 				attrib.type = metatype[m - 1];
 				attrib.string = metaval[m - 1];
 
-				if (!filters) {
+				if (!sst->filters) {
 					auto fk = layermap->find(layername);
 					add_to_file_keys(fk->second.file_keys, metakey[m - 1], attrib);
 				}
@@ -311,10 +311,10 @@ int serialize_geometry(struct serialization_state *sst, json_object *geometry, j
 		sf.full_values.push_back(sv);
 	}
 
-	return serialize_feature(sst, sf, want_dist, filters, maxzoom, uses_gamma);
+	return serialize_feature(sst, sf);
 }
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool want_dist, bool filters, int maxzoom, bool uses_gamma) {
+int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	struct reader *r = &(sst->readers[sst->segment]);
 
 	sf.bbox[0] = LLONG_MAX;
@@ -329,7 +329,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool 
 		sf.geometry = fix_polygon(sf.geometry);
 	}
 
-	if (want_dist) {
+	if (sst->want_dist) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {
 			if (sf.geometry[i].op == VT_MOVETO || sf.geometry[i].op == VT_LINETO) {
@@ -361,12 +361,12 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool 
 	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
 		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
 	}
-	if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - maxzoom))) {
+	if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - sst->maxzoom))) {
 		inline_meta = false;
 
 		if (prevent[P_CLIPPING]) {
 			static volatile long long warned = 0;
-			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - maxzoom)) + 1));
+			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
 			if (extent > warned) {
 				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
 				warned = extent;
@@ -420,7 +420,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf, bool 
 	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
 	bbox_index = encode(midx, midy);
 
-	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || uses_gamma) {
+	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma) {
 		sf.index = bbox_index;
 	} else {
 		sf.index = 0;
@@ -493,7 +493,7 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, double droprate, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, bool want_dist, bool filters) {
+void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, std::map<std::string, layermap_entry> *layermap, std::string layername, std::map<std::string, int> const *attribute_types) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -561,7 +561,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 				}
 				found_geometries++;
 
-				serialize_geometry(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, droprate, NULL, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
+				serialize_geojson_feature(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, NULL, j, layermap, layername, attribute_types);
 				json_free(j);
 				continue;
 			}
@@ -604,10 +604,10 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geometry(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, droprate, tippecanoe, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
+				serialize_geojson_feature(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layermap, layername, attribute_types);
 			}
 		} else {
-			serialize_geometry(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, droprate, tippecanoe, maxzoom, j, layermap, layername, uses_gamma, attribute_types, want_dist, filters);
+			serialize_geojson_feature(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layermap, layername, attribute_types);
 		}
 
 		json_free(j);
@@ -619,7 +619,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = (struct parse_json_args *) v;
 
-	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, pja->droprate, pja->maxzoom, pja->layermap, *pja->layername, pja->uses_gamma, pja->attribute_types, pja->want_dist, pja->filters);
+	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, pja->layermap, *pja->layername, pja->attribute_types);
 
 	return NULL;
 }
