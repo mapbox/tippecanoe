@@ -127,4 +127,6 @@ struct serialization_state {
 	int exclude_all;
 };
 
+int serialize_feature(struct serialization_state *sst, serial_feature &sf);
+
 #endif

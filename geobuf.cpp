@@ -1,13 +1,60 @@
 #include <stdio.h>
 #include <string>
+#include "mvt.hpp"
 #include "serial.hpp"
 #include "geobuf.hpp"
+#include "geojson.hpp"
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 
 serial_val readValue(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys) {
-	return serial_val();
+	serial_val sv;
+	sv.type = mvt_null;
+	sv.s = "null";
+
+	while (pbf.next()) {
+		switch (pbf.tag()) {
+		case 1:
+			sv.type = mvt_string;
+			sv.s = pbf.get_string();
+			break;
+
+		case 2:
+			sv.type = mvt_double;
+			sv.s = std::to_string(pbf.get_double());
+			break;
+
+		case 3:
+			sv.type = mvt_double;
+			sv.s = std::to_string(pbf.get_uint64());
+			break;
+
+		case 4:
+			sv.type = mvt_double;
+			sv.s = std::to_string(-pbf.get_uint64());
+			break;
+
+		case 5:
+			sv.type = mvt_bool;
+			if (pbf.get_bool()) {
+				sv.s = "true";
+			} else {
+				sv.s = "false";
+			}
+			break;
+
+		case 6:
+			sv.type = mvt_string;  // stringified JSON
+			sv.s = pbf.get_string();
+			break;
+
+		default:
+			pbf.skip();
+		}
+	}
+
+	return sv;
 }
 
 drawvec readGeometry(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys, int &type) {
@@ -49,14 +96,18 @@ drawvec readGeometry(protozero::pbf_reader &pbf, double e, std::vector<std::stri
 	}
 
 	type /= 2;
-	return drawvec();
+	drawvec dv;
+	dv.push_back(draw(VT_MOVETO, 0, 0));
+	dv.push_back(draw(VT_LINETO, 1000, 1000));
+	return dv;
 }
 
-void readFeature(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys) {
+void readFeature(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
 	drawvec dv;
-	long long id = -1;
+	long long id = 0;
+	bool has_id = false;
 	std::vector<serial_val> values;
-	std::vector<int> properties;
+	std::vector<size_t> properties;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {
@@ -69,11 +120,17 @@ void readFeature(protozero::pbf_reader &pbf, double e, std::vector<std::string> 
 
 		case 11:
 			id = pbf.get_int64();
+			has_id = true;
 			break;
 
-		case 12:
-			fprintf(stderr, "Non-numeric feature IDs not supported");
+		case 12: {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Non-numeric feature IDs not supported");
+				warned = true;
+			}
 			break;
+		}
 
 		case 13: {
 			protozero::pbf_reader value_reader(pbf.get_message());
@@ -93,14 +150,45 @@ void readFeature(protozero::pbf_reader &pbf, double e, std::vector<std::string> 
 			pbf.skip();
 		}
 	}
+
+	serial_feature sf;
+	sf.layer = layer;
+	sf.layername = layername;
+	sf.segment = 0; // single thread
+	sf.has_id = has_id;
+	sf.id = id;
+	sf.has_tippecanoe_minzoom = false;
+	sf.has_tippecanoe_maxzoom = false;
+	sf.feature_minzoom = false;
+	sf.seq = (*sst->layer_seq);
+	sf.geometry = dv;
+
+	for (size_t i = 0; i + 1 < properties.size(); i += 2) {
+		if (properties[i] >= keys.size()) {
+			fprintf(stderr, "Out of bounds key: %zu in %zu\n", properties[i], keys.size());
+			exit(EXIT_FAILURE);
+		}
+
+		if (properties[i + 1] >= values.size()) {
+			fprintf(stderr, "Out of bounds value: %zu in %zu\n", properties[i + 1], values.size());
+			exit(EXIT_FAILURE);
+		}
+
+		sf.full_keys.push_back(keys[properties[i]]);
+		sf.full_values.push_back(values[properties[i + 1]]);
+	}
+
+	sf.m = sf.full_values.size();
+
+	serialize_feature(sst, sf);
 }
 
-void readFeatureCollection(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys) {
+void readFeatureCollection(protozero::pbf_reader &pbf, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
 			protozero::pbf_reader feature_reader(pbf.get_message());
-			readFeature(feature_reader, e, keys);
+			readFeature(feature_reader, e, keys, sst, layer, layername);
 			break;
 		}
 
@@ -133,13 +221,13 @@ void parse_geobuf(struct serialization_state *sst, std::string const &src, int l
 
 		case 4: {
 			protozero::pbf_reader feature_collection_reader(pbf.get_message());
-			readFeatureCollection(feature_collection_reader, e, keys);
+			readFeatureCollection(feature_collection_reader, e, keys, sst, layer, layername);
 			break;
 		}
 
 		case 5: {
 			protozero::pbf_reader feature_reader(pbf.get_message());
-			readFeature(feature_reader, e, keys);
+			readFeature(feature_reader, e, keys, sst, layer, layername);
 			break;
 		}
 
