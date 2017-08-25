@@ -399,12 +399,12 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].uses_gamma = uses_gamma;
 		sst[i].filters = filters;
 		sst[i].layermap = &(*layermaps)[i];
+		sst[i].exclude = exclude;
+		sst[i].include = include;
+		sst[i].exclude_all = exclude_all;
+		sst[i].basezoom = basezoom;
 
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
-		pja[i].exclude = exclude;
-		pja[i].include = include;
-		pja[i].exclude_all = exclude_all;
-		pja[i].basezoom = basezoom;
 		pja[i].layer = source;
 		pja[i].layername = &layername;
 		pja[i].attribute_types = attribute_types;
@@ -1378,8 +1378,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.filters = prefilter != NULL || postfilter != NULL;
 				sst.uses_gamma = uses_gamma;
 				sst.layermap = &layermaps[0];
+				sst.exclude = exclude;
+				sst.include = include;
+				sst.exclude_all = exclude_all;
+				sst.basezoom = basezoom;
 
-				parse_json(&sst, jp, exclude, include, exclude_all, basezoom, layer, sources[layer].layer, attribute_types);
+				parse_json(&sst, jp, layer, sources[layer].layer, attribute_types);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);

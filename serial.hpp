@@ -114,10 +114,16 @@ struct serialization_state {
 	bool want_dist;
 
 	int maxzoom;
+	int basezoom;
+
 	bool filters;
 	bool uses_gamma;
 
 	std::map<std::string, layermap_entry> *layermap;
+
+	std::set<std::string> *exclude;
+	std::set<std::string> *include;
+	int exclude_all;
 };
 
 #endif

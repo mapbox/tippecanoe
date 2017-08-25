@@ -99,7 +99,7 @@ static long long scale_geometry(struct serialization_state *sst, long long *bbox
 	return geom.size();
 }
 
-int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, json_object *tippecanoe, json_object *feature, std::string layername, std::map<std::string, int> const *attribute_types) {
+int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername, std::map<std::string, int> const *attribute_types) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -216,14 +216,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	for (size_t i = 0; i < nprop; i++) {
 		if (properties->keys[i]->type == JSON_STRING) {
 			std::string s(properties->keys[i]->string);
-
-			if (exclude_all) {
-				if (include->count(s) == 0) {
-					continue;
-				}
-			} else if (exclude->count(s) != 0) {
-				continue;
-			}
 
 			int type = -1;
 			std::string val;
@@ -409,8 +401,24 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		exit(EXIT_FAILURE);
 	}
 
+	for (size_t i = 0; i < sf.full_keys.size(); i++) {
+		if (sst->exclude_all) {
+			if (sst->include->count(sf.full_keys[i]) == 0) {
+				sf.full_keys[i] = "";
+				sf.m--;
+			}
+		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+			sf.full_keys[i] = "";
+			sf.m--;
+		}
+	}
+
 	if (!sst->filters) {
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			if (sf.full_keys[i].size() == 0) {
+				continue;
+			}
+
 			type_and_string attrib;
 			attrib.type = sf.full_values[i].type;
 			attrib.string = sf.full_values[i].s;
@@ -423,12 +431,18 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			if (sf.full_keys[i].size() == 0) {
+				continue;
+			}
 			sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
 			sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 		}
 	} else {
 		sf.metapos = r->metapos;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			if (sf.full_keys[i].size() == 0) {
+				continue;
+			}
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
 		}
@@ -487,7 +501,7 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int layer, std::string layername, std::map<std::string, int> const *attribute_types) {
+void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername, std::map<std::string, int> const *attribute_types) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -555,7 +569,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 				}
 				found_geometries++;
 
-				serialize_geojson_feature(sst, j, NULL, NULL, exclude, include, exclude_all, basezoom, layer, NULL, j, layername, attribute_types);
+				serialize_geojson_feature(sst, j, NULL, NULL, layer, NULL, j, layername, attribute_types);
 				json_free(j);
 				continue;
 			}
@@ -598,10 +612,10 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geojson_feature(sst, geometries->array[g], properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layername, attribute_types);
+				serialize_geojson_feature(sst, geometries->array[g], properties, id, layer, tippecanoe, j, layername, attribute_types);
 			}
 		} else {
-			serialize_geojson_feature(sst, geometry, properties, id, exclude, include, exclude_all, basezoom, layer, tippecanoe, j, layername, attribute_types);
+			serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, j, layername, attribute_types);
 		}
 
 		json_free(j);
@@ -613,7 +627,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, std::set<std::st
 void *run_parse_json(void *v) {
 	struct parse_json_args *pja = (struct parse_json_args *) v;
 
-	parse_json(pja->sst, pja->jp, pja->exclude, pja->include, pja->exclude_all, pja->basezoom, pja->layer, *pja->layername, pja->attribute_types);
+	parse_json(pja->sst, pja->jp, pja->layer, *pja->layername, pja->attribute_types);
 
 	return NULL;
 }
