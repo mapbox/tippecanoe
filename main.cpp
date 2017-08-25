@@ -1193,6 +1193,52 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 		size_t layer = a->second.id;
 
+		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".pbf")) {
+			std::string s = "";
+
+			char buf[20000];
+			ssize_t n;
+			while ((n = read(fd, buf, 20000)) > 0) {
+				s.append(std::string(buf, n));
+			}
+
+			if (close(fd) != 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
+
+			long long layer_seq = overall_offset;
+
+			struct serialization_state sst;
+			sst.fname = reading.c_str();
+			sst.line = 0;
+			sst.layer_seq = &layer_seq;
+			sst.progress_seq = &progress_seq;
+			sst.readers = reader;
+			sst.segment = 0;
+			sst.initial_x = &initial_x[0];
+			sst.initial_y = &initial_y[0];
+			sst.initialized = &initialized[0];
+			sst.dist_sum = &dist_sum;
+			sst.dist_count = &dist_count;
+			sst.want_dist = guess_maxzoom;
+			sst.maxzoom = maxzoom;
+			sst.filters = prefilter != NULL || postfilter != NULL;
+			sst.uses_gamma = uses_gamma;
+			sst.layermap = &layermaps[0];
+			sst.exclude = exclude;
+			sst.include = include;
+			sst.exclude_all = exclude_all;
+			sst.basezoom = basezoom;
+			sst.attribute_types = attribute_types;
+
+			parse_geobuf(&sst, s, layer, sources[layer].layer);
+
+			overall_offset = layer_seq;
+			checkdisk(reader, CPUS);
+			continue;
+		}
+
 		struct stat st;
 		char *map = NULL;
 		off_t off = 0;
