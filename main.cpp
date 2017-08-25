@@ -403,11 +403,11 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].include = include;
 		sst[i].exclude_all = exclude_all;
 		sst[i].basezoom = basezoom;
+		sst[i].attribute_types = attribute_types;
 
 		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
 		pja[i].layer = source;
 		pja[i].layername = &layername;
-		pja[i].attribute_types = attribute_types;
 
 		pja[i].sst = &sst[i];
 
@@ -1382,8 +1382,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.include = include;
 				sst.exclude_all = exclude_all;
 				sst.basezoom = basezoom;
+				sst.attribute_types = attribute_types;
 
-				parse_json(&sst, jp, layer, sources[layer].layer, attribute_types);
+				parse_json(&sst, jp, layer, sources[layer].layer);
 				json_end(jp);
 				overall_offset = layer_seq;
 				checkdisk(reader, CPUS);

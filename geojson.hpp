@@ -22,7 +22,7 @@ struct parse_json_args {
 struct json_pull *json_begin_map(char *map, long long len);
 void json_end_map(struct json_pull *jp);
 
-void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername, std::map<std::string, int> const *attribute_types);
+void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername);
 void *run_parse_json(void *v);
 
 #endif

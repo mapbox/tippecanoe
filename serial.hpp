@@ -121,6 +121,7 @@ struct serialization_state {
 
 	std::map<std::string, layermap_entry> *layermap;
 
+	std::map<std::string, int> const *attribute_types;
 	std::set<std::string> *exclude;
 	std::set<std::string> *include;
 	int exclude_all;

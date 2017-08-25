@@ -62,7 +62,8 @@ enum mvt_value_type {
 	mvt_int,
 	mvt_uint,
 	mvt_sint,
-	mvt_bool
+	mvt_bool,
+	mvt_null,
 };
 
 struct mvt_value {

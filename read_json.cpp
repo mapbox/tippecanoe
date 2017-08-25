@@ -106,7 +106,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	}
 }
 
-void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature, std::string const &key, std::map<std::string, int> const *attribute_types) {
+void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature, std::string const &key) {
 	if (value != NULL) {
 		int vt = value->type;
 		std::string val;
@@ -125,40 +125,6 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			free((void *) v);  // stringify
 		}
 
-		auto a = (*attribute_types).find(key);
-		if (a != attribute_types->end()) {
-			if (a->second == mvt_string) {
-				vt = JSON_STRING;
-			} else if (a->second == mvt_float) {
-				vt = JSON_NUMBER;
-				val = std::to_string(atof(val.c_str()));
-			} else if (a->second == mvt_int) {
-				vt = JSON_NUMBER;
-				if (val.size() == 0) {
-					val = "0";
-				}
-
-				for (size_t ii = 0; ii < val.size(); ii++) {
-					char c = val[ii];
-					if (c < '0' || c > '9') {
-						val = std::to_string(round(atof(val.c_str())));
-						break;
-					}
-				}
-			} else if (a->second == mvt_bool) {
-				if (val == "false" || val == "0" || val == "null" || val.size() == 0) {
-					vt = JSON_FALSE;
-					val = "false";
-				} else {
-					vt = JSON_TRUE;
-					val = "true";
-				}
-			} else {
-				fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
-				exit(EXIT_FAILURE);
-			}
-		}
-
 		if (vt == JSON_STRING) {
 			type = mvt_string;
 			stringified = val;
@@ -175,10 +141,47 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			type = mvt_bool;
 			stringified = val;
 		} else if (vt == JSON_NULL) {
-			;
+			type = mvt_null;
+			stringified = "null";
 		} else {
 			type = mvt_string;
 			stringified = val;
+		}
+	}
+}
+
+void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types) {
+	auto a = (*attribute_types).find(key);
+	if (a != attribute_types->end()) {
+		if (a->second == mvt_string) {
+			vt = mvt_string;
+		} else if (a->second == mvt_float) {
+			vt = mvt_double;
+			val = std::to_string(atof(val.c_str()));
+		} else if (a->second == mvt_int) {
+			vt = mvt_double;
+			if (val.size() == 0) {
+				val = "0";
+			}
+
+			for (size_t ii = 0; ii < val.size(); ii++) {
+				char c = val[ii];
+				if (c < '0' || c > '9') {
+					val = std::to_string(round(atof(val.c_str())));
+					break;
+				}
+			}
+		} else if (a->second == mvt_bool) {
+			if (val == "false" || val == "0" || val == "null" || val.size() == 0) {
+				vt = mvt_bool;
+				val = "false";
+			} else {
+				vt = mvt_bool;
+				val = "true";
+			}
+		} else {
+			fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
+			exit(EXIT_FAILURE);
 		}
 	}
 }
