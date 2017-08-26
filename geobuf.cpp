@@ -94,7 +94,7 @@ drawvec readLinePart(std::vector<long long> &coords, std::vector<int> &lengths, 
 		long long x, y;
 		projection->project(p[0], p[1], 32, &x, &y);
 
-		if (i == 0) {
+		if (i == start) {
 			dv.push_back(draw(VT_MOVETO, x, y));
 		} else {
 			dv.push_back(draw(VT_LINETO, x, y));
@@ -123,7 +123,7 @@ drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths,
 		drawvec dv2 = readLinePart(coords, lengths, dim, e, here, here + lengths[i] * dim, closed);
 		here += lengths[i] * dim;
 
-		for (size_t j = 0; i < dv2.size(); i++) {
+		for (size_t j = 0; j < dv2.size(); j++) {
 			dv.push_back(dv2[j]);
 		}
 	}
@@ -132,7 +132,32 @@ drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths,
 }
 
 drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
-	return drawvec();
+	if (lengths.size() == 0) {
+		return readLinePart(coords, lengths, dim, e, 0, coords.size(), true);
+	}
+
+	size_t polys = lengths[0];
+	size_t n = 1;
+	size_t here = 0;
+	drawvec dv;
+
+	for (size_t i = 0; i < polys; i++) {
+		size_t rings = lengths[n++];
+
+		for (size_t j = 0; j < rings; j++) {
+			drawvec dv2 = readLinePart(coords, lengths, dim, e, here, here + lengths[n] * dim, true);
+			here += lengths[n] * dim;
+			n++;
+
+			for (size_t k = 0; k < dv2.size(); k++) {
+				dv.push_back(dv2[k]);
+			}
+		}
+
+		dv.push_back(draw(VT_CLOSEPATH, 0, 0));  // mark that the next ring is outer
+	}
+
+	return dv;
 }
 
 drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, int &type) {
@@ -146,7 +171,7 @@ drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vect
 			break;
 
 		case 2: {
-			auto pi = pbf.get_packed_sint32();
+			auto pi = pbf.get_packed_uint32();
 			for (auto it = pi.first; it != pi.second; ++it) {
 				lengths.push_back(*it);
 			}
@@ -186,14 +211,7 @@ drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vect
 		dv = readMultiPolygon(coords, lengths, dim, e);
 	}
 
-#if 0
-	for (size_t i = 0; i < dv.size(); i++) {
-		printf("%d %lld %lld\n", dv[i].op, dv[i].x, dv[i].y);
-	}
-	printf("\n");
-#endif
-
-	type /= 2;
+	type = type / 2 + 1;
 	return dv;
 }
 
@@ -203,29 +221,30 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	bool has_id = false;
 	std::vector<serial_val> values;
 	std::vector<size_t> properties;
+	int type = 0;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
-			int type;
 			protozero::pbf_reader geometry_reader(pbf.get_message());
 			dv = readGeometry(geometry_reader, dim, e, keys, type);
 			break;
 		}
 
-		case 11:
+		case 11: {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Non-numeric feature IDs not supported\n");
+				warned = true;
+			}
+			pbf.skip();
+			break;
+		}
+
+		case 12:
 			id = pbf.get_int64();
 			has_id = true;
 			break;
-
-		case 12: {
-			static bool warned = false;
-			if (!warned) {
-				fprintf(stderr, "Non-numeric feature IDs not supported");
-				warned = true;
-			}
-			break;
-		}
 
 		case 13: {
 			protozero::pbf_reader value_reader(pbf.get_message());
@@ -249,7 +268,7 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	serial_feature sf;
 	sf.layer = layer;
 	sf.layername = layername;
-	sf.segment = 0; // single thread
+	sf.segment = 0;  // single thread
 	sf.has_id = has_id;
 	sf.id = id;
 	sf.has_tippecanoe_minzoom = false;
@@ -257,6 +276,7 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	sf.feature_minzoom = false;
 	sf.seq = (*sst->layer_seq);
 	sf.geometry = dv;
+	sf.t = type;
 
 	for (size_t i = 0; i + 1 < properties.size(); i += 2) {
 		if (properties[i] >= keys.size()) {
