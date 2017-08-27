@@ -32,6 +32,9 @@
 #include "mbgl/style/rapidjson_conversion.hpp"
 #include "mbgl/style/conversion/filter.hpp"
 #include "mbgl/style/filter.hpp"
+#include "mbgl/style/filter_evaluator.hpp"
+#include "mbgl/util/geometry.hpp"
+#include "evaluator.hpp"
 
 #include <experimental/optional>
 
@@ -103,6 +106,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 		}
 
 		auto file_keys = layermap.find(layer.name);
+		const auto filter_it = layerToFilterMap.find(layer.name);
+		const bool has_filter = filter_it != layerToFilterMap.end();
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
@@ -122,6 +127,34 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				mvt_value &val = layer.values[feat.tags[t + 1]];
 				std::string value;
 				int type = -1;
+
+				// if this layer has a filter specified,
+				// check to see if this feature passes.
+				if (has_filter) {
+					mbgl::FeatureType featureType = mbgl::FeatureType::Unknown;
+					switch (feat.type) {
+						case mvt_geometry_type::mvt_point:
+							featureType = mbgl::FeatureType::Point;
+							break;
+						case mvt_geometry_type::mvt_linestring:
+							featureType = mbgl::FeatureType::LineString;
+							break;
+						case mvt_geometry_type::mvt_polygon:
+							featureType = mbgl::FeatureType::Polygon;
+							break;
+						default:
+							break;
+					}
+
+					std::experimental::optional<mapbox::geometry::identifier> optId;
+					if (feat.has_id) {
+						optId = std::experimental::optional<mapbox::geometry::identifier>(feat.id);
+					}
+
+					if (!filter_it->second(featureType, optId, Evaluator(layer, feat))) {
+						continue;
+					}
+				}
 
 				if (val.type == mvt_string) {
 					value = val.string_value;
