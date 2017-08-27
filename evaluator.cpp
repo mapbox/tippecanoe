@@ -15,7 +15,7 @@ std::experimental::optional<mapbox::geometry::value> Evaluator::operator()(const
   // empty optional.
   const auto it = m_layer.key_map.find(key);
   if (it == m_layer.key_map.end()) {
-    return std::experimental::optional<mapbox::geometry::value>();
+    return {}
   }
 
   // if the layer does contain the property,
@@ -32,12 +32,12 @@ std::experimental::optional<mapbox::geometry::value> Evaluator::operator()(const
   }
 
   if (tidx == size_max) {
-    return std::experimental::optional<mapbox::geometry::value>();
+    return {};
   }
 
   // now we know that the feature has the property,
   // get the value.
-  const mvt_value& value = m_layer.values[tidx + 1];
+  const mvt_value& value = m_layer.values[m_feature.tags[tidx + 1]];
 
   switch (value.type) {
     case mvt_value_type::mvt_string:
@@ -55,6 +55,6 @@ std::experimental::optional<mapbox::geometry::value> Evaluator::operator()(const
     case mvt_value_type::mvt_bool:
       return std::experimental::optional<mapbox::geometry::value>(value.numeric_value.bool_value);
     default:
-      return std::experimental::optional<mapbox::geometry::value>();
+      return {};
   }
 }

@@ -146,7 +146,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 							break;
 					}
 
-					std::experimental::optional<mapbox::geometry::identifier> optId;
+					std::experimental::optional<mapbox::geometry::identifier> optId = {};
 					if (feat.has_id) {
 						optId = std::experimental::optional<mapbox::geometry::identifier>(feat.id);
 					}
