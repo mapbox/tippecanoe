@@ -30,23 +30,3 @@ TEST_CASE("UTF-8 truncation", "[trunc]")
 	REQUIRE(truncate16("0123456789😀😬😁😂😃😄😅😆", 17) == std::string("0123456789😀😬😁"));
 	REQUIRE(truncate16("0123456789あいうえおかきくけこさ", 16) == std::string("0123456789あいうえおか"));
 }
-
-TEST_CASE("Invalid JSON Filter Parsing", "[invalid-filter]")
-{
-	JSValue v("invalid_filter");
-	conversion::Error conversionError;
-	auto result = conversion::convert<Filter>(v, conversionError);
-	REQUIRE(!result);
-}
-
-TEST_CASE("Valid JSON Filter Parsing", "[valid-filter]")
-{
-	{
-		JSValue v("[\"==\", \"$type\", \"LineString\"]");
-		conversion::Error conversionError;
-		auto result = conversion::convert<Filter>(v, conversionError);
-		REQUIRE(result);
-		// REQUIRE(result->value == FeatureType::LineString);
-		// REQUIRE(result.key == "$type");
-	}
-}

@@ -1114,31 +1114,6 @@ void read_filter_json(char *fn, std::map<std::string, mbgl::style::Filter>& laye
 			exit(EXIT_FAILURE);
 		}
 	}
-
-	// char s[MAXLINE];
-	// if (fgets(s, MAXLINE, f)) {
-	// 	header = split(s);
-
-	// 	for (size_t i = 0; i < header.size(); i++) {
-	// 		header[i] = dequote(header[i]);
-	// 	}
-	// }
-	// while (fgets(s, MAXLINE, f)) {
-	// 	std::vector<std::string> line = split(s);
-	// 	if (line.size() > 0) {
-	// 		line[0] = dequote(line[0]);
-	// 	}
-
-	// 	for (size_t i = 0; i < line.size() && i < header.size(); i++) {
-	// 		// printf("putting %s\n", line[0].c_str());
-	// 		mapping.insert(std::pair<std::string, std::vector<std::string>>(line[0], line));
-	// 	}
-	// }
-
-	// if (fclose(f) != 0) {
-	// 	perror("fclose");
-	// 	exit(EXIT_FAILURE);
-	// }
 }
 
 int main(int argc, char **argv) {
