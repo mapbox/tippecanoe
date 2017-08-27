@@ -15,7 +15,7 @@ std::experimental::optional<mapbox::geometry::value> Evaluator::operator()(const
   // empty optional.
   const auto it = m_layer.key_map.find(key);
   if (it == m_layer.key_map.end()) {
-    return {}
+    return {};
   }
 
   // if the layer does contain the property,
