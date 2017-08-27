@@ -1,8 +1,0 @@
-{  
-   "layers":[  
-      {  
-         "id":"background",
-         "filter":["in", "class", "street_major", "street_minor", "street_limited"]
-      }
-   ]
-}
