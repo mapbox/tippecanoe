@@ -1,8 +1,19 @@
 #define CATCH_CONFIG_MAIN
 #include "catch/catch.hpp"
 #include "text.hpp"
+#include "mbgl/style/conversion.hpp"
+#include "mbgl/style/rapidjson_conversion.hpp"
+#include "mbgl/style/conversion/filter.hpp"
+#include "mbgl/style/filter.hpp"
+#include "rapidjson/document.h"
 
-TEST_CASE("UTF-8 enforcement", "[utf8]") {
+#include <experimental/optional>
+
+using namespace mbgl::style;
+using namespace mbgl;
+
+TEST_CASE("UTF-8 enforcement", "[utf8]")
+{
 	REQUIRE(check_utf8("") == std::string(""));
 	REQUIRE(check_utf8("hello world") == std::string(""));
 	REQUIRE(check_utf8("Καλημέρα κόσμε") == std::string(""));
@@ -11,7 +22,8 @@ TEST_CASE("UTF-8 enforcement", "[utf8]") {
 	REQUIRE(check_utf8("Hola m\xF3n") == std::string("\"Hola m\xF3n\" is not valid UTF-8 (0xF3 0x6E)"));
 }
 
-TEST_CASE("UTF-8 truncation", "[trunc]") {
+TEST_CASE("UTF-8 truncation", "[trunc]")
+{
 	REQUIRE(truncate16("0123456789abcdefghi", 16) == std::string("0123456789abcdef"));
 	REQUIRE(truncate16("0123456789éîôüéîôüç", 16) == std::string("0123456789éîôüéî"));
 	REQUIRE(truncate16("0123456789😀😬😁😂😃😄😅😆", 16) == std::string("0123456789😀😬😁"));

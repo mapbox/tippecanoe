@@ -27,6 +27,16 @@
 #include <algorithm>
 #include <functional>
 #include "jsonpull/jsonpull.h"
+#include "rapidjson/filereadstream.h"
+#include "mbgl/style/conversion.hpp"
+#include "mbgl/style/rapidjson_conversion.hpp"
+#include "mbgl/style/conversion/filter.hpp"
+#include "mbgl/style/filter.hpp"
+#include "mbgl/style/filter_evaluator.hpp"
+#include "mbgl/util/geometry.hpp"
+#include "evaluator.hpp"
+
+#include <experimental/optional>
 
 std::string dequote(std::string s);
 
@@ -45,7 +55,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, const std::map<std::string, mbgl::style::Filter>& layerToFilterMap, mvt_tile &outtile) {
 	mvt_tile tile;
 	int features_added = 0;
 	bool was_compressed;
@@ -96,6 +106,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 		}
 
 		auto file_keys = layermap.find(layer.name);
+		const auto filter_it = layerToFilterMap.find(layer.name);
+		const bool has_filter = filter_it != layerToFilterMap.end();
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
@@ -115,6 +127,34 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				mvt_value &val = layer.values[feat.tags[t + 1]];
 				std::string value;
 				int type = -1;
+
+				// if this layer has a filter specified,
+				// check to see if this feature passes.
+				if (has_filter) {
+					mbgl::FeatureType featureType = mbgl::FeatureType::Unknown;
+					switch (feat.type) {
+						case mvt_geometry_type::mvt_point:
+							featureType = mbgl::FeatureType::Point;
+							break;
+						case mvt_geometry_type::mvt_linestring:
+							featureType = mbgl::FeatureType::LineString;
+							break;
+						case mvt_geometry_type::mvt_polygon:
+							featureType = mbgl::FeatureType::Polygon;
+							break;
+						default:
+							break;
+					}
+
+					std::experimental::optional<mapbox::geometry::identifier> optId = {};
+					if (feat.has_id) {
+						optId = std::experimental::optional<mapbox::geometry::identifier>(feat.id);
+					}
+
+					if (!filter_it->second(featureType, optId, Evaluator(layer, feat))) {
+						continue;
+					}
+				}
 
 				if (val.type == mvt_string) {
 					value = val.string_value;
@@ -562,6 +602,7 @@ struct arg {
 	std::set<std::string> *exclude;
 	std::set<std::string> *keep_layers;
 	std::set<std::string> *remove_layers;
+	const std::map<std::string, mbgl::style::Filter> *layer_to_filters;
 	int ifmatched;
 };
 
@@ -572,7 +613,7 @@ void *join_worker(void *v) {
 		mvt_tile tile;
 
 		for (size_t i = 0; i < ai->second.size(); i++) {
-			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile);
+			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, *(a->layer_to_filters), tile);
 		}
 
 		ai->second.clear();
@@ -606,7 +647,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, const std::map<std::string, mbgl::style::Filter>& layerToFilterMap) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -620,6 +661,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		args[i].keep_layers = &keep_layers;
 		args[i].remove_layers = &remove_layers;
 		args[i].ifmatched = ifmatched;
+		args[i].layer_to_filters = &layerToFilterMap;
 	}
 
 	size_t count = 0;
@@ -661,7 +703,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, const std::map<std::string, mbgl::style::Filter>& layerToFilterMap) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -706,7 +748,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
-				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, layerToFilterMap);
 				tasks.clear();
 			}
 		}
@@ -759,7 +801,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 	st->minlat = min(minlat, st->minlat);
 	st->maxlat = max(maxlat, st->maxlat);
 
-	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, layerToFilterMap);
 	layermap = merge_layermaps(layermaps);
 
 	struct reader *next;
@@ -916,6 +958,7 @@ void usage(char **argv) {
 }
 
 #define MAXLINE 10000 /* XXX */
+#define BUFFER 65536
 
 std::vector<std::string> split(char *s) {
 	std::vector<std::string> ret;
@@ -996,11 +1039,89 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	}
 }
 
+void read_filter_json(char *fn, std::map<std::string, mbgl::style::Filter>& layerToFilterMap) {
+	FILE *fp = fopen(fn, "r");
+	if (fp == NULL) {
+		perror(fn);
+		exit(EXIT_FAILURE);
+	}
+
+	char readBuffer[BUFFER];
+	
+	// expects UTF-8 for now.
+	// use EncodedInputStream if we need to?
+	rapidjson::FileReadStream frs(fp, readBuffer, sizeof(readBuffer));
+	mbgl::JSDocument doc;
+	doc.ParseStream(frs);
+
+	if (fclose(fp) != 0) {
+		perror("fclose");
+		exit(EXIT_FAILURE);
+	}
+
+	// now that we've parsed our json document,
+	// try and construct our map.
+	const mbgl::JSValue& layers = doc["layers"];
+	if (!layers.IsArray()) {
+		fprintf(stderr, "Expected \"layers\" property in %s to be an array\n", fn);
+		exit(EXIT_FAILURE);
+	}
+
+	// for each layer, add its filter into
+	// our map
+	for (size_t i = 0; i < layers.Size(); i++) {
+		const mbgl::JSValue& layer = layers[i];
+		if (!layer.IsObject()) {
+			fprintf(stderr, "Expected layers[%zu] property to be an object\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		// get layer id
+		const mbgl::JSValue& layerId = layer["id"];
+		if (!layerId.IsString()) {
+			fprintf(stderr, "Expected layers[%zu][\"id\"] to be a string\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		const std::string& id = layerId.GetString();
+
+		// now we need to check and see if there is a filter property.
+		// if there isn't a filter property, just ignore this. we'll defer to
+		// to the rest of tile-join's functionality to do filtering
+		const mbgl::JSValue& layerFilter = layer["filter"];
+		if (layerFilter.IsNull()) {
+			continue;
+		}
+
+		// try and parse the filter from the json now.
+		mbgl::style::conversion::Error conversionError;
+		auto result = mbgl::style::conversion::convert<mbgl::style::Filter>(layerFilter, conversionError);
+		if (conversionError.message != "") {
+			fprintf(stderr, "layer \"%s\": %s\n", id.c_str(), conversionError.message.c_str());
+			exit(EXIT_FAILURE);
+		}
+
+		if (!result) {
+			fprintf(stderr, "layer \"%s\": unknown error parsing filter", id.c_str());
+			exit(EXIT_FAILURE);
+		}
+
+		// if everything is good, try and insert the filter into the map for the layer.
+		// fail on duplicates now.
+		const auto ins = layerToFilterMap.insert(std::pair<std::string, mbgl::style::Filter>(id, *result));
+		if (ins.second == false) {
+			fprintf(stderr, "duplicate layer \"%s\"\n", id.c_str());
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 int main(int argc, char **argv) {
 	char *out_mbtiles = NULL;
 	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	char *csv = NULL;
+	char *filter_json = NULL;
 	int force = 0;
 	int ifmatched = 0;
 
@@ -1023,6 +1144,8 @@ int main(int argc, char **argv) {
 
 	std::string set_name, set_description, set_attribution;
 
+	std::map<std::string, mbgl::style::Filter> layerToFilters;
+
 	struct option long_options[] = {
 		{"output", required_argument, 0, 'o'},
 		{"output-to-directory", required_argument, 0, 'e'},
@@ -1039,6 +1162,7 @@ int main(int argc, char **argv) {
 		{"quiet", no_argument, 0, 'q'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"filter", required_argument, 0, 'j'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1101,6 +1225,16 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'j':
+			if (filter_json != NULL) {
+				fprintf(stderr, "Only one -j for now\n");
+				exit(EXIT_FAILURE);
+			}
+
+			filter_json = optarg;
+			read_filter_json(filter_json, layerToFilters);
 			break;
 
 		case 'p':
@@ -1200,7 +1334,7 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name);
+	decode(readers, csv, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, layerToFilters);
 
 	if (set_attribution.size() != 0) {
 		attribution = set_attribution;
