@@ -27,6 +27,13 @@
 #include <algorithm>
 #include <functional>
 #include "jsonpull/jsonpull.h"
+#include "rapidjson/filereadstream.h"
+#include "mbgl/style/conversion.hpp"
+#include "mbgl/style/rapidjson_conversion.hpp"
+#include "mbgl/style/conversion/filter.hpp"
+#include "mbgl/style/filter.hpp"
+
+#include <experimental/optional>
 
 std::string dequote(std::string s);
 
@@ -916,6 +923,7 @@ void usage(char **argv) {
 }
 
 #define MAXLINE 10000 /* XXX */
+#define BUFFER 65536
 
 std::vector<std::string> split(char *s) {
 	std::vector<std::string> ret;
@@ -996,11 +1004,102 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	}
 }
 
+void read_filter_json(char *fn) {
+	FILE *fp = fopen(fn, "r");
+	if (fp == NULL) {
+		perror(fn);
+		exit(EXIT_FAILURE);
+	}
+
+	char readBuffer[BUFFER];
+	
+	// expects UTF-8 for now.
+	// use EncodedInputStream if we need to?
+	rapidjson::FileReadStream frs(fp, readBuffer, sizeof(readBuffer));
+	mbgl::JSDocument doc;
+	doc.ParseStream(frs);
+
+	if (fclose(fp) != 0) {
+		perror("fclose");
+		exit(EXIT_FAILURE);
+	}
+
+	std::map<std::string, mbgl::style::Filter> layerToFilterMap;
+
+	// now that we've parsed our json document,
+	// try and construct our map.
+	const mbgl::JSValue& layers = doc["layers"];
+	if (!layers.IsArray()) {
+		fprintf(stderr, "Expected \"layers\" property in %s to be an array.\n", fn);
+		exit(EXIT_FAILURE);
+	}
+
+	// for each layer, add its filter into
+	// our map
+	for (size_t i = 0; i < layers.Size(); i++) {
+		const mbgl::JSValue& layer = layers[i];
+		if (!layer.IsObject()) {
+			fprintf(stderr, "Expected layers[%zu] property to be an object.\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		// get layer id
+		const mbgl::JSValue& layerId = layer["id"];
+		if (!layerId.IsString()) {
+			fprintf(stderr, "Expected layers[%zu][\"id\"] to be a string.\n", i);
+			exit(EXIT_FAILURE);
+		}
+
+		const std::string& id = layerId.GetString();
+
+		// now we need to check and see if there is a filter property.
+		// if there isn't a filter property, just ignore this. we'll defer to
+		// to the rest of tile-join's functionality to do filtering
+		const mbgl::JSValue& layerFilter = layer["filter"];
+		if (layerFilter.IsNull()) {
+			continue;
+		}
+
+		mbgl::style::conversion::Error conversionError;
+		auto result = mbgl::style::conversion::convert<mbgl::style::Filter>(layerFilter, conversionError);
+		if (conversionError.message != "") {
+			fprintf(stderr, "layer \"%s\": %s\n", id.c_str(), conversionError.message.c_str());
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	// char s[MAXLINE];
+	// if (fgets(s, MAXLINE, f)) {
+	// 	header = split(s);
+
+	// 	for (size_t i = 0; i < header.size(); i++) {
+	// 		header[i] = dequote(header[i]);
+	// 	}
+	// }
+	// while (fgets(s, MAXLINE, f)) {
+	// 	std::vector<std::string> line = split(s);
+	// 	if (line.size() > 0) {
+	// 		line[0] = dequote(line[0]);
+	// 	}
+
+	// 	for (size_t i = 0; i < line.size() && i < header.size(); i++) {
+	// 		// printf("putting %s\n", line[0].c_str());
+	// 		mapping.insert(std::pair<std::string, std::vector<std::string>>(line[0], line));
+	// 	}
+	// }
+
+	// if (fclose(f) != 0) {
+	// 	perror("fclose");
+	// 	exit(EXIT_FAILURE);
+	// }
+}
+
 int main(int argc, char **argv) {
 	char *out_mbtiles = NULL;
 	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	char *csv = NULL;
+	char *filter_json = NULL;
 	int force = 0;
 	int ifmatched = 0;
 
@@ -1039,6 +1138,7 @@ int main(int argc, char **argv) {
 		{"quiet", no_argument, 0, 'q'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"filter", required_argument, 0, 'j'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1101,6 +1201,16 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'j':
+			if (filter_json != NULL) {
+				fprintf(stderr, "Only one -j for now\n");
+				exit(EXIT_FAILURE);
+			}
+
+			filter_json = optarg;
+			read_filter_json(filter_json);
 			break;
 
 		case 'p':

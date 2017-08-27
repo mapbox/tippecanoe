@@ -1,0 +1,8 @@
+{  
+   "layers":[  
+      {  
+         "id":"background",
+         "filter":["==", "$type", "LineString"]
+      }
+   ]
+}

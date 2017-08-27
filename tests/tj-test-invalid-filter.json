@@ -1,0 +1,10 @@
+{  
+   "layers":[  
+      {  
+         "id":"background",
+         "filter":[  
+            "=="
+         ]
+      }
+   ]
+}

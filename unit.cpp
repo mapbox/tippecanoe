@@ -2,14 +2,18 @@
 #include "catch/catch.hpp"
 #include "text.hpp"
 #include "mbgl/style/conversion.hpp"
+#include "mbgl/style/rapidjson_conversion.hpp"
 #include "mbgl/style/conversion/filter.hpp"
 #include "mbgl/style/filter.hpp"
-#include "mbgl/style/rapidjson_conversion.hpp"
+#include "rapidjson/document.h"
+
+#include <experimental/optional>
 
 using namespace mbgl::style;
 using namespace mbgl;
 
-TEST_CASE("UTF-8 enforcement", "[utf8]") {
+TEST_CASE("UTF-8 enforcement", "[utf8]")
+{
 	REQUIRE(check_utf8("") == std::string(""));
 	REQUIRE(check_utf8("hello world") == std::string(""));
 	REQUIRE(check_utf8("Καλημέρα κόσμε") == std::string(""));
@@ -18,7 +22,8 @@ TEST_CASE("UTF-8 enforcement", "[utf8]") {
 	REQUIRE(check_utf8("Hola m\xF3n") == std::string("\"Hola m\xF3n\" is not valid UTF-8 (0xF3 0x6E)"));
 }
 
-TEST_CASE("UTF-8 truncation", "[trunc]") {
+TEST_CASE("UTF-8 truncation", "[trunc]")
+{
 	REQUIRE(truncate16("0123456789abcdefghi", 16) == std::string("0123456789abcdef"));
 	REQUIRE(truncate16("0123456789éîôüéîôüç", 16) == std::string("0123456789éîôüéî"));
 	REQUIRE(truncate16("0123456789😀😬😁😂😃😄😅😆", 16) == std::string("0123456789😀😬😁"));
@@ -26,8 +31,22 @@ TEST_CASE("UTF-8 truncation", "[trunc]") {
 	REQUIRE(truncate16("0123456789あいうえおかきくけこさ", 16) == std::string("0123456789あいうえおか"));
 }
 
-TEST_CASE("JSON Filter Parsing", "[filter]") {
+TEST_CASE("Invalid JSON Filter Parsing", "[invalid-filter]")
+{
+	JSValue v("invalid_filter");
 	conversion::Error conversionError;
-	auto result = conversion::convert<Filter>("string", conversionError);
-	// REQUIRE(result == {});
+	auto result = conversion::convert<Filter>(v, conversionError);
+	REQUIRE(!result);
+}
+
+TEST_CASE("Valid JSON Filter Parsing", "[valid-filter]")
+{
+	{
+		JSValue v("[\"==\", \"$type\", \"LineString\"]");
+		conversion::Error conversionError;
+		auto result = conversion::convert<Filter>(v, conversionError);
+		REQUIRE(result);
+		// REQUIRE(result->value == FeatureType::LineString);
+		// REQUIRE(result.key == "$type");
+	}
 }
