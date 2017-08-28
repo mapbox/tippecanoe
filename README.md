@@ -482,7 +482,14 @@ The options are:
 
  * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * `-i` or `--if-matched`: Only include features that matched the CSV.
- * `-J` *filter-file* or `--gl-filter-file`=*filter-file*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match.
+ * `-j` *filter* or `--gl-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through.
+ * `-J` *filter-file* or `--gl-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
+
+Example: to find the Natural Earth countries with low `scalerank` but high `LABELRANK`:
+
+```
+tile-join -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.mbtiles
+```
 
 ### Setting or disabling tile size limits
 

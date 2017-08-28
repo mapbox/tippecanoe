@@ -69,7 +69,7 @@ json_pull *json_begin_file(FILE *f) {
 }
 
 static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
-	char *cp = j->source;
+	const char *cp = j->source;
 	size_t out = 0;
 
 	while (out < n && cp[out] != '\0') {
@@ -81,7 +81,7 @@ static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
 	return out;
 }
 
-json_pull *json_begin_string(char *s) {
+json_pull *json_begin_string(const char *s) {
 	return json_begin(read_string, s);
 }
 

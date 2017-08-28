@@ -566,6 +566,18 @@ The options are:
 \fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
 .IP \(bu 2
 \fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
+.IP \(bu 2
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-gl\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through.
+.IP \(bu 2
+\fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-gl\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
+.RE
+.PP
+Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but high \fB\fCLABELRANK\fR:
+.PP
+.RS
+.nf
+tile\-join \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.mbtiles
+.fi
 .RE
 .SS Setting or disabling tile size limits
 .RS

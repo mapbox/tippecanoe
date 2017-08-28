@@ -22,6 +22,7 @@
 #include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "dirtiles.hpp"
+#include "evaluator.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -130,6 +131,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+				if (!evaluate(attributes, layer.name, filter)) {
+					continue;
+				}
 			}
 
 			mvt_feature outfeature;
@@ -1050,6 +1055,19 @@ json_object *read_filter(const char *fname) {
 	return filter;
 }
 
+json_object *parse_filter(const char *s) {
+	json_pull *jp = json_begin_string(s);
+	json_object *filter = json_read_tree(jp);
+	if (filter == NULL) {
+		fprintf(stderr, "Could not parse filter %s\n", s);
+		fprintf(stderr, "%s\n", jp->error);
+		exit(EXIT_FAILURE);
+	}
+
+	// XXX clone tree instead of leaving pull open
+	return filter;
+}
+
 int main(int argc, char **argv) {
 	char *out_mbtiles = NULL;
 	char *out_dir = NULL;
@@ -1095,6 +1113,7 @@ int main(int argc, char **argv) {
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"gl-filter-file", required_argument, 0, 'J'},
+		{"gl-filter", required_argument, 0, 'j'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1161,6 +1180,10 @@ int main(int argc, char **argv) {
 
 		case 'J':
 			filter = read_filter(optarg);
+			break;
+
+		case 'j':
+			filter = parse_filter(optarg);
 			break;
 
 		case 'p':

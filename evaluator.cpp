@@ -174,19 +174,7 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 }
 
 bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const &layer, json_object *filter) {
-	json_object *layers = json_hash_get(filter, "layers");
-
-	if (layers == NULL) {
-		fprintf(stderr, "Filter: no \"layers\" key at top level\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (layers->type != JSON_HASH) {
-		fprintf(stderr, "Filter: \"layers\" is not a hash\n");
-		exit(EXIT_FAILURE);
-	}
-
-	json_object *f = json_hash_get(layers, layer.c_str());
+	json_object *f = json_hash_get(filter, layer.c_str());
 
 	if (f != NULL) {
 		return eval(feature, f);
