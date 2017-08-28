@@ -51,7 +51,7 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 			return false;  // bool vs non-bool
 		}
 
-		bool b = two->type = JSON_TRUE;
+		bool b = two->type != JSON_FALSE;
 		return one.numeric_value.bool_value > b;
 	}
 
