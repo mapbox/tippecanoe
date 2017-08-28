@@ -1194,16 +1194,17 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		size_t layer = a->second.id;
 
 		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".pbf")) {
-			std::string s = "";
-
-			char buf[20000];
-			ssize_t n;
-			while ((n = read(fd, buf, 20000)) > 0) {
-				s.append(std::string(buf, n));
+			struct stat st;
+			if (fstat(fd, &st) != 0) {
+				perror("fstat");
+				perror(sources[source].file.c_str());
+				exit(EXIT_FAILURE);
 			}
 
-			if (close(fd) != 0) {
-				perror("close");
+			char *map = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+			if (map == MAP_FAILED) {
+				perror("mmap");
+				perror(sources[source].file.c_str());
 				exit(EXIT_FAILURE);
 			}
 
@@ -1232,7 +1233,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			sst.basezoom = basezoom;
 			sst.attribute_types = attribute_types;
 
-			parse_geobuf(&sst, s, layer, sources[layer].layer);
+			parse_geobuf(&sst, map, st.st_size, layer, sources[layer].layer);
+
+			if (munmap(map, st.st_size) != 0) {
+				perror("munmap source file");
+				exit(EXIT_FAILURE);
+			}
+			if (close(fd) != 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
 
 			overall_offset = layer_seq;
 			checkdisk(reader, CPUS);

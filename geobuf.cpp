@@ -313,8 +313,8 @@ void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std
 	}
 }
 
-void parse_geobuf(struct serialization_state *sst, std::string const &src, int layer, std::string layername) {
-	protozero::pbf_reader pbf(src);
+void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, int layer, std::string layername) {
+	protozero::pbf_reader pbf(src, len);
 
 	size_t dim = 2;
 	double e = 1e6;
