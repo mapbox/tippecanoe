@@ -482,6 +482,7 @@ The options are:
 
  * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
  * `-i` or `--if-matched`: Only include features that matched the CSV.
+ * `-J` *filter-file* or `--gl-filter-file`=*filter-file*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match.
 
 ### Setting or disabling tile size limits
 
