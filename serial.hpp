@@ -128,5 +128,6 @@ struct serialization_state {
 };
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf);
+void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types);
 
 #endif

@@ -149,39 +149,3 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 		}
 	}
 }
-
-void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types) {
-	auto a = (*attribute_types).find(key);
-	if (a != attribute_types->end()) {
-		if (a->second == mvt_string) {
-			vt = mvt_string;
-		} else if (a->second == mvt_float) {
-			vt = mvt_double;
-			val = std::to_string(atof(val.c_str()));
-		} else if (a->second == mvt_int) {
-			vt = mvt_double;
-			if (val.size() == 0) {
-				val = "0";
-			}
-
-			for (size_t ii = 0; ii < val.size(); ii++) {
-				char c = val[ii];
-				if (c < '0' || c > '9') {
-					val = std::to_string(round(atof(val.c_str())));
-					break;
-				}
-			}
-		} else if (a->second == mvt_bool) {
-			if (val == "false" || val == "0" || val == "null" || val.size() == 0) {
-				vt = mvt_bool;
-				val = "false";
-			} else {
-				vt = mvt_bool;
-				val = "true";
-			}
-		} else {
-			fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
-			exit(EXIT_FAILURE);
-		}
-	}
-}
