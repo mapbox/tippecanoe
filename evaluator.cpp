@@ -197,6 +197,59 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 		}
 	}
 
+	if (strcmp(f->array[0]->string, "in") == 0 ||
+	    strcmp(f->array[0]->string, "!in") == 0) {
+		if (f->length < 2) {
+			fprintf(stderr, "Array too small in filter: %s\n", json_stringify(f));
+			exit(EXIT_FAILURE);
+		}
+
+		if (f->array[1]->type != JSON_STRING) {
+			fprintf(stderr, "\"!has\" key is not a string: %s\n", json_stringify(f));
+			exit(EXIT_FAILURE);
+		}
+
+		auto ff = feature.find(std::string(f->array[1]->string));
+		if (ff == feature.end()) {
+			static bool warned = false;
+			if (!warned) {
+				const char *s = json_stringify(f);
+				fprintf(stderr, "Warning: attribute not found for comparison: %s\n", s);
+				free((void *) s);
+				warned = true;
+			}
+			return false;  // not found: comparison is false
+		}
+
+		bool found = false;
+		for (size_t i = 2; i < f->length; i++) {
+			bool fail = false;
+			int cmp = compare(ff->second, f->array[i], fail);
+
+			if (fail) {
+				static bool warned = false;
+				if (!warned) {
+					const char *s = json_stringify(f);
+					fprintf(stderr, "Warning: mismatched type in comparison: %s\n", s);
+					free((void *) s);
+					warned = true;
+				}
+				cmp = 1;
+			}
+
+			if (cmp == 0) {
+				found = true;
+				break;
+			}
+		}
+
+		if (strcmp(f->array[0]->string, "in") == 0) {
+			return found;
+		} else {
+			return !found;
+		}
+	}
+
 	fprintf(stderr, "Unknown filter %s\n", json_stringify(f));
 	exit(EXIT_FAILURE);
 }
