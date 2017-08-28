@@ -1049,8 +1049,8 @@ json_object *read_filter(const char *fname) {
 		fprintf(stderr, "%s: %s\n", fname, jp->error);
 		exit(EXIT_FAILURE);
 	}
-
-	// XXX clone tree instead of leaving pull open
+	json_disconnect(filter);
+	json_end(jp);
 	fclose(fp);
 	return filter;
 }
@@ -1063,8 +1063,8 @@ json_object *parse_filter(const char *s) {
 		fprintf(stderr, "%s\n", jp->error);
 		exit(EXIT_FAILURE);
 	}
-
-	// XXX clone tree instead of leaving pull open
+	json_disconnect(filter);
+	json_end(jp);
 	return filter;
 }
 
@@ -1299,6 +1299,10 @@ int main(int argc, char **argv) {
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
+	}
+
+	if (filter != NULL) {
+		json_free(filter);
 	}
 
 	return 0;
