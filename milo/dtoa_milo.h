@@ -356,7 +356,6 @@ inline void Prettify(std::string &buffer, int length, int k) {
 	else if (-6 < kk && kk <= 0) {
 		// 1234e-6 -> 0.001234
 		const int offset = 2 - kk;
-		memmove(&buffer[offset], &buffer[0], length);
 		buffer.insert(buffer.begin(), '0');
 		buffer.insert(buffer.begin() + 1, '.');
 		for (int i = 2; i < offset; i++)
