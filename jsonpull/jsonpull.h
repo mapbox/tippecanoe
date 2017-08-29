@@ -46,7 +46,7 @@ typedef struct json_pull {
 	int line;
 
 	ssize_t (*read)(struct json_pull *, char *buf, size_t n);
-	const void *source;
+	void *source;
 	char *buffer;
 	ssize_t buffer_tail;
 	ssize_t buffer_head;

@@ -77,12 +77,12 @@ static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
 		out++;
 	}
 
-	j->source = cp + out;
+	j->source = (void *) (cp + out);
 	return out;
 }
 
 json_pull *json_begin_string(const char *s) {
-	return json_begin(read_string, s);
+	return json_begin(read_string, (void *) s);
 }
 
 void json_end(json_pull *p) {
