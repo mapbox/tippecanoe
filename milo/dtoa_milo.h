@@ -377,9 +377,16 @@ inline void Prettify(std::string &buffer, int length, int k) {
 inline std::string dtoa_milo(double value) {
 	std::string buffer;
 
-	// Not handling NaN and inf
-	assert(!isnan(value));
-	assert(!isinf(value));
+	if (isnan(value)) {
+		return "nan";
+	}
+	if (isinf(value)) {
+		if (value < 0) {
+			return "-inf";
+		} else {
+			return "inf";
+		}
+	}
 
 	if (value == 0) {
 		buffer = "0";
