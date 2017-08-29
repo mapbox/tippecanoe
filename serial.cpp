@@ -7,6 +7,7 @@
 #include <sqlite3.h>
 #include <set>
 #include <map>
+#include <limits.h>
 #include "protozero/varint.hpp"
 #include "geometry.hpp"
 #include "mbtiles.hpp"
