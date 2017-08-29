@@ -358,7 +358,7 @@ inline void Prettify(std::string &buffer, int length, int k) {
 		const int offset = 2 - kk;
 		memmove(&buffer[offset], &buffer[0], length);
 		buffer.insert(buffer.begin(), '0');
-		buffer.insert(buffer.begin() + 1, '0');
+		buffer.insert(buffer.begin() + 1, '.');
 		for (int i = 2; i < offset; i++)
 			buffer.insert(buffer.begin() + 2, '0');
 	}
