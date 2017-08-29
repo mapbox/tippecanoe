@@ -9,12 +9,14 @@
 #include <stdint.h>
 #endif
 
+namespace milo {
+
 #define UINT64_C2(h, l) ((static_cast<uint64_t>(h) << 32) | static_cast<uint64_t>(l))
 
 struct DiyFp {
 	DiyFp() {}
 
-	DiyFp(uint64_t f, int e) : f(f), e(e) {}
+	DiyFp(uint64_t ff, int ee) : f(ff), e(ee) {}
 
 	DiyFp(double d) {
 		union {
@@ -398,4 +400,6 @@ inline void dtoa_milo(double value, char* buffer) {
 		Grisu2(value, buffer, &length, &K);
 		Prettify(buffer, length, K);
 	}
+}
+
 }
