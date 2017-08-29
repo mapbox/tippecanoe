@@ -16,6 +16,7 @@
 #include "main.hpp"
 #include "pool.hpp"
 #include "projection.hpp"
+#include "milo/dtoa_milo.h"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
 	size_t w = fwrite(ptr, size, nitems, stream);
@@ -607,7 +608,7 @@ void coerce_value(std::string const &key, int &vt, std::string &val, std::map<st
 			vt = mvt_string;
 		} else if (a->second == mvt_float) {
 			vt = mvt_double;
-			val = std::to_string(atof(val.c_str()));
+			val = milo::dtoa_milo(atof(val.c_str()));
 		} else if (a->second == mvt_int) {
 			vt = mvt_double;
 			if (val.size() == 0) {

@@ -8,6 +8,7 @@
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
+#include "milo/dtoa_milo.h"
 
 #define POINT 0
 #define MULTIPOINT 1
@@ -30,7 +31,7 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 
 		case 2:
 			sv.type = mvt_double;
-			sv.s = std::to_string(pbf.get_double());
+			sv.s = milo::dtoa_milo(pbf.get_double());
 			break;
 
 		case 3:

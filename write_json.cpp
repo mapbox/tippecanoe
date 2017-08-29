@@ -7,6 +7,7 @@
 #include "geometry.hpp"
 #include "mvt.hpp"
 #include "write_json.hpp"
+#include "milo/dtoa_milo.h"
 
 struct lonlat {
 	int op;
@@ -120,7 +121,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (v == (long long) v) {
 					fprintf(fp, ": %lld", (long long) v);
 				} else {
-					fprintf(fp, ": %g", v);
+					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 				}
 			} else if (val.type == mvt_float) {
 				fprintq(fp, key);
@@ -128,7 +129,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (v == (long long) v) {
 					fprintf(fp, ": %lld", (long long) v);
 				} else {
-					fprintf(fp, ": %g", v);
+					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 				}
 			} else if (val.type == mvt_sint) {
 				fprintq(fp, key);

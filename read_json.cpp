@@ -5,16 +5,13 @@
 #include <vector>
 #include <string>
 #include <map>
-
-extern "C" {
 #include "jsonpull/jsonpull.h"
-}
-
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "read_json.hpp"
 #include "text.hpp"
 #include "mvt.hpp"
+#include "milo/dtoa_milo.h"
 
 const char *geometry_names[GEOM_TYPES] = {
 	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
@@ -136,7 +133,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			}
 		} else if (vt == JSON_NUMBER) {
 			type = mvt_double;
-			stringified = val;
+			stringified = milo::dtoa_milo(value->number);
 		} else if (vt == JSON_TRUE || vt == JSON_FALSE) {
 			type = mvt_bool;
 			stringified = val;
