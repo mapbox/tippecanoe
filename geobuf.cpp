@@ -41,7 +41,7 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 
 		case 4:
 			sv.type = mvt_double;
-			sv.s = std::to_string(-pbf.get_uint64());
+			sv.s = std::to_string(- (long long) pbf.get_uint64());
 			break;
 
 		case 5:
@@ -56,6 +56,11 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 		case 6:
 			sv.type = mvt_string;  // stringified JSON
 			sv.s = pbf.get_string();
+
+			if (sv.s == "null") {
+				sv.type = mvt_null;
+			}
+
 			break;
 
 		default:
