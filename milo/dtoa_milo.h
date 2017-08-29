@@ -203,7 +203,7 @@ inline DiyFp GetCachedPower(int e, int* K) {
 	return DiyFp(kCachedPowers_F[index], kCachedPowers_E[index]);
 }
 
-inline void GrisuRound(char* buffer, int len, uint64_t delta, uint64_t rest, uint64_t ten_kappa, uint64_t wp_w) {
+inline void GrisuRound(std::string &buffer, int len, uint64_t delta, uint64_t rest, uint64_t ten_kappa, uint64_t wp_w) {
 	while (rest < wp_w && delta - rest >= ten_kappa &&
 		   (rest + ten_kappa < wp_w ||  /// closer
 			wp_w - rest > rest + ten_kappa - wp_w)) {
@@ -226,7 +226,7 @@ inline unsigned CountDecimalDigit32(uint32_t n) {
 	return 10;
 }
 
-inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, char* buffer, int* len, int* K) {
+inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, std::string &buffer, int* len, int* K) {
 	static const uint32_t kPow10[] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000 };
 	const DiyFp one(uint64_t(1) << -Mp.e, Mp.e);
 	const DiyFp wp_w = Mp - W;
@@ -257,8 +257,10 @@ inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, char* buff
 				d = 0;
 #endif
 		}
-		if (d || *len)
-			buffer[(*len)++] = '0' + static_cast<char>(d);
+		if (d || *len) {
+			buffer.push_back('0' + static_cast<char>(d));
+			(*len)++;
+		}
 		kappa--;
 		uint64_t tmp = (static_cast<uint64_t>(p1) << -one.e) + p2;
 		if (tmp <= delta) {
@@ -273,8 +275,10 @@ inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, char* buff
 		p2 *= 10;
 		delta *= 10;
 		char d = static_cast<char>(p2 >> -one.e);
-		if (d || *len)
-			buffer[(*len)++] = '0' + d;
+		if (d || *len) {
+			buffer.push_back('0' + d);
+			(*len)++;
+		}
 		p2 &= one.f - 1;
 		kappa--;
 		if (p2 < delta) {
@@ -285,7 +289,7 @@ inline void DigitGen(const DiyFp& W, const DiyFp& Mp, uint64_t delta, char* buff
 	}
 }
 
-inline void Grisu2(double value, char* buffer, int* length, int* K) {
+inline void Grisu2(double value, std::string &buffer, int* length, int* K) {
 	const DiyFp v(value);
 	DiyFp w_m, w_p;
 	v.NormalizedBoundaries(&w_m, &w_p);
@@ -315,91 +319,87 @@ inline const char* GetDigitsLut() {
 	return cDigitsLut;
 }
 
-inline void WriteExponent(int K, char* buffer) {
+inline void WriteExponent(int K, std::string &buffer) {
 	if (K < 0) {
-		*buffer++ = '-';
+		buffer.push_back('-');
 		K = -K;
 	}
 
 	if (K >= 100) {
-		*buffer++ = '0' + static_cast<char>(K / 100);
+		buffer.push_back('0' + static_cast<char>(K / 100));
 		K %= 100;
 		const char* d = GetDigitsLut() + K * 2;
-		*buffer++ = d[0];
-		*buffer++ = d[1];
+		buffer.push_back(d[0]);
+		buffer.push_back(d[1]);
 	}
 	else if (K >= 10) {
 		const char* d = GetDigitsLut() + K * 2;
-		*buffer++ = d[0];
-		*buffer++ = d[1];
+		buffer.push_back(d[0]);
+		buffer.push_back(d[1]);
 	}
 	else
-		*buffer++ = '0' + static_cast<char>(K);
-
-	*buffer = '\0';
+		buffer.push_back('0' + static_cast<char>(K));
 }
 
-inline void Prettify(char* buffer, int length, int k) {
+inline void Prettify(std::string &buffer, int length, int k) {
 	const int kk = length + k;	// 10^(kk-1) <= v < 10^kk
 
 	if (length <= kk && kk <= 21) {
 		// 1234e7 -> 12340000000
 		for (int i = length; i < kk; i++)
-			buffer[i] = '0';
-		buffer[kk] = '.';
-		buffer[kk + 1] = '0';
-		buffer[kk + 2] = '\0';
+			buffer.push_back('0');
 	}
 	else if (0 < kk && kk <= 21) {
 		// 1234e-2 -> 12.34
-		memmove(&buffer[kk + 1], &buffer[kk], length - kk);
-		buffer[kk] = '.';
-		buffer[length + 1] = '\0';
+		buffer.insert(buffer.begin() + kk, '.');
 	}
 	else if (-6 < kk && kk <= 0) {
 		// 1234e-6 -> 0.001234
 		const int offset = 2 - kk;
 		memmove(&buffer[offset], &buffer[0], length);
-		buffer[0] = '0';
-		buffer[1] = '.';
+		buffer.insert(buffer.begin(), '0');
+		buffer.insert(buffer.begin() + 1, '0');
 		for (int i = 2; i < offset; i++)
-			buffer[i] = '0';
-		buffer[length + offset] = '\0';
+			buffer.insert(buffer.begin() + 2, '0');
 	}
 	else if (length == 1) {
 		// 1e30
-		buffer[1] = 'e';
-		WriteExponent(kk - 1, &buffer[2]);
+		buffer.push_back('e');
+		WriteExponent(kk - 1, buffer);
 	}
 	else {
 		// 1234e30 -> 1.234e33
-		memmove(&buffer[2], &buffer[1], length - 1);
-		buffer[1] = '.';
-		buffer[length + 1] = 'e';
-		WriteExponent(kk - 1, &buffer[0 + length + 2]);
+		buffer.insert(buffer.begin() + 1, '.');
+		buffer.push_back('e');
+		WriteExponent(kk - 1, buffer);
 	}
 }
 
-inline void dtoa_milo(double value, char* buffer) {
+inline std::string dtoa_milo(double value) {
+	std::string buffer;
+
 	// Not handling NaN and inf
 	assert(!isnan(value));
 	assert(!isinf(value));
 
 	if (value == 0) {
-		buffer[0] = '0';
-		buffer[1] = '.';
-		buffer[2] = '0';
-		buffer[3] = '\0';
+		buffer = "0";
 	}
 	else {
+		bool minus = false;
 		if (value < 0) {
-			*buffer++ = '-';
+			minus = true;
 			value = -value;
 		}
 		int length, K;
 		Grisu2(value, buffer, &length, &K);
 		Prettify(buffer, length, K);
+		if (minus) {
+			buffer.insert(buffer.begin(), '-');
+		}
 	}
+
+	return buffer;
 }
 
 }
