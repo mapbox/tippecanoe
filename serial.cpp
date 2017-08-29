@@ -622,7 +622,7 @@ void coerce_value(std::string const &key, int &vt, std::string &val, std::map<st
 				}
 			}
 		} else if (a->second == mvt_bool) {
-			if (val == "false" || val == "0" || val == "null" || val.size() == 0) {
+			if (val == "false" || val == "0" || val == "null" || val.size() == 0 || (vt == mvt_double && atof(val.c_str()) == 0)) {
 				vt = mvt_bool;
 				val = "false";
 			} else {

@@ -156,7 +156,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
  * `-T`_attribute_`:`_type_ or `--attribute-type=`_attribute_`:`_type_: Coerce the named feature _attribute_ to be of the specified _type_.
    The _type_ may be `string`, `float`, `int`, or `bool`.
-   If the type is `bool`, then original attributes of `0`, `false`, `null`, or the empty string become `false`, and otherwise become `true`.
+   If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
 
