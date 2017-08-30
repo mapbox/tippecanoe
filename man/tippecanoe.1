@@ -1,6 +1,6 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] features,
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] or Geobuf \[la]https://github.com/mapbox/geobuf\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
@@ -37,7 +37,7 @@ $ brew install tippecanoe
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [file.json ...]
+$ tippecanoe \-o file.mbtiles [file.json file.geobuf ...]
 .fi
 .RE
 .PP
@@ -111,6 +111,8 @@ or if metadata fields can't be set. You probably don't want to use this.
 .RS
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.geobuf\fR or \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
 specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.

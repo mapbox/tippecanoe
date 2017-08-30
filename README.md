@@ -1,7 +1,7 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) features,
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) or [Geobuf](https://github.com/mapbox/geobuf) features,
 [like these](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
@@ -41,7 +41,7 @@ Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [file.json ...]
+$ tippecanoe -o file.mbtiles [file.json file.geobuf ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -109,6 +109,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 ### Input files and layer names
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
+ * _name_`.geobuf` or _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.

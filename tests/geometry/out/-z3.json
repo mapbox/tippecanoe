@@ -1,9 +1,9 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-79.453125,-23.563987,102.000000,59.900000",
+"bounds": "-122.000000,-23.563987,102.000000,59.900000",
 "center": "22.500000,20.489949,3",
 "description": "tests/geometry/out/-z3.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"bare\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {} }, { \"id\": \"geometrycollection\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"collection\": \"Boolean\"} }, { \"id\": \"multipoint\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"point\": \"String\"} } ],\"tilestats\": {\"layerCount\": 3,\"layers\": [{\"layer\": \"bare\",\"count\": 2,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"geometrycollection\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"collection\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]}]},{\"layer\": \"multipoint\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"point\",\"count\": 1,\"type\": \"string\",\"values\": [\"multi\"]}]}]}}",
+"json": "{\"vector_layers\": [ { \"id\": \"bare\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {} }, { \"id\": \"geometrycollection\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"collection\": \"Boolean\"} }, { \"id\": \"multipoint\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"point\": \"String\"} }, { \"id\": \"onebare\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 4,\"layers\": [{\"layer\": \"bare\",\"count\": 2,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"geometrycollection\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"collection\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]}]},{\"layer\": \"multipoint\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"point\",\"count\": 1,\"type\": \"string\",\"values\": [\"multi\"]}]},{\"layer\": \"onebare\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "3",
 "minzoom": "0",
 "name": "tests/geometry/out/-z3.json.check.mbtiles",
@@ -24,6 +24,10 @@
 { "type": "FeatureCollection", "properties": { "layer": "multipoint", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "point": "multi" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ -79.453125, 49.382373 ], [ 11.513672, 52.052490 ], [ -60.468750, -6.926427 ], [ 23.906250, -12.468760 ] ] } }
 ] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "onebare", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.080078, 37.020098 ], [ -118.037109, 34.016242 ] ] } }
+] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 1 }, "features": [
@@ -41,6 +45,10 @@
 ,
 { "type": "FeatureCollection", "properties": { "layer": "multipoint", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "point": "multi" }, "geometry": { "type": "Point", "coordinates": [ -79.453125, 49.382373 ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "onebare", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.036133, 37.020098 ], [ -118.037109, 34.016242 ] ] } }
 ] }
 ] }
 ,
@@ -75,6 +83,12 @@
 ,
 { "type": "FeatureCollection", "properties": { "layer": "multipoint", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "point": "multi" }, "geometry": { "type": "Point", "coordinates": [ 11.557617, 52.052490 ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 2, "x": 0, "y": 1 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "onebare", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.014160, 37.002553 ], [ -118.015137, 34.016242 ] ] } }
 ] }
 ] }
 ,
@@ -129,6 +143,12 @@
 { "type": "Feature", "properties": { "collection": true }, "geometry": { "type": "LineString", "coordinates": [ [ 100.986328, 0.000000 ], [ 101.997070, 1.010690 ] ] } }
 ,
 { "type": "Feature", "properties": { "collection": true }, "geometry": { "type": "Point", "coordinates": [ 99.997559, 0.000000 ] } }
+] }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "zoom": 3, "x": 1, "y": 3 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "onebare", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.003174, 37.002553 ], [ -118.004150, 34.007135 ] ] } }
 ] }
 ] }
 ,
