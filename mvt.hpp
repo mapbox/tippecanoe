@@ -79,6 +79,7 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
+	std::string toString();
 };
 
 struct mvt_layer {

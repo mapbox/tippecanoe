@@ -9,6 +9,7 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
+#include "jsonpull/jsonpull.h"
 
 #define POINT 0
 #define MULTIPOINT 1
@@ -41,7 +42,7 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 
 		case 4:
 			sv.type = mvt_double;
-			sv.s = std::to_string(- (long long) pbf.get_uint64());
+			sv.s = std::to_string(-(long long) pbf.get_uint64());
 			break;
 
 		case 5:
@@ -226,8 +227,9 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	long long id = 0;
 	bool has_id = false;
 	std::vector<serial_val> values;
-	std::vector<size_t> properties;
 	int type = 0;
+	serial_feature sf;
+	std::map<std::string, serial_val> other;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {
@@ -259,10 +261,53 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		}
 
 		case 14: {
+			std::vector<size_t> properties;
 			auto pi = pbf.get_packed_uint32();
 			for (auto it = pi.first; it != pi.second; ++it) {
 				properties.push_back(*it);
 			}
+
+			for (size_t i = 0; i + 1 < properties.size(); i += 2) {
+				if (properties[i] >= keys.size()) {
+					fprintf(stderr, "Out of bounds key: %zu in %zu\n", properties[i], keys.size());
+					exit(EXIT_FAILURE);
+				}
+
+				if (properties[i + 1] >= values.size()) {
+					fprintf(stderr, "Out of bounds value: %zu in %zu\n", properties[i + 1], values.size());
+					exit(EXIT_FAILURE);
+				}
+
+				sf.full_keys.push_back(keys[properties[i]]);
+				sf.full_values.push_back(values[properties[i + 1]]);
+			}
+
+			values.clear();
+			break;
+		}
+
+		case 15: {
+			std::vector<size_t> misc;
+			auto pi = pbf.get_packed_uint32();
+			for (auto it = pi.first; it != pi.second; ++it) {
+				misc.push_back(*it);
+			}
+
+			for (size_t i = 0; i + 1 < misc.size(); i += 2) {
+				if (misc[i] >= keys.size()) {
+					fprintf(stderr, "Out of bounds key: %zu in %zu\n", misc[i], keys.size());
+					exit(EXIT_FAILURE);
+				}
+
+				if (misc[i + 1] >= values.size()) {
+					fprintf(stderr, "Out of bounds value: %zu in %zu\n", misc[i + 1], values.size());
+					exit(EXIT_FAILURE);
+				}
+
+				other.insert(std::pair<std::string, serial_val>(keys[misc[i]], values[misc[i + 1]]));
+			}
+
+			values.clear();
 			break;
 		}
 
@@ -271,7 +316,6 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		}
 	}
 
-	serial_feature sf;
 	sf.layer = layer;
 	sf.layername = layername;
 	sf.segment = 0;  // single thread
@@ -283,23 +327,30 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	sf.seq = (*sst->layer_seq);
 	sf.geometry = dv;
 	sf.t = type;
-
-	for (size_t i = 0; i + 1 < properties.size(); i += 2) {
-		if (properties[i] >= keys.size()) {
-			fprintf(stderr, "Out of bounds key: %zu in %zu\n", properties[i], keys.size());
-			exit(EXIT_FAILURE);
-		}
-
-		if (properties[i + 1] >= values.size()) {
-			fprintf(stderr, "Out of bounds value: %zu in %zu\n", properties[i + 1], values.size());
-			exit(EXIT_FAILURE);
-		}
-
-		sf.full_keys.push_back(keys[properties[i]]);
-		sf.full_values.push_back(values[properties[i + 1]]);
-	}
-
 	sf.m = sf.full_values.size();
+
+	auto tip = other.find("tippecanoe");
+	if (tip != other.end()) {
+		json_pull *jp = json_begin_string(tip->second.s.c_str());
+		json_object *o = json_read_tree(jp);
+
+		if (o != NULL) {
+			json_object *min = json_hash_get(o, "minzoom");
+			if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
+				sf.has_tippecanoe_minzoom = true;
+				sf.tippecanoe_minzoom = atoi(min->string);
+			}
+
+			json_object *max = json_hash_get(o, "maxzoom");
+			if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
+				sf.has_tippecanoe_maxzoom = true;
+				sf.tippecanoe_maxzoom = atoi(max->string);
+			}
+		}
+
+		json_free(o);
+		json_end(jp);
+	}
 
 	serialize_feature(sst, sf);
 }
