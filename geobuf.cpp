@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string>
+#include <limits.h>
 #include "mvt.hpp"
 #include "serial.hpp"
 #include "geobuf.hpp"
@@ -279,8 +280,16 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		}
 
 		case 12:
-			id = pbf.get_int64();
 			has_id = true;
+			id = pbf.get_sint64();
+			if (id < 0) {
+				static bool warned = false;
+				if (!warned) {
+					fprintf(stderr, "Out of range feature id %lld\n", id);
+					warned = true;
+				}
+				has_id = false;
+			}
 			break;
 
 		case 13: {
@@ -379,6 +388,11 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 				if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_maxzoom = true;
 					sf.tippecanoe_maxzoom = atoi(max->string);
+				}
+
+				json_object *tlayer = json_hash_get(o, "layer");
+				if (tlayer != NULL && (tlayer->type == JSON_STRING || tlayer->type == JSON_NUMBER)) {
+					sf.layername = tlayer->string;
 				}
 			}
 
