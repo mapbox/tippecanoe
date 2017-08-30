@@ -180,9 +180,16 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 	return dv;
 }
 
-drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, int &type) {
+struct drawvec_type {
+	drawvec dv;
+	int type;
+};
+
+std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys) {
+	std::vector<drawvec_type> ret;
 	std::vector<long long> coords;
 	std::vector<int> lengths;
+	int type;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {
@@ -207,9 +214,13 @@ drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vect
 		}
 
 		case 4: {
-			int type2;
 			protozero::pbf_reader geometry_reader(pbf.get_message());
-			drawvec dv2 = readGeometry(geometry_reader, dim, e, keys, type2);
+			std::vector<drawvec_type> dv2 = readGeometry(geometry_reader, dim, e, keys);
+
+			for (size_t i = 0; i < dv2.size(); i++) {
+				ret.push_back(dv2[i]);
+			}
+
 			break;
 		}
 
@@ -218,37 +229,42 @@ drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vect
 		}
 	}
 
-	drawvec dv;
+	drawvec_type dv;
 	if (type == POINT) {
-		dv = readPoint(coords, lengths, dim, e);
+		dv.dv = readPoint(coords, lengths, dim, e);
 	} else if (type == MULTIPOINT) {
-		dv = readLine(coords, lengths, dim, e, false);
+		dv.dv = readLine(coords, lengths, dim, e, false);
 	} else if (type == LINESTRING) {
-		dv = readLine(coords, lengths, dim, e, false);
+		dv.dv = readLine(coords, lengths, dim, e, false);
 	} else if (type == POLYGON) {
-		dv = readMultiLine(coords, lengths, dim, e, true);
+		dv.dv = readMultiLine(coords, lengths, dim, e, true);
 	} else if (type == MULTIPOLYGON) {
-		dv = readMultiPolygon(coords, lengths, dim, e);
+		dv.dv = readMultiPolygon(coords, lengths, dim, e);
 	}
 
-	type = type / 2 + 1;
-	return dv;
+	dv.type = type / 2 + 1;
+	ret.push_back(dv);
+	return ret;
 }
 
 void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
-	drawvec dv;
+	std::vector<drawvec_type> dv;
 	long long id = 0;
 	bool has_id = false;
 	std::vector<serial_val> values;
-	int type = 0;
-	serial_feature sf;
 	std::map<std::string, serial_val> other;
+
+	std::vector<std::string> full_keys;
+	std::vector<serial_val> full_values;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
 			protozero::pbf_reader geometry_reader(pbf.get_message());
-			dv = readGeometry(geometry_reader, dim, e, keys, type);
+			std::vector<drawvec_type> dv2 = readGeometry(geometry_reader, dim, e, keys);
+			for (size_t i = 0; i < dv2.size(); i++) {
+				dv.push_back(dv2[i]);
+			}
 			break;
 		}
 
@@ -291,8 +307,8 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 					exit(EXIT_FAILURE);
 				}
 
-				sf.full_keys.push_back(keys[properties[i]]);
-				sf.full_values.push_back(values[properties[i + 1]]);
+				full_keys.push_back(keys[properties[i]]);
+				full_values.push_back(values[properties[i + 1]]);
 			}
 
 			values.clear();
@@ -329,43 +345,49 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		}
 	}
 
-	sf.layer = layer;
-	sf.layername = layername;
-	sf.segment = 0;  // single thread
-	sf.has_id = has_id;
-	sf.id = id;
-	sf.has_tippecanoe_minzoom = false;
-	sf.has_tippecanoe_maxzoom = false;
-	sf.feature_minzoom = false;
-	sf.seq = (*sst->layer_seq);
-	sf.geometry = dv;
-	sf.t = type;
-	sf.m = sf.full_values.size();
+	for (size_t i = 0; i < dv.size(); i++) {
+		serial_feature sf;
 
-	auto tip = other.find("tippecanoe");
-	if (tip != other.end()) {
-		json_pull *jp = json_begin_string(tip->second.s.c_str());
-		json_object *o = json_read_tree(jp);
+		sf.layer = layer;
+		sf.layername = layername;
+		sf.segment = 0;  // single thread
+		sf.has_id = has_id;
+		sf.id = id;
+		sf.has_tippecanoe_minzoom = false;
+		sf.has_tippecanoe_maxzoom = false;
+		sf.feature_minzoom = false;
+		sf.seq = (*sst->layer_seq);
+		sf.geometry = dv[i].dv;
+		sf.t = dv[i].type;
+		sf.full_keys = full_keys;
+		sf.full_values = full_values;
+		sf.m = sf.full_values.size();
 
-		if (o != NULL) {
-			json_object *min = json_hash_get(o, "minzoom");
-			if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
-				sf.has_tippecanoe_minzoom = true;
-				sf.tippecanoe_minzoom = atoi(min->string);
+		auto tip = other.find("tippecanoe");
+		if (tip != other.end()) {
+			json_pull *jp = json_begin_string(tip->second.s.c_str());
+			json_object *o = json_read_tree(jp);
+
+			if (o != NULL) {
+				json_object *min = json_hash_get(o, "minzoom");
+				if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
+					sf.has_tippecanoe_minzoom = true;
+					sf.tippecanoe_minzoom = atoi(min->string);
+				}
+
+				json_object *max = json_hash_get(o, "maxzoom");
+				if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
+					sf.has_tippecanoe_maxzoom = true;
+					sf.tippecanoe_maxzoom = atoi(max->string);
+				}
 			}
 
-			json_object *max = json_hash_get(o, "maxzoom");
-			if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
-				sf.has_tippecanoe_maxzoom = true;
-				sf.tippecanoe_maxzoom = atoi(max->string);
-			}
+			json_free(o);
+			json_end(jp);
 		}
 
-		json_free(o);
-		json_end(jp);
+		serialize_feature(sst, sf);
 	}
-
-	serialize_feature(sst, sf);
 }
 
 void outBareGeometry(drawvec const &dv, int type, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
@@ -435,10 +457,11 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 		}
 
 		case 6: {
-			int type;
 			protozero::pbf_reader geometry_reader(pbf.get_message());
-			drawvec dv = readGeometry(geometry_reader, dim, e, keys, type);
-			outBareGeometry(dv, type, dim, e, keys, sst, layer, layername);
+			std::vector<drawvec_type> dv = readGeometry(geometry_reader, dim, e, keys);
+			for (size_t i = 0; i < dv.size(); i++) {
+				outBareGeometry(dv[i].dv, dv[i].type, dim, e, keys, sst, layer, layername);
+			}
 			break;
 		}
 
