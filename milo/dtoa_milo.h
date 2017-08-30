@@ -323,6 +323,8 @@ inline void WriteExponent(int K, std::string &buffer) {
 	if (K < 0) {
 		buffer.push_back('-');
 		K = -K;
+	} else {
+		buffer.push_back('+');
 	}
 
 	if (K >= 100) {

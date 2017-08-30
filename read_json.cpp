@@ -103,6 +103,22 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	}
 }
 
+void canonicalize(json_object *o) {
+	if (o->type == JSON_NUMBER) {
+		std::string s = milo::dtoa_milo(o->number);
+		free(o->string);
+		o->string = strdup(s.c_str());
+	} else if (o->type == JSON_HASH) {
+		for (size_t i = 0; i < o->length; i++) {
+			canonicalize(o->values[i]);
+		}
+	} else if (o->type == JSON_ARRAY) {
+		for (size_t i = 0; i < o->length; i++) {
+			canonicalize(o->array[i]);
+		}
+	}
+}
+
 void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature, std::string const &key) {
 	if (value != NULL) {
 		int vt = value->type;
@@ -117,6 +133,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 		} else if (vt == JSON_NULL) {
 			val = "null";
 		} else {
+			canonicalize(value);
 			const char *v = json_stringify(value);
 			val = std::string(v);
 			free((void *) v);  // stringify
