@@ -18,6 +18,13 @@
 #define POLYGON 4
 #define MULTIPOLYGON 5
 
+void ensureDim(size_t dim) {
+	if (dim < 2) {
+		fprintf(stderr, "Geometry has fewer than 2 dimensions: %zu\n", dim);
+		exit(EXIT_FAILURE);
+	}
+}
+
 serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys) {
 	serial_val sv;
 	sv.type = mvt_null;
@@ -73,6 +80,8 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 }
 
 drawvec readPoint(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
+	ensureDim(dim);
+
 	long long x, y;
 	projection->project(coords[0] / e, coords[1] / e, 32, &x, &y);
 	drawvec dv;
@@ -81,6 +90,8 @@ drawvec readPoint(std::vector<long long> &coords, std::vector<int> &lengths, siz
 }
 
 drawvec readLinePart(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, size_t start, size_t end, bool closed) {
+	ensureDim(dim);
+
 	drawvec dv;
 	std::vector<long long> prev;
 	std::vector<double> p;
@@ -139,6 +150,8 @@ drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths,
 }
 
 drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
+	ensureDim(dim);
+
 	if (lengths.size() == 0) {
 		return readLinePart(coords, lengths, dim, e, 0, coords.size(), true);
 	}
@@ -209,7 +222,7 @@ drawvec readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vect
 	if (type == POINT) {
 		dv = readPoint(coords, lengths, dim, e);
 	} else if (type == MULTIPOINT) {
-		dv = readLine(coords, lengths, dim, e, true);
+		dv = readLine(coords, lengths, dim, e, false);
 	} else if (type == LINESTRING) {
 		dv = readLine(coords, lengths, dim, e, false);
 	} else if (type == POLYGON) {
@@ -355,6 +368,24 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	serialize_feature(sst, sf);
 }
 
+void outBareGeometry(drawvec const &dv, int type, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+	serial_feature sf;
+
+	sf.layer = layer;
+	sf.layername = layername;
+	sf.segment = 0;  // single thread
+	sf.has_id = false;
+	sf.has_tippecanoe_minzoom = false;
+	sf.has_tippecanoe_maxzoom = false;
+	sf.feature_minzoom = false;
+	sf.seq = (*sst->layer_seq);
+	sf.geometry = dv;
+	sf.t = type;
+	sf.m = 0;
+
+	serialize_feature(sst, sf);
+}
+
 void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
 	while (pbf.next()) {
 		switch (pbf.tag()) {
@@ -385,10 +416,6 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 
 		case 2:
 			dim = pbf.get_int64();
-			if (dim < 2) {
-				fprintf(stderr, "Geometry has fewer than 2 dimensions: %zu\n", dim);
-				exit(EXIT_FAILURE);
-			}
 			break;
 
 		case 3:
@@ -411,6 +438,7 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 			int type;
 			protozero::pbf_reader geometry_reader(pbf.get_message());
 			drawvec dv = readGeometry(geometry_reader, dim, e, keys, type);
+			outBareGeometry(dv, type, dim, e, keys, sst, layer, layername);
 			break;
 		}
 
