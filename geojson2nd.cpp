@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <string>
-#include "jsonpull.h"
+#include "jsonpull/jsonpull.h"
 
 int fail = EXIT_SUCCESS;
 bool wrap = false;

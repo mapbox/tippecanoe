@@ -95,7 +95,7 @@ geobuf-test: geojson2nd $(addsuffix .checkbuf,$(TESTS))
 
 # XXX Use proper makefile rules instead of a for loop
 %.json.checkbuf:
-	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./geojson2nd -w $$i | json2geobuf > $$i.geobuf; done
+	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./geojson2nd -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
 	./tippecanoe -aD -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.checkbuf,%,$(word 4,$(subst /, ,$@)))))) $(addsuffix .geobuf,$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)) < /dev/null
 	./tippecanoe-decode $@.mbtiles | sed 's/checkbuf/check/g' > $@.out
 	cmp $@.out $(patsubst %.checkbuf,%,$@)
