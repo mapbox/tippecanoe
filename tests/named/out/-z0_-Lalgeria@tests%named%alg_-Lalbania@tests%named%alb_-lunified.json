@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-8.682385,18.975561,24.163413,69.036356",
+"bounds": "-8.682385,18.975561,24.163413,69.036355",
 "center": "0.000000,18.975561,0",
 "description": "tests/named/out/-z0_-Lalgeria@tests%named%alg_-Lalbania@tests%named%alb_-lunified.json.check.mbtiles",
 "format": "pbf",

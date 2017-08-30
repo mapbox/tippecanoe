@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"bounds": "-124.213807,29.689480,-70.645734,49.005639",
 "center": "-82.968750,37.710240,7",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.check.mbtiles",
 "format": "pbf",
@@ -240,7 +240,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 6, "x": 12, "y": 24 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "countries", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -109.046173, 37.000359 ], [ -110.496368, 37.008036 ], [ -112.418976, 37.010229 ], [ -112.587891, 37.009133 ] ], [ [ -109.046173, 37.000359 ], [ -106.787109, 36.999262 ] ], [ [ -109.046173, 37.000359 ], [ -109.046173, 36.527295 ] ] ] } }
+{ "type": "Feature", "properties": { "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ -109.046173, 37.000359 ], [ -110.496368, 37.008036 ], [ -112.417603, 37.010229 ], [ -112.587891, 37.009133 ] ], [ [ -109.046173, 37.000359 ], [ -106.787109, 36.999262 ] ], [ [ -109.046173, 37.000359 ], [ -109.046173, 36.527295 ] ] ] } }
 ] }
 ] }
 ,
@@ -564,7 +564,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 7, "x": 24, "y": 49 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "countries", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.643555, 37.003649 ], [ -110.496368, 37.007488 ], [ -112.418289, 37.009681 ], [ -112.543945, 37.009133 ] ] } }
+{ "type": "Feature", "properties": { "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -109.643555, 37.003649 ], [ -110.496368, 37.007488 ], [ -112.417603, 37.009681 ], [ -112.543945, 37.009133 ] ] } }
 ] }
 ] }
 ,

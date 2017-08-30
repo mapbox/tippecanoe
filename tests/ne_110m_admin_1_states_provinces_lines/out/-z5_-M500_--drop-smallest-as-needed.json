@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-124.213808,29.689480,-70.645734,49.005640",
+"bounds": "-124.213807,29.689480,-70.645734,49.005639",
 "center": "-95.625000,44.951199,5",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
 "format": "pbf",
