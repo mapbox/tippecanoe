@@ -6,6 +6,7 @@
 #include "text.hpp"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * Returns an empty string if `s` is valid utf8;
