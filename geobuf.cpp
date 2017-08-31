@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <string>
 #include <limits.h>
+#include <pthread.h>
 #include "mvt.hpp"
 #include "serial.hpp"
 #include "geobuf.hpp"
 #include "geojson.hpp"
 #include "projection.hpp"
+#include "main.hpp"
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
@@ -18,6 +20,18 @@
 #define MULTILINESTRING 3
 #define POLYGON 4
 #define MULTIPOLYGON 5
+
+struct queued_feature {
+	protozero::pbf_reader pbf;
+	size_t dim;
+	double e;
+	std::vector<std::string> *keys;
+	struct serialization_state *sst;
+	int layer;
+	std::string layername;
+};
+
+static std::vector<queued_feature> feature_queue;
 
 void ensureDim(size_t dim) {
 	if (dim < 2) {
@@ -359,13 +373,13 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 
 		sf.layer = layer;
 		sf.layername = layername;
-		sf.segment = 0;  // single thread
+		sf.segment = sst->segment;
 		sf.has_id = has_id;
 		sf.id = id;
 		sf.has_tippecanoe_minzoom = false;
 		sf.has_tippecanoe_maxzoom = false;
 		sf.feature_minzoom = false;
-		sf.seq = (*sst->layer_seq);
+		sf.seq = *(sst->layer_seq);
 		sf.geometry = dv[i].dv;
 		sf.t = dv[i].type;
 		sf.full_keys = full_keys;
@@ -404,12 +418,79 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 	}
 }
 
+struct queue_run_arg {
+	size_t start;
+	size_t end;
+	size_t segment;
+};
+
+void *run_parse_feature(void *v) {
+	struct queue_run_arg *qra = (struct queue_run_arg *) v;
+
+	for (size_t i = qra->start; i < qra->end; i++) {
+		struct queued_feature &qf = feature_queue[i];
+		readFeature(qf.pbf, qf.dim, qf.e, *qf.keys, &qf.sst[qra->segment], qf.layer, qf.layername);
+	}
+
+	return NULL;
+}
+
+void runQueue() {
+	if (feature_queue.size() == 0) {
+		return;
+	}
+
+	struct queue_run_arg qra[CPUS];
+	pthread_t pthreads[CPUS];
+
+	for (size_t i = 0; i < CPUS; i++) {
+		*(feature_queue[0].sst[i].layer_seq) = *(feature_queue[0].sst[0].layer_seq) + feature_queue.size() * i / CPUS;
+
+		qra[i].start = feature_queue.size() * i / CPUS;
+		qra[i].end = feature_queue.size() * (i + 1) / CPUS;
+		qra[i].segment = i;
+
+		if (pthread_create(&pthreads[i], NULL, run_parse_feature, &qra[i]) != 0) {
+			perror("pthread_create");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	for (size_t i = 0; i < CPUS; i++) {
+		void *retval;
+
+		if (pthread_join(pthreads[i], &retval) != 0) {
+			perror("pthread_join");
+		}
+	}
+
+	*(feature_queue[0].sst[0].layer_seq) = *(feature_queue[0].sst[CPUS - 1].layer_seq);
+	feature_queue.clear();
+}
+
+void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+	struct queued_feature qf;
+	qf.pbf = pbf;
+	qf.dim = dim;
+	qf.e = e;
+	qf.keys = &keys;
+	qf.sst = sst;
+	qf.layer = layer;
+	qf.layername = layername;
+
+	feature_queue.push_back(qf);
+
+	if (feature_queue.size() > CPUS * 500) {
+		runQueue();
+	}
+}
+
 void outBareGeometry(drawvec const &dv, int type, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
 	serial_feature sf;
 
 	sf.layer = layer;
 	sf.layername = layername;
-	sf.segment = 0;  // single thread
+	sf.segment = sst->segment;
 	sf.has_id = false;
 	sf.has_tippecanoe_minzoom = false;
 	sf.has_tippecanoe_maxzoom = false;
@@ -427,7 +508,7 @@ void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std
 		switch (pbf.tag()) {
 		case 1: {
 			protozero::pbf_reader feature_reader(pbf.get_message());
-			readFeature(feature_reader, dim, e, keys, sst, layer, layername);
+			queueFeature(feature_reader, dim, e, keys, sst, layer, layername);
 			break;
 		}
 
@@ -466,7 +547,7 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 
 		case 5: {
 			protozero::pbf_reader feature_reader(pbf.get_message());
-			readFeature(feature_reader, dim, e, keys, sst, layer, layername);
+			queueFeature(feature_reader, dim, e, keys, sst, layer, layername);
 			break;
 		}
 
@@ -483,4 +564,6 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 			pbf.skip();
 		}
 	}
+
+	runQueue();
 }
