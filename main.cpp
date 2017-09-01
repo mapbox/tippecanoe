@@ -2697,6 +2697,10 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+	if (filter != NULL) {
+		json_free(filter);
+	}
+
 	return ret;
 }
 
