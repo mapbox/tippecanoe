@@ -69,6 +69,25 @@ while (<IN>) {
 					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"not$hash\" }, $prop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 0, 0 ] } }\n";
 					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"$hash\" }, $prop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ -100, 0 ] } }\n";
 				}
+			} elsif ($prop =~ /id/) {
+				$prop =~ s/id/"id"/g;
+				$prop =~ s/'/"/g;
+
+				my $qprop = "$prop, $filter";
+				$qprop =~ s/"/\\"/g;
+
+				if ($matched eq "true") {
+					$qprop = "\"properties\": { \"rule\": \"$qprop\" }";
+
+					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"$hash\" }, $prop, $qprop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 0, 0 ] } }\n";
+					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"not$hash\" }, $prop, $qprop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ -100, 0 ] } }\n";
+				} else {
+					$qprop = "\"properties\": { \"rule\": \"not $qprop\" }";
+
+					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"not$hash\" }, $prop, $qprop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ 0, 0 ] } }\n";
+					print GEOJSON "{ \"type\": \"Feature\", \"tippecanoe\": { \"layer\": \"$hash\" }, $prop, $qprop, \"geometry\": { \"type\": \"Point\", \"coordinates\": [ -100, 0 ] } }\n";
+				}
+
 			}
 		}
 	}
