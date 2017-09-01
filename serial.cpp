@@ -18,6 +18,7 @@
 #include "main.hpp"
 #include "pool.hpp"
 #include "projection.hpp"
+#include "evaluator.hpp"
 #include "milo/dtoa_milo.h"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
@@ -528,6 +529,44 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		if (sf.full_values[i].type == mvt_null) {
 			sf.full_keys[i] = "";
 			sf.m--;
+		}
+	}
+
+	if (sst->filter != NULL) {
+		std::map<std::string, mvt_value> attributes;
+
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			if (sf.full_keys[i] != "") {
+				std::string key = sf.full_keys[i];
+				mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
+
+				attributes.insert(std::pair<std::string, mvt_value>(key, val));
+			}
+		}
+
+		if (sf.has_id) {
+			mvt_value v;
+			v.type = mvt_uint;
+			v.numeric_value.uint_value = sf.id;
+
+			attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+		}
+
+		mvt_value v;
+		v.type = mvt_string;
+
+		if (sf.t == mvt_point) {
+			v.string_value = "Point";
+		} else if (sf.t == mvt_linestring) {
+			v.string_value = "LineString";
+		} else if (sf.t == mvt_polygon) {
+			v.string_value = "Polygon";
+		}
+
+		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+		if (!evaluate(attributes, sf.layername, sst->filter)) {
+			return 0;
 		}
 	}
 

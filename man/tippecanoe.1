@@ -178,6 +178,10 @@ The \fItype\fP may be \fB\fCstring\fR, \fB\fCfloat\fR, \fB\fCint\fR, or \fB\fCbo
 If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR (or, if numeric, \fB\fC0.0\fR, etc.), \fB\fCfalse\fR, \fB\fCnull\fR, or the empty string become \fB\fCfalse\fR, and otherwise become \fB\fCtrue\fR\&.
 If the type is \fB\fCfloat\fR or \fB\fCint\fR and the original attribute was non\-numeric, it becomes \fB\fC0\fR\&.
 If the type is \fB\fCint\fR and the original attribute was floating\-point, it is rounded to the nearest integer.
+.IP \(bu 2
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
+.IP \(bu 2
+\fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
 .SS Dropping a fixed fraction of features by zoom level
 .RS
@@ -569,9 +573,9 @@ The options are:
 .IP \(bu 2
 \fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-gl\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through.
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
-\fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-gl\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
+\fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
 .PP
 Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but high \fB\fCLABELRANK\fR:

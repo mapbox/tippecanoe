@@ -1037,38 +1037,6 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	}
 }
 
-json_object *read_filter(const char *fname) {
-	FILE *fp = fopen(fname, "r");
-	if (fp == NULL) {
-		perror(fname);
-		exit(EXIT_FAILURE);
-	}
-
-	json_pull *jp = json_begin_file(fp);
-	json_object *filter = json_read_tree(jp);
-	if (filter == NULL) {
-		fprintf(stderr, "%s: %s\n", fname, jp->error);
-		exit(EXIT_FAILURE);
-	}
-	json_disconnect(filter);
-	json_end(jp);
-	fclose(fp);
-	return filter;
-}
-
-json_object *parse_filter(const char *s) {
-	json_pull *jp = json_begin_string(s);
-	json_object *filter = json_read_tree(jp);
-	if (filter == NULL) {
-		fprintf(stderr, "Could not parse filter %s\n", s);
-		fprintf(stderr, "%s\n", jp->error);
-		exit(EXIT_FAILURE);
-	}
-	json_disconnect(filter);
-	json_end(jp);
-	return filter;
-}
-
 int main(int argc, char **argv) {
 	char *out_mbtiles = NULL;
 	char *out_dir = NULL;
@@ -1113,8 +1081,8 @@ int main(int argc, char **argv) {
 		{"quiet", no_argument, 0, 'q'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
-		{"gl-filter-file", required_argument, 0, 'J'},
-		{"gl-filter", required_argument, 0, 'j'},
+		{"feature-filter-file", required_argument, 0, 'J'},
+		{"feature-filter", required_argument, 0, 'j'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
