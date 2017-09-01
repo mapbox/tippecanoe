@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <functional>
 #include "jsonpull/jsonpull.h"
+#include "milo/dtoa_milo.h"
 
 std::string dequote(std::string s);
 
@@ -161,10 +162,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
 					type = mvt_double;
 				} else if (val.type == mvt_double) {
-					aprintf(&value, "%g", val.numeric_value.double_value);
+					aprintf(&value, "%s", milo::dtoa_milo(val.numeric_value.double_value).c_str());
 					type = mvt_double;
 				} else if (val.type == mvt_float) {
-					aprintf(&value, "%g", val.numeric_value.float_value);
+					aprintf(&value, "%s", milo::dtoa_milo(val.numeric_value.float_value).c_str());
 					type = mvt_double;
 				} else if (val.type == mvt_bool) {
 					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");

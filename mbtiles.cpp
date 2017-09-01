@@ -14,6 +14,7 @@
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "text.hpp"
+#include "milo/dtoa_milo.h"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -275,11 +276,11 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1, si
 				out.append(",\n");
 
 				out.append("\t\t\t\t\t\"min\": ");
-				out.append(std::to_string(attribute.second.min));
+				out.append(milo::dtoa_milo(attribute.second.min));
 				out.append(",\n");
 
 				out.append("\t\t\t\t\t\"max\": ");
-				out.append(std::to_string(attribute.second.max));
+				out.append(milo::dtoa_milo(attribute.second.max));
 			}
 
 			out.append("\n");
