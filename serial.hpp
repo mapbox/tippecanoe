@@ -4,7 +4,9 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <vector>
+#include <sys/stat.h>
 #include "geometry.hpp"
+#include "mbtiles.hpp"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
@@ -62,9 +64,70 @@ struct serial_feature {
 	long long bbox[4];
 	std::vector<std::string> full_keys;
 	std::vector<serial_val> full_values;
+	std::string layername;
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
 serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+
+struct reader {
+	int metafd;
+	int poolfd;
+	int treefd;
+	int geomfd;
+	int indexfd;
+
+	FILE *metafile;
+	struct memfile *poolfile;
+	struct memfile *treefile;
+	FILE *geomfile;
+	FILE *indexfile;
+
+	long long metapos;
+	long long geompos;
+	long long indexpos;
+
+	long long file_bbox[4];
+
+	struct stat geomst;
+	struct stat metast;
+
+	char *geom_map;
+};
+
+struct serialization_state {
+	const char *fname;  // source file name
+	int line;	   // user-oriented location within source for error reports
+
+	volatile long long *layer_seq;     // sequence within current layer
+	volatile long long *progress_seq;  // overall sequence for progress indicator
+
+	struct reader *readers;  // array of data for each input thread
+	int segment;		 // the current input thread
+
+	unsigned *initial_x;  // relative offset of all geometries
+	unsigned *initial_y;
+	int *initialized;
+
+	double *dist_sum;  // running tally for calculation of resolution within features
+	size_t *dist_count;
+	bool want_dist;
+
+	int maxzoom;
+	int basezoom;
+
+	bool filters;
+	bool uses_gamma;
+
+	std::map<std::string, layermap_entry> *layermap;
+
+	std::map<std::string, int> const *attribute_types;
+	std::set<std::string> *exclude;
+	std::set<std::string> *include;
+	int exclude_all;
+};
+
+int serialize_feature(struct serialization_state *sst, serial_feature &sf);
+void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types);
 
 #endif

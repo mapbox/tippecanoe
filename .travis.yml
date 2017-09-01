@@ -1,4 +1,6 @@
-language: generic
+language: node_js
+node_js:
+  - "6"
 
 sudo: false
 
@@ -68,7 +70,8 @@ install:
  - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
- - BUILDTYPE=${BUILDTYPE} make test
+ - npm install geobuf
+ - BUILDTYPE=${BUILDTYPE} make test geobuf-test
  - if [ -n "${COVERAGE}" ]; then
        /usr/bin/llvm-cov-3.5 -lp *.o;
        pip install --user cpp-coveralls;

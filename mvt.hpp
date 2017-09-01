@@ -62,7 +62,8 @@ enum mvt_value_type {
 	mvt_int,
 	mvt_uint,
 	mvt_sint,
-	mvt_bool
+	mvt_bool,
+	mvt_null,
 };
 
 struct mvt_value {
@@ -78,6 +79,7 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
+	std::string toString();
 };
 
 struct mvt_layer {

@@ -1,3 +1,7 @@
+## 1.23.0
+
+* Add input support for Geobuf file format
+
 ## 1.22.2
 
 * Add better diagnostics for NaN or Infinity in input JSON

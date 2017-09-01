@@ -19,7 +19,7 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit
+all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit geojson2nd
 
 docs: man/tippecanoe.1
 
@@ -46,16 +46,19 @@ C = $(wildcard *.c) $(wildcard *.cpp)
 INCLUDES = -I/usr/local/include -I.
 LIBS = -L/usr/local/lib
 
-tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o dirtiles.o plugin.o read_json.o write_json.o
+tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o dirtiles.o plugin.o read_json.o write_json.o geobuf.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
-tippecanoe-decode: decode.o projection.o mvt.o write_json.o
+tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+
+geojson2nd: geojson2nd.o jsonpull/jsonpull.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 unit: unit.o text.o
@@ -86,6 +89,16 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test p
 	./tippecanoe -aD -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $@.out $(patsubst %.check,%,$@)
+	rm $@.out $@.mbtiles
+
+geobuf-test: geojson2nd $(addsuffix .checkbuf,$(TESTS))
+
+# XXX Use proper makefile rules instead of a for loop
+%.json.checkbuf:
+	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./geojson2nd -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
+	./tippecanoe -aD -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.checkbuf,%,$(word 4,$(subst /, ,$@)))))) $(addsuffix .geobuf,$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)) < /dev/null
+	./tippecanoe-decode $@.mbtiles | sed 's/checkbuf/check/g' > $@.out
+	cmp $@.out $(patsubst %.checkbuf,%,$@)
 	rm $@.out $@.mbtiles
 
 parallel-test:

@@ -1,6 +1,6 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] features,
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] or Geobuf \[la]https://github.com/mapbox/geobuf\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
@@ -37,7 +37,7 @@ $ brew install tippecanoe
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [file.json ...]
+$ tippecanoe \-o file.mbtiles [file.json file.geobuf ...]
 .fi
 .RE
 .PP
@@ -112,6 +112,8 @@ or if metadata fields can't be set. You probably don't want to use this.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
+\fIname\fP\fB\fC\&.geobuf\fR or \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+.IP \(bu 2
 \fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
 specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
 .IP \(bu 2
@@ -173,7 +175,7 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .IP \(bu 2
 \fB\fC\-T\fR\fIattribute\fP\fB\fC:\fR\fItype\fP or \fB\fC\-\-attribute\-type=\fR\fIattribute\fP\fB\fC:\fR\fItype\fP: Coerce the named feature \fIattribute\fP to be of the specified \fItype\fP\&.
 The \fItype\fP may be \fB\fCstring\fR, \fB\fCfloat\fR, \fB\fCint\fR, or \fB\fCbool\fR\&.
-If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR, \fB\fCfalse\fR, \fB\fCnull\fR, or the empty string become \fB\fCfalse\fR, and otherwise become \fB\fCtrue\fR\&.
+If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR (or, if numeric, \fB\fC0.0\fR, etc.), \fB\fCfalse\fR, \fB\fCnull\fR, or the empty string become \fB\fCfalse\fR, and otherwise become \fB\fCtrue\fR\&.
 If the type is \fB\fCfloat\fR or \fB\fCint\fR and the original attribute was non\-numeric, it becomes \fB\fC0\fR\&.
 If the type is \fB\fCint\fR and the original attribute was floating\-point, it is rounded to the nearest integer.
 .RE

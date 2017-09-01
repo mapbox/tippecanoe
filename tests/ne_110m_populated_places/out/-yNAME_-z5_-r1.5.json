@@ -1,5 +1,5 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "-175.220565,-41.299974,179.216647,64.150024",
+"bounds": "-175.220564,-41.299973,179.216647,64.150023",
 "center": "16.875000,44.951199,5",
 "description": "tests/ne_110m_populated_places/out/-yNAME_-z5_-r1.5.json.check.mbtiles",
 "format": "pbf",
