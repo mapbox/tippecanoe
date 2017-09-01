@@ -56,6 +56,15 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 		return one.numeric_value.bool_value > b;
 	}
 
+	if (one.type == mvt_null) {
+		if (two->type != JSON_NULL) {
+			fail = true;
+			return false;  // null vs non-null
+		}
+
+		return 0;  // null equals null
+	}
+
 	fprintf(stderr, "Internal error: bad mvt type %d\n", one.type);
 	exit(EXIT_FAILURE);
 }
@@ -124,6 +133,9 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 				free((void *) s);
 				warned = true;
 			}
+			if (strcmp(f->array[0]->string, "!=") == 0) {
+				return true;  //  attributes that aren't found are not equal
+			}
 			return false;  // not found: comparison is false
 		}
 
@@ -137,6 +149,9 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 				fprintf(stderr, "Warning: mismatched type in comparison: %s\n", s);
 				free((void *) s);
 				warned = true;
+			}
+			if (strcmp(f->array[0]->string, "!=") == 0) {
+				return true;  // mismatched types are not equal
 			}
 			return false;
 		}
@@ -218,6 +233,9 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 				fprintf(stderr, "Warning: attribute not found for comparison: %s\n", s);
 				free((void *) s);
 				warned = true;
+			}
+			if (strcmp(f->array[0]->string, "!in") == 0) {
+				return true;  // attributes that aren't found are not in
 			}
 			return false;  // not found: comparison is false
 		}

@@ -514,22 +514,18 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
 		if (sst->exclude_all) {
-			if (sst->include->count(sf.full_keys[i]) == 0) {
+			if (sst->include->count(sf.full_keys[i]) == 0 && sf.full_keys[i] != "") {
 				sf.full_keys[i] = "";
 				sf.m--;
 				continue;
 			}
-		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+		} else if (sst->exclude->count(sf.full_keys[i]) != 0 && sf.full_keys[i] != "") {
 			sf.full_keys[i] = "";
 			sf.m--;
 			continue;
 		}
 
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
-		if (sf.full_values[i].type == mvt_null) {
-			sf.full_keys[i] = "";
-			sf.m--;
-		}
 	}
 
 	if (sst->filter != NULL) {
@@ -567,6 +563,13 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 		if (!evaluate(attributes, sf.layername, sst->filter)) {
 			return 0;
+		}
+	}
+
+	for (size_t i = 0; i < sf.full_keys.size(); i++) {
+		if (sf.full_values[i].type == mvt_null && sf.full_keys[i] != "") {
+			sf.full_keys[i] = "";
+			sf.m--;
 		}
 	}
 

@@ -530,6 +530,8 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	} else if (type == mvt_bool) {
 		tv.type = mvt_bool;
 		tv.numeric_value.bool_value = (s[0] == 't');
+	} else if (type == mvt_null) {
+		tv.type = mvt_null;
 	} else {
 		tv.type = mvt_string;
 		tv.string_value = s;
