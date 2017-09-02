@@ -708,6 +708,21 @@ void json_free(json_object *o) {
 	free(o);
 }
 
+static void json_disconnect_parser(json_object *o) {
+	if (o->type == JSON_HASH) {
+		for (size_t i = 0; i < o->length; i++) {
+			json_disconnect_parser(o->keys[i]);
+			json_disconnect_parser(o->values[i]);
+		}
+	} else if (o->type == JSON_ARRAY) {
+		for (size_t i = 0; i < o->length; i++) {
+			json_disconnect_parser(o->array[i]);
+		}
+	}
+
+	o->parser = NULL;
+}
+
 void json_disconnect(json_object *o) {
 	// Expunge references to this as an array element
 	// or a hash key or value.
@@ -761,6 +776,7 @@ void json_disconnect(json_object *o) {
 		o->parser->root = NULL;
 	}
 
+	json_disconnect_parser(o);
 	o->parent = NULL;
 }
 
