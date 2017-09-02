@@ -710,12 +710,14 @@ void json_free(json_object *o) {
 
 static void json_disconnect_parser(json_object *o) {
 	if (o->type == JSON_HASH) {
-		for (size_t i = 0; i < o->length; i++) {
+		size_t i;
+		for (i = 0; i < o->length; i++) {
 			json_disconnect_parser(o->keys[i]);
 			json_disconnect_parser(o->values[i]);
 		}
 	} else if (o->type == JSON_ARRAY) {
-		for (size_t i = 0; i < o->length; i++) {
+		size_t i;
+		for (i = 0; i < o->length; i++) {
 			json_disconnect_parser(o->array[i]);
 		}
 	}
