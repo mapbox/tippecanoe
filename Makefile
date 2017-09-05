@@ -93,6 +93,9 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test p
 
 geobuf-test: geojson2nd $(addsuffix .checkbuf,$(TESTS))
 
+# For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
+fewer-tests: tippecanoe tippecanoe-decode geobuf-test raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit
+
 # XXX Use proper makefile rules instead of a for loop
 %.json.checkbuf:
 	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./geojson2nd -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
@@ -217,7 +220,7 @@ join-filter-test:
 	./tippecanoe -z0 -f -o tests/feature-filter/out/all.mbtiles tests/feature-filter/in.json
 	./tile-join -J tests/feature-filter/filter -f -o tests/feature-filter/out/filtered.mbtiles tests/feature-filter/out/all.mbtiles
 	./tippecanoe-decode tests/feature-filter/out/filtered.mbtiles > tests/feature-filter/out/filtered.json.check
-	cmp tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.json
+	cmp tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.json.standard
 	rm -f tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.mbtiles tests/feature-filter/out/all.mbtiles
 
 # Use this target to regenerate the standards that the tests are compared against
