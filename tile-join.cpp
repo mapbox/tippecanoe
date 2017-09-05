@@ -618,15 +618,16 @@ void *join_worker(void *v) {
 		ai->second.clear();
 
 		bool anything = false;
+		mvt_tile outtile;
 		for (size_t i = 0; i < tile.layers.size(); i++) {
 			if (tile.layers[i].features.size() > 0) {
+				outtile.layers.push_back(tile.layers[i]);
 				anything = true;
-				break;
 			}
 		}
 
 		if (anything) {
-			std::string pbf = tile.encode();
+			std::string pbf = outtile.encode();
 			std::string compressed;
 
 			if (!pC) {
