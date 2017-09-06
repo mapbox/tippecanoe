@@ -204,7 +204,7 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 	std::vector<drawvec_type> ret;
 	std::vector<long long> coords;
 	std::vector<int> lengths;
-	int type;
+	int type = -1;
 
 	while (pbf.next()) {
 		switch (pbf.tag()) {

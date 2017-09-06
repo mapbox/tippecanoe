@@ -22,6 +22,7 @@
 #include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "dirtiles.hpp"
+#include "evaluator.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -46,7 +47,7 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
 	int features_added = 0;
 	bool was_compressed;
@@ -100,6 +101,43 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
+
+			if (filter != NULL) {
+				std::map<std::string, mvt_value> attributes;
+
+				for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
+					std::string key = layer.keys[feat.tags[t]];
+					mvt_value &val = layer.values[feat.tags[t + 1]];
+
+					attributes.insert(std::pair<std::string, mvt_value>(key, val));
+				}
+
+				if (feat.has_id) {
+					mvt_value v;
+					v.type = mvt_uint;
+					v.numeric_value.uint_value = feat.id;
+
+					attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+				}
+
+				mvt_value v;
+				v.type = mvt_string;
+
+				if (feat.type == mvt_point) {
+					v.string_value = "Point";
+				} else if (feat.type == mvt_linestring) {
+					v.string_value = "LineString";
+				} else if (feat.type == mvt_polygon) {
+					v.string_value = "Polygon";
+				}
+
+				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+				if (!evaluate(attributes, layer.name, filter)) {
+					continue;
+				}
+			}
+
 			mvt_feature outfeature;
 			int matched = 0;
 
@@ -564,6 +602,7 @@ struct arg {
 	std::set<std::string> *keep_layers;
 	std::set<std::string> *remove_layers;
 	int ifmatched;
+	json_object *filter;
 };
 
 void *join_worker(void *v) {
@@ -573,21 +612,22 @@ void *join_worker(void *v) {
 		mvt_tile tile;
 
 		for (size_t i = 0; i < ai->second.size(); i++) {
-			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile);
+			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile, a->filter);
 		}
 
 		ai->second.clear();
 
 		bool anything = false;
+		mvt_tile outtile;
 		for (size_t i = 0; i < tile.layers.size(); i++) {
 			if (tile.layers[i].features.size() > 0) {
+				outtile.layers.push_back(tile.layers[i]);
 				anything = true;
-				break;
 			}
 		}
 
 		if (anything) {
-			std::string pbf = tile.encode();
+			std::string pbf = outtile.encode();
 			std::string compressed;
 
 			if (!pC) {
@@ -607,7 +647,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -621,6 +661,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 		args[i].keep_layers = &keep_layers;
 		args[i].remove_layers = &remove_layers;
 		args[i].ifmatched = ifmatched;
+		args[i].filter = filter;
 	}
 
 	size_t count = 0;
@@ -662,7 +703,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name) {
+void decode(struct reader *readers, char *map, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -707,7 +748,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
-				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 				tasks.clear();
 			}
 		}
@@ -760,7 +801,7 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 	st->minlat = min(minlat, st->minlat);
 	st->maxlat = max(maxlat, st->maxlat);
 
-	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers);
+	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 	layermap = merge_layermaps(layermaps);
 
 	struct reader *next;
@@ -1004,6 +1045,7 @@ int main(int argc, char **argv) {
 	char *csv = NULL;
 	int force = 0;
 	int ifmatched = 0;
+	json_object *filter = NULL;
 
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -1040,6 +1082,8 @@ int main(int argc, char **argv) {
 		{"quiet", no_argument, 0, 'q'},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"feature-filter-file", required_argument, 0, 'J'},
+		{"feature-filter", required_argument, 0, 'j'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1102,6 +1146,14 @@ int main(int argc, char **argv) {
 
 		case 'Z':
 			minzoom = atoi(optarg);
+			break;
+
+		case 'J':
+			filter = read_filter(optarg);
+			break;
+
+		case 'j':
+			filter = parse_filter(optarg);
 			break;
 
 		case 'p':
@@ -1201,7 +1253,7 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, csv, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name);
+	decode(readers, csv, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, filter);
 
 	if (set_attribution.size() != 0) {
 		attribution = set_attribution;
@@ -1217,6 +1269,10 @@ int main(int argc, char **argv) {
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
+	}
+
+	if (filter != NULL) {
+		json_free(filter);
 	}
 
 	return 0;

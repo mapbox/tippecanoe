@@ -17,7 +17,7 @@ matrix:
     # debug+leak+address-sanitizer build
     - os: linux
       compiler: clang
-      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address" FEWER=true
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
@@ -71,7 +71,10 @@ install:
 
 script:
  - npm install geobuf
- - BUILDTYPE=${BUILDTYPE} make test geobuf-test
+ - if [ -n "${FEWER}" ]; then
+       BUILDTYPE=${BUILDTYPE} make fewer-tests; else
+       BUILDTYPE=${BUILDTYPE} make test geobuf-test;
+   fi
  - if [ -n "${COVERAGE}" ]; then
        /usr/bin/llvm-cov-3.5 -lp *.o;
        pip install --user cpp-coveralls;

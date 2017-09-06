@@ -1,3 +1,7 @@
+## 1.24.0
+
+* Add feature filters using the Mapbox GL Style Specification filter syntax
+
 ## 1.23.0
 
 * Add input support for Geobuf file format

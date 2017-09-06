@@ -56,6 +56,7 @@
 #include "options.hpp"
 #include "mvt.hpp"
 #include "dirtiles.hpp"
+#include "evaluator.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -349,7 +350,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, struct reader *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > *layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -400,6 +401,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].filters = filters;
 		sst[i].layermap = &(*layermaps)[i];
 		sst[i].exclude = exclude;
+		sst[i].filter = filter;
 		sst[i].include = include;
 		sst[i].exclude_all = exclude_all;
 		sst[i].basezoom = basezoom;
@@ -445,6 +447,7 @@ struct read_parallel_arg {
 	std::set<std::string> *exclude;
 	std::set<std::string> *include;
 	int exclude_all;
+	json_object *filter;
 	char *fname;
 	int maxzoom;
 	int basezoom;
@@ -483,7 +486,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->readers, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator, rpa->dist_sum, rpa->dist_count, rpa->want_dist, rpa->filters);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->readers, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->filter, rpa->fname, rpa->basezoom, rpa->source, rpa->nlayers, rpa->layermaps, rpa->droprate, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator, rpa->dist_sum, rpa->dist_count, rpa->want_dist, rpa->filters);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -500,7 +503,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, struct reader *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, char *fname, int basezoom, int source, int nlayers, std::vector<std::map<std::string, layermap_entry> > &layermaps, double droprate, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -526,6 +529,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	rpa->exclude = exclude;
 	rpa->include = include;
 	rpa->exclude_all = exclude_all;
+	rpa->filter = filter;
 	rpa->fname = fname;
 	rpa->basezoom = basezoom;
 	rpa->source = source;
@@ -1001,7 +1005,7 @@ void choose_first_zoom(long long *file_bbox, struct reader *readers, unsigned *i
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
 	int ret = EXIT_SUCCESS;
 
 	struct reader readers[CPUS];
@@ -1237,6 +1241,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].exclude = exclude;
 				sst[i].include = include;
 				sst[i].exclude_all = exclude_all;
+				sst[i].filter = filter;
 				sst[i].basezoom = basezoom;
 				sst[i].attribute_types = attribute_types;
 			}
@@ -1299,7 +1304,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (map != NULL && map != MAP_FAILED && read_parallel_this) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, filter, fname, basezoom, layer, nlayers, &layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 			overall_offset += st.st_size - off;
 			checkdisk(readers, CPUS);
 
@@ -1375,7 +1380,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, filter, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1412,7 +1417,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), readers, &progress_seq, exclude, include, exclude_all, filter, fname, basezoom, layer, nlayers, layermaps, droprate, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1450,6 +1455,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.exclude = exclude;
 				sst.include = include;
 				sst.exclude_all = exclude_all;
+				sst.filter = filter;
 				sst.basezoom = basezoom;
 				sst.attribute_types = attribute_types;
 
@@ -2143,6 +2149,7 @@ int main(int argc, char **argv) {
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
+	json_object *filter = NULL;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;
@@ -2186,6 +2193,8 @@ int main(int argc, char **argv) {
 		{"include", required_argument, 0, 'y'},
 		{"exclude-all", no_argument, 0, 'X'},
 		{"attribute-type", required_argument, 0, 'T'},
+		{"feature-filter-file", required_argument, 0, 'J'},
+		{"feature-filter", required_argument, 0, 'j'},
 
 		{"Dropping a fixed fraction of features by zoom level", 0, 0, 0},
 		{"drop-rate", required_argument, 0, 'r'},
@@ -2413,6 +2422,14 @@ int main(int argc, char **argv) {
 
 		case 'X':
 			exclude_all = 1;
+			break;
+
+		case 'J':
+			filter = read_filter(optarg);
+			break;
+
+		case 'j':
+			filter = parse_filter(optarg);
 			break;
 
 		case 'r':
@@ -2663,7 +2680,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0]);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0]);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
@@ -2678,6 +2695,10 @@ int main(int argc, char **argv) {
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
 		exit(EXIT_FAILURE);
+	}
+
+	if (filter != NULL) {
+		json_free(filter);
 	}
 
 	return ret;

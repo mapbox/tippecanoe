@@ -165,6 +165,11 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 				metatype[m] = type;
 				metaval[m] = val;
 				m++;
+			} else {
+				metakey[m] = properties->keys[i]->string;
+				metatype[m] = mvt_null;
+				metaval[m] = "null";
+				m++;
 			}
 		}
 	}
