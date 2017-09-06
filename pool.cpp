@@ -35,7 +35,7 @@ int swizzlecmp(const char *a, const char *b) {
 }
 
 long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
-	long long *sp = &treefile->tree;
+	unsigned long *sp = &treefile->tree;
 	size_t depth = 0;
 
 	// In typical data, traversal depth generally stays under 2.5x
@@ -93,6 +93,16 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	if (memfile_write(poolfile, (void *) s, strlen(s) + 1) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
+	}
+
+	if (off >= LONG_MAX || treefile->off >= LONG_MAX) {
+		// Tree or pool is bigger than 2GB
+		static bool warned = false;
+		if (!warned) {
+			fprintf(stderr, "Warning: string pool is very large.\n");
+			warned = true;
+		}
+		return off;
 	}
 
 	struct stringpool tsp;
