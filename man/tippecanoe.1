@@ -188,7 +188,7 @@ Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but hig
 .PP
 .RS
 .nf
-tile\-join \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.mbtiles
+tippecanoe \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 .fi
 .RE
 .SS Dropping a fixed fraction of features by zoom level

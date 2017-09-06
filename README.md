@@ -166,7 +166,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 Example: to find the Natural Earth countries with low `scalerank` but high `LABELRANK`:
 
 ```
-tile-join -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.mbtiles
+tippecanoe -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 ```
 
 ### Dropping a fixed fraction of features by zoom level
