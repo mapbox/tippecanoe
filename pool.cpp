@@ -7,31 +7,27 @@
 #include "pool.hpp"
 
 int swizzlecmp(const char *a, const char *b) {
-	ssize_t a1 = strlen(a) - 1;
-	ssize_t b1 = strlen(b) - 1;
+	ssize_t alen = strlen(a);
+	ssize_t blen = strlen(b);
 
-	while (a1 >= 0 || b1 >= 0) {
-		unsigned char ac = '\0', bc = '\0';
-		if (a1 >= 0) {
-			ac = a[a1];
-		}
-		if (b1 >= 0) {
-			bc = b[b1];
-		}
-
-		int aa = ac;
-		int bb = bc;
-
-		int cmp = aa - bb;
-		if (cmp != 0) {
-			return cmp;
-		}
-
-		a1--;
-		b1--;
+	if (strcmp(a, b) == 0) {
+		return 0;
 	}
 
-	return 0;
+	unsigned int hash1 = 0, hash2 = 0;
+	for (ssize_t i = alen - 1; i >= 0; i--) {
+		hash1 = hash1 * 37 + a[i];
+	}
+	for (ssize_t i = blen - 1; i >= 0; i--) {
+		hash2 = hash2 * 37 + b[i];
+	}
+
+	int h1 = hash1, h2 = hash2;
+	if (h1 == h2) {
+		return strcmp(a, b);
+	}
+
+	return h1 - h2;
 }
 
 long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
