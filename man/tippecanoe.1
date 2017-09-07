@@ -37,7 +37,7 @@ $ brew install tippecanoe
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [file.json file.geobuf ...]
+$ tippecanoe \-o file.mbtiles [options] [file.json file.geobuf ...]
 .fi
 .RE
 .PP
@@ -48,24 +48,42 @@ The GeoJSON features need not be wrapped in a FeatureCollection.
 You can concatenate multiple GeoJSON features or files together,
 and it will parse out the features and ignore whatever other objects
 it encounters.
-.SH Docker Image
+.SH Try this first
 .PP
-A tippecanoe Docker image can be built from source and executed as a task to
-automatically install dependencies and allow tippecanoe to run on any system
-supported by Docker.
+If you aren't sure what options to use, try this:
 .PP
 .RS
 .nf
-$ docker build \-t tippecanoe:latest .
-$ docker run \-it \-\-rm \\
-  \-v /tiledata:/data \\
-  tippecanoe:latest \\
-  tippecanoe \-\-output=/data/output.mbtiles /data/example.geojson
+$ tippecanoe \-o out.mbtiles \-zg \-\-drop\-densest\-as\-needed in.geojson
 .fi
 .RE
 .PP
-The commands above will build a Docker image from the source and compile the
-latest version. The image supports all tippecanoe flags and options.
+The \fB\fC\-zg\fR option will make Tippecanoe choose a maximum zoom level that should be
+high enough to reflect the precision of the original data. (If it turns out still
+not to be as detailed as you want, use \fB\fC\-z\fR manually with a higher number.)
+.PP
+If the tiles come out too big, the \fB\fC\-\-drop\-densest\-as\-needed\fR option will make
+Tippecanoe try dropping what should be the least visible features at each zoom level.
+(If it drops too many features, use \fB\fC\-x\fR to leave out some feature attributes that
+you didn't really need.)
+.SH Examples
+.PP
+Create a tileset of TIGER roads for Alameda County, to zoom level 13, with a custom layer name and description:
+.PP
+.RS
+.nf
+$ tippecanoe \-o alameda.mbtiles \-l alameda \-n "Alameda County from TIGER" \-z13 tl_2014_06001_roads.json
+.fi
+.RE
+.PP
+Create a tileset of all TIGER roads, at only zoom level 12, but with higher detail than normal,
+with a custom layer name and description, and leaving out the \fB\fCLINEARID\fR and \fB\fCRTTYP\fR attributes:
+.PP
+.RS
+.nf
+$ cat tiger/tl_2014_*_roads.json | tippecanoe \-o tiger.mbtiles \-l roads \-n "All TIGER roads, one zoom" \-z12 \-Z12 \-d14 \-x LINEARID \-x RTTYP
+.fi
+.RE
 .SH Options
 .PP
 There are a lot of options. A lot of the time you won't want to use any of them
@@ -122,7 +140,7 @@ specified, the files are all merged into the single named layer, even if they tr
 .SS Parallel processing of input
 .RS
 .IP \(bu 2
-\fB\fC\-P\fR or \fB\fC\-\-read\-parallel\fR: Use multiple threads to read different parts of each input file at once.
+\fB\fC\-P\fR or \fB\fC\-\-read\-parallel\fR: Use multiple threads to read different parts of each GeoJSON input file at once.
 This will only work if the input is line\-delimited JSON with each Feature on its
 own line, because it knows nothing of the top\-level structure around the Features. Spurious "EOF" error
 messages may result otherwise.
@@ -133,6 +151,8 @@ rather than a stream that can only be read sequentially.
 If the input file begins with the RFC 8142 \[la]https://tools.ietf.org/html/rfc8142\[ra] record separator,
 parallel processing of input will be invoked automatically, splitting at record separators rather
 than at all newlines.
+.PP
+Parallel processing will also be automatic if the input file is in Geobuf format.
 .SS Projection of input
 .RS
 .IP \(bu 2
@@ -154,9 +174,9 @@ specified maximum zoom and to any levels added beyond that.
 .SS Tile resolution
 .RS
 .IP \(bu 2
-\fB\fC\-d\fR \fIdetail\fP or \fB\fC\-\-full\-detail=\fR\fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 4096)
+\fB\fC\-d\fR \fIdetail\fP or \fB\fC\-\-full\-detail=\fR\fIdetail\fP: Detail at max zoom level (default 12, for tile resolution of 2
 .IP \(bu 2
-\fB\fC\-D\fR \fIdetail\fP or \fB\fC\-\-low\-detail=\fR\fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 4096)
+\fB\fC\-D\fR \fIdetail\fP or \fB\fC\-\-low\-detail=\fR\fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 2
 .IP \(bu 2
 \fB\fC\-m\fR \fIdetail\fP or \fB\fC\-\-minimum\-detail=\fR\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 .RE
@@ -188,7 +208,7 @@ Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but hig
 .PP
 .RS
 .nf
-tippecanoe \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
+tippecanoe \-z5 \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 .fi
 .RE
 .SS Dropping a fixed fraction of features by zoom level
@@ -363,19 +383,6 @@ tippecanoe \-o roads.mbtiles \-c 'if [ $1 \-lt 11 ]; then grep "\\"MTFCC\\": \\"
 .PP
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
 You can override this number by setting the \fB\fCTIPPECANOE_MAX_THREADS\fR environmental variable.
-.SH Example
-.PP
-.RS
-.nf
-$ tippecanoe \-o alameda.mbtiles \-l alameda \-n "Alameda County from TIGER" \-z13 tl_2014_06001_roads.json
-.fi
-.RE
-.PP
-.RS
-.nf
-$ cat tiger/tl_2014_*_roads.json | tippecanoe \-o tiger.mbtiles \-l roads \-n "All TIGER roads, one zoom" \-z12 \-Z12 \-d14 \-x LINEARID \-x RTTYP
-.fi
-.RE
 .SH GeoJSON extension
 .PP
 Tippecanoe defines a GeoJSON extension that you can use to specify the minimum and/or maximum zoom level
@@ -519,6 +526,24 @@ sudo apt\-get install \-y g++\-5
 export CXX=g++\-5
 .fi
 .RE
+.SH Docker Image
+.PP
+A tippecanoe Docker image can be built from source and executed as a task to
+automatically install dependencies and allow tippecanoe to run on any system
+supported by Docker.
+.PP
+.RS
+.nf
+$ docker build \-t tippecanoe:latest .
+$ docker run \-it \-\-rm \\
+  \-v /tiledata:/data \\
+  tippecanoe:latest \\
+  tippecanoe \-\-output=/data/output.mbtiles /data/example.geojson
+.fi
+.RE
+.PP
+The commands above will build a Docker image from the source and compile the
+latest version. The image supports all tippecanoe flags and options.
 .SH Examples
 .PP
 Check out some examples of maps made with tippecanoe \[la]MADE_WITH.md\[ra]
