@@ -1,6 +1,7 @@
 #pragma once
 #include <assert.h>
 #include <math.h>
+#include <cmath>
 
 #if defined(_MSC_VER)
 #include "msinttypes/stdint.h"
@@ -379,10 +380,10 @@ inline void Prettify(std::string &buffer, int length, int k) {
 inline std::string dtoa_milo(double value) {
 	std::string buffer;
 
-	if (isnan(value)) {
+	if (std::isnan(value)) {
 		return "nan";
 	}
-	if (isinf(value)) {
+	if (std::isinf(value)) {
 		if (value < 0) {
 			return "-inf";
 		} else {
