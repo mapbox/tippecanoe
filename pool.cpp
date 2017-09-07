@@ -14,12 +14,12 @@ int swizzlecmp(const char *a, const char *b) {
 		return 0;
 	}
 
-	unsigned int hash1 = 0, hash2 = 0;
+	long long hash1 = 0, hash2 = 0;
 	for (ssize_t i = alen - 1; i >= 0; i--) {
-		hash1 = hash1 * 37 + a[i];
+		hash1 = (hash1 * 37 + a[i]) & INT_MAX;
 	}
 	for (ssize_t i = blen - 1; i >= 0; i--) {
-		hash2 = hash2 * 37 + b[i];
+		hash2 = (hash2 * 37 + b[i]) & INT_MAX;
 	}
 
 	int h1 = hash1, h2 = hash2;
