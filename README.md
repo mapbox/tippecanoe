@@ -41,7 +41,7 @@ Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [file.json file.geobuf ...]
+$ tippecanoe -o file.mbtiles [options] [file.json file.geobuf ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -52,23 +52,39 @@ You can concatenate multiple GeoJSON features or files together,
 and it will parse out the features and ignore whatever other objects
 it encounters.
 
-Docker Image
-------------
+Try this first
+--------------
 
-A tippecanoe Docker image can be built from source and executed as a task to
-automatically install dependencies and allow tippecanoe to run on any system
-supported by Docker.
+If you aren't sure what options to use, try this:
 
-```docker
-$ docker build -t tippecanoe:latest .
-$ docker run -it --rm \
-  -v /tiledata:/data \
-  tippecanoe:latest \
-  tippecanoe --output=/data/output.mbtiles /data/example.geojson
+```sh
+$ tippecanoe -o out.mbtiles -zg --drop-densest-as-needed in.geojson
 ```
 
-The commands above will build a Docker image from the source and compile the
-latest version. The image supports all tippecanoe flags and options.
+The `-zg` option will make Tippecanoe choose a maximum zoom level that should be
+high enough to reflect the precision of the original data. (If it turns out still
+not to be as detailed as you want, use `-z` manually with a higher number.)
+
+If the tiles come out too big, the `--drop-densest-as-needed` option will make
+Tippecanoe try dropping what should be the least visible features at each zoom level.
+(If it drops too many features, use `-x` to leave out some feature attributes that
+you didn't really need.)
+
+Examples
+--------
+
+Create a tileset of TIGER roads for Alameda County, to zoom level 13, with a custom layer name and description:
+
+```sh
+$ tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 tl_2014_06001_roads.json
+```
+
+Create a tileset of all TIGER roads, at only zoom level 12, but with higher detail than normal,
+with a custom layer name and description, and leaving out the `LINEARID` and `RTTYP` attributes:
+
+```
+$ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
+```
 
 Options
 -------
@@ -116,7 +132,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
 ### Parallel processing of input
 
- * `-P` or `--read-parallel`: Use multiple threads to read different parts of each input file at once.
+ * `-P` or `--read-parallel`: Use multiple threads to read different parts of each GeoJSON input file at once.
    This will only work if the input is line-delimited JSON with each Feature on its
    own line, because it knows nothing of the top-level structure around the Features. Spurious "EOF" error
    messages may result otherwise.
@@ -126,6 +142,8 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 If the input file begins with the [RFC 8142](https://tools.ietf.org/html/rfc8142) record separator,
 parallel processing of input will be invoked automatically, splitting at record separators rather
 than at all newlines.
+
+Parallel processing will also be automatic if the input file is in Geobuf format.
 
 ### Projection of input
 
@@ -142,8 +160,8 @@ than at all newlines.
 
 ### Tile resolution
 
- * `-d` _detail_ or `--full-detail=`_detail_: Detail at max zoom level (default 12, for tile resolution of 4096)
- * `-D` _detail_ or `--low-detail=`_detail_: Detail at lower zoom levels (default 12, for tile resolution of 4096)
+ * `-d` _detail_ or `--full-detail=`_detail_: Detail at max zoom level (default 12, for tile resolution of 2^12=4096)
+ * `-D` _detail_ or `--low-detail=`_detail_: Detail at lower zoom levels (default 12, for tile resolution of 2^12=4096)
  * `-m` _detail_ or `--minimum-detail=`_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
@@ -166,7 +184,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 Example: to find the Natural Earth countries with low `scalerank` but high `LABELRANK`:
 
 ```
-tippecanoe -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
+tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 ```
 
 ### Dropping a fixed fraction of features by zoom level
@@ -297,17 +315,6 @@ Environment
 Tippecanoe ordinarily uses as many parallel threads as the operating system claims that CPUs are available.
 You can override this number by setting the `TIPPECANOE_MAX_THREADS` environmental variable.
 
-Example
--------
-
-```sh
-$ tippecanoe -o alameda.mbtiles -l alameda -n "Alameda County from TIGER" -z13 tl_2014_06001_roads.json
-```
-
-```
-$ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
-```
-
 GeoJSON extension
 -----------------
 
@@ -436,6 +443,24 @@ sudo apt-get update -y
 sudo apt-get install -y g++-5
 export CXX=g++-5
 ```
+
+Docker Image
+------------
+
+A tippecanoe Docker image can be built from source and executed as a task to
+automatically install dependencies and allow tippecanoe to run on any system
+supported by Docker.
+
+```docker
+$ docker build -t tippecanoe:latest .
+$ docker run -it --rm \
+  -v /tiledata:/data \
+  tippecanoe:latest \
+  tippecanoe --output=/data/output.mbtiles /data/example.geojson
+```
+
+The commands above will build a Docker image from the source and compile the
+latest version. The image supports all tippecanoe flags and options.
 
 Examples
 ------

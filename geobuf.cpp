@@ -255,6 +255,9 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 		dv.dv = readMultiLine(coords, lengths, dim, e, true);
 	} else if (type == MULTIPOLYGON) {
 		dv.dv = readMultiPolygon(coords, lengths, dim, e);
+	} else {
+		// GeometryCollection
+		return ret;
 	}
 
 	dv.type = type / 2 + 1;

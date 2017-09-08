@@ -6,7 +6,7 @@ struct memfile {
 	char *map;
 	long long len;
 	long long off;
-	long long tree;
+	unsigned long tree;
 };
 
 struct memfile *memfile_open(int fd);

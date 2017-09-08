@@ -1,3 +1,7 @@
+## 1.24.1
+
+* Limit the size and depth of the string pool for better performance
+
 ## 1.24.0
 
 * Add feature filters using the Mapbox GL Style Specification filter syntax
