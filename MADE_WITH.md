@@ -1,4 +1,4 @@
-## [Visualizing a Month of Lightning](http://rousseau.io/2015/03/23/visualizing-a-month-of-lightning/) by Jordan Rousseau
+## [Visualizing a Month of Lightning](http://rousseau.io/2015/03/23/visualizing-a-month-of-lightning) by Jordan Rousseau
 
 ![](http://rousseau.io/assets/img/ltg-studio-style.png)
 
