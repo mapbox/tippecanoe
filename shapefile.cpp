@@ -204,6 +204,37 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 			std::vector<std::string> full_keys;
 			std::vector<serial_val> full_values;
 
+			unsigned char *dbp = db;
+			for (size_t i = 0; i < columns.size(); i++) {
+				std::string s = std::string((char *) dbp, column_widths[i]);
+				dbp += column_widths[i];
+
+				while (s.size() > 0 && s[s.size() - 1] == ' ') {
+					s.pop_back();
+				}
+
+				if (s.size() > 0) {
+					serial_val sv;
+					sv.s = s;
+
+					if (column_types[i] == 'F' || column_types[i] == 'N') {
+						sv.type = mvt_double;
+					} else if (column_types[i] == 'L') {
+						sv.type = mvt_bool;
+						if (s == "Y" || s == "y" || s == "T" || s == "t") {
+							sv.s = "true";
+						} else {
+							sv.s = "false";
+						}
+					} else {
+						sv.type = mvt_string;
+					}
+
+					full_keys.push_back(columns[i]);
+					full_values.push_back(sv);
+				}
+			}
+
 			sf.layer = layer;
 			sf.layername = layername;
 			sf.segment = sst->segment;
