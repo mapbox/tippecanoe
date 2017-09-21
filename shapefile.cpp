@@ -1,5 +1,10 @@
 #include <stdlib.h>
 #include "shapefile.hpp"
+#include "mvt.hpp"
+#include "serial.hpp"
+#include "projection.hpp"
+#include "main.hpp"
+#include "milo/dtoa_milo.h"
 
 static unsigned int read32le(unsigned char *ba) {
 	return ((ba[0] & 0xFF)) |
@@ -32,6 +37,38 @@ static double toDouble(unsigned char *ba) {
 	}
 
 	return *((double *) ba);
+}
+
+drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
+	drawvec dv;
+
+	if (len < 4) {
+		fprintf(stderr, "Geometry too short\n");
+		exit(EXIT_FAILURE);
+	}
+
+	unsigned t = read32le(data);
+	if (t == 1) { // point
+		if (len < 20) {
+			fprintf(stderr, "Unexpectedly short point geometry\n");
+			exit(EXIT_FAILURE);
+		}
+
+		double lon = toDouble(data + 4);
+		double lat = toDouble(data + 12);
+		long long x, y;
+		projection->project(lon, lat, 32, &x, &y);
+		dv.push_back(draw(VT_MOVETO, x, y));
+		*type = VT_POINT;
+	} else {
+		static bool warned = false;
+		if (!warned) {
+			fprintf(stderr, "Unsupported geometry type %u\n", t);
+			*type = 0;
+		}
+	}
+
+	return dv;
 }
 
 void parse_shapefile(struct serialization_state *sst, std::string fname, int layer, std::string layername) {
@@ -124,6 +161,33 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 		if (fread(geom_buf, 1, geom_len, shp) != geom_len) {
 			fprintf(stderr, "End of file reading geometry\n");
 			exit(EXIT_FAILURE);
+		}
+
+		int type;
+		drawvec dv = decode_geometry(geom_buf, geom_len, &type);
+
+		if (type > 0 && dv.size() > 0) {
+			serial_feature sf;
+
+			std::vector<std::string> full_keys;
+			std::vector<serial_val> full_values;
+
+			sf.layer = layer;
+			sf.layername = layername;
+			sf.segment = sst->segment;
+			sf.has_id = false;
+			sf.id = 0;
+			sf.has_tippecanoe_minzoom = false;
+			sf.has_tippecanoe_maxzoom = false;
+			sf.feature_minzoom = false;
+			sf.seq = *(sst->layer_seq);
+			sf.geometry = dv;
+			sf.t = type;
+			sf.full_keys = full_keys;
+			sf.full_values = full_values;
+			sf.m = sf.full_values.size();
+
+			serialize_feature(sst, sf);
 		}
 	}
 
