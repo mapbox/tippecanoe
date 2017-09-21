@@ -18,11 +18,6 @@ static unsigned int read16le(unsigned char *ba) {
 	       ((ba[1] & 0xFF) << 8);
 }
 
-static unsigned long long read64le(unsigned char *ba) {
-	return read32le(ba) |
-	       (((long long) read32le(ba + 4)) << 32);
-}
-
 static unsigned int read32be(unsigned char *ba) {
 	return ((ba[0] & 0xFF) << 24) |
 	       ((ba[1] & 0xFF) << 16) |
@@ -67,11 +62,11 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		unsigned points = read32le(data + 40);
 
 		for (size_t i = 0; i < parts; i++) {
-			unsigned start = read32le(data + 44 * 4 * i);
+			unsigned start = read32le(data + 44 + 4 * i);
 			unsigned end;
 
 			if (i + 1 < parts) {
-				end = read32le(data + 44 * 4 * (i + 1));
+				end = read32le(data + 44 + 4 * (i + 1));
 			} else {
 				end = points;
 			}
@@ -92,6 +87,63 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		}
 
 		*type = VT_LINE;
+	} else if (t == 5) {  // MultiPolygon
+		unsigned parts = read32le(data + 36);
+		unsigned points = read32le(data + 40);
+
+		std::vector<drawvec> inner;
+		std::vector<drawvec> outer;
+
+		for (size_t i = 0; i < parts; i++) {
+			unsigned start = read32le(data + 44 + 4 * i);
+			unsigned end;
+
+			if (i + 1 < parts) {
+				end = read32le(data + 44 + 4 * (i + 1));
+			} else {
+				end = points;
+			}
+
+			drawvec ring;
+
+			for (size_t j = start; j < end; j++) {
+				double lon = toDouble(data + 44 + 4 * parts + 16 * j);
+				double lat = toDouble(data + 44 + 4 * parts + 16 * j + 8);
+
+				long long x, y;
+				projection->project(lon, lat, 32, &x, &y);
+
+				if (j == start) {
+					ring.push_back(draw(VT_MOVETO, x, y));
+				} else {
+					ring.push_back(draw(VT_LINETO, x, y));
+				}
+			}
+
+			if (get_area(ring, 0, ring.size()) > 0) {
+				outer.push_back(ring);
+			} else {
+				inner.push_back(ring);
+			}
+		}
+
+		// Expectation from GeoJSON is that outer rings are the first
+		// or follow an end-polygon marker; inner rings follow anything else
+		for (size_t i = 0; i < outer.size(); i++) {
+			if (i != 0) {
+				dv.push_back(draw(VT_CLOSEPATH, 0, 0));
+			}
+			for (size_t j = 0; j < outer[i].size(); j++) {
+				dv.push_back(outer[i][j]);
+			}
+		}
+		for (size_t i = 0; i < inner.size(); i++) {
+			for (size_t j = 0; j < inner[i].size(); j++) {
+				dv.push_back(inner[i][j]);
+			}
+		}
+
+		*type = VT_POLYGON;
 	} else {
 		static bool warned = false;
 		if (!warned) {
@@ -204,9 +256,9 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 			std::vector<std::string> full_keys;
 			std::vector<serial_val> full_values;
 
-			unsigned char *dbp = db + 1;
+			size_t dbp = 1;
 			for (size_t i = 0; i < columns.size(); i++) {
-				std::string s = std::string((char *) dbp, column_widths[i]);
+				std::string s = std::string((char *) (db + dbp), column_widths[i]);
 				dbp += column_widths[i];
 
 				while (s.size() > 0 && s[s.size() - 1] == ' ') {
