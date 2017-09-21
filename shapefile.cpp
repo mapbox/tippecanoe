@@ -204,7 +204,7 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 			std::vector<std::string> full_keys;
 			std::vector<serial_val> full_values;
 
-			unsigned char *dbp = db;
+			unsigned char *dbp = db + 1;
 			for (size_t i = 0; i < columns.size(); i++) {
 				std::string s = std::string((char *) dbp, column_widths[i]);
 				dbp += column_widths[i];
@@ -219,6 +219,7 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 
 					if (column_types[i] == 'F' || column_types[i] == 'N') {
 						sv.type = mvt_double;
+						sv.s = milo::dtoa_milo(atof(sv.s.c_str()));
 					} else if (column_types[i] == 'L') {
 						sv.type = mvt_bool;
 						if (s == "Y" || s == "y" || s == "T" || s == "t") {
