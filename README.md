@@ -1,7 +1,7 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) or [Geobuf](https://github.com/mapbox/geobuf) features,
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [Shapefile](https://en.wikipedia.org/wiki/Shapefile) features,
 [like these](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
@@ -126,6 +126,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
  * _name_`.geobuf` or _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
+ * _name_`.shp` or _name_`.shp`: Read the named Shapefile input file into a layer called _name_. Note that _name_`.dbf` must also exist.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
@@ -574,6 +575,37 @@ Then you can join those populations to the geometries and discard the no-longer-
 
 ```sh
 ./tile-join -o population.mbtiles -x GEOID10 -c population.csv tl_2010_06001_tabblock10.mbtiles
+```
+
+Another example
+---------------
+
+If you have this GeoJSON `points.json`, with attribute `id`:
+
+```
+{ "type": "Feature", "properties": { "id": 1 }, "geometry": { "type": "Point", "coordinates": [ 0, 0 ] } }
+{ "type": "Feature", "properties": { "id": 2 }, "geometry": { "type": "Point", "coordinates": [ 1, 1 ] } }
+{ "type": "Feature", "properties": { "id": 3 }, "geometry": { "type": "Point", "coordinates": [ 2, 2 ] } }
+{ "type": "Feature", "properties": { "id": 4 }, "geometry": { "type": "Point", "coordinates": [ 3, 3 ] } }
+{ "type": "Feature", "properties": { "id": 5 }, "geometry": { "type": "Point", "coordinates": [ 4, 4 ] } }
+```
+
+and this CSV `join.csv`, with first column `id`:
+
+```
+id,name,square
+1,One,1
+2,Two,4
+3,Three,9
+4,Four,16
+5,Five,25
+```
+
+it will add `name` and `square` attributes to each feature based on the matching `id` if you do:
+
+```
+tippecanoe -o points.mbtiles points.json
+tile-join -o joined.mbtiles -c join.csv points.mbtiles
 ```
 
 tippecanoe-enumerate
