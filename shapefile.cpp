@@ -4,6 +4,7 @@
 #include "serial.hpp"
 #include "projection.hpp"
 #include "main.hpp"
+#include "text.hpp"
 #include "milo/dtoa_milo.h"
 
 static void check(size_t bits, void *p, void *end) {
@@ -39,6 +40,30 @@ static double toDouble(unsigned char *ba) {
 	}
 
 	return *((double *) ba);
+}
+
+std::string forceutf8(std::string const &s) {
+	if (check_utf8(s).size() == 0) {
+		return s;
+	}
+
+	std::string out;
+	for (size_t i = 0; i < s.size(); i++) {
+		to_utf8(s[i] & 0xFF, out);
+	}
+
+	static bool warned = false;
+	if (!warned) {
+		std::string trimmed = out;
+		while (trimmed.size() > 0 && trimmed[trimmed.size() - 1] == ' ') {
+			trimmed.pop_back();
+		}
+
+		fprintf(stderr, "Warning: string \"%s\" is not UTF-8; assuming ISO-8859-1\n", trimmed.c_str());
+		warned = true;
+	}
+
+	return out;
 }
 
 drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
@@ -235,7 +260,7 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 			}
 		}
 
-		columns.push_back(std::string((char *) dbcolumns + i, j - i));
+		columns.push_back(forceutf8(std::string((char *) dbcolumns + i, j - i)));
 		column_widths.push_back(dbcolumns[i + 16]);
 		column_types.push_back(dbcolumns[i + 11]);
 	}
@@ -274,7 +299,7 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 
 			size_t dbp = 1;
 			for (size_t i = 0; i < columns.size(); i++) {
-				std::string s = std::string((char *) (db + dbp), column_widths[i]);
+				std::string s = forceutf8(std::string((char *) (db + dbp), column_widths[i]));
 				dbp += column_widths[i];
 
 				while (s.size() > 0 && s[s.size() - 1] == ' ') {
