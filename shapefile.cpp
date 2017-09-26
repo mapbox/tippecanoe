@@ -6,6 +6,13 @@
 #include "main.hpp"
 #include "milo/dtoa_milo.h"
 
+static void check(size_t bits, void *p, void *end) {
+	if ((char *) p + (bits / 8) > (char *) end) {
+		fprintf(stderr, "Shapefile index past end\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
 static unsigned int read32le(unsigned char *ba) {
 	return ((ba[0] & 0xFF)) |
 	       ((ba[1] & 0xFF) << 8) |
@@ -37,18 +44,10 @@ static double toDouble(unsigned char *ba) {
 drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 	drawvec dv;
 
-	if (len < 4) {
-		fprintf(stderr, "Geometry too short\n");
-		exit(EXIT_FAILURE);
-	}
-
+	check(32, data, data + len);
 	unsigned t = read32le(data);
 	if (t == 1) {  // Point
-		if (len < 20) {
-			fprintf(stderr, "Unexpectedly short point geometry\n");
-			exit(EXIT_FAILURE);
-		}
-
+		check(64, data + 12, data + len);
 		double lon = toDouble(data + 4);
 		double lat = toDouble(data + 12);
 
@@ -58,20 +57,24 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		dv.push_back(draw(VT_MOVETO, x, y));
 		*type = VT_POINT;
 	} else if (t == 3) {  // MultiLineString
+		check(32, data + 40, data + len);
 		unsigned parts = read32le(data + 36);
 		unsigned points = read32le(data + 40);
 
 		for (size_t i = 0; i < parts; i++) {
+			check(32, data + 44 + 4 * i, data + len);
 			unsigned start = read32le(data + 44 + 4 * i);
 			unsigned end;
 
 			if (i + 1 < parts) {
+				check(32, data + 44 + 4 * (i + 1), data + len);
 				end = read32le(data + 44 + 4 * (i + 1));
 			} else {
 				end = points;
 			}
 
 			for (size_t j = start; j < end; j++) {
+				check(64, data + 44 + 4 * parts + 16 * j + 8, data + len);
 				double lon = toDouble(data + 44 + 4 * parts + 16 * j);
 				double lat = toDouble(data + 44 + 4 * parts + 16 * j + 8);
 
@@ -87,7 +90,16 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		}
 
 		*type = VT_LINE;
-	} else if (t == 5) {  // MultiPolygon
+	} else if (t == 5 || t == 15) {  // MultiPolygon
+		if (t == 15) {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Warning: ignoring dimensions beyond 2\n");
+				warned = true;
+			}
+		}
+
+		check(32, data + 40, data + len);
 		unsigned parts = read32le(data + 36);
 		unsigned points = read32le(data + 40);
 
@@ -95,10 +107,12 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		std::vector<drawvec> outer;
 
 		for (size_t i = 0; i < parts; i++) {
+			check(32, data + 44 + 4 * i, data + len);
 			unsigned start = read32le(data + 44 + 4 * i);
 			unsigned end;
 
 			if (i + 1 < parts) {
+				check(32, data + 44 + 4 * (i + 1), data + len);
 				end = read32le(data + 44 + 4 * (i + 1));
 			} else {
 				end = points;
@@ -107,6 +121,7 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 			drawvec ring;
 
 			for (size_t j = start; j < end; j++) {
+				check(64, data + 44 + 4 * parts + 16 * j + 8, data + len);
 				double lon = toDouble(data + 44 + 4 * parts + 16 * j);
 				double lat = toDouble(data + 44 + 4 * parts + 16 * j + 8);
 
@@ -148,6 +163,7 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 		static bool warned = false;
 		if (!warned) {
 			fprintf(stderr, "Unsupported geometry type %u\n", t);
+			warned = true;
 			*type = 0;
 		}
 	}
