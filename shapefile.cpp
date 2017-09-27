@@ -198,6 +198,7 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 
 void parse_shapefile(struct serialization_state *sst, std::string fname, int layer, std::string layername) {
 	std::string dbfname = fname.substr(0, fname.size() - 3) + "dbf";
+	std::string prjname = fname.substr(0, fname.size() - 3) + "prj";
 
 	FILE *shp = fopen(fname.c_str(), "rb");
 	if (shp == NULL) {
@@ -208,6 +209,11 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 	if (dbf == NULL) {
 		perror(dbfname.c_str());
 		exit(EXIT_FAILURE);
+	}
+	FILE *prj = fopen(prjname.c_str(), "r");
+	if (prj != NULL) {
+		projection->warn(prj);
+		fclose(prj);
 	}
 
 	unsigned char shpheader[100];
