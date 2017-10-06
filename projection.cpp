@@ -106,13 +106,10 @@ wkt *find(std::vector<wkt> *w, std::string s) {
 	return NULL;
 }
 
-void warn_wgs84(FILE *f) {
-	std::vector<wkt> w;
-	parsewkt(f, w);
-
-	wkt *geogcs = find(&w, "geogcs");
+void warn_wgs84_inner(std::vector<wkt> *w) {
+	wkt *geogcs = find(w, "geogcs");
 	if (geogcs == NULL) {
-		fprintf(stderr, "Warning: expected geographic coordinate system for projection\n");
+		fprintf(stderr, "Warning: expected geographic coordinate system for projection WGS84\n");
 		return;
 	}
 
@@ -134,9 +131,24 @@ void warn_wgs84(FILE *f) {
 	}
 }
 
+void warn_wgs84(FILE *f) {
+	std::vector<wkt> w;
+	parsewkt(f, w);
+
+	warn_wgs84_inner(&w);
+}
+
 void warn_epsg3857(FILE *f) {
 	std::vector<wkt> w;
 	parsewkt(f, w);
+
+	wkt *projcs = find(&w, "projcs");
+	if (projcs == NULL) {
+		fprintf(stderr, "Warning: expected projected coordinate system for projection EPSG:3857\n");
+		return;
+	}
+
+	warn_wgs84_inner(&(projcs->sublist));
 }
 
 struct projection projections[] = {
