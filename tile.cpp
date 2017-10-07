@@ -1449,6 +1449,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
+		std::vector<drawvec> coalesced_geometry;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1556,6 +1557,22 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.extent <= minextent && sf.t != VT_POINT) {
 					continue;
 				}
+			}
+			if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+				extents.push_back(sf.extent);
+				if (sf.extent <= minextent) {
+					coalesced_geometry.push_back(sf.geometry);
+					continue;
+				}
+			}
+
+			if (coalesced_geometry.size() != 0) {
+				for (size_t i = 0; i < coalesced_geometry.size(); i++) {
+					for (size_t j = 0; j < coalesced_geometry[i].size(); j++) {
+						sf.geometry.push_back(coalesced_geometry[i][j]);
+					}
+				}
+				coalesced_geometry.clear();
 			}
 
 			if (additional[A_CALCULATE_FEATURE_DENSITY]) {
@@ -1916,7 +1933,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;
 					continue;
-				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * 200000.0 / totalsize * 0.90;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
@@ -1999,7 +2016,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 					}
 					line_detail++;
-				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
@@ -2290,7 +2307,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 

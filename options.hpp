@@ -15,6 +15,7 @@
 #define A_DROP_DENSEST_AS_NEEDED ((int) 's')
 #define A_DROP_FRACTION_AS_NEEDED ((int) 'd')
 #define A_DROP_SMALLEST_AS_NEEDED ((int) 'n')
+#define A_COALESCE_SMALLEST_AS_NEEDED ((int) 'N')
 #define A_GRID_LOW_ZOOMS ((int) 'L')
 #define A_DETECT_WRAPAROUND ((int) 'w')
 #define A_EXTEND_ZOOMS ((int) 'e')

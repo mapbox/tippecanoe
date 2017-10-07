@@ -447,7 +447,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	double extent = 0;
-	if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 		if (sf.t == VT_POLYGON) {
 			for (size_t i = 0; i < sf.geometry.size(); i++) {
 				if (sf.geometry[i].op == VT_MOVETO) {
