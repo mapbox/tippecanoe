@@ -1450,6 +1450,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
 		std::vector<drawvec> coalesced_geometry;
+		double coalesced_area = 0;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1546,6 +1547,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
+			sf.extent += coalesced_area;
+			coalesced_area = 0;
+
 			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
@@ -1562,6 +1566,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				extents.push_back(sf.extent);
 				if (sf.extent <= minextent) {
 					coalesced_geometry.push_back(sf.geometry);
+					coalesced_area += sf.extent;
 					continue;
 				}
 			}
@@ -1573,6 +1578,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 				}
 				coalesced_geometry.clear();
+				coalesced_area = 0;
 			}
 
 			if (additional[A_CALCULATE_FEATURE_DENSITY]) {
