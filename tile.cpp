@@ -1449,8 +1449,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
-		std::vector<drawvec> coalesced_geometry;
-		double coalesced_area = 0;
+		std::vector<serial_feature> coalesced_geometry;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1547,8 +1546,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			sf.extent += coalesced_area;
-			coalesced_area = 0;
+			double coalesced_area = 0;
+			for (size_t i = 0; i < coalesced_geometry.size(); i++) {
+				if (coalesced_geometry[i].t == sf.t) {
+					coalesced_area += coalesced_geometry[i].extent;
+				}
+			}
 
 			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
@@ -1558,27 +1561,27 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent <= minextent && sf.t != VT_POINT) {
+				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT) {
 					continue;
 				}
 			}
 			if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent <= minextent) {
-					coalesced_geometry.push_back(sf.geometry);
-					coalesced_area += sf.extent;
+				if (sf.extent + coalesced_area <= minextent) {
+					coalesced_geometry.push_back(sf);
 					continue;
 				}
 			}
 
 			if (coalesced_geometry.size() != 0) {
-				for (size_t i = 0; i < coalesced_geometry.size(); i++) {
-					for (size_t j = 0; j < coalesced_geometry[i].size(); j++) {
-						sf.geometry.push_back(coalesced_geometry[i][j]);
+				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
+					if (coalesced_geometry[i].t == sf.t) {
+						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
+							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
+						}
+						coalesced_geometry.erase(coalesced_geometry.begin() + i);
 					}
 				}
-				coalesced_geometry.clear();
-				coalesced_area = 0;
 			}
 
 			if (additional[A_CALCULATE_FEATURE_DENSITY]) {
