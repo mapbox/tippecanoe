@@ -237,6 +237,8 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
+\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
+.IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .RE
 .SS Dropping tightly overlapping features
@@ -725,6 +727,8 @@ resolutions.
 \fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Decode only layers with the specified names. (Multiple \fB\fC\-l\fR options can be specified.)
 .IP \(bu 2
 \fB\fC\-c\fR or \fB\fC\-\-tag\-layer\-and\-zoom\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
+.IP \(bu 2
+\fB\fC\-S\fR or \fB\fC\-\-stats\fR: Just report statistics about each tile's size and the number of features in it, as a JSON structure.
 .IP \(bu 2
 \fB\fC\-f\fR or \fB\fC\-\-force\fR: Decode tiles even if polygon ring order or closure problems are detected
 .RE

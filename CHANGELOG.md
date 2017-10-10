@@ -1,3 +1,8 @@
+## 1.25.0
+
+* Add --coalesce-smallest-as-needed strategy for reducing tile sizes
+* Add --stats option to tipppecanoe-decode
+
 ## 1.24.1
 
 * Limit the size and depth of the string pool for better performance

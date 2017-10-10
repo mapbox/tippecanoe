@@ -2206,6 +2206,7 @@ int main(int argc, char **argv) {
 		{"drop-densest-as-needed", no_argument, &additional[A_DROP_DENSEST_AS_NEEDED], 1},
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
+		{"coalesce-smallest-as-needed", no_argument, &additional[A_COALESCE_SMALLEST_AS_NEEDED], 1},
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
 
 		{"Dropping tightly overlapping features", 0, 0, 0},

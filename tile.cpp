@@ -1449,6 +1449,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
+		std::vector<serial_feature> coalesced_geometry;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1545,6 +1546,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
+			double coalesced_area = 0;
+			for (size_t i = 0; i < coalesced_geometry.size(); i++) {
+				if (coalesced_geometry[i].t == sf.t) {
+					coalesced_area += coalesced_geometry[i].extent;
+				}
+			}
+
 			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
@@ -1553,8 +1561,26 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent <= minextent && sf.t != VT_POINT) {
+				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT) {
 					continue;
+				}
+			}
+			if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+				extents.push_back(sf.extent);
+				if (sf.extent + coalesced_area <= minextent) {
+					coalesced_geometry.push_back(sf);
+					continue;
+				}
+			}
+
+			if (coalesced_geometry.size() != 0) {
+				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
+					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
+						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
+							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
+						}
+						coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					}
 				}
 			}
 
@@ -1611,6 +1637,20 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			merge_previndex = sf.index;
+		}
+
+		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
+		for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
+			for (size_t j = 0; j < partials.size(); j++) {
+				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
+					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
+						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
+					}
+
+					coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					break;
+				}
+			}
 		}
 
 		if (prefilter != NULL) {
@@ -1916,7 +1956,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;
 					continue;
-				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * 200000.0 / totalsize * 0.90;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
@@ -1999,7 +2039,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
 					}
 					line_detail++;
-				} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
@@ -2290,7 +2330,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
