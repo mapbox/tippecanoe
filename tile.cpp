@@ -1575,7 +1575,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (coalesced_geometry.size() != 0) {
 				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-					if (coalesced_geometry[i].t == sf.t) {
+					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
 						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
 							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
 						}
@@ -1637,6 +1637,20 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			merge_previndex = sf.index;
+		}
+
+		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
+		for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
+			for (size_t j = 0; j < partials.size(); j++) {
+				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
+					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
+						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
+					}
+
+					coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					break;
+				}
+			}
 		}
 
 		if (prefilter != NULL) {
