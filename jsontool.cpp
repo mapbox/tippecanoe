@@ -13,6 +13,10 @@ int fail = EXIT_SUCCESS;
 bool wrap = false;
 const char *extract = NULL;
 
+FILE *csvfile = NULL;
+std::vector<std::string> cols;
+std::vector<std::string> fields;
+
 std::string buffered;
 int buffered_type = -1;
 // 0: nothing yet
@@ -247,11 +251,12 @@ void process(FILE *fp, const char *fname) {
 }
 
 int main(int argc, char **argv) {
+	const char *csv = NULL;
+
 	struct option long_options[] = {
 		{"wrap", no_argument, 0, 'w'},
 		{"extract", required_argument, 0, 'e'},
 		{"csv", required_argument, 0, 'c'},
-		{"join", required_argument, 0, 'j'},
 
 		{0, 0, 0, 0},
 	};
@@ -280,6 +285,10 @@ int main(int argc, char **argv) {
 			extract = optarg;
 			break;
 
+		case 'c':
+			csv = optarg;
+			break;
+
 		default:
 			fprintf(stderr, "Unexpected option -%c\n", i);
 			exit(EXIT_FAILURE);
@@ -289,6 +298,14 @@ int main(int argc, char **argv) {
 	if (extract != NULL && wrap) {
 		fprintf(stderr, "%s: --wrap and --extract not supported together\n", argv[0]);
 		exit(EXIT_FAILURE);
+	}
+
+	if (csv != NULL) {
+		csvfile = fopen(csv, "r");
+		if (csvfile == NULL) {
+			perror(csv);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (optind >= argc) {
@@ -310,6 +327,13 @@ int main(int argc, char **argv) {
 		printf("%s\n", buffered.c_str());
 	} else if (buffer_state == 2) {
 		printf("]}\n");
+	}
+
+	if (csvfile != NULL) {
+		if (fclose(csvfile) != 0) {
+			perror("close");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	return fail;
