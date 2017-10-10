@@ -1,0 +1,9 @@
+[
+{ "zoom": 11, "x": 326, "y": 791, "bytes": 372, "compressed": true, "layers": { "muni": { "points": 14, "lines": 0, "polygons": 0, "extent": 4096 } } }
+,
+{ "zoom": 11, "x": 327, "y": 792, "bytes": 6481, "compressed": true, "layers": { "muni": { "points": 528, "lines": 0, "polygons": 0, "extent": 4096 } } }
+,
+{ "zoom": 11, "x": 327, "y": 791, "bytes": 44376, "compressed": true, "layers": { "muni": { "points": 4285, "lines": 0, "polygons": 0, "extent": 4096 }, "subway": { "points": 19, "lines": 0, "polygons": 0, "extent": 4096 } } }
+,
+{ "zoom": 11, "x": 954, "y": 791, "bytes": 75, "compressed": true, "layers": { "muni": { "points": 12, "lines": 0, "polygons": 0, "extent": 4096 } } }
+]

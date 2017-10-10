@@ -23,7 +23,34 @@ int minzoom = 0;
 int maxzoom = 32;
 bool force = false;
 
-void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline) {
+void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y) {
+	printf("{ \"zoom\": %d, \"x\": %u, \"y\": %u, \"bytes\": %zu, \"compressed\": %s", z, x, y, size, compressed ? "true" : "false");
+
+	printf(", \"layers\": { ");
+	for (size_t i = 0; i < tile.layers.size(); i++) {
+		if (i != 0) {
+			printf(", ");
+		}
+		fprintq(stdout, tile.layers[i].name.c_str());
+
+		int points = 0, lines = 0, polygons = 0;
+		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
+			if (tile.layers[i].features[j].type == mvt_point) {
+				points++;
+			} else if (tile.layers[i].features[j].type == mvt_linestring) {
+				lines++;
+			} else if (tile.layers[i].features[j].type == mvt_polygon) {
+				polygons++;
+			}
+		}
+
+		printf(": { \"points\": %d, \"lines\": %d, \"polygons\": %d, \"extent\": %lld }", points, lines, polygons, tile.layers[i].extent);
+	}
+
+	printf(" } }\n");
+}
+
+void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -35,6 +62,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	} catch (protozero::unknown_pbf_wire_type_exception e) {
 		fprintf(stderr, "PBF decoding error in tile %d/%u/%u\n", z, x, y);
 		exit(EXIT_FAILURE);
+	}
+
+	if (stats) {
+		do_stats(tile, message.size(), was_compressed, z, x, y);
+		return;
 	}
 
 	if (!pipeline) {
@@ -96,7 +128,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
 	sqlite3 *db;
 	int oz = z;
 	unsigned ox = x, oy = y;
@@ -111,7 +143,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, 1, to_decode, pipeline);
+							handle(s, z, x, y, 1, to_decode, pipeline, stats);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -141,7 +173,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	if (z < 0) {
 		int within = 0;
 
-		if (!pipeline) {
+		if (!pipeline && !stats) {
 			printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
 
 			const char *sql2 = "SELECT name, value from metadata order by name;";
@@ -168,6 +200,10 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			sqlite3_finalize(stmt2);
 		}
 
+		if (stats) {
+			printf("[\n");
+		}
+
 		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
 		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -178,13 +214,19 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		sqlite3_bind_int(stmt, 1, minzoom);
 		sqlite3_bind_int(stmt, 2, maxzoom);
 
-		if (!pipeline) {
+		if (!pipeline && !stats) {
 			printf("\n}, \"features\": [\n");
 		}
 
 		within = 0;
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			if (!pipeline) {
+			if (!pipeline && !stats) {
+				if (within) {
+					printf(",\n");
+				}
+				within = 1;
+			}
+			if (stats) {
 				if (within) {
 					printf(",\n");
 				}
@@ -198,11 +240,14 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-			handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline);
+			handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
 		}
 
-		if (!pipeline) {
+		if (!pipeline && !stats) {
 			printf("] }\n");
+		}
+		if (stats) {
+			printf("]\n");
 		}
 
 		sqlite3_finalize(stmt);
@@ -228,7 +273,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, 0, to_decode, pipeline);
+				handle(std::string(s, len), z, x, y, 0, to_decode, pipeline, stats);
 				handled = 1;
 			}
 
@@ -257,6 +302,7 @@ int main(int argc, char **argv) {
 	int i;
 	std::set<std::string> to_decode;
 	bool pipeline = false;
+	bool stats = false;
 
 	struct option long_options[] = {
 		{"projection", required_argument, 0, 's'},
@@ -264,6 +310,7 @@ int main(int argc, char **argv) {
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"layer", required_argument, 0, 'l'},
 		{"tag-layer-and-zoom", no_argument, 0, 'c'},
+		{"stats", no_argument, 0, 'S'},
 		{"force", no_argument, 0, 'f'},
 		{0, 0, 0, 0},
 	};
@@ -304,6 +351,10 @@ int main(int argc, char **argv) {
 			pipeline = true;
 			break;
 
+		case 'S':
+			stats = true;
+			break;
+
 		case 'f':
 			force = true;
 			break;
@@ -314,9 +365,9 @@ int main(int argc, char **argv) {
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline);
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline, stats);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1, to_decode, pipeline);
+		decode(argv[optind], -1, -1, -1, to_decode, pipeline, stats);
 	} else {
 		usage(argv);
 	}
