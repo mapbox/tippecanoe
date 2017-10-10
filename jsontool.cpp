@@ -8,13 +8,14 @@
 #include <getopt.h>
 #include <vector>
 #include "jsonpull/jsonpull.h"
+#include "csv.hpp"
 
 int fail = EXIT_SUCCESS;
 bool wrap = false;
 const char *extract = NULL;
 
 FILE *csvfile = NULL;
-std::vector<std::string> cols;
+std::vector<std::string> header;
 std::vector<std::string> fields;
 
 std::string buffered;
@@ -187,6 +188,156 @@ void out(std::string const &s, int type, json_object *properties) {
 	}
 }
 
+std::string prev_joinkey;
+
+bool is_number(std::string const &s) {
+	return false;  // XXX
+}
+
+void join_csv(json_object *j) {
+	if (header.size() == 0) {
+		std::string s = csv_getline(csvfile);
+		if (s.size() == 0) {
+			fprintf(stderr, "Couldn't get column header from CSV file\n");
+			exit(EXIT_FAILURE);
+		}
+
+		header = csv_split(s.c_str());
+
+		for (size_t i = 0; i < header.size(); i++) {
+			header[i] = csv_dequote(header[i]);
+		}
+
+		if (header.size() == 0) {
+			fprintf(stderr, "No columns in CSV header \"%s\"\n", s.c_str());
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	json_object *properties = json_hash_get(j, "properties");
+	json_object *key = NULL;
+
+	if (properties != NULL) {
+		key = json_hash_get(properties, header[0].c_str());
+	}
+
+	if (key == NULL) {
+		static bool warned = false;
+		if (!warned) {
+			fprintf(stderr, "Warning: couldn't find CSV key \"%s\" in JSON\n", header[0].c_str());
+			warned = true;
+		}
+		return;
+	}
+
+	std::string joinkey;
+	if (key->type == JSON_STRING || key->type == JSON_NUMBER) {
+		joinkey = key->string;
+	} else {
+		const char *s = json_stringify(key);
+		joinkey = s;
+		free((void *) s);
+	}
+
+	if (joinkey < prev_joinkey) {
+		fprintf(stderr, "GeoJSON file is out of sort: \"%s\" follows \"%s\"\n", joinkey.c_str(), prev_joinkey.c_str());
+		exit(EXIT_FAILURE);
+	}
+	prev_joinkey = joinkey;
+
+	if (fields.size() == 0 || joinkey > fields[0]) {
+		std::string prevkey;
+		if (fields.size() > 0) {
+			prevkey = fields[0];
+		}
+
+		while (true) {
+			std::string s = csv_getline(csvfile);
+			if (s.size() == 0) {
+				fields.clear();
+				break;
+			}
+
+			fields = csv_split(s.c_str());
+
+			for (size_t i = 0; i < fields.size(); i++) {
+				fields[i] = csv_dequote(fields[i]);
+			}
+
+			if (fields.size() > 0 && fields[0] < prevkey) {
+				fprintf(stderr, "CSV file is out of sort: \"%s\" follows \"%s\"\n", fields[0].c_str(), prevkey.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			if (fields.size() > 0 && fields[0] >= joinkey) {
+				break;
+			}
+
+			if (fields.size() > 0) {
+				prevkey = fields[0];
+			}
+		}
+	}
+
+	if (fields.size() > 0 && joinkey == fields[0]) {
+		// This knows more about the structure of JSON objects than it ought to
+		properties->keys = (json_object **) realloc((void *) properties->keys, (properties->length + 32 + fields.size()) * sizeof(json_object *));
+		properties->values = (json_object **) realloc((void *) properties->values, (properties->length + 32 + fields.size()) * sizeof(json_object *));
+		if (properties->keys == NULL || properties->values == NULL) {
+			perror("realloc");
+			exit(EXIT_FAILURE);
+		}
+
+		for (size_t i = 0; i < fields.size(); i++) {
+			std::string k = header[i];
+			std::string v = fields[i];
+			json_type attr_type = JSON_STRING;
+
+			if (v.size() > 0) {
+				if (v[0] == '"') {
+					v = csv_dequote(v);
+				} else if (is_number(v)) {
+					attr_type = JSON_NUMBER;
+				}
+
+				// This knows more about the structure of JSON objects than it ought to
+
+				json_object *ko = (json_object *) malloc(sizeof(json_object));
+				json_object *vo = (json_object *) malloc(sizeof(json_object));
+				if (ko == NULL || vo == NULL) {
+					perror("malloc");
+					exit(EXIT_FAILURE);
+				}
+
+				ko->type = JSON_STRING;
+				vo->type = attr_type;
+
+				ko->parent = vo->parent = properties;
+				ko->array = vo->array = NULL;
+				ko->keys = vo->keys = NULL;
+				ko->values = vo->values = NULL;
+				ko->parser = vo->parser = properties->parser;
+
+				ko->string = strdup(k.c_str());
+				vo->string = strdup(v.c_str());
+
+				if (ko->string == NULL || vo->string == NULL) {
+					perror("strdup");
+					exit(EXIT_FAILURE);
+				}
+
+				ko->length = strlen(ko->string);
+				vo->length = strlen(vo->string);
+				vo->number = atof(vo->string);
+
+				properties->keys[properties->length] = ko;
+				properties->values[properties->length] = vo;
+				properties->length++;
+			}
+		}
+	}
+}
+
 void process(FILE *fp, const char *fname) {
 	json_pull *jp = json_begin_file(fp);
 
@@ -207,6 +358,10 @@ void process(FILE *fp, const char *fname) {
 		}
 
 		if (strcmp(type->string, "Feature") == 0) {
+			if (csvfile != NULL) {
+				join_csv(j);
+			}
+
 			char *s = json_stringify(j);
 			out(s, 1, json_hash_get(j, "properties"));
 			free(s);
