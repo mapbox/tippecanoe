@@ -637,12 +637,14 @@ than can comfortably fit in memory by streaming through them in parallel, in the
 ### Options
 
  * `-w` or `--wrap`: Add the FeatureCollection or GeometryCollection wrapper.
- * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute
+ * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
+   The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
+   be sorted correctly by tools that just do ASCII comparisons.
  * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key.
 
 ### Example
 
-Join Census LEHD ([Longitudinal Employer-Household Dynamics]) employment data to a file of Census block geography
+Join Census LEHD ([Longitudinal Employer-Household Dynamics](https://lehd.ces.census.gov/)) employment data to a file of Census block geography
 for Tippecanoe County, Indiana.
 
 Download Census block geometry, and convert to GeoJSON:
