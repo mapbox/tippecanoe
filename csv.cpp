@@ -92,3 +92,62 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 		exit(EXIT_FAILURE);
 	}
 }
+
+// Follow JSON rules for what looks like a number
+bool is_number(std::string const &s) {
+	const char *cp = s.c_str();
+	char c = *(cp++);
+
+	if (c == '-' || (c >= '0' && c <= '9')) {
+		if (c == '-') {
+			c = *(cp++);
+		}
+
+		if (c == '0') {
+			;
+		} else if (c >= '1' && c <= '9') {
+			c = *cp;
+
+			while (c >= '0' && c <= '9') {
+				cp++;
+				c = *cp;
+			}
+		}
+
+		if (*cp == '.') {
+			cp++;
+
+			c = *cp;
+			if (c < '0' || c > '9') {
+				return false;
+			}
+			while (c >= '0' && c <= '9') {
+				cp++;
+				c = *cp;
+			}
+		}
+
+		c = *cp;
+		if (c == 'e' || c == 'E') {
+			cp++;
+
+			c = *cp;
+			if (c == '+' || c == '-') {
+				cp++;
+			}
+
+			c = *cp;
+			if (c < '0' || c > '9') {
+				return false;
+			}
+			while (c >= '0' && c <= '9') {
+				cp++;
+				c = *cp;
+			}
+		}
+
+		return true;
+	}
+
+	return false;
+}

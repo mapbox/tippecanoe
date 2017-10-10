@@ -213,7 +213,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
 									joinval = csv_dequote(joinval);
-								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
+								} else if (is_number(joinval)) {
 									attr_type = mvt_double;
 								}
 							}
