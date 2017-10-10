@@ -190,10 +190,6 @@ void out(std::string const &s, int type, json_object *properties) {
 
 std::string prev_joinkey;
 
-bool is_number(std::string const &s) {
-	return false;  // XXX
-}
-
 void join_csv(json_object *j) {
 	if (header.size() == 0) {
 		std::string s = csv_getline(csvfile);
