@@ -2,11 +2,11 @@
 
 #define MAXLINE 10000 /* XXX */
 
-std::vector<std::string> csv_split(char *s) {
+std::vector<std::string> csv_split(const char *s) {
 	std::vector<std::string> ret;
 
 	while (*s && *s != '\n' && *s != '\r') {
-		char *start = s;
+		const char *start = s;
 		int within = 0;
 
 		for (; *s && *s != '\n' && *s != '\r'; s++) {
@@ -48,6 +48,18 @@ std::string csv_dequote(std::string s) {
 	return out;
 }
 
+std::string getline(FILE *f) {
+	std::string out;
+	int c;
+	while ((c = getc(f)) != EOF) {
+		out.push_back(c);
+		if (c == '\n') {
+			break;
+		}
+	}
+	return out;
+}
+
 void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping) {
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
@@ -55,16 +67,16 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 		exit(EXIT_FAILURE);
 	}
 
-	char s[MAXLINE];
-	if (fgets(s, MAXLINE, f)) {
-		header = csv_split(s);
+	std::string s;
+	if ((s = getline(f)).size() > 0) {
+		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
 			header[i] = csv_dequote(header[i]);
 		}
 	}
-	while (fgets(s, MAXLINE, f)) {
-		std::vector<std::string> line = csv_split(s);
+	while ((s = getline(f)).size() > 0) {
+		std::vector<std::string> line = csv_split(s.c_str());
 		if (line.size() > 0) {
 			line[0] = csv_dequote(line[0]);
 		}
@@ -80,4 +92,3 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 		exit(EXIT_FAILURE);
 	}
 }
-
