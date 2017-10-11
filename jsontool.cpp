@@ -284,7 +284,7 @@ void join_csv(json_object *j) {
 			exit(EXIT_FAILURE);
 		}
 
-		for (size_t i = 0; i < fields.size(); i++) {
+		for (size_t i = 1; i < fields.size(); i++) {
 			std::string k = header[i];
 			std::string v = fields[i];
 			json_type attr_type = JSON_STRING;

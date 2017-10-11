@@ -655,7 +655,7 @@ $ unzip tl_2010_18157_tabblock10.zip
 $ ogr2ogr -f GeoJSON tl_2010_18157_tabblock10.json tl_2010_18157_tabblock10.shp
 ```
 
-Download employment data, and fix name of join key in header
+Download Indiana employment data, and fix name of join key in header
 
 ```
 $ curl -L -O https://lehd.ces.census.gov/data/lodes/LODES7/in/wac/in_wac_S000_JT00_2015.csv.gz
