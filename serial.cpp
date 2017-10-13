@@ -225,7 +225,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
-		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());
+		fprintf(stderr, "Internal error: feature said to have %lld attributes but only %lld found\n", (long long) sf->m, (long long) sf->keys.size());
 		exit(EXIT_FAILURE);
 	}
 
@@ -515,15 +515,17 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		exit(EXIT_FAILURE);
 	}
 
-	for (size_t i = 0; i < sf.full_keys.size(); i++) {
+	for (ssize_t i = sf.full_keys.size() - 1; i >= 0; i--) {
 		if (sst->exclude_all) {
-			if (sst->include->count(sf.full_keys[i]) == 0 && sf.full_keys[i] != "") {
-				sf.full_keys[i] = "";
+			if (sst->include->count(sf.full_keys[i]) == 0) {
+				sf.full_keys.erase(sf.full_keys.begin() + i);
+				sf.full_values.erase(sf.full_values.begin() + i);
 				sf.m--;
 				continue;
 			}
-		} else if (sst->exclude->count(sf.full_keys[i]) != 0 && sf.full_keys[i] != "") {
-			sf.full_keys[i] = "";
+		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
 			sf.m--;
 			continue;
 		}
@@ -535,12 +537,10 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		std::map<std::string, mvt_value> attributes;
 
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			if (sf.full_keys[i] != "") {
-				std::string key = sf.full_keys[i];
-				mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
+			std::string key = sf.full_keys[i];
+			mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
 
-				attributes.insert(std::pair<std::string, mvt_value>(key, val));
-			}
+			attributes.insert(std::pair<std::string, mvt_value>(key, val));
 		}
 
 		if (sf.has_id) {
@@ -569,19 +569,16 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	for (size_t i = 0; i < sf.full_keys.size(); i++) {
-		if (sf.full_values[i].type == mvt_null && sf.full_keys[i] != "") {
-			sf.full_keys[i] = "";
+	for (ssize_t i = sf.full_keys.size() - 1; i >= 0; i--) {
+		if (sf.full_values[i].type == mvt_null) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
 			sf.m--;
 		}
 	}
 
 	if (!sst->filters) {
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			if (sf.full_keys[i].size() == 0) {
-				continue;
-			}
-
 			type_and_string attrib;
 			attrib.type = sf.full_values[i].type;
 			attrib.string = sf.full_values[i].s;
@@ -594,18 +591,12 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	if (inline_meta) {
 		sf.metapos = -1;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			if (sf.full_keys[i].size() == 0) {
-				continue;
-			}
 			sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
 			sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 		}
 	} else {
 		sf.metapos = r->metapos;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			if (sf.full_keys[i].size() == 0) {
-				continue;
-			}
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
 		}

@@ -1,3 +1,7 @@
+## 1.26.0
+
+Fix error when parsing attributes with empty-string keys
+
 ## 1.25.0
 
 * Add --coalesce-smallest-as-needed strategy for reducing tile sizes
