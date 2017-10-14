@@ -151,15 +151,21 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature, std::string const &exclude) {
 	int i;
 	for (i = 0; i < m; i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		layer.tag(feature, key.string_value, value);
+		if (key.string_value != exclude) {
+			layer.tag(feature, key.string_value, value);
+		}
 	}
+}
+
+void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+	decode_meta(m, metakeys, metavals, stringpool, layer, feature, "");
 }
 
 int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
@@ -1397,6 +1403,80 @@ void *run_prefilter(void *v) {
 	return NULL;
 }
 
+void diagnose(std::map<std::string, std::vector<coalesce>> &layers, size_t orig) {
+	// collect all the keys into this layer
+	mvt_layer single_layer;
+
+	for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+		std::vector<coalesce> &layer_features = layer_iterator->second;
+
+		for (size_t x = 0; x < layer_features.size(); x++) {
+			mvt_feature feature;
+
+			decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, single_layer, feature);
+			for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
+				serial_val sv = layer_features[x].full_values[a];
+				mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
+				single_layer.tag(feature, layer_features[x].full_keys[a], v);
+			}
+		}
+	}
+
+	// Empty string for the case where no attributes are being dropped
+	single_layer.keys.insert(single_layer.keys.begin(), "");
+	std::vector<size_t> sizes;
+	std::vector<std::pair<double, std::string>> savings;
+
+	for (size_t i = 0; i < single_layer.keys.size(); i++) {
+		mvt_tile tile;
+		fprintf(stderr, "Checking attribute sizes (%zu/%zu)\r", i + 1, single_layer.keys.size());
+
+		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
+			std::vector<coalesce> &layer_features = layer_iterator->second;
+			mvt_layer layer;
+
+			for (size_t x = 0; x < layer_features.size(); x++) {
+				mvt_feature feature;
+
+				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, single_layer.keys[i]);
+				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
+					serial_val sv = layer_features[x].full_values[a];
+					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
+					if (layer_features[x].full_keys[a] != single_layer.keys[i]) {
+						layer.tag(feature, layer_features[x].full_keys[a], v);
+					}
+				}
+
+				layer.features.push_back(feature);
+			}
+
+			if (layer.features.size() > 0) {
+				tile.layers.push_back(layer);
+			}
+		}
+
+		std::string compressed;
+		std::string pbf = tile.encode();
+
+		if (!prevent[P_TILE_COMPRESSION]) {
+			compress(pbf, compressed);
+		} else {
+			compressed = pbf;
+		}
+
+		sizes.push_back(compressed.size());
+		if (sizes[i] < sizes[0]) {
+			savings.push_back(std::pair<double, std::string>(100.0 * (orig - (sizes[0] - sizes[i])) / orig, single_layer.keys[i]));
+		}
+	}
+
+	std::sort(savings.begin(), savings.end());
+
+	for (size_t i = 0; i < savings.size() && i < 20; i++) {
+		fprintf(stderr, "%6.2f%% space savings if you use -x %s\n", 100.0 - savings[i].first, savings[i].second.c_str());
+	}
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -2000,6 +2080,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
+				}
+				static bool diagnosed = false;
+				if (!diagnosed && !quiet) {
+					diagnosed = true;
+					diagnose(layers, compressed.size());
 				}
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
