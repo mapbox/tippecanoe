@@ -240,6 +240,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								tas.type = outval.type;
 								tas.string = joinval;
 
+								// Convert from double to int if the joined attribute is an integer
+								outval = stringified_to_mvt_value(outval.type, joinval.c_str());
+
 								attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(joinkey, std::pair<mvt_value, type_and_string>(outval, tas)));
 								key_order.push_back(joinkey);
 							}
