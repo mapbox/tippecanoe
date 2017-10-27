@@ -39,6 +39,7 @@ size_t CPUS;
 int quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
+std::map<std::string, std::string> renames;
 
 struct stats {
 	int minzoom;
@@ -59,6 +60,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
+
+		auto found = renames.find(layer.name);
+		if (found != renames.end()) {
+			layer.name = found->second;
+		}
 
 		if (keep_layers.size() > 0 && keep_layers.count(layer.name) == 0) {
 			continue;
@@ -1084,6 +1090,7 @@ int main(int argc, char **argv) {
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"feature-filter-file", required_argument, 0, 'J'},
 		{"feature-filter", required_argument, 0, 'j'},
+		{"rename-layer", required_argument, 0, 'R'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1190,6 +1197,17 @@ int main(int argc, char **argv) {
 		case 'L':
 			remove_layers.insert(std::string(optarg));
 			break;
+
+		case 'R': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -R requires old:new\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			std::string before = std::string(optarg).substr(0, cp - optarg);
+			std::string after = std::string(cp + 1);
+			renames.insert(std::pair<std::string, std::string>(before, after));
+		} break;
 
 		case 'q':
 			quiet = true;
