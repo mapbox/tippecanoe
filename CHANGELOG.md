@@ -1,3 +1,7 @@
+## 1.26.1
+
+* Add tile-join option to rename layers
+
 ## 1.26.0
 
 Fix error when parsing attributes with empty-string keys
