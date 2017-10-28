@@ -501,8 +501,15 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				std::string key, value;
 
-				quote(key, (const char *) sqlite3_column_text(stmt, 0));
-				quote(value, (const char *) sqlite3_column_text(stmt, 1));
+				const char *k = (const char *) sqlite3_column_text(stmt, 0);
+				const char *v = (const char *) sqlite3_column_text(stmt, 1);
+				if (k == NULL || v == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+					exit(EXIT_FAILURE);
+				}
+
+				quote(key, k);
+				quote(value, v);
 
 				if (!first) {
 					fprintf(fp, ",\n");

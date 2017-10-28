@@ -192,6 +192,11 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				const unsigned char *name = sqlite3_column_text(stmt2, 0);
 				const unsigned char *value = sqlite3_column_text(stmt2, 1);
 
+				if (name == NULL || value == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+					exit(EXIT_FAILURE);
+				}
+
 				fprintq(stdout, (char *) name);
 				printf(": ");
 				fprintq(stdout, (char *) value);
