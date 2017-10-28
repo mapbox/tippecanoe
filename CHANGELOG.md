@@ -1,3 +1,7 @@
+## 1.26.2
+
+* Make sure to encode tile-joined integers as ints, not doubles
+
 ## 1.26.1
 
 * Add tile-join option to rename layers
