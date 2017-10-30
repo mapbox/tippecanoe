@@ -93,6 +93,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
 
+		if (layer.extent <= 0) {
+			fprintf(stderr, "Impossible layer extent %lld in mbtiles\n", layer.extent);
+			exit(EXIT_FAILURE);
+		}
+
 		if (to_decode.size() != 0 && !to_decode.count(layer.name)) {
 			continue;
 		}
