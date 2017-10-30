@@ -1,3 +1,7 @@
+## 1.26.3
+
+* Guard against impossible coordinates when decoding tilesets
+
 ## 1.26.2
 
 * Make sure to encode tile-joined integers as ints, not doubles
