@@ -837,28 +837,39 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+					if (s != NULL) {
+						sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					attribution = std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						attribution = std::string((char *) s);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'description'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					description = std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						description = std::string((char *) s);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'name'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					if (name.size() == 0) {
-						name = std::string((char *) sqlite3_column_text(r->stmt, 0));
-					} else {
-						name += " + " + std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						if (name.size() == 0) {
+							name = std::string((char *) s);
+						} else {
+							name += " + " + std::string((char *) s);
+						}
 					}
 				}
 				sqlite3_finalize(r->stmt);
@@ -866,11 +877,13 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-						st->minlon = min(minlon, st->minlon);
-						st->maxlon = max(maxlon, st->maxlon);
-						st->minlat = min(minlat, st->minlat);
-						st->maxlat = max(maxlat, st->maxlat);
+					if (s != NULL) {
+						if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
+							st->minlon = min(minlon, st->minlon);
+							st->maxlon = max(maxlon, st->maxlon);
+							st->minlat = min(minlat, st->minlat);
+							st->maxlat = max(maxlat, st->maxlat);
+						}
 					}
 				}
 				sqlite3_finalize(r->stmt);
