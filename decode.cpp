@@ -247,6 +247,12 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			int tz = sqlite3_column_int(stmt, 1);
 			int tx = sqlite3_column_int(stmt, 2);
 			int ty = sqlite3_column_int(stmt, 3);
+
+			if (tz < 0 || tz >= 32) {
+				fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
+				exit(EXIT_FAILURE);
+			}
+
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
