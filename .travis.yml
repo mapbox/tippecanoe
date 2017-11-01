@@ -6,6 +6,19 @@ sudo: false
 
 matrix:
   include:
+    # test on docker
+    - os: linux
+      compiler: clang
+      services:
+       - docker
+      sudo: true
+      dist: trusty
+      env: DOCKERFILE=Dockerfile
+      before_install: []
+      install:
+        - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      script:
+        - docker run -it tippecanoe-image
     # debug+integer-santizer build
     - os: linux
       compiler: clang
