@@ -1,3 +1,7 @@
+## 1.26.4
+
+* Array bounds bug fix in binary to decimal conversion library
+
 ## 1.26.3
 
 * Guard against impossible coordinates when decoding tilesets
