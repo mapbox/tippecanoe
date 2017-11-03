@@ -356,33 +356,6 @@ the filename or name specified using `--layer`, like this:
 }
 ```
 
-Point styling
--------------
-
-To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
-coordinated with the base zoom level and dot-dropping rate. You can use this shell script to
-calculate the appropriate marker-width at high zoom levels to match the fraction of dots
-that were dropped at low zoom levels.
-
-If you used `-B` or `-z` to change the base zoom level or `-r` to change the
-dot-dropping rate, replace them in the `basezoom` and `rate` below.
-
-    awk 'BEGIN {
-        dotsize = 2;    # up to you to decide
-        basezoom = 14;  # tippecanoe -z 14
-        rate = 2.5;     # tippecanoe -r 2.5
-
-        print "  marker-line-width: 0;";
-        print "  marker-ignore-placement: true;";
-        print "  marker-allow-overlap: true;";
-        print "  marker-width: " dotsize ";";
-        for (i = basezoom + 1; i <= 22; i++) {
-            print "  [zoom >= " i "] { marker-width: " (dotsize * exp(log(sqrt(rate)) * (i - basezoom))) "; }";
-        }
-
-        exit(0);
-    }'
-
 Geometric simplifications
 -------------------------
 
