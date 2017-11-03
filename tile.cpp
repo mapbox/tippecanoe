@@ -163,11 +163,6 @@ void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long
 }
 
 int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
-	// XXX
-	// Ideally this would make identical features compare the same lexically
-	// even if their attributes were declared in different orders in different instances.
-	// In practice, this is probably good enough to put "identical" features together.
-
 	int i;
 	for (i = 0; i < m1 && i < m2; i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
