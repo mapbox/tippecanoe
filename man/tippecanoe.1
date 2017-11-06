@@ -427,35 +427,6 @@ the filename or name specified using \fB\fC\-\-layer\fR, like this:
 }
 .fi
 .RE
-.SH Point styling
-.PP
-To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
-coordinated with the base zoom level and dot\-dropping rate. You can use this shell script to
-calculate the appropriate marker\-width at high zoom levels to match the fraction of dots
-that were dropped at low zoom levels.
-.PP
-If you used \fB\fC\-B\fR or \fB\fC\-z\fR to change the base zoom level or \fB\fC\-r\fR to change the
-dot\-dropping rate, replace them in the \fB\fCbasezoom\fR and \fB\fCrate\fR below.
-.PP
-.RS
-.nf
-awk 'BEGIN {
-    dotsize = 2;    # up to you to decide
-    basezoom = 14;  # tippecanoe \-z 14
-    rate = 2.5;     # tippecanoe \-r 2.5
-
-    print "  marker\-line\-width: 0;";
-    print "  marker\-ignore\-placement: true;";
-    print "  marker\-allow\-overlap: true;";
-    print "  marker\-width: " dotsize ";";
-    for (i = basezoom + 1; i <= 22; i++) {
-        print "  [zoom >= " i "] { marker\-width: " (dotsize * exp(log(sqrt(rate)) * (i \- basezoom))) "; }";
-    }
-
-    exit(0);
-}'
-.fi
-.RE
 .SH Geometric simplifications
 .PP
 At every zoom level, line and polygon features are subjected to Douglas\-Peucker

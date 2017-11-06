@@ -23,14 +23,13 @@
 #include "geometry.hpp"
 #include "dirtiles.hpp"
 #include "evaluator.hpp"
+#include "csv.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <functional>
 #include "jsonpull/jsonpull.h"
 #include "milo/dtoa_milo.h"
-
-std::string dequote(std::string s);
 
 int pk = false;
 int pC = false;
@@ -213,8 +212,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							if (joinval.size() > 0) {
 								if (joinval[0] == '"') {
-									joinval = dequote(joinval);
-								} else if ((joinval[0] >= '0' && joinval[0] <= '9') || joinval[0] == '-') {
+									joinval = csv_dequote(joinval);
+								} else if (is_number(joinval)) {
 									attr_type = mvt_double;
 								}
 							}
@@ -977,87 +976,6 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
-}
-
-#define MAXLINE 10000 /* XXX */
-
-std::vector<std::string> split(char *s) {
-	std::vector<std::string> ret;
-
-	while (*s && *s != '\n' && *s != '\r') {
-		char *start = s;
-		int within = 0;
-
-		for (; *s && *s != '\n' && *s != '\r'; s++) {
-			if (*s == '"') {
-				within = !within;
-			}
-
-			if (*s == ',' && !within) {
-				break;
-			}
-		}
-
-		std::string v = std::string(start, s - start);
-		ret.push_back(v);
-
-		if (*s == ',') {
-			s++;
-
-			while (*s && isspace(*s)) {
-				s++;
-			}
-		}
-	}
-
-	return ret;
-}
-
-std::string dequote(std::string s) {
-	std::string out;
-	for (size_t i = 0; i < s.size(); i++) {
-		if (s[i] == '"') {
-			if (i + 1 < s.size() && s[i + 1] == '"') {
-				out.push_back('"');
-			}
-		} else {
-			out.push_back(s[i]);
-		}
-	}
-	return out;
-}
-
-void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping) {
-	FILE *f = fopen(fn, "r");
-	if (f == NULL) {
-		perror(fn);
-		exit(EXIT_FAILURE);
-	}
-
-	char s[MAXLINE];
-	if (fgets(s, MAXLINE, f)) {
-		header = split(s);
-
-		for (size_t i = 0; i < header.size(); i++) {
-			header[i] = dequote(header[i]);
-		}
-	}
-	while (fgets(s, MAXLINE, f)) {
-		std::vector<std::string> line = split(s);
-		if (line.size() > 0) {
-			line[0] = dequote(line[0]);
-		}
-
-		for (size_t i = 0; i < line.size() && i < header.size(); i++) {
-			// printf("putting %s\n", line[0].c_str());
-			mapping.insert(std::pair<std::string, std::vector<std::string>>(line[0], line));
-		}
-	}
-
-	if (fclose(f) != 0) {
-		perror("fclose");
-		exit(EXIT_FAILURE);
-	}
 }
 
 int main(int argc, char **argv) {

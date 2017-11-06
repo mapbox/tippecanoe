@@ -1,3 +1,9 @@
+## 1.26.5
+
+* Support UTF-16 surrogate pairs in JSON strings
+* Support arbitrarily long lines in CSV files.
+* Treat CSV fields as numbers only if they follow JSON number syntax
+
 ## 1.26.4
 
 * Array bounds bug fix in binary to decimal conversion library
