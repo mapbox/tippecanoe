@@ -17,9 +17,9 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
-	long long x;
-	long long y;
-	int /* mvt_operation */ op;
+	long long x = 0;
+	long long y = 0;
+	int /* mvt_operation */ op = 0;
 
 	mvt_geometry(int op, long long x, long long y);
 
@@ -43,11 +43,11 @@ enum mvt_geometry_type {
 };
 
 struct mvt_feature {
-	std::vector<unsigned> tags;
-	std::vector<mvt_geometry> geometry;
-	int /* mvt_geometry_type */ type;
-	unsigned long long id;
-	bool has_id;
+	std::vector<unsigned> tags = std::vector<unsigned>();
+	std::vector<mvt_geometry> geometry = std::vector<mvt_geometry>();
+	int /* mvt_geometry_type */ type = 0;
+	unsigned long long id = 0;
+	bool has_id = false;
 
 	mvt_feature() {
 		has_id = false;
@@ -80,15 +80,21 @@ struct mvt_value {
 
 	bool operator<(const mvt_value &o) const;
 	std::string toString();
+
+	mvt_value() {
+		this->type = mvt_double;
+		this->string_value = "";
+		this->numeric_value.double_value = 0;
+	}
 };
 
 struct mvt_layer {
-	int version;
-	std::string name;
-	std::vector<mvt_feature> features;
-	std::vector<std::string> keys;
-	std::vector<mvt_value> values;
-	long long extent;
+	int version = 0;
+	std::string name = "";
+	std::vector<mvt_feature> features = std::vector<mvt_feature>();
+	std::vector<std::string> keys = std::vector<std::string>();
+	std::vector<mvt_value> values = std::vector<mvt_value>();
+	long long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);

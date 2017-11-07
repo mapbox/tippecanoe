@@ -872,10 +872,10 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 	// If necessary, merge some adjacent polygons into some other polygons
 
 	struct merge_order {
-		ssize_t edge;
-		unsigned long long gap;
-		size_t p1;
-		size_t p2;
+		ssize_t edge = 0;
+		unsigned long long gap = 0;
+		size_t p1 = 0;
+		size_t p2 = 0;
 
 		bool operator<(const merge_order &m) const {
 			return gap < m.gap;
@@ -1300,38 +1300,38 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 }
 
 struct run_prefilter_args {
-	FILE *geoms;
-	long long *geompos_in;
-	char *metabase;
-	long long *meta_off;
-	int z;
-	unsigned tx;
-	unsigned ty;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	long long *original_features;
-	long long *unclipped_features;
-	int nextzoom;
-	int maxzoom;
-	int minzoom;
-	int max_zoom_increment;
-	size_t pass;
-	size_t passes;
-	volatile long long *along;
-	long long alongminus;
-	int buffer;
-	int *within;
-	bool *first_time;
-	FILE **geomfile;
-	long long *geompos;
-	volatile double *oprogress;
-	double todo;
-	const char *fname;
-	int child_shards;
-	std::vector<std::vector<std::string>> *layer_unmaps;
-	char *stringpool;
-	long long *pool_off;
-	FILE *prefilter_fp;
+	FILE *geoms = NULL;
+	long long *geompos_in = NULL;
+	char *metabase = NULL;
+	long long *meta_off = NULL;
+	int z = 0;
+	unsigned tx = 0;
+	unsigned ty = 0;
+	unsigned *initial_x = 0;
+	unsigned *initial_y = 0;
+	long long *original_features = 0;
+	long long *unclipped_features = 0;
+	int nextzoom = 0;
+	int maxzoom = 0;
+	int minzoom = 0;
+	int max_zoom_increment = 0;
+	size_t pass = 0;
+	size_t passes = 0;
+	volatile long long *along = 0;
+	long long alongminus = 0;
+	int buffer = 0;
+	int *within = NULL;
+	bool *first_time = NULL;
+	FILE **geomfile = NULL;
+	long long *geompos = NULL;
+	volatile double *oprogress = NULL;
+	double todo = 0;
+	const char *fname = 0;
+	int child_shards = 0;
+	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
+	char *stringpool = NULL;
+	long long *pool_off = NULL;
+	FILE *prefilter_fp = NULL;
 };
 
 void *run_prefilter(void *v) {
@@ -2091,8 +2091,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 }
 
 struct task {
-	int fileno;
-	struct task *next;
+	int fileno = 0;
+	struct task *next = NULL;
 };
 
 void *run_thread(void *vargs) {
@@ -2278,12 +2278,17 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		// Assign temporary files to threads
 
-		struct task tasks[TEMP_FILES];
+		std::vector<struct task> tasks;
+		tasks.resize(TEMP_FILES);
+
 		struct dispatch {
-			struct task *tasks;
-			long long todo;
-			struct dispatch *next;
-		} dispatches[threads];
+			struct task *tasks = NULL;
+			long long todo = 0;
+			struct dispatch *next = NULL;
+		};
+		std::vector<struct dispatch> dispatches;
+		dispatches.resize(threads);
+
 		struct dispatch *dispatch_head = &dispatches[0];
 		for (size_t j = 0; j < threads; j++) {
 			dispatches[j].tasks = NULL;
