@@ -10,13 +10,13 @@
 #include "serial.hpp"
 
 struct parse_json_args {
-	json_pull *jp;
-	int layer;
-	std::string *layername;
-	std::map<std::string, int> const *attribute_types;
-	bool want_dist;
+	json_pull *jp = NULL;
+	int layer = 0;
+	std::string *layername = NULL;
+	std::map<std::string, int> const *attribute_types = NULL;
+	bool want_dist = false;
 
-	struct serialization_state *sst;
+	struct serialization_state *sst = NULL;
 };
 
 struct json_pull *json_begin_map(char *map, long long len);

@@ -100,8 +100,8 @@ struct mvt_layer {
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
 
 	// For tracking the key-value constants already used in this layer
-	std::map<std::string, size_t> key_map;
-	std::map<mvt_value, size_t> value_map;
+	std::map<std::string, size_t> key_map = std::map<std::string, size_t>();
+	std::map<mvt_value, size_t> value_map = std::map<mvt_value, size_t>();
 };
 
 struct mvt_tile {

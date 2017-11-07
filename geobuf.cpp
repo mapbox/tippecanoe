@@ -26,7 +26,7 @@ struct queued_feature {
 	size_t dim;
 	double e;
 	std::vector<std::string> *keys;
-	struct serialization_state *sst;
+	std::vector<struct serialization_state> *sst;
 	int layer;
 	std::string layername;
 };
@@ -432,7 +432,7 @@ void *run_parse_feature(void *v) {
 
 	for (size_t i = qra->start; i < qra->end; i++) {
 		struct queued_feature &qf = feature_queue[i];
-		readFeature(qf.pbf, qf.dim, qf.e, *qf.keys, &qf.sst[qra->segment], qf.layer, qf.layername);
+		readFeature(qf.pbf, qf.dim, qf.e, *qf.keys, &(*qf.sst)[qra->segment], qf.layer, qf.layername);
 	}
 
 	return NULL;
@@ -447,7 +447,7 @@ void runQueue() {
 	pthread_t pthreads[CPUS];
 
 	for (size_t i = 0; i < CPUS; i++) {
-		*(feature_queue[0].sst[i].layer_seq) = *(feature_queue[0].sst[0].layer_seq) + feature_queue.size() * i / CPUS;
+		*((*(feature_queue[0].sst))[i].layer_seq) = *((*(feature_queue[0].sst))[0].layer_seq) + feature_queue.size() * i / CPUS;
 
 		qra[i].start = feature_queue.size() * i / CPUS;
 		qra[i].end = feature_queue.size() * (i + 1) / CPUS;
@@ -467,11 +467,11 @@ void runQueue() {
 		}
 	}
 
-	*(feature_queue[0].sst[0].layer_seq) = *(feature_queue[0].sst[CPUS - 1].layer_seq);
+	*((*(feature_queue[0].sst))[0].layer_seq) = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
 	feature_queue.clear();
 }
 
-void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	struct queued_feature qf;
 	qf.pbf = pbf;
 	qf.dim = dim;
@@ -506,7 +506,7 @@ void outBareGeometry(drawvec const &dv, int type, struct serialization_state *ss
 	serialize_feature(sst, sf);
 }
 
-void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
@@ -521,7 +521,7 @@ void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std
 	}
 }
 
-void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, int layer, std::string layername) {
+void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src, size_t len, int layer, std::string layername) {
 	protozero::pbf_reader pbf(src, len);
 
 	size_t dim = 2;
@@ -558,7 +558,8 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 			protozero::pbf_reader geometry_reader(pbf.get_message());
 			std::vector<drawvec_type> dv = readGeometry(geometry_reader, dim, e, keys);
 			for (size_t i = 0; i < dv.size(); i++) {
-				outBareGeometry(dv[i].dv, dv[i].type, sst, layer, layername);
+				// Always on thread 0
+				outBareGeometry(dv[i].dv, dv[i].type, &(*sst)[0], layer, layername);
 			}
 			break;
 		}
