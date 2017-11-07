@@ -57,14 +57,14 @@ struct serial_feature {
 	long long extent = 0;
 
 	size_t m = 0;
-	std::vector<long long> keys = std::vector<long long>();
-	std::vector<long long> values = std::vector<long long>();
+	std::vector<long long> keys{};
+	std::vector<long long> values{};
 	long long metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
 	long long bbox[4] = {0, 0, 0, 0};
-	std::vector<std::string> full_keys = std::vector<std::string>();
-	std::vector<serial_val> full_values = std::vector<serial_val>();
+	std::vector<std::string> full_keys{};
+	std::vector<serial_val> full_values{};
 	std::string layername = "";
 };
 

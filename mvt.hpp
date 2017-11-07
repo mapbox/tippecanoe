@@ -43,8 +43,8 @@ enum mvt_geometry_type {
 };
 
 struct mvt_feature {
-	std::vector<unsigned> tags = std::vector<unsigned>();
-	std::vector<mvt_geometry> geometry = std::vector<mvt_geometry>();
+	std::vector<unsigned> tags{};
+	std::vector<mvt_geometry> geometry{};
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;
@@ -91,9 +91,9 @@ struct mvt_value {
 struct mvt_layer {
 	int version = 0;
 	std::string name = "";
-	std::vector<mvt_feature> features = std::vector<mvt_feature>();
-	std::vector<std::string> keys = std::vector<std::string>();
-	std::vector<mvt_value> values = std::vector<mvt_value>();
+	std::vector<mvt_feature> features{};
+	std::vector<std::string> keys{};
+	std::vector<mvt_value> values{};
 	long long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
@@ -105,7 +105,7 @@ struct mvt_layer {
 };
 
 struct mvt_tile {
-	std::vector<mvt_layer> layers;
+	std::vector<mvt_layer> layers{};
 
 	std::string encode();
 	bool decode(std::string &message, bool &was_compressed);

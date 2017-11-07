@@ -22,7 +22,7 @@ struct type_and_string_stats {
 
 struct layermap_entry {
 	size_t id = 0;
-	std::map<std::string, type_and_string_stats> file_keys = std::map<std::string, type_and_string_stats>();
+	std::map<std::string, type_and_string_stats> file_keys{};
 	int minzoom = 0;
 	int maxzoom = 0;
 
