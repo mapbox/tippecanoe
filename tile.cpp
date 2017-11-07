@@ -76,21 +76,21 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
-	char *stringpool;
-	std::vector<long long> keys;
-	std::vector<long long> values;
-	std::vector<std::string> full_keys;
-	std::vector<serial_val> full_values;
-	drawvec geom;
-	unsigned long long index;
-	unsigned long long index2;
-	long long original_seq;
-	int type;
-	int m;
-	bool coalesced;
-	double spacing;
-	bool has_id;
-	unsigned long long id;
+	char *stringpool = NULL;
+	std::vector<long long> keys = std::vector<long long>();
+	std::vector<long long> values = std::vector<long long>();
+	std::vector<std::string> full_keys = std::vector<std::string>();
+	std::vector<serial_val> full_values = std::vector<serial_val>();
+	drawvec geom = drawvec();
+	unsigned long long index = 0;
+	unsigned long long index2 = 0;
+	long long original_seq = 0;
+	int type = 0;
+	int m = 0;
+	bool coalesced = false;
+	double spacing = 0;
+	bool has_id = false;
+	unsigned long long id = 0;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -309,34 +309,34 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 }
 
 struct partial {
-	std::vector<drawvec> geoms;
-	std::vector<long long> keys;
-	std::vector<long long> values;
-	std::vector<std::string> full_keys;
-	std::vector<serial_val> full_values;
-	std::vector<ssize_t> arc_polygon;
-	long long layer;
-	long long original_seq;
-	unsigned long long index;
-	unsigned long long index2;
-	int m;
-	int segment;
-	bool reduced;
-	int z;
-	int line_detail;
-	int maxzoom;
-	double spacing;
-	double simplification;
-	signed char t;
-	unsigned long long id;
-	bool has_id;
-	ssize_t renamed;
+	std::vector<drawvec> geoms = std::vector<drawvec>();
+	std::vector<long long> keys = std::vector<long long>();
+	std::vector<long long> values = std::vector<long long>();
+	std::vector<std::string> full_keys = std::vector<std::string>();
+	std::vector<serial_val> full_values = std::vector<serial_val>();
+	std::vector<ssize_t> arc_polygon = std::vector<ssize_t>();
+	long long layer = 0;
+	long long original_seq = 0;
+	unsigned long long index = 0;
+	unsigned long long index2 = 0;
+	int m = 0;
+	int segment = 0;
+	bool reduced = 0;
+	int z = 0;
+	int line_detail = 0;
+	int maxzoom = 0;
+	double spacing = 0;
+	double simplification = 0;
+	signed char t = 0;
+	unsigned long long id = 0;
+	bool has_id = 0;
+	ssize_t renamed = 0;
 };
 
 struct partial_arg {
-	std::vector<struct partial> *partials;
-	int task;
-	int tasks;
+	std::vector<struct partial> *partials = NULL;
+	int task = 0;
+	int tasks = 0;
 };
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
@@ -523,11 +523,11 @@ static drawvec reverse_subring(drawvec const &dv) {
 }
 
 struct edge {
-	unsigned x1;
-	unsigned y1;
-	unsigned x2;
-	unsigned y2;
-	unsigned ring;
+	unsigned x1 = 0;
+	unsigned y1 = 0;
+	unsigned x2 = 0;
+	unsigned y2 = 0;
+	unsigned ring = 0;
 
 	edge(unsigned _x1, unsigned _y1, unsigned _x2, unsigned _y2, unsigned _ring) {
 		x1 = _x1;
@@ -1127,51 +1127,51 @@ long long choose_minextent(std::vector<long long> &extents, double f) {
 }
 
 struct write_tile_args {
-	struct task *tasks;
-	char *metabase;
-	char *stringpool;
-	int min_detail;
-	sqlite3 *outdb;
-	const char *outdir;
-	int buffer;
-	const char *fname;
-	FILE **geomfile;
-	double todo;
-	volatile long long *along;
-	double gamma;
-	double gamma_out;
-	int child_shards;
-	int *geomfd;
-	off_t *geom_size;
-	volatile unsigned *midx;
-	volatile unsigned *midy;
-	int maxzoom;
-	int minzoom;
-	int full_detail;
-	int low_detail;
-	double simplification;
-	volatile long long *most;
-	long long *meta_off;
-	long long *pool_off;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	volatile int *running;
-	int err;
-	std::vector<std::map<std::string, layermap_entry>> *layermaps;
-	std::vector<std::vector<std::string>> *layer_unmaps;
-	size_t pass;
-	size_t passes;
-	unsigned long long mingap;
-	unsigned long long mingap_out;
-	long long minextent;
-	long long minextent_out;
-	double fraction;
-	double fraction_out;
-	const char *prefilter;
-	const char *postfilter;
-	bool still_dropping;
-	int wrote_zoom;
-	size_t tiling_seg;
+	struct task *tasks = NULL;
+	char *metabase = NULL;
+	char *stringpool = NULL;
+	int min_detail = 0;
+	sqlite3 *outdb = NULL;
+	const char *outdir = NULL;
+	int buffer = 0;
+	const char *fname = NULL;
+	FILE **geomfile = NULL;
+	double todo = 0;
+	volatile long long *along = NULL;
+	double gamma = 0;
+	double gamma_out = 0;
+	int child_shards = 0;
+	int *geomfd = NULL;
+	off_t *geom_size = NULL;
+	volatile unsigned *midx = NULL;
+	volatile unsigned *midy = NULL;
+	int maxzoom = 0;
+	int minzoom = 0;
+	int full_detail = 0;
+	int low_detail = 0;
+	double simplification = 0;
+	volatile long long *most = NULL;
+	long long *meta_off = NULL;
+	long long *pool_off = NULL;
+	unsigned *initial_x = NULL;
+	unsigned *initial_y = NULL;
+	volatile int *running = NULL;
+	int err = 0;
+	std::vector<std::map<std::string, layermap_entry>> *layermaps = NULL;
+	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
+	size_t pass = 0;
+	size_t passes = 0;
+	unsigned long long mingap = 0;
+	unsigned long long mingap_out = 0;
+	long long minextent = 0;
+	long long minextent_out = 0;
+	double fraction = 0;
+	double fraction_out = 0;
+	const char *prefilter = NULL;
+	const char *postfilter = NULL;
+	bool still_dropping = false;
+	int wrote_zoom = 0;
+	size_t tiling_seg = 0;
 };
 
 bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
@@ -1680,7 +1680,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		pthread_t pthreads[tasks];
-		partial_arg args[tasks];
+		std::vector<partial_arg> args;
+		args.resize(tasks);
 		for (int i = 0; i < tasks; i++) {
 			args[i].task = i;
 			args[i].tasks = tasks;
@@ -2332,7 +2333,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		for (size_t pass = start; pass < 2; pass++) {
 			pthread_t pthreads[threads];
-			write_tile_args args[threads];
+			std::vector<write_tile_args> args;
+			args.resize(threads);
 			int running = threads;
 			long long along = 0;
 
