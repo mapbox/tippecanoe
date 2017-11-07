@@ -158,7 +158,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 			int type = -1;
 			std::string val;
-			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature, properties->keys[i]->string);
+			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature);
 
 			if (type >= 0) {
 				metakey[m] = properties->keys[i]->string;
