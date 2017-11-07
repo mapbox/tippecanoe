@@ -22,13 +22,13 @@
 #define MULTIPOLYGON 5
 
 struct queued_feature {
-	protozero::pbf_reader pbf;
-	size_t dim;
-	double e;
-	std::vector<std::string> *keys;
-	std::vector<struct serialization_state> *sst;
-	int layer;
-	std::string layername;
+	protozero::pbf_reader pbf{};
+	size_t dim = 0;
+	double e = 0;
+	std::vector<std::string> *keys = NULL;
+	std::vector<struct serialization_state> *sst = NULL;
+	int layer = 0;
+	std::string layername = "";
 };
 
 static std::vector<queued_feature> feature_queue;
@@ -196,8 +196,8 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 }
 
 struct drawvec_type {
-	drawvec dv;
-	int type;
+	drawvec dv{};
+	int type = 0;
 };
 
 std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys) {

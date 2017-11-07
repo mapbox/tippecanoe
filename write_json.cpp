@@ -16,12 +16,12 @@ struct lonlat {
 	long long x;
 	long long y;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny) {
-		this->op = nop;
-		this->lon = nlon;
-		this->lat = nlat;
-		this->x = nx;
-		this->y = ny;
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	    : op(nop),
+	      lon(nlon),
+	      lat(nlat),
+	      x(nx),
+	      y(ny) {
 	}
 };
 

@@ -322,20 +322,20 @@ double max(double a, double b) {
 }
 
 struct reader {
-	long long zoom;
-	long long x;
-	long long sorty;
-	long long y;
-	int pbf_count;
-	int z_flag;
+	long long zoom = 0;
+	long long x = 0;
+	long long sorty = 0;
+	long long y = 0;
+	int pbf_count = 0;
+	int z_flag = 0;
 
-	std::string data;
-	std::vector<std::string> pbf_path;
-	std::vector<std::string> large_zoom;
+	std::string data = "";
+	std::vector<std::string> pbf_path{};
+	std::vector<std::string> large_zoom{};
 
-	sqlite3 *db;
-	sqlite3_stmt *stmt;
-	struct reader *next;
+	sqlite3 *db = NULL;
+	sqlite3_stmt *stmt = NULL;
+	struct reader *next = NULL;
 
 	bool operator<(const struct reader &r) const {
 		if (zoom < r.zoom) {
@@ -569,10 +569,10 @@ struct zxy {
 	long long x;
 	long long y;
 
-	zxy(long long _z, long long _x, long long _y) {
-		z = _z;
-		x = _x;
-		y = _y;
+	zxy(long long _z, long long _x, long long _y)
+	    : z(_z),
+	      x(_x),
+	      y(_y) {
 	}
 
 	bool operator<(zxy const &other) const {
@@ -599,18 +599,18 @@ struct zxy {
 };
 
 struct arg {
-	std::map<zxy, std::vector<std::string>> inputs;
-	std::map<zxy, std::string> outputs;
+	std::map<zxy, std::vector<std::string>> inputs{};
+	std::map<zxy, std::string> outputs{};
 
-	std::map<std::string, layermap_entry> *layermap;
+	std::map<std::string, layermap_entry> *layermap = NULL;
 
-	std::vector<std::string> *header;
-	std::map<std::string, std::vector<std::string>> *mapping;
-	std::set<std::string> *exclude;
-	std::set<std::string> *keep_layers;
-	std::set<std::string> *remove_layers;
-	int ifmatched;
-	json_object *filter;
+	std::vector<std::string> *header = NULL;
+	std::map<std::string, std::vector<std::string>> *mapping = NULL;
+	std::set<std::string> *exclude = NULL;
+	std::set<std::string> *keep_layers = NULL;
+	std::set<std::string> *remove_layers = NULL;
+	int ifmatched = 0;
+	json_object *filter = NULL;
 };
 
 void *join_worker(void *v) {

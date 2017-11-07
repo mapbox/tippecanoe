@@ -90,8 +90,8 @@ struct reader {
 
 	long long file_bbox[4] = {0, 0, 0, 0};
 
-	struct stat geomst;
-	struct stat metast;
+	struct stat geomst {};
+	struct stat metast {};
 
 	char *geom_map = NULL;
 };

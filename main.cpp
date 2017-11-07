@@ -71,8 +71,8 @@ int prevent[256];
 int additional[256];
 
 struct source {
-	std::string layer;
-	std::string file;
+	std::string layer = "";
+	std::string file = "";
 };
 
 size_t CPUS;
@@ -437,34 +437,34 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 }
 
 struct read_parallel_arg {
-	int fd;
-	FILE *fp;
-	long long offset;
-	long long len;
-	volatile int *is_parsing;
-	int separator;
+	int fd = 0;
+	FILE *fp = NULL;
+	long long offset = 0;
+	long long len = 0;
+	volatile int *is_parsing = NULL;
+	int separator = 0;
 
-	const char *reading;
-	std::vector<struct reader> *readers;
-	volatile long long *progress_seq;
-	std::set<std::string> *exclude;
-	std::set<std::string> *include;
-	int exclude_all;
-	json_object *filter;
-	int maxzoom;
-	int basezoom;
-	int source;
-	std::vector<std::map<std::string, layermap_entry> > *layermaps;
-	int *initialized;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	std::string layername;
-	bool uses_gamma;
-	std::map<std::string, int> const *attribute_types;
-	double *dist_sum;
-	size_t *dist_count;
-	bool want_dist;
-	bool filters;
+	const char *reading = NULL;
+	std::vector<struct reader> *readers = NULL;
+	volatile long long *progress_seq = NULL;
+	std::set<std::string> *exclude = NULL;
+	std::set<std::string> *include = NULL;
+	int exclude_all = 0;
+	json_object *filter = NULL;
+	int maxzoom = 0;
+	int basezoom = 0;
+	int source = 0;
+	std::vector<std::map<std::string, layermap_entry> > *layermaps = NULL;
+	int *initialized = NULL;
+	unsigned *initial_x = NULL;
+	unsigned *initial_y = NULL;
+	std::string layername = "";
+	bool uses_gamma = false;
+	std::map<std::string, int> const *attribute_types = NULL;
+	double *dist_sum = NULL;
+	size_t *dist_count = NULL;
+	bool want_dist = false;
+	bool filters = false;
 };
 
 void *run_read_parallel(void *v) {
