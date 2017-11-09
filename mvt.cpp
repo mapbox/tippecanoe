@@ -472,7 +472,7 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	feature.tags.push_back(vo);
 }
 
-static int is_integer(const char *s, long long *v) {
+bool is_integer(const char *s, long long *v) {
 	errno = 0;
 	char *endptr;
 
@@ -480,7 +480,47 @@ static int is_integer(const char *s, long long *v) {
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE)) {
+	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+		return 0;
+	}
+	if (*endptr != '\0') {
+		// Special case: If it is an integer followed by .0000 or similar,
+		// it is still an integer
+
+		if (*endptr != '.') {
+			return 0;
+		}
+		endptr++;
+		for (; *endptr != '\0'; endptr++) {
+			if (*endptr != '0') {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	return 1;
+}
+
+bool is_unsigned_integer(const char *s, unsigned long long *v) {
+	errno = 0;
+	char *endptr;
+
+	// Special check because MacOS stroull() returns 1
+	// for -18446744073709551615
+	while (isspace(*s)) {
+		s++;
+	}
+	if (*s == '-') {
+		return 0;
+	}
+
+	*v = strtoull(s, &endptr, 0);
+	if (*v == 0 && errno != 0) {
+		return 0;
+	}
+	if ((*v == ULLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
