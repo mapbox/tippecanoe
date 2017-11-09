@@ -91,7 +91,8 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test p
 	cmp $@.out $(patsubst %.check,%,$@)
 	rm $@.out $@.mbtiles
 
-geobuf-test: geojson2nd $(addsuffix .checkbuf,$(TESTS))
+# Don't test overflow with geobuf, because it fails (https://github.com/mapbox/geobuf/issues/87)
+geobuf-test: geojson2nd $(addsuffix .checkbuf,$(filter-out tests/overflow/out/-z0.json,$(TESTS)))
 
 # For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
 fewer-tests: tippecanoe tippecanoe-decode geobuf-test raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit

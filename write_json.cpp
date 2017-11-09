@@ -114,7 +114,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				fprintq(fp, val.string_value.c_str());
 			} else if (val.type == mvt_int) {
 				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.int_value);
+				fprintf(fp, ": %lld", val.numeric_value.int_value);
 			} else if (val.type == mvt_double) {
 				fprintq(fp, key);
 				double v = val.numeric_value.double_value;
@@ -133,10 +133,10 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 			} else if (val.type == mvt_sint) {
 				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.sint_value);
+				fprintf(fp, ": %lld", val.numeric_value.sint_value);
 			} else if (val.type == mvt_uint) {
 				fprintq(fp, key);
-				fprintf(fp, ": %lld", (long long) val.numeric_value.uint_value);
+				fprintf(fp, ": %llu", val.numeric_value.uint_value);
 			} else if (val.type == mvt_bool) {
 				fprintq(fp, key);
 				fprintf(fp, ": %s", val.numeric_value.bool_value ? "true" : "false");
