@@ -517,14 +517,28 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 				tv.numeric_value.sint_value = v;
 			}
 		} else {
-			double d = atof(s);
+			errno = 0;
+			char *endptr;
 
-			if (d == (float) d) {
-				tv.type = mvt_float;
-				tv.numeric_value.float_value = d;
-			} else {
+			float f = strtof(s, &endptr);
+
+			if (endptr == s || ((f == HUGE_VAL || f == HUGE_VALF || f == HUGE_VALL) && errno == ERANGE)) {
+				double d = strtod(s, &endptr);
+				if (endptr == s || ((d == HUGE_VAL || d == HUGE_VALF || d == HUGE_VALL) && errno == ERANGE)) {
+					fprintf(stderr, "Warning: numeric value %s could not be represented\n", s);
+				}
 				tv.type = mvt_double;
 				tv.numeric_value.double_value = d;
+			} else {
+				double d = atof(s);
+				if (f == d) {
+					tv.type = mvt_float;
+					tv.numeric_value.float_value = f;
+				} else {
+					// Conversion succeeded, but lost precision, so use double
+					tv.type = mvt_double;
+					tv.numeric_value.double_value = d;
+				}
 			}
 		}
 	} else if (type == mvt_bool) {

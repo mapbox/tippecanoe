@@ -1,3 +1,7 @@
+## 1.26.6
+
+* Be more careful about checking for overflow when parsing numbers
+
 ## 1.26.5
 
 * Support UTF-16 surrogate pairs in JSON strings
