@@ -30,11 +30,11 @@
 ,
 { "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "properties": { "excess": 18446744073709551615 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 9223372036854776000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "properties": { "excess": 9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,

@@ -6,6 +6,7 @@
 #include <zlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <ctype.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
@@ -420,7 +421,7 @@ std::string mvt_value::toString() {
 	if (type == mvt_string) {
 		return quote(string_value);
 	} else if (type == mvt_int) {
-		return std::to_string((long long) numeric_value.int_value);
+		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
 		double v = numeric_value.double_value;
 		if (v == (long long) v) {
@@ -436,9 +437,9 @@ std::string mvt_value::toString() {
 			return milo::dtoa_milo(v);
 		}
 	} else if (type == mvt_sint) {
-		return std::to_string((long long) numeric_value.sint_value);
+		return std::to_string(numeric_value.sint_value);
 	} else if (type == mvt_uint) {
-		return std::to_string((long long) numeric_value.uint_value);
+		return std::to_string(numeric_value.uint_value);
 	} else if (type == mvt_bool) {
 		return numeric_value.bool_value ? "true" : "false";
 	} else {
@@ -548,14 +549,18 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 
 	if (type == mvt_double) {
 		long long v;
-		if (is_integer(s, &v)) {
-			if (v >= 0) {
+		unsigned long long uv;
+		if (is_unsigned_integer(s, &uv)) {
+			if (uv <= LLONG_MAX) {
 				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
+				tv.numeric_value.int_value = uv;
 			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
+				tv.type = mvt_uint;
+				tv.numeric_value.uint_value = uv;
 			}
+		} else if (is_integer(s, &v)) {
+			tv.type = mvt_sint;
+			tv.numeric_value.sint_value = v;
 		} else {
 			errno = 0;
 			char *endptr;
