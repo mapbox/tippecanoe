@@ -1,0 +1,46 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "0.000000,0.000000,0.000000,0.000000",
+"center": "0.000000,0.000000,0",
+"description": "tests/overflow/out/-z0.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"excess\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 15,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"excess\",\"count\": 14,\"type\": \"number\",\"values\": [-18446744073709553000,-2147483647,-2147483648,-9223372036854775807,-9223372036854775808,18446744073709551615,18446744073709553000,2.2222222222222223e+291,2.2e+292,2.5,2147483647,2147483648,9223372036854775807,9223372036854775808],\"min\": -18446744073709553000,\"max\": 2.2e+292}]}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/overflow/out/-z0.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "excess": 2.2222222222222223e+291 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 2.2e+292 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 2.5 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 2147483648 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -2147483648 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 2147483647 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -2147483647 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 18446744073709551615 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": 9223372036854775807 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": { "excess": -9223372036854775807 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+] }
+] }
+] }
