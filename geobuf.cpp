@@ -425,6 +425,10 @@ struct queue_run_arg {
 	size_t start;
 	size_t end;
 	size_t segment;
+
+	queue_run_arg(size_t start1, size_t end1, size_t segment1)
+	    : start(start1), end(end1), segment(segment1) {
+	}
 };
 
 void *run_parse_feature(void *v) {
@@ -444,7 +448,6 @@ void runQueue() {
 	}
 
 	std::vector<struct queue_run_arg> qra;
-	qra.resize(CPUS);
 
 	std::vector<pthread_t> pthreads;
 	pthreads.resize(CPUS);
@@ -452,10 +455,13 @@ void runQueue() {
 	for (size_t i = 0; i < CPUS; i++) {
 		*((*(feature_queue[0].sst))[i].layer_seq) = *((*(feature_queue[0].sst))[0].layer_seq) + feature_queue.size() * i / CPUS;
 
-		qra[i].start = feature_queue.size() * i / CPUS;
-		qra[i].end = feature_queue.size() * (i + 1) / CPUS;
-		qra[i].segment = i;
+		qra.push_back(queue_run_arg(
+			feature_queue.size() * i / CPUS,
+			feature_queue.size() * (i + 1) / CPUS,
+			i));
+	}
 
+	for (size_t i = 0; i < CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, run_parse_feature, &qra[i]) != 0) {
 			perror("pthread_create");
 			exit(EXIT_FAILURE);

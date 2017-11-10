@@ -302,6 +302,10 @@ struct sort_arg {
 	size_t nmerges;
 	long long unit;
 	int bytes;
+
+	sort_arg(int task1, int cpus1, long long indexpos1, struct mergelist *merges1, int indexfd1, size_t nmerges1, long long unit1, int bytes1)
+	    : task(task1), cpus(cpus1), indexpos(indexpos1), merges(merges1), indexfd(indexfd1), nmerges(nmerges1), unit(unit1), bytes(bytes1) {
+	}
 };
 
 void *run_sort(void *v) {
@@ -726,18 +730,21 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				}
 
 				pthread_t pthreads[CPUS];
-				struct sort_arg args[CPUS];
+				std::vector<sort_arg> args;
 
 				for (size_t a = 0; a < CPUS; a++) {
-					args[a].task = a;
-					args[a].cpus = CPUS;
-					args[a].indexpos = indexpos;
-					args[a].merges = merges;
-					args[a].indexfd = indexfds[i];
-					args[a].nmerges = nmerges;
-					args[a].unit = unit;
-					args[a].bytes = bytes;
+					args.push_back(sort_arg(
+						a,
+						CPUS,
+						indexpos,
+						merges,
+						indexfds[i],
+						nmerges,
+						unit,
+						bytes));
+				}
 
+				for (size_t a = 0; a < CPUS; a++) {
 					if (pthread_create(&pthreads[a], NULL, run_sort, &args[a]) != 0) {
 						perror("pthread_create");
 						exit(EXIT_FAILURE);
