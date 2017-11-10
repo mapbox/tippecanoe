@@ -146,10 +146,15 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		nprop = properties->length;
 	}
 
-	char *metakey[nprop];
+	std::vector<char *> metakey;
+	metakey.resize(nprop);
+
 	std::vector<std::string> metaval;
 	metaval.resize(nprop);
-	int metatype[nprop];
+
+	std::vector<int> metatype;
+	metatype.resize(nprop);
+
 	size_t m = 0;
 
 	for (size_t i = 0; i < nprop; i++) {
@@ -158,7 +163,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 			int type = -1;
 			std::string val;
-			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature, properties->keys[i]->string);
+			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature);
 
 			if (type >= 0) {
 				metakey[m] = properties->keys[i]->string;

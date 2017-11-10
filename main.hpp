@@ -4,15 +4,20 @@
 #include <stddef.h>
 
 struct index {
-	long long start;
-	long long end;
-	unsigned long long index;
-	short segment;
+	long long start = 0;
+	long long end = 0;
+	unsigned long long ix = 0;
+	short segment = 0;
 	unsigned short t : 2;
 	unsigned long long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
+
+	index()
+	    : t(0),
+	      seq(0) {
+	}
 };
 
-void checkdisk(struct reader *r, int nreader);
+void checkdisk(std::vector<struct reader> *r);
 
 extern int geometry_scale;
 extern int quiet;
