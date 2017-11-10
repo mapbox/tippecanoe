@@ -374,7 +374,6 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 
 	std::vector<parse_json_args> pja;
-	pja.resize(CPUS);
 
 	std::vector<serialization_state> sst;
 	sst.resize(CPUS);
@@ -410,12 +409,14 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].basezoom = basezoom;
 		sst[i].attribute_types = attribute_types;
 
-		pja[i].jp = json_begin_map(map + segs[i], segs[i + 1] - segs[i]);
-		pja[i].layer = source;
-		pja[i].layername = &layername;
+		pja.push_back(parse_json_args(
+			json_begin_map(map + segs[i], segs[i + 1] - segs[i]),
+			source,
+			&layername,
+			&sst[i]));
+	}
 
-		pja[i].sst = &sst[i];
-
+	for (size_t i = 0; i < CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, run_parse_json, &pja[i]) != 0) {
 			perror("pthread_create");
 			exit(EXIT_FAILURE);
