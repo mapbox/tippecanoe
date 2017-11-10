@@ -6,7 +6,20 @@ sudo: false
 
 matrix:
   include:
-    # test on docker
+    # test on docker+centos7
+    - os: linux
+      compiler: clang
+      services:
+       - docker
+      sudo: true
+      dist: trusty
+      env: DOCKERFILE=Dockerfile.centos7
+      before_install: []
+      install:
+        - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      script:
+        - docker run -it tippecanoe-image
+    # test on docker+ubuntu
     - os: linux
       compiler: clang
       services:
