@@ -443,8 +443,11 @@ void runQueue() {
 		return;
 	}
 
-	struct queue_run_arg qra[CPUS];
-	pthread_t pthreads[CPUS];
+	std::vector<struct queue_run_arg> qra;
+	qra.resize(CPUS);
+
+	std::vector<pthread_t> pthreads;
+	pthreads.resize(CPUS);
 
 	for (size_t i = 0; i < CPUS; i++) {
 		*((*(feature_queue[0].sst))[i].layer_seq) = *((*(feature_queue[0].sst))[0].layer_seq) + feature_queue.size() * i / CPUS;
