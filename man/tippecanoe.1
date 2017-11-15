@@ -93,13 +93,15 @@ delete the file that already exists with that name.
 If you aren't sure what the right maxzoom is for your data, \fB\fC\-zg\fR will guess one for you
 based on the density of features.
 .PP
-If you are mapping point features, you will often want to use \fB\fC\-Bg\fR to automatically choose
-a base zoom level for dot dropping. If that doesn't work out for you, try
-\fB\fC\-r1 \-\-drop\-fraction\-as\-needed\fR to turn off the normal dot dropping and instead
-only drop features if the tiles get too big.
+Tippecanoe will normally drop a fraction of point features at zooms below the maxzoom,
+to keep the low\-zoom tiles from getting too big. If you have a smaller data set where
+all the points would fit without dropping any of them, use \fB\fC\-r1\fR to keep them all.
+If you do want point dropping, but you still want the tiles to be denser than \fB\fC\-zg\fR
+thinks they should be, use \fB\fC\-B\fR to set a basezoom lower than the maxzoom.
 .PP
-If you are mapping points or polygons, you will often want to use \fB\fC\-\-drop\-densest\-as\-needed\fR
-to drop some of them if necessary to make the low zoom levels work.
+If some of your tiles are coming out too big in spite of the settings above, you will
+often want to use \fB\fC\-\-drop\-densest\-as\-needed\fR to drop whatever fraction of the features
+is necessary at each zoom level to make that zoom level's tiles work.
 .PP
 If your features have a lot of attributes, use \fB\fC\-y\fR to keep only the ones you really need.
 .PP
