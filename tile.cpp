@@ -1632,7 +1632,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
 		for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-			for (size_t j = 0; j < partials.size(); j++) {
+			for (ssize_t j = partials.size() - 1; j >= 0; j--) {
 				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
 					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
 						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
