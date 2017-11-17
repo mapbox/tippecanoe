@@ -611,13 +611,16 @@ The reason for requiring sorting is so that it is possible to work on CSV and Ge
 than can comfortably fit in memory by streaming through them in parallel, in the same way that the Unix
 `join` command does. The Unix `sort` command can be used to sort large files to prepare them for joining.
 
+The sorting interface is weird, and future version of `tippecanoe-json-tool` will replace it with
+something better.
+
 ### Options
 
  * `-w` or `--wrap`: Add the FeatureCollection or GeometryCollection wrapper.
  * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
    The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
    be sorted correctly by tools that just do ASCII comparisons.
- * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key.
+ * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
 
 ### Example
 
