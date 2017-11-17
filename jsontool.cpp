@@ -138,9 +138,11 @@ std::string sort_quote(const char *s) {
 void out(std::string const &s, int type, json_object *properties) {
 	if (extract != NULL) {
 		std::string extracted = sort_quote("null");
+		bool found = false;
 
 		json_object *o = json_hash_get(properties, extract);
 		if (o != NULL) {
+			found = true;
 			if (o->type == JSON_STRING || o->type == JSON_NUMBER) {
 				extracted = sort_quote(o->string);
 			} else {
@@ -150,6 +152,14 @@ void out(std::string const &s, int type, json_object *properties) {
 				const char *out = json_stringify(o);
 				extracted = sort_quote(out);
 				free((void *) out);
+			}
+		}
+
+		if (!found) {
+			static bool warned = false;
+			if (!warned) {
+				fprintf(stderr, "Warning: extract key \"%s\" not found in JSON\n", extract);
+				warned = true;
 			}
 		}
 
