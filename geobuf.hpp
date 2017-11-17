@@ -8,6 +8,6 @@
 #include "mbtiles.hpp"
 #include "serial.hpp"
 
-void parse_geobuf(struct serialization_state *sst, const char *s, size_t len, int layer, std::string layername);
+void parse_geobuf(std::vector<struct serialization_state> *sst, const char *s, size_t len, int layer, std::string layername);
 
 #endif

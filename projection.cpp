@@ -7,7 +7,7 @@
 struct projection projections[] = {
 	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84"},
 	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857"},
-	{NULL, NULL},
+	{NULL, NULL, NULL, NULL},
 };
 
 struct projection *projection = &projections[0];

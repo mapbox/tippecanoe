@@ -22,13 +22,13 @@
 #define MULTIPOLYGON 5
 
 struct queued_feature {
-	protozero::pbf_reader pbf;
-	size_t dim;
-	double e;
-	std::vector<std::string> *keys;
-	struct serialization_state *sst;
-	int layer;
-	std::string layername;
+	protozero::pbf_reader pbf{};
+	size_t dim = 0;
+	double e = 0;
+	std::vector<std::string> *keys = NULL;
+	std::vector<struct serialization_state> *sst = NULL;
+	int layer = 0;
+	std::string layername = "";
 };
 
 static std::vector<queued_feature> feature_queue;
@@ -40,7 +40,7 @@ void ensureDim(size_t dim) {
 	}
 }
 
-serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys) {
+serial_val readValue(protozero::pbf_reader &pbf) {
 	serial_val sv;
 	sv.type = mvt_null;
 	sv.s = "null";
@@ -94,7 +94,7 @@ serial_val readValue(protozero::pbf_reader &pbf, std::vector<std::string> &keys)
 	return sv;
 }
 
-drawvec readPoint(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
+drawvec readPoint(std::vector<long long> &coords, size_t dim, double e) {
 	ensureDim(dim);
 
 	long long x, y;
@@ -104,7 +104,7 @@ drawvec readPoint(std::vector<long long> &coords, std::vector<int> &lengths, siz
 	return dv;
 }
 
-drawvec readLinePart(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, size_t start, size_t end, bool closed) {
+drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_t start, size_t end, bool closed) {
 	ensureDim(dim);
 
 	drawvec dv;
@@ -141,19 +141,19 @@ drawvec readLinePart(std::vector<long long> &coords, std::vector<int> &lengths, 
 	return dv;
 }
 
-drawvec readLine(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, bool closed) {
-	return readLinePart(coords, lengths, dim, e, 0, coords.size(), closed);
+drawvec readLine(std::vector<long long> &coords, size_t dim, double e, bool closed) {
+	return readLinePart(coords, dim, e, 0, coords.size(), closed);
 }
 
 drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, bool closed) {
 	if (lengths.size() == 0) {
-		return readLinePart(coords, lengths, dim, e, 0, coords.size(), closed);
+		return readLinePart(coords, dim, e, 0, coords.size(), closed);
 	}
 
 	drawvec dv;
 	size_t here = 0;
 	for (size_t i = 0; i < lengths.size(); i++) {
-		drawvec dv2 = readLinePart(coords, lengths, dim, e, here, here + lengths[i] * dim, closed);
+		drawvec dv2 = readLinePart(coords, dim, e, here, here + lengths[i] * dim, closed);
 		here += lengths[i] * dim;
 
 		for (size_t j = 0; j < dv2.size(); j++) {
@@ -168,7 +168,7 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 	ensureDim(dim);
 
 	if (lengths.size() == 0) {
-		return readLinePart(coords, lengths, dim, e, 0, coords.size(), true);
+		return readLinePart(coords, dim, e, 0, coords.size(), true);
 	}
 
 	size_t polys = lengths[0];
@@ -180,7 +180,7 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 		size_t rings = lengths[n++];
 
 		for (size_t j = 0; j < rings; j++) {
-			drawvec dv2 = readLinePart(coords, lengths, dim, e, here, here + lengths[n] * dim, true);
+			drawvec dv2 = readLinePart(coords, dim, e, here, here + lengths[n] * dim, true);
 			here += lengths[n] * dim;
 			n++;
 
@@ -196,8 +196,8 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 }
 
 struct drawvec_type {
-	drawvec dv;
-	int type;
+	drawvec dv{};
+	int type = 0;
 };
 
 std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys) {
@@ -246,11 +246,11 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 
 	drawvec_type dv;
 	if (type == POINT) {
-		dv.dv = readPoint(coords, lengths, dim, e);
+		dv.dv = readPoint(coords, dim, e);
 	} else if (type == MULTIPOINT) {
-		dv.dv = readLine(coords, lengths, dim, e, false);
+		dv.dv = readLine(coords, dim, e, false);
 	} else if (type == LINESTRING) {
-		dv.dv = readLine(coords, lengths, dim, e, false);
+		dv.dv = readLine(coords, dim, e, false);
 	} else if (type == POLYGON) {
 		dv.dv = readMultiLine(coords, lengths, dim, e, true);
 	} else if (type == MULTIPOLYGON) {
@@ -311,7 +311,7 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 
 		case 13: {
 			protozero::pbf_reader value_reader(pbf.get_message());
-			values.push_back(readValue(value_reader, keys));
+			values.push_back(readValue(value_reader));
 			break;
 		}
 
@@ -425,6 +425,10 @@ struct queue_run_arg {
 	size_t start;
 	size_t end;
 	size_t segment;
+
+	queue_run_arg(size_t start1, size_t end1, size_t segment1)
+	    : start(start1), end(end1), segment(segment1) {
+	}
 };
 
 void *run_parse_feature(void *v) {
@@ -432,7 +436,7 @@ void *run_parse_feature(void *v) {
 
 	for (size_t i = qra->start; i < qra->end; i++) {
 		struct queued_feature &qf = feature_queue[i];
-		readFeature(qf.pbf, qf.dim, qf.e, *qf.keys, &qf.sst[qra->segment], qf.layer, qf.layername);
+		readFeature(qf.pbf, qf.dim, qf.e, *qf.keys, &(*qf.sst)[qra->segment], qf.layer, qf.layername);
 	}
 
 	return NULL;
@@ -443,16 +447,21 @@ void runQueue() {
 		return;
 	}
 
-	struct queue_run_arg qra[CPUS];
-	pthread_t pthreads[CPUS];
+	std::vector<struct queue_run_arg> qra;
+
+	std::vector<pthread_t> pthreads;
+	pthreads.resize(CPUS);
 
 	for (size_t i = 0; i < CPUS; i++) {
-		*(feature_queue[0].sst[i].layer_seq) = *(feature_queue[0].sst[0].layer_seq) + feature_queue.size() * i / CPUS;
+		*((*(feature_queue[0].sst))[i].layer_seq) = *((*(feature_queue[0].sst))[0].layer_seq) + feature_queue.size() * i / CPUS;
 
-		qra[i].start = feature_queue.size() * i / CPUS;
-		qra[i].end = feature_queue.size() * (i + 1) / CPUS;
-		qra[i].segment = i;
+		qra.push_back(queue_run_arg(
+			feature_queue.size() * i / CPUS,
+			feature_queue.size() * (i + 1) / CPUS,
+			i));
+	}
 
+	for (size_t i = 0; i < CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, run_parse_feature, &qra[i]) != 0) {
 			perror("pthread_create");
 			exit(EXIT_FAILURE);
@@ -467,11 +476,11 @@ void runQueue() {
 		}
 	}
 
-	*(feature_queue[0].sst[0].layer_seq) = *(feature_queue[0].sst[CPUS - 1].layer_seq);
+	*((*(feature_queue[0].sst))[0].layer_seq) = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
 	feature_queue.clear();
 }
 
-void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	struct queued_feature qf;
 	qf.pbf = pbf;
 	qf.dim = dim;
@@ -488,7 +497,7 @@ void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<
 	}
 }
 
-void outBareGeometry(drawvec const &dv, int type, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void outBareGeometry(drawvec const &dv, int type, struct serialization_state *sst, int layer, std::string layername) {
 	serial_feature sf;
 
 	sf.layer = layer;
@@ -506,7 +515,7 @@ void outBareGeometry(drawvec const &dv, int type, size_t dim, double e, std::vec
 	serialize_feature(sst, sf);
 }
 
-void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
@@ -521,7 +530,7 @@ void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std
 	}
 }
 
-void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, int layer, std::string layername) {
+void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src, size_t len, int layer, std::string layername) {
 	protozero::pbf_reader pbf(src, len);
 
 	size_t dim = 2;
@@ -558,7 +567,8 @@ void parse_geobuf(struct serialization_state *sst, const char *src, size_t len, 
 			protozero::pbf_reader geometry_reader(pbf.get_message());
 			std::vector<drawvec_type> dv = readGeometry(geometry_reader, dim, e, keys);
 			for (size_t i = 0; i < dv.size(); i++) {
-				outBareGeometry(dv[i].dv, dv[i].type, dim, e, keys, sst, layer, layername);
+				// Always on thread 0
+				outBareGeometry(dv[i].dv, dv[i].type, &(*sst)[0], layer, layername);
 			}
 			break;
 		}

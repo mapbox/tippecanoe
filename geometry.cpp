@@ -219,7 +219,7 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 	}
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int detail, int buffer, bool clip) {
+drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
 	geom = remove_noop(geom, VT_POLYGON, 0);
@@ -345,7 +345,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 	return c;
 }
 
-void check_polygon(drawvec &geom, drawvec &before) {
+void check_polygon(drawvec &geom) {
 	geom = remove_noop(geom, VT_POLYGON, 0);
 
 	mapbox::geometry::multi_polygon<long long> mp;
@@ -635,7 +635,7 @@ int quick_check(long long *bbox, int z, long long buffer) {
 	return 2;
 }
 
-bool point_within_tile(long long x, long long y, int z, long long buffer) {
+bool point_within_tile(long long x, long long y, int z) {
 	// No adjustment for buffer, because the point must be
 	// strictly within the tile to appear exactly once
 

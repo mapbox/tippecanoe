@@ -379,7 +379,7 @@ static long long scale_geometry(struct serialization_state *sst, long long *bbox
 }
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
-	struct reader *r = &(sst->readers[sst->segment]);
+	struct reader *r = &(*sst->readers)[sst->segment];
 
 	sf.bbox[0] = LLONG_MAX;
 	sf.bbox[1] = LLONG_MAX;
@@ -611,7 +611,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	index.segment = sst->segment;
 	index.seq = *(sst->layer_seq);
 	index.t = sf.t;
-	index.index = bbox_index;
+	index.ix = bbox_index;
 
 	fwrite_check(&index, sizeof(struct index), 1, r->indexfile, sst->fname);
 	r->indexpos += sizeof(struct index);
@@ -628,7 +628,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	if (*(sst->progress_seq) % 10000 == 0) {
-		checkdisk(sst->readers, CPUS);
+		checkdisk(sst->readers);
 		if (!quiet && !quiet_progress) {
 			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
 		}
