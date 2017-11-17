@@ -93,6 +93,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
 
+		if (layer.extent <= 0) {
+			fprintf(stderr, "Impossible layer extent %lld in mbtiles\n", layer.extent);
+			exit(EXIT_FAILURE);
+		}
+
 		if (to_decode.size() != 0 && !to_decode.count(layer.name)) {
 			continue;
 		}
@@ -112,6 +117,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 
 				first_layer = false;
 			}
+		}
+
+		// X and Y are unsigned, so no need to check <0
+		if (x > (1 << z) || y > (1 << z)) {
+			fprintf(stderr, "Impossible tile %d/%u/%u\n", z, x, y);
+			exit(EXIT_FAILURE);
 		}
 
 		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
@@ -192,6 +203,11 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				const unsigned char *name = sqlite3_column_text(stmt2, 0);
 				const unsigned char *value = sqlite3_column_text(stmt2, 1);
 
+				if (name == NULL || value == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+					exit(EXIT_FAILURE);
+				}
+
 				fprintq(stdout, (char *) name);
 				printf(": ");
 				fprintq(stdout, (char *) value);
@@ -237,6 +253,12 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			int tz = sqlite3_column_int(stmt, 1);
 			int tx = sqlite3_column_int(stmt, 2);
 			int ty = sqlite3_column_int(stmt, 3);
+
+			if (tz < 0 || tz >= 32) {
+				fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
+				exit(EXIT_FAILURE);
+			}
+
 			ty = (1LL << tz) - 1 - ty;
 			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 

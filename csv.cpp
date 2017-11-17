@@ -1,7 +1,5 @@
 #include "csv.hpp"
 
-#define MAXLINE 10000 /* XXX */
-
 std::vector<std::string> csv_split(const char *s) {
 	std::vector<std::string> ret;
 

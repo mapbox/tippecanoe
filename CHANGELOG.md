@@ -1,3 +1,33 @@
+## 1.26.6
+
+* Be more careful about checking for overflow when parsing numbers
+
+## 1.26.5
+
+* Support UTF-16 surrogate pairs in JSON strings
+* Support arbitrarily long lines in CSV files.
+* Treat CSV fields as numbers only if they follow JSON number syntax
+
+## 1.26.4
+
+* Array bounds bug fix in binary to decimal conversion library
+
+## 1.26.3
+
+* Guard against impossible coordinates when decoding tilesets
+
+## 1.26.2
+
+* Make sure to encode tile-joined integers as ints, not doubles
+
+## 1.26.1
+
+* Add tile-join option to rename layers
+
+## 1.26.0
+
+Fix error when parsing attributes with empty-string keys
+
 ## 1.25.0
 
 * Add --coalesce-smallest-as-needed strategy for reducing tile sizes

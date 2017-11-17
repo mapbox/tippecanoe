@@ -111,4 +111,7 @@ int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);
+
+bool is_integer(const char *s, long long *v);
+bool is_unsigned_integer(const char *s, unsigned long long *v);
 #endif

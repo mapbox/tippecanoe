@@ -356,33 +356,6 @@ the filename or name specified using `--layer`, like this:
 }
 ```
 
-Point styling
--------------
-
-To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
-coordinated with the base zoom level and dot-dropping rate. You can use this shell script to
-calculate the appropriate marker-width at high zoom levels to match the fraction of dots
-that were dropped at low zoom levels.
-
-If you used `-B` or `-z` to change the base zoom level or `-r` to change the
-dot-dropping rate, replace them in the `basezoom` and `rate` below.
-
-    awk 'BEGIN {
-        dotsize = 2;    # up to you to decide
-        basezoom = 14;  # tippecanoe -z 14
-        rate = 2.5;     # tippecanoe -r 2.5
-
-        print "  marker-line-width: 0;";
-        print "  marker-ignore-placement: true;";
-        print "  marker-allow-overlap: true;";
-        print "  marker-width: " dotsize ";";
-        for (i = basezoom + 1; i <= 22; i++) {
-            print "  [zoom >= " i "] { marker-width: " (dotsize * exp(log(sqrt(rate)) * (i - basezoom))) "; }";
-        }
-
-        exit(0);
-    }'
-
 Geometric simplifications
 -------------------------
 
@@ -498,11 +471,15 @@ The options are:
 
 ### Tileset description and attribution
 
- * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
- * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution* or `--attribution=`*attribution*: Set the attribution string.
  * `-n` *name* or `--name=`*name*: Set the tileset name.
  * `-N` *description* or `--description=`*description*: Set the tileset description.
+
+### Layer filtering and naming
+
+ * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
+ * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-R`*old*`:`*new* or `--rename-layer=`*old*`:`*new*: Rename the layer named *old* to be named *new* instead. You can specify multiple `-R` options to rename multiple layers. Renaming happens before filtering.
 
 ### Zoom levels
 

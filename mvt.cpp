@@ -6,6 +6,7 @@
 #include <zlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <ctype.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
@@ -420,7 +421,7 @@ std::string mvt_value::toString() {
 	if (type == mvt_string) {
 		return quote(string_value);
 	} else if (type == mvt_int) {
-		return std::to_string((long long) numeric_value.int_value);
+		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
 		double v = numeric_value.double_value;
 		if (v == (long long) v) {
@@ -436,9 +437,9 @@ std::string mvt_value::toString() {
 			return milo::dtoa_milo(v);
 		}
 	} else if (type == mvt_sint) {
-		return std::to_string((long long) numeric_value.sint_value);
+		return std::to_string(numeric_value.sint_value);
 	} else if (type == mvt_uint) {
-		return std::to_string((long long) numeric_value.uint_value);
+		return std::to_string(numeric_value.uint_value);
 	} else if (type == mvt_bool) {
 		return numeric_value.bool_value ? "true" : "false";
 	} else {
@@ -472,7 +473,7 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	feature.tags.push_back(vo);
 }
 
-static int is_integer(const char *s, long long *v) {
+bool is_integer(const char *s, long long *v) {
 	errno = 0;
 	char *endptr;
 
@@ -480,7 +481,47 @@ static int is_integer(const char *s, long long *v) {
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE)) {
+	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+		return 0;
+	}
+	if (*endptr != '\0') {
+		// Special case: If it is an integer followed by .0000 or similar,
+		// it is still an integer
+
+		if (*endptr != '.') {
+			return 0;
+		}
+		endptr++;
+		for (; *endptr != '\0'; endptr++) {
+			if (*endptr != '0') {
+				return 0;
+			}
+		}
+
+		return 1;
+	}
+
+	return 1;
+}
+
+bool is_unsigned_integer(const char *s, unsigned long long *v) {
+	errno = 0;
+	char *endptr;
+
+	// Special check because MacOS stroull() returns 1
+	// for -18446744073709551615
+	while (isspace(*s)) {
+		s++;
+	}
+	if (*s == '-') {
+		return 0;
+	}
+
+	*v = strtoull(s, &endptr, 0);
+	if (*v == 0 && errno != 0) {
+		return 0;
+	}
+	if ((*v == ULLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
@@ -508,23 +549,41 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 
 	if (type == mvt_double) {
 		long long v;
-		if (is_integer(s, &v)) {
-			if (v >= 0) {
+		unsigned long long uv;
+		if (is_unsigned_integer(s, &uv)) {
+			if (uv <= LLONG_MAX) {
 				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
+				tv.numeric_value.int_value = uv;
 			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
+				tv.type = mvt_uint;
+				tv.numeric_value.uint_value = uv;
 			}
+		} else if (is_integer(s, &v)) {
+			tv.type = mvt_sint;
+			tv.numeric_value.sint_value = v;
 		} else {
-			double d = atof(s);
+			errno = 0;
+			char *endptr;
 
-			if (d == (float) d) {
-				tv.type = mvt_float;
-				tv.numeric_value.float_value = d;
-			} else {
+			float f = strtof(s, &endptr);
+
+			if (endptr == s || ((f == HUGE_VAL || f == HUGE_VALF || f == HUGE_VALL) && errno == ERANGE)) {
+				double d = strtod(s, &endptr);
+				if (endptr == s || ((d == HUGE_VAL || d == HUGE_VALF || d == HUGE_VALL) && errno == ERANGE)) {
+					fprintf(stderr, "Warning: numeric value %s could not be represented\n", s);
+				}
 				tv.type = mvt_double;
 				tv.numeric_value.double_value = d;
+			} else {
+				double d = atof(s);
+				if (f == d) {
+					tv.type = mvt_float;
+					tv.numeric_value.float_value = f;
+				} else {
+					// Conversion succeeded, but lost precision, so use double
+					tv.type = mvt_double;
+					tv.numeric_value.double_value = d;
+				}
 			}
 		}
 	} else if (type == mvt_bool) {

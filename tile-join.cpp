@@ -38,6 +38,7 @@ size_t CPUS;
 int quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
+std::map<std::string, std::string> renames;
 
 struct stats {
 	int minzoom;
@@ -58,6 +59,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
+
+		auto found = renames.find(layer.name);
+		if (found != renames.end()) {
+			layer.name = found->second;
+		}
 
 		if (keep_layers.size() > 0 && keep_layers.count(layer.name) == 0) {
 			continue;
@@ -232,6 +238,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								type_and_string tas;
 								tas.type = outval.type;
 								tas.string = joinval;
+
+								// Convert from double to int if the joined attribute is an integer
+								outval = stringified_to_mvt_value(outval.type, joinval.c_str());
 
 								attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(joinkey, std::pair<mvt_value, type_and_string>(outval, tas)));
 								key_order.push_back(joinkey);
@@ -827,28 +836,39 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+					if (s != NULL) {
+						sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					attribution = std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						attribution = std::string((char *) s);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'description'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					description = std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						description = std::string((char *) s);
+					}
 				}
 				sqlite3_finalize(r->stmt);
 			}
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'name'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					if (name.size() == 0) {
-						name = std::string((char *) sqlite3_column_text(r->stmt, 0));
-					} else {
-						name += " + " + std::string((char *) sqlite3_column_text(r->stmt, 0));
+					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+					if (s != NULL) {
+						if (name.size() == 0) {
+							name = std::string((char *) s);
+						} else {
+							name += " + " + std::string((char *) s);
+						}
 					}
 				}
 				sqlite3_finalize(r->stmt);
@@ -856,11 +876,13 @@ void decode(struct reader *readers, char *map, std::map<std::string, layermap_en
 			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
 				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-						st->minlon = min(minlon, st->minlon);
-						st->maxlon = max(maxlon, st->maxlon);
-						st->minlat = min(minlat, st->minlat);
-						st->maxlat = max(maxlat, st->maxlat);
+					if (s != NULL) {
+						if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
+							st->minlon = min(minlon, st->minlon);
+							st->maxlon = max(maxlon, st->maxlon);
+							st->minlat = min(minlat, st->minlat);
+							st->maxlat = max(maxlat, st->maxlat);
+						}
 					}
 				}
 				sqlite3_finalize(r->stmt);
@@ -1002,6 +1024,7 @@ int main(int argc, char **argv) {
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"feature-filter-file", required_argument, 0, 'J'},
 		{"feature-filter", required_argument, 0, 'j'},
+		{"rename-layer", required_argument, 0, 'R'},
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
@@ -1108,6 +1131,17 @@ int main(int argc, char **argv) {
 		case 'L':
 			remove_layers.insert(std::string(optarg));
 			break;
+
+		case 'R': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -R requires old:new\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			std::string before = std::string(optarg).substr(0, cp - optarg);
+			std::string after = std::string(cp + 1);
+			renames.insert(std::pair<std::string, std::string>(before, after));
+		} break;
 
 		case 'q':
 			quiet = true;
