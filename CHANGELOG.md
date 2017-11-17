@@ -1,3 +1,7 @@
+## 1.26.7
+
+* Add an option to quiet the progress indicator but not warnings
+
 ## 1.26.6
 
 * Be more careful about checking for overflow when parsing numbers

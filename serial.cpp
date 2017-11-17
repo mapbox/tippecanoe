@@ -629,7 +629,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	if (*(sst->progress_seq) % 10000 == 0) {
 		checkdisk(sst->readers, CPUS);
-		if (!quiet) {
+		if (!quiet && !quiet_progress) {
 			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
 		}
 	}

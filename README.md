@@ -264,7 +264,8 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
 ### Progress indicator
 
- * `-q` or `--quiet`: Work quietly instead of reporting progress
+ * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
+ * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
  * `-v` or `--version`: Report Tippecanoe's version number
 
 ### Filters
