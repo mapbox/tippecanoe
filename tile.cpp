@@ -862,7 +862,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 3);
+			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 4);
 		} else {
 			simplified_arcs[ai->second] = dv;
 		}
