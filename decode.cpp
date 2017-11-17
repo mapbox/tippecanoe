@@ -120,7 +120,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		}
 
 		// X and Y are unsigned, so no need to check <0
-		if (x > (1 << z) || y > (1 << z)) {
+		if (x > (1ULL << z) || y > (1ULL << z)) {
 			fprintf(stderr, "Impossible tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
 		}

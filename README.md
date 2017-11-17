@@ -96,13 +96,15 @@ delete the file that already exists with that name.
 If you aren't sure what the right maxzoom is for your data, `-zg` will guess one for you
 based on the density of features.
 
-If you are mapping point features, you will often want to use `-Bg` to automatically choose
-a base zoom level for dot dropping. If that doesn't work out for you, try
-`-r1 --drop-fraction-as-needed` to turn off the normal dot dropping and instead
-only drop features if the tiles get too big.
+Tippecanoe will normally drop a fraction of point features at zooms below the maxzoom,
+to keep the low-zoom tiles from getting too big. If you have a smaller data set where
+all the points would fit without dropping any of them, use `-r1` to keep them all.
+If you do want point dropping, but you still want the tiles to be denser than `-zg`
+thinks they should be, use `-B` to set a basezoom lower than the maxzoom.
 
-If you are mapping points or polygons, you will often want to use `--drop-densest-as-needed`
-to drop some of them if necessary to make the low zoom levels work.
+If some of your tiles are coming out too big in spite of the settings above, you will
+often want to use `--drop-densest-as-needed` to drop whatever fraction of the features
+is necessary at each zoom level to make that zoom level's tiles work.
 
 If your features have a lot of attributes, use `-y` to keep only the ones you really need.
 
@@ -262,7 +264,8 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
 ### Progress indicator
 
- * `-q` or `--quiet`: Work quietly instead of reporting progress
+ * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
+ * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
  * `-v` or `--version`: Report Tippecanoe's version number
 
 ### Filters
