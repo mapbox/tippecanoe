@@ -515,7 +515,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		exit(EXIT_FAILURE);
 	}
 
-	for (ssize_t i = sf.full_keys.size() - 1; i >= 0; i--) {
+	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
 		if (sst->exclude_all) {
 			if (sst->include->count(sf.full_keys[i]) == 0) {
 				sf.full_keys.erase(sf.full_keys.begin() + i);
@@ -569,7 +569,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	for (ssize_t i = sf.full_keys.size() - 1; i >= 0; i--) {
+	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
 		if (sf.full_values[i].type == mvt_null) {
 			sf.full_keys.erase(sf.full_keys.begin() + i);
 			sf.full_values.erase(sf.full_values.begin() + i);
