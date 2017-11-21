@@ -1,3 +1,10 @@
+## 1.27.0
+
+* Add tippecanoe-json-tool for sorting and joining GeoJSON files
+* Fix problem where --detect-shared-borders could simplify polygons away
+* Attach --coalesce-smallest-as-needed leftovers to the last feature, not the first
+* Fix overflow when iterating through 0-length lists backwards
+
 ## 1.26.7
 
 * Add an option to quiet the progress indicator but not warnings

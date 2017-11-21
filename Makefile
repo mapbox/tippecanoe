@@ -19,21 +19,22 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit geojson2nd
+all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit tippecanoe-json-tool
 
 docs: man/tippecanoe.1
 
-install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join
+install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join tippecanoe-json-tool
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
 	cp tippecanoe-enumerate $(PREFIX)/bin/tippecanoe-enumerate
 	cp tippecanoe-decode $(PREFIX)/bin/tippecanoe-decode
+	cp tippecanoe-json-tool $(PREFIX)/bin/tippecanoe-json-tool
 	cp tile-join $(PREFIX)/bin/tile-join
 	cp man/tippecanoe.1 $(MANDIR)/tippecanoe.1
 
 uninstall:
-	rm $(PREFIX)/bin/tippecanoe $(PREFIX)/bin/tippecanoe-enumerate $(PREFIX)/bin/tippecanoe-decode $(PREFIX)/bin/tile-join $(MANDIR)/tippecanoe.1
+	rm $(PREFIX)/bin/tippecanoe $(PREFIX)/bin/tippecanoe-enumerate $(PREFIX)/bin/tippecanoe-decode $(PREFIX)/bin/tile-join $(MANDIR)/tippecanoe.1 $(PREFIX)/bin/tippecanoe-json-tool
 
 man/tippecanoe.1: README.md
 	md2man-roff README.md > man/tippecanoe.1
@@ -58,7 +59,7 @@ tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
-geojson2nd: geojson2nd.o jsonpull/jsonpull.o
+tippecanoe-json-tool: jsontool.o jsonpull/jsonpull.o csv.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 unit: unit.o text.o
@@ -81,7 +82,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test
 	./unit
 
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
@@ -92,14 +93,14 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test p
 	rm $@.out $@.mbtiles
 
 # Don't test overflow with geobuf, because it fails (https://github.com/mapbox/geobuf/issues/87)
-geobuf-test: geojson2nd $(addsuffix .checkbuf,$(filter-out tests/overflow/out/-z0.json,$(TESTS)))
+geobuf-test: tippecanoe-json-tool $(addsuffix .checkbuf,$(filter-out tests/overflow/out/-z0.json,$(TESTS)))
 
 # For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
 fewer-tests: tippecanoe tippecanoe-decode geobuf-test raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit
 
 # XXX Use proper makefile rules instead of a for loop
 %.json.checkbuf:
-	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./geojson2nd -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
+	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./tippecanoe-json-tool -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
 	./tippecanoe -aD -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.checkbuf,%,$(word 4,$(subst /, ,$@)))))) $(addsuffix .geobuf,$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)) < /dev/null
 	./tippecanoe-decode $@.mbtiles | sed 's/checkbuf/check/g' > $@.out
 	cmp $@.out $(patsubst %.checkbuf,%,$@)
@@ -231,6 +232,12 @@ join-filter-test:
 	./tippecanoe-decode tests/feature-filter/out/filtered.mbtiles > tests/feature-filter/out/filtered.json.check
 	cmp tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.json.standard
 	rm -f tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.mbtiles tests/feature-filter/out/all.mbtiles
+
+json-tool-test: tippecanoe-json-tool
+	./tippecanoe-json-tool -e GEOID10 tests/join-population/tabblock_06001420.json | sort > tests/join-population/tabblock_06001420.json.sort
+	./tippecanoe-json-tool -c tests/join-population/population.csv tests/join-population/tabblock_06001420.json.sort > tests/join-population/tabblock_06001420.json.sort.joined
+	cmp tests/join-population/tabblock_06001420.json.sort.joined tests/join-population/tabblock_06001420.json.sort.joined.standard
+	rm -f tests/join-population/tabblock_06001420.json.sort tests/join-population/tabblock_06001420.json.sort.joined
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output

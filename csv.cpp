@@ -46,7 +46,7 @@ std::string csv_dequote(std::string s) {
 	return out;
 }
 
-std::string getline(FILE *f) {
+std::string csv_getline(FILE *f) {
 	std::string out;
 	int c;
 	while ((c = getc(f)) != EOF) {
@@ -58,7 +58,7 @@ std::string getline(FILE *f) {
 	return out;
 }
 
-void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping) {
+void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping) {
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
 		perror(fn);
@@ -66,14 +66,14 @@ void readcsv(char *fn, std::vector<std::string> &header, std::map<std::string, s
 	}
 
 	std::string s;
-	if ((s = getline(f)).size() > 0) {
+	if ((s = csv_getline(f)).size() > 0) {
 		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
 			header[i] = csv_dequote(header[i]);
 		}
 	}
-	while ((s = getline(f)).size() > 0) {
+	while ((s = csv_getline(f)).size() > 0) {
 		std::vector<std::string> line = csv_split(s.c_str());
 		if (line.size() > 0) {
 			line[0] = csv_dequote(line[0]);

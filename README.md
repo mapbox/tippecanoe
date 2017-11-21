@@ -595,3 +595,65 @@ resolutions.
  * `-c` or `--tag-layer-and-zoom`: Include each feature's layer and zoom level as part of its `tippecanoe` object rather than as a FeatureCollection wrapper
  * `-S` or `--stats`: Just report statistics about each tile's size and the number of features in it, as a JSON structure.
  * `-f` or `--force`: Decode tiles even if polygon ring order or closure problems are detected
+
+tippecanoe-json-tool
+====================
+
+Extracts GeoJSON features or standalone geometries as line-delimited JSON objects from a larger JSON file,
+following the same extraction rules that Tippecanoe uses when parsing JSON.
+
+    tippecanoe-json-tool file.json [... file.json]
+
+Optionally also wraps them in a FeatureCollection or GeometryCollection as appropriate.
+
+Optionally extracts an attribute from the GeoJSON `properties` for sorting.
+
+Optionally joins a sorted CSV of new attributes to a sorted GeoJSON file.
+
+The reason for requiring sorting is so that it is possible to work on CSV and GeoJSON files that are larger
+than can comfortably fit in memory by streaming through them in parallel, in the same way that the Unix
+`join` command does. The Unix `sort` command can be used to sort large files to prepare them for joining.
+
+The sorting interface is weird, and future version of `tippecanoe-json-tool` will replace it with
+something better.
+
+### Options
+
+ * `-w` or `--wrap`: Add the FeatureCollection or GeometryCollection wrapper.
+ * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
+   The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
+   be sorted correctly by tools that just do ASCII comparisons.
+ * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+
+### Example
+
+Join Census LEHD ([Longitudinal Employer-Household Dynamics](https://lehd.ces.census.gov/)) employment data to a file of Census block geography
+for Tippecanoe County, Indiana.
+
+Download Census block geometry, and convert to GeoJSON:
+
+```
+$ curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_18157_tabblock10.zip
+$ unzip tl_2010_18157_tabblock10.zip
+$ ogr2ogr -f GeoJSON tl_2010_18157_tabblock10.json tl_2010_18157_tabblock10.shp
+```
+
+Download Indiana employment data, and fix name of join key in header
+
+```
+$ curl -L -O https://lehd.ces.census.gov/data/lodes/LODES7/in/wac/in_wac_S000_JT00_2015.csv.gz
+$ gzip -dc in_wac_S000_JT00_2015.csv.gz | sed '1s/w_geocode/GEOID10/' > in_wac_S000_JT00_2015.csv
+```
+
+Sort GeoJSON block geometry so it is ordered by block ID. If you don't do this, you will get a
+"GeoJSON file is out of sort" error.
+
+```
+$ tippecanoe-json-tool -e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C sort > tl_2010_18157_tabblock10.sort.json
+```
+
+Join block geometries to employment properties:
+
+```
+$ tippecanoe-json-tool -c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks-wac.json
+```
