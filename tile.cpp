@@ -83,7 +83,6 @@ struct coalesce {
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	drawvec geom = drawvec();
 	unsigned long long index = 0;
-	unsigned long long index2 = 0;
 	long long original_seq = 0;
 	int type = 0;
 	int m = 0;
@@ -130,9 +129,9 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 			return 1;
 		}
 
-		if (c1->index2 > c2->index2) {
+		if (c1->geom < c2->geom) {
 			return -1;
-		} else if (c1->index2 < c2->index2) {
+		} else if (c1->geom > c2->geom) {
 			return 1;
 		}
 	}
@@ -318,7 +317,6 @@ struct partial {
 	long long layer = 0;
 	long long original_seq = 0;
 	unsigned long long index = 0;
-	unsigned long long index2 = 0;
 	int m = 0;
 	int segment = 0;
 	bool reduced = 0;
@@ -457,22 +455,7 @@ void *partial_feature_worker(void *v) {
 			}
 		}
 
-		// Worth skipping this if not coalescing anyway?
-		if (geoms.size() > 0 && geoms[0].size() > 0) {
-			(*partials)[i].index = encode(geoms[0][0].x, geoms[0][0].y);
-			(*partials)[i].index2 = encode(geoms[0][geoms[0].size() - 1].x, geoms[0][geoms[0].size() - 1].y);
-
-			// Anything numbered below the start of the line
-			// can't possibly be the next feature.
-			// We want lowest-but-not-under.
-			if ((*partials)[i].index2 < (*partials)[i].index) {
-				(*partials)[i].index2 = ~0LL;
-			}
-		} else {
-			(*partials)[i].index = 0;
-			(*partials)[i].index2 = 0;
-		}
-
+		(*partials)[i].index = i;
 		(*partials)[i].geoms = geoms;
 	}
 
@@ -1621,7 +1604,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.simplification = simplification;
 				p.id = sf.id;
 				p.has_id = sf.has_id;
-				p.index2 = merge_previndex;
 				p.index = sf.index;
 				p.renamed = -1;
 				partials.push_back(p);
@@ -1720,7 +1702,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					c.type = t;
 					c.index = partials[i].index;
-					c.index2 = partials[i].index2;
 					c.geom = pgeoms[j];
 					pgeoms[j].clear();
 					c.coalesced = false;
