@@ -186,7 +186,7 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 			return type1 - type2;
 		}
 		int cmp = strcmp(s1, s2);
-		if (s1 != s2) {
+		if (cmp != 0) {
 			return cmp;
 		}
 	}

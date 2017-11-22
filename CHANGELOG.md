@@ -1,3 +1,9 @@
+## 1.27.1
+
+* Fix a potential null pointer when parsing GeoJSON with bare geometries
+* Fix a bug that could cause the wrong features to be coalesced when
+  input was parsed in parallel
+
 ## 1.27.0
 
 * Add tippecanoe-json-tool for sorting and joining GeoJSON files
