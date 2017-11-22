@@ -380,7 +380,7 @@ void process(FILE *fp, const char *fname) {
 			int is_geometry = 1;
 
 			if (j->parent != NULL) {
-				if (j->parent->type == JSON_ARRAY) {
+				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
 					if (j->parent->parent->type == JSON_HASH) {
 						json_object *geometries = json_hash_get(j->parent->parent, "geometries");
 						if (geometries != NULL) {
