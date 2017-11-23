@@ -278,7 +278,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 
 			if (is_geometry) {
 				if (j->parent != NULL) {
-					if (j->parent->type == JSON_ARRAY) {
+					if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
 						if (j->parent->parent->type == JSON_HASH) {
 							json_object *geometries = json_hash_get(j->parent->parent, "geometries");
 							if (geometries != NULL) {
