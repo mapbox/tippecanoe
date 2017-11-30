@@ -240,10 +240,20 @@ json-tool-test: tippecanoe-json-tool
 	rm -f tests/join-population/tabblock_06001420.json.sort tests/join-population/tabblock_06001420.json.sort.joined
 
 allow-existing-test:
+	# Make a tileset
+	./tippecanoe -Z0 -z0 -f -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
+	# Writing to existing should fail
+	if ./tippecanoe -Z1 -z1 -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json; then exit 1; else exit 0; fi
+	# Replace existing
 	./tippecanoe -Z8 -z9 -f -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
 	./tippecanoe -Z10 -z11 -F -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
 	./tippecanoe-decode tests/allow-existing/both.mbtiles > tests/allow-existing/both.mbtiles.json.check
 	cmp tests/allow-existing/both.mbtiles.json.check tests/allow-existing/both.mbtiles.json
+	# Make a tileset
+	./tippecanoe -Z0 -z0 -f -e tests/allow-existing/both.dir tests/coalesce-tract/tl_2010_06001_tract10.json
+	# Writing to existing should fail
+	if ./tippecanoe -Z1 -z1 -e tests/allow-existing/both.dir tests/coalesce-tract/tl_2010_06001_tract10.json; then exit 1; else exit 0; fi
+	# Replace existing
 	./tippecanoe -Z8 -z9 -f -e tests/allow-existing/both.dir tests/coalesce-tract/tl_2010_06001_tract10.json
 	./tippecanoe -Z10 -z11 -F -e tests/allow-existing/both.dir tests/coalesce-tract/tl_2010_06001_tract10.json
 	./tippecanoe-decode tests/allow-existing/both.dir | sed 's/both\.dir/both.mbtiles/g' > tests/allow-existing/both.dir.json.check
