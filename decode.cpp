@@ -11,13 +11,16 @@
 #include <zlib.h>
 #include <math.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <protozero/pbf_reader.hpp>
+#include <sys/stat.h>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "write_json.hpp"
+#include "jsonpull/jsonpull.h"
 
 int minzoom = 0;
 int maxzoom = 32;
@@ -139,8 +142,154 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
+struct zxy {
+	int z;
+	int x;
+	int y;
+
+	zxy(int _z, int _x, int _y)
+	    : z(_z), x(_x), y(_y) {
+	}
+
+	bool operator<(const zxy &other) const {
+		if (z < other.z) {
+			return true;
+		}
+		if (z == other.z) {
+			if (x < other.x) {
+				return true;
+			}
+			if (x == other.x) {
+				if (y > other.y) {
+					return true;  // reversed for TMS
+				}
+			}
+		}
+
+		return false;
+	}
+};
+
+// XXX deduplicate from dirtiles
+bool numeric(const char *s) {
+	if (*s == '\0') {
+		return false;
+	}
+	for (; *s != 0; s++) {
+		if (*s < '0' || *s > '9') {
+			return false;
+		}
+	}
+	return true;
+}
+
+// XXX deduplicate from dirtiles
+bool pbfname(const char *s) {
+	while (*s >= '0' && *s <= '9') {
+		s++;
+	}
+
+	return strcmp(s, ".pbf") == 0;
+}
+
+sqlite3 *meta2tmp(const char *fname, std::vector<zxy> &tiles) {
 	sqlite3 *db;
+	char *err = NULL;
+
+	if (sqlite3_open("", &db) != SQLITE_OK) {
+		fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "Create metadata table: %s\n", err);
+		exit(EXIT_FAILURE);
+	}
+
+	std::string name = fname;
+	name += "/metadata.json";
+
+	FILE *f = fopen(name.c_str(), "r");
+	if (f == NULL) {
+		perror(name.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	json_pull *jp = json_begin_file(f);
+	json_object *o = json_read_tree(jp);
+
+	if (o->type != JSON_HASH) {
+		fprintf(stderr, "%s: bad metadata format\n", name.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	for (size_t i = 0; i < o->length; i++) {
+		if (o->keys[i]->type != JSON_STRING || o->values[i]->type != JSON_STRING) {
+			fprintf(stderr, "%s: non-string in metadata\n", name.c_str());
+		}
+
+		char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string, o->values[i]->string);
+		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string, err);
+		}
+		sqlite3_free(sql);
+	}
+
+	json_end(jp);
+	fclose(f);
+
+	// XXX deduplicate from dirtiles
+	DIR *d1 = opendir(fname);
+	if (d1 != NULL) {
+		struct dirent *dp;
+		while ((dp = readdir(d1)) != NULL) {
+			if (numeric(dp->d_name)) {
+				std::string z = std::string(fname) + "/" + dp->d_name;
+				int tz = atoi(dp->d_name);
+
+				DIR *d2 = opendir(z.c_str());
+				if (d2 == NULL) {
+					perror(z.c_str());
+					exit(EXIT_FAILURE);
+				}
+
+				struct dirent *dp2;
+				while ((dp2 = readdir(d2)) != NULL) {
+					if (numeric(dp2->d_name)) {
+						std::string x = z + "/" + dp2->d_name;
+						int tx = atoi(dp2->d_name);
+
+						DIR *d3 = opendir(x.c_str());
+						if (d3 == NULL) {
+							perror(x.c_str());
+							exit(EXIT_FAILURE);
+						}
+
+						struct dirent *dp3;
+						while ((dp3 = readdir(d3)) != NULL) {
+							if (pbfname(dp3->d_name)) {
+								int ty = atoi(dp3->d_name);
+								tiles.push_back(zxy(tz, tx, ty));
+							}
+						}
+
+						closedir(d3);
+					}
+				}
+
+				closedir(d2);
+			}
+		}
+
+		closedir(d1);
+	}
+
+	std::sort(tiles.begin(), tiles.end());
+	return db;
+}
+
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
+	sqlite3 *db = NULL;
+	bool isdir = false;
 	int oz = z;
 	unsigned ox = x, oy = y;
 
@@ -176,9 +325,17 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		perror(fname);
 	}
 
-	if (sqlite3_open(fname, &db) != SQLITE_OK) {
-		fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+	struct stat st;
+	std::vector<zxy> tiles;
+	if (stat(fname, &st) == 0 && (st.st_mode & S_IFDIR) != 0) {
+		isdir = true;
+
+		db = meta2tmp(fname, tiles);
+	} else {
+		if (sqlite3_open(fname, &db) != SQLITE_OK) {
+			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (z < 0) {
@@ -220,49 +377,86 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			printf("[\n");
 		}
 
-		const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
-		sqlite3_stmt *stmt;
-		if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-			fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
-			exit(EXIT_FAILURE);
-		}
-
-		sqlite3_bind_int(stmt, 1, minzoom);
-		sqlite3_bind_int(stmt, 2, maxzoom);
-
 		if (!pipeline && !stats) {
 			printf("\n}, \"features\": [\n");
 		}
 
-		within = 0;
-		while (sqlite3_step(stmt) == SQLITE_ROW) {
-			if (!pipeline && !stats) {
-				if (within) {
-					printf(",\n");
+		if (isdir) {
+			within = 0;
+			for (size_t i = 0; i < tiles.size(); i++) {
+				if (!pipeline && !stats) {
+					if (within) {
+						printf(",\n");
+					}
+					within = 1;
 				}
-				within = 1;
-			}
-			if (stats) {
-				if (within) {
-					printf(",\n");
+				if (stats) {
+					if (within) {
+						printf(",\n");
+					}
+					within = 1;
 				}
-				within = 1;
+
+				std::string fn = std::string(fname) + "/" + std::to_string(tiles[i].z) + "/" + std::to_string(tiles[i].x) + "/" + std::to_string(tiles[i].y) + ".pbf";
+				FILE *f = fopen(fn.c_str(), "rb");
+				if (f == NULL) {
+					perror(fn.c_str());
+					exit(EXIT_FAILURE);
+				}
+
+				std::string s;
+				char buf[2000];
+				ssize_t n;
+				while ((n = fread(buf, 1, 2000, f)) > 0) {
+					s.append(std::string(buf, n));
+				}
+				fclose(f);
+
+				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, 1, to_decode, pipeline, stats);
 			}
-
-			int len = sqlite3_column_bytes(stmt, 0);
-			int tz = sqlite3_column_int(stmt, 1);
-			int tx = sqlite3_column_int(stmt, 2);
-			int ty = sqlite3_column_int(stmt, 3);
-
-			if (tz < 0 || tz >= 32) {
-				fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
+		} else {
+			const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
+			sqlite3_stmt *stmt;
+			if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+				fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
 				exit(EXIT_FAILURE);
 			}
 
-			ty = (1LL << tz) - 1 - ty;
-			const char *s = (const char *) sqlite3_column_blob(stmt, 0);
+			sqlite3_bind_int(stmt, 1, minzoom);
+			sqlite3_bind_int(stmt, 2, maxzoom);
 
-			handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
+			within = 0;
+			while (sqlite3_step(stmt) == SQLITE_ROW) {
+				if (!pipeline && !stats) {
+					if (within) {
+						printf(",\n");
+					}
+					within = 1;
+				}
+				if (stats) {
+					if (within) {
+						printf(",\n");
+					}
+					within = 1;
+				}
+
+				int len = sqlite3_column_bytes(stmt, 0);
+				int tz = sqlite3_column_int(stmt, 1);
+				int tx = sqlite3_column_int(stmt, 2);
+				int ty = sqlite3_column_int(stmt, 3);
+
+				if (tz < 0 || tz >= 32) {
+					fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
+					exit(EXIT_FAILURE);
+				}
+
+				ty = (1LL << tz) - 1 - ty;
+				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
+
+				handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
+			}
+
+			sqlite3_finalize(stmt);
 		}
 
 		if (!pipeline && !stats) {
@@ -271,8 +465,6 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		if (stats) {
 			printf("]\n");
 		}
-
-		sqlite3_finalize(stmt);
 	} else {
 		int handled = 0;
 		while (z >= 0 && !handled) {
