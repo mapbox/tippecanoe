@@ -1142,11 +1142,15 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			// Trim .json or .mbtiles from the name
 			ssize_t cp;
 			cp = trunc.find(".json");
-			if (cp >= 0) {
+			if (cp >= 0 && (size_t) cp + 5 == trunc.size()) {
+				trunc = trunc.substr(0, cp);
+			}
+			cp = trunc.find(".geojson");
+			if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
 				trunc = trunc.substr(0, cp);
 			}
 			cp = trunc.find(".mbtiles");
-			if (cp >= 0) {
+			if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
 				trunc = trunc.substr(0, cp);
 			}
 
@@ -2664,10 +2668,7 @@ int main(int argc, char **argv) {
 		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
 	}
 	if (out_dir != NULL) {
-		if (force) {
-			check_dir(out_dir, true);
-		}
-		check_dir(out_dir, false);
+		check_dir(out_dir, force, forcetable);
 	}
 
 	int ret = EXIT_SUCCESS;

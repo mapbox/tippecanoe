@@ -59,17 +59,24 @@ bool pbfname(const char *s) {
 	return strcmp(s, ".pbf") == 0;
 }
 
-void check_dir(const char *dir, bool rm) {
+void check_dir(const char *dir, bool force, bool forcetable) {
 	struct stat st;
 
 	std::string meta = std::string(dir) + "/" + "metadata.json";
-	if (rm) {
+	if (force) {
 		unlink(meta.c_str());  // error OK since it may not exist;
 	} else {
 		if (stat(meta.c_str(), &st) == 0) {
 			fprintf(stderr, "%s: file exists\n", meta.c_str());
-			exit(EXIT_FAILURE);
+			if (!forcetable) {
+				exit(EXIT_FAILURE);
+			}
 		}
+	}
+
+	if (forcetable) {
+		// Don't clear existing tiles
+		return;
 	}
 
 	DIR *d1 = opendir(dir);
@@ -101,7 +108,7 @@ void check_dir(const char *dir, bool rm) {
 							if (pbfname(dp3->d_name)) {
 								std::string y = x + "/" + dp3->d_name;
 
-								if (rm) {
+								if (force) {
 									if (unlink(y.c_str()) != 0) {
 										perror(y.c_str());
 										exit(EXIT_FAILURE);

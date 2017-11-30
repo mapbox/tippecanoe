@@ -1,3 +1,9 @@
+## 1.27.2
+
+* Tippecanoe-decode can decode directories of tiles, not just mbtiles
+* The --allow-existing option works on directories of tiles
+* Trim .geojson, not just .json, when making layer names from filenames
+
 ## 1.27.1
 
 * Fix a potential null pointer when parsing GeoJSON with bare geometries

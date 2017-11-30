@@ -11,6 +11,7 @@
 #include <string>
 #include <set>
 #include <map>
+#include <sys/stat.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "text.hpp"
@@ -487,41 +488,47 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 	if (outdir != NULL) {
 		std::string metadata = std::string(outdir) + "/metadata.json";
-		FILE *fp = fopen(metadata.c_str(), "w");
-		if (fp == NULL) {
-			perror(metadata.c_str());
-			exit(EXIT_FAILURE);
-		}
 
-		fprintf(fp, "{\n");
-
-		sqlite3_stmt *stmt;
-		bool first = true;
-		if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
-			while (sqlite3_step(stmt) == SQLITE_ROW) {
-				std::string key, value;
-
-				const char *k = (const char *) sqlite3_column_text(stmt, 0);
-				const char *v = (const char *) sqlite3_column_text(stmt, 1);
-				if (k == NULL || v == NULL) {
-					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-					exit(EXIT_FAILURE);
-				}
-
-				quote(key, k);
-				quote(value, v);
-
-				if (!first) {
-					fprintf(fp, ",\n");
-				}
-				fprintf(fp, "    \"%s\": \"%s\"", key.c_str(), value.c_str());
-				first = false;
+		struct stat st;
+		if (stat(metadata.c_str(), &st) == 0) {
+			// Leave existing metadata in place with --allow-existing
+		} else {
+			FILE *fp = fopen(metadata.c_str(), "w");
+			if (fp == NULL) {
+				perror(metadata.c_str());
+				exit(EXIT_FAILURE);
 			}
-			sqlite3_finalize(stmt);
-		}
 
-		fprintf(fp, "\n}\n");
-		fclose(fp);
+			fprintf(fp, "{\n");
+
+			sqlite3_stmt *stmt;
+			bool first = true;
+			if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
+				while (sqlite3_step(stmt) == SQLITE_ROW) {
+					std::string key, value;
+
+					const char *k = (const char *) sqlite3_column_text(stmt, 0);
+					const char *v = (const char *) sqlite3_column_text(stmt, 1);
+					if (k == NULL || v == NULL) {
+						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+						exit(EXIT_FAILURE);
+					}
+
+					quote(key, k);
+					quote(value, v);
+
+					if (!first) {
+						fprintf(fp, ",\n");
+					}
+					fprintf(fp, "    \"%s\": \"%s\"", key.c_str(), value.c_str());
+					first = false;
+				}
+				sqlite3_finalize(stmt);
+			}
+
+			fprintf(fp, "\n}\n");
+			fclose(fp);
+		}
 	}
 
 	if (outdb == NULL) {
