@@ -326,12 +326,12 @@ struct reader {
 	long long x = 0;
 	long long sorty = 0;
 	long long y = 0;
-	int pbf_count = 0;
 	int z_flag = 0;
 
 	std::string data = "";
-	std::vector<std::string> pbf_path{};
-	std::vector<std::string> large_zoom{};
+
+	std::vector<zxy> dirtiles;
+	std::string dirbase;
 
 	sqlite3 *db = NULL;
 	sqlite3_stmt *stmt = NULL;
@@ -367,165 +367,29 @@ struct reader {
 	}
 };
 
-std::vector<std::string> split_slash(std::string pbf_path) {
-	std::vector<std::string> path_parts;
-	std::string path(pbf_path);
-	std::istringstream iss(path);
-	std::string token;
-
-	while (std::getline(iss, token, '/')) {
-		path_parts.push_back(token);
-	}
-
-	return path_parts;
-}
-
-int filter(const struct dirent *dir) {
-	if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".DS_Store") == 0 || strcmp(dir->d_name, "metadata.json") == 0) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-// Recursively walk through a specified directory and its subdirectories,
-// using alphasort function and integer variable zoom_range to handle input in numerical order.
-// Store the path of all pbf files in a pbf_path vector member of reader struct,
-// with the help of a large_zoom vector and two integer members pbf_count and z_flag
-// to ensure the tiles order in pbf_path to be the same as in mbtiles.
-struct reader *read_dir(struct reader *readers, const char *name, int level, int zoom_range) {
-	struct dirent **namelist;
-	struct stat buf;
-	std::string path;
-	int i = 0;
-	int n = scandir(name, &namelist, filter, alphasort);
-	std::vector<std::string> path_parts1, path_parts2;
-	readers->pbf_count = 0;
-
-	if (n > 0) {
-		while (i < n) {
-			path = std::string(name) + "/" + std::string(namelist[i]->d_name);
-
-			if (stat(path.c_str(), &buf) == 0 && S_ISDIR(buf.st_mode)) {
-				if (level == 0) {
-					if (std::stoi(namelist[i]->d_name) <= 9) {
-						zoom_range = 0;
-					} else {
-						zoom_range = 1;
-					}
-
-					if (readers->pbf_count > 0) {
-						if (readers->z_flag == 0) {
-							std::sort(readers->pbf_path.end() - (readers->pbf_count + 1), readers->pbf_path.end(), std::greater<std::string>());
-						} else {
-							std::sort(readers->large_zoom.end() - (readers->pbf_count + 1), readers->large_zoom.end(), std::greater<std::string>());
-						}
-						readers->pbf_count = 0;
-					}
-				}
-
-				if (level == 1 && readers->pbf_count > 0) {
-					if (zoom_range == 0) {
-						std::sort(readers->pbf_path.end() - (readers->pbf_count + 1), readers->pbf_path.end(), std::greater<std::string>());
-					} else {
-						std::sort(readers->large_zoom.end() - (readers->pbf_count + 1), readers->large_zoom.end(), std::greater<std::string>());
-					}
-					readers->pbf_count = 0;
-				}
-
-				read_dir(readers, path.c_str(), level + 1, zoom_range);
-			} else {
-				if (level == 0) {
-					fprintf(stderr, "ERROR: Directory structure in '%s' should be zoom/x/y\n", name);
-					exit(EXIT_FAILURE);
-				}
-
-				if (level == 1) {
-					fprintf(stderr, "ERROR: Directory structure in '%s' should be zoom/x/y\n", split_slash(name)[0].c_str());
-					exit(EXIT_FAILURE);
-				}
-
-				if (zoom_range == 0) {
-					readers->pbf_path.push_back(path);
-
-					if (readers->pbf_path.size() > 1) {
-						path_parts1 = split_slash(readers->pbf_path[readers->pbf_path.size() - 1]);
-						path_parts2 = split_slash(readers->pbf_path[readers->pbf_path.size() - 2]);
-						int p1 = path_parts1.size();
-						int p2 = path_parts2.size();
-
-						if (std::stoll(path_parts1[p1 - 3]) == std::stoll(path_parts2[p2 - 3]) && std::stoll(path_parts1[p1 - 2]) == std::stoll(path_parts2[p2 - 2])) {
-							readers->z_flag = 0;
-							readers->pbf_count++;
-						}
-
-						path_parts1.clear();
-						path_parts2.clear();
-					}
-				} else {
-					readers->large_zoom.push_back(path);
-
-					if (readers->large_zoom.size() > 1) {
-						path_parts1 = split_slash(readers->large_zoom[readers->large_zoom.size() - 1]);
-						path_parts2 = split_slash(readers->large_zoom[readers->large_zoom.size() - 2]);
-						int p1 = path_parts1.size();
-						int p2 = path_parts2.size();
-
-						if (std::stoll(path_parts1[p1 - 3]) == std::stoll(path_parts2[p2 - 3]) && std::stoll(path_parts1[p1 - 2]) == std::stoll(path_parts2[p2 - 2])) {
-							readers->z_flag = 1;
-							readers->pbf_count++;
-						}
-
-						path_parts1.clear();
-						path_parts2.clear();
-					}
-				}
-			}
-
-			free(namelist[i]);
-			i++;
-		}
-
-		if (level == 0) {
-			if (readers->pbf_count > 0) {
-				std::sort(readers->pbf_path.end() - (readers->pbf_count + 1), readers->pbf_path.end(), std::greater<std::string>());
-			}
-
-			readers->pbf_path.insert(std::end(readers->pbf_path), std::begin(readers->large_zoom), std::end(readers->large_zoom));
-		}
-
-		free(namelist);
-	} else if (n == 0) {
-		fprintf(stderr, "ERROR: Empty directory '%s'\n", name);
-		exit(EXIT_FAILURE);
-	} else {
-		perror("scandir");
-	}
-
-	return readers;
-}
-
 struct reader *begin_reading(char *fname) {
-	DIR *dir;
 	struct reader *r = new reader;
-	if ((dir = opendir(fname)) != NULL) {
-		r = read_dir(r, fname, 0, 0);
+	struct stat st;
 
-		std::vector<std::string> path_parts;
-		path_parts = split_slash(r->pbf_path[0]);
-		int p = path_parts.size();
-
+	if (stat(fname, &st) == 0 && (st.st_mode & S_IFDIR) != 0) {
 		r->db = NULL;
 		r->stmt = NULL;
 		r->next = NULL;
-		r->pbf_count = 0;
-		r->zoom = std::stoll(path_parts[p - 3]);
-		r->x = std::stoll(path_parts[p - 2]);
-		r->y = std::stoll(path_parts[p - 1].substr(0, path_parts[p - 1].find_last_of(".")));
-		r->sorty = (1LL << r->zoom) - 1 - r->y;
-		r->data = dir_read_tile(r->pbf_path[0]);
-		path_parts.clear();
-		closedir(dir);
+
+		r->dirtiles = enumerate_dirtiles(fname);
+		r->dirbase = fname;
+
+		if (r->dirtiles.size() == 0) {
+			r->zoom = 32;
+		} else {
+			r->zoom = r->dirtiles[0].z;
+			r->x = r->dirtiles[0].x;
+			r->y = r->dirtiles[0].y;
+			r->sorty = (1LL << r->zoom) - 1 - r->y;
+			r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
+
+			r->dirtiles.erase(r->dirtiles.begin());
+		}
 	} else {
 		sqlite3 *db;
 
@@ -563,40 +427,6 @@ struct reader *begin_reading(char *fname) {
 
 	return r;
 }
-
-struct zxy {
-	long long z;
-	long long x;
-	long long y;
-
-	zxy(long long _z, long long _x, long long _y)
-	    : z(_z),
-	      x(_x),
-	      y(_y) {
-	}
-
-	bool operator<(zxy const &other) const {
-		if (z < other.z) {
-			return true;
-		}
-		if (z > other.z) {
-			return false;
-		}
-
-		if (x < other.x) {
-			return true;
-		}
-		if (x > other.x) {
-			return false;
-		}
-
-		if (y < other.y) {
-			return true;
-		}
-
-		return false;
-	}
-};
 
 struct arg {
 	std::map<zxy, std::vector<std::string>> inputs{};
@@ -775,20 +605,16 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				r->zoom = 32;
 			}
 		} else {
-			r->pbf_count++;
-
-			if (r->pbf_count != static_cast<int>(r->pbf_path.size())) {
-				std::vector<std::string> path_parts;
-				path_parts = split_slash(r->pbf_path[r->pbf_count]);
-				int p = path_parts.size();
-				r->zoom = std::stoll(path_parts[p - 3]);
-				r->x = std::stoll(path_parts[p - 2]);
-				r->y = std::stoll(path_parts[p - 1].substr(0, path_parts[p - 1].find_last_of(".")));
-				r->sorty = (1LL << r->zoom) - 1 - r->y;
-				r->data = dir_read_tile(r->pbf_path[r->pbf_count]);
-				path_parts.clear();
-			} else {
+			if (r->dirtiles.size() == 0) {
 				r->zoom = 32;
+			} else {
+				r->zoom = r->dirtiles[0].z;
+				r->x = r->dirtiles[0].x;
+				r->y = r->dirtiles[0].y;
+				r->sorty = (1LL << r->zoom) - 1 - r->y;
+				r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
+
+				r->dirtiles.erase(r->dirtiles.begin());
 			}
 		}
 
@@ -894,23 +720,15 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 			}
 
 		} else {
-			std::vector<std::string> path_parts;
-			path_parts = split_slash(r->pbf_path[0]);
-			std::string metadata_path = path_parts[0];
+			std::string metadata_path = r->dirbase + "/metadata.json";
 
-			for (int i = 1; i < static_cast<int>(path_parts.size()) - 3; i++) {
-				metadata_path = metadata_path + "/" + path_parts[i];
-			}
-
-			metadata_path += "/metadata.json";
-
-			path_parts.clear();
 			FILE *f = fopen(metadata_path.c_str(), "r");
-
 			if (f == NULL) {
 				perror(metadata_path.c_str());
 				exit(EXIT_FAILURE);
 			}
+
+			// XXX unify metadata reading
 
 			json_pull *jp = json_begin_file(f);
 			json_object *j, *k;
