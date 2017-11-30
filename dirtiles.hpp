@@ -41,6 +41,7 @@ struct zxy {
 };
 
 std::vector<zxy> enumerate_dirtiles(const char *fname);
+sqlite3 *dirmeta2tmp(const char *fname);
 std::string dir_read_tile(std::string pbfPath, struct zxy tile);
 
 #endif

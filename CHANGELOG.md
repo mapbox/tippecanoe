@@ -1,3 +1,7 @@
+## 1.27.3
+
+* Clean up duplicated code for reading tiles from a directory
+
 ## 1.27.2
 
 * Tippecanoe-decode can decode directories of tiles, not just mbtiles

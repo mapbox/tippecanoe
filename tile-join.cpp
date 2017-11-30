@@ -642,149 +642,86 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 	for (struct reader *r = readers; r != NULL; r = next) {
 		next = r->next;
 
-		if (r->db != NULL) {
-			sqlite3_finalize(r->stmt);
-
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
-					st->minzoom = min(st->minzoom, minz);
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
-					st->maxzoom = max(st->maxzoom, maxz);
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (s != NULL) {
-						sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
-					}
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (s != NULL) {
-						attribution = std::string((char *) s);
-					}
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'description'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (s != NULL) {
-						description = std::string((char *) s);
-					}
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'name'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (s != NULL) {
-						if (name.size() == 0) {
-							name = std::string((char *) s);
-						} else {
-							name += " + " + std::string((char *) s);
-						}
-					}
-				}
-				sqlite3_finalize(r->stmt);
-			}
-			if (sqlite3_prepare_v2(r->db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
-				if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-					const unsigned char *s = sqlite3_column_text(r->stmt, 0);
-					if (s != NULL) {
-						if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-							st->minlon = min(minlon, st->minlon);
-							st->maxlon = max(maxlon, st->maxlon);
-							st->minlat = min(minlat, st->minlat);
-							st->maxlat = max(maxlat, st->maxlat);
-						}
-					}
-				}
-				sqlite3_finalize(r->stmt);
-			}
-
-			if (sqlite3_close(r->db) != SQLITE_OK) {
-				fprintf(stderr, "Could not close database: %s\n", sqlite3_errmsg(r->db));
-				exit(EXIT_FAILURE);
-			}
-
+		sqlite3 *db = r->db;
+		if (db == NULL) {
+			db = dirmeta2tmp(r->dirbase.c_str());
 		} else {
-			std::string metadata_path = r->dirbase + "/metadata.json";
+			sqlite3_finalize(r->stmt);
+		}
 
-			FILE *f = fopen(metadata_path.c_str(), "r");
-			if (f == NULL) {
-				perror(metadata_path.c_str());
-				exit(EXIT_FAILURE);
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
+				st->minzoom = min(st->minzoom, minz);
 			}
-
-			// XXX unify metadata reading
-
-			json_pull *jp = json_begin_file(f);
-			json_object *j, *k;
-
-			while ((j = json_read(jp)) != NULL) {
-				if (j->type == JSON_HASH) {
-					if ((k = json_hash_get(j, "minzoom")) != NULL) {
-						const std::string minzoom_tmp = k->string;
-						int minz = max(std::stoi(minzoom_tmp), minzoom);
-						st->minzoom = min(st->minzoom, minz);
-					}
-
-					if ((k = json_hash_get(j, "maxzoom")) != NULL) {
-						const std::string maxzoom_tmp = k->string;
-						int maxz = min(std::stoi(maxzoom_tmp), maxzoom);
-						st->maxzoom = max(st->maxzoom, maxz);
-					}
-
-					if ((k = json_hash_get(j, "center")) != NULL) {
-						const std::string center = k->string;
-						const unsigned char *s = (const unsigned char *) center.c_str();
-						sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
-					}
-
-					if ((k = json_hash_get(j, "attribution")) != NULL) {
-						attribution = k->string;
-					}
-
-					if ((k = json_hash_get(j, "description")) != NULL) {
-						description = k->string;
-					}
-
-					if ((k = json_hash_get(j, "name")) != NULL) {
-						const std::string name_tmp = k->string;
-						if (name.size() == 0) {
-							name = name_tmp;
-						} else {
-							name += " + " + name_tmp;
-						}
-					}
-
-					if ((k = json_hash_get(j, "bounds")) != NULL) {
-						const std::string bounds = k->string;
-						const unsigned char *s = (const unsigned char *) bounds.c_str();
-						if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-							st->minlon = min(minlon, st->minlon);
-							st->maxlon = max(maxlon, st->maxlon);
-							st->minlat = min(minlat, st->minlat);
-							st->maxlat = max(maxlat, st->maxlat);
-						}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
+				st->maxzoom = max(st->maxzoom, maxz);
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'center'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				if (s != NULL) {
+					sscanf((char *) s, "%lf,%lf", &st->midlon, &st->midlat);
+				}
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'attribution'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				if (s != NULL) {
+					attribution = std::string((char *) s);
+				}
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'description'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				if (s != NULL) {
+					description = std::string((char *) s);
+				}
+			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'name'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				if (s != NULL) {
+					if (name.size() == 0) {
+						name = std::string((char *) s);
+					} else {
+						name += " + " + std::string((char *) s);
 					}
 				}
 			}
-			json_free(j);
-			json_end(jp);
-			fclose(f);
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'bounds'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+				if (s != NULL) {
+					if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
+						st->minlon = min(minlon, st->minlon);
+						st->maxlon = max(maxlon, st->maxlon);
+						st->minlat = min(minlat, st->minlat);
+						st->maxlat = max(maxlat, st->maxlat);
+					}
+				}
+			}
+			sqlite3_finalize(r->stmt);
+		}
+
+		// Closes either real db or temp mirror of metadata.json
+		if (sqlite3_close(db) != SQLITE_OK) {
+			fprintf(stderr, "Could not close database: %s\n", sqlite3_errmsg(db));
+			exit(EXIT_FAILURE);
 		}
 
 		delete r;
