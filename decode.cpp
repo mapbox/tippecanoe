@@ -21,6 +21,7 @@
 #include "geometry.hpp"
 #include "write_json.hpp"
 #include "jsonpull/jsonpull.h"
+#include "dirtiles.hpp"
 
 int minzoom = 0;
 int maxzoom = 32;
@@ -142,151 +143,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	}
 }
 
-struct zxy {
-	int z;
-	int x;
-	int y;
-
-	zxy(int _z, int _x, int _y)
-	    : z(_z), x(_x), y(_y) {
-	}
-
-	bool operator<(const zxy &other) const {
-		if (z < other.z) {
-			return true;
-		}
-		if (z == other.z) {
-			if (x < other.x) {
-				return true;
-			}
-			if (x == other.x) {
-				if (y > other.y) {
-					return true;  // reversed for TMS
-				}
-			}
-		}
-
-		return false;
-	}
-};
-
-// XXX deduplicate from dirtiles
-bool numeric(const char *s) {
-	if (*s == '\0') {
-		return false;
-	}
-	for (; *s != 0; s++) {
-		if (*s < '0' || *s > '9') {
-			return false;
-		}
-	}
-	return true;
-}
-
-// XXX deduplicate from dirtiles
-bool pbfname(const char *s) {
-	while (*s >= '0' && *s <= '9') {
-		s++;
-	}
-
-	return strcmp(s, ".pbf") == 0;
-}
-
-sqlite3 *meta2tmp(const char *fname, std::vector<zxy> &tiles) {
-	sqlite3 *db;
-	char *err = NULL;
-
-	if (sqlite3_open("", &db) != SQLITE_OK) {
-		fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
-	}
-	if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "Create metadata table: %s\n", err);
-		exit(EXIT_FAILURE);
-	}
-
-	std::string name = fname;
-	name += "/metadata.json";
-
-	FILE *f = fopen(name.c_str(), "r");
-	if (f == NULL) {
-		perror(name.c_str());
-		exit(EXIT_FAILURE);
-	}
-
-	json_pull *jp = json_begin_file(f);
-	json_object *o = json_read_tree(jp);
-
-	if (o->type != JSON_HASH) {
-		fprintf(stderr, "%s: bad metadata format\n", name.c_str());
-		exit(EXIT_FAILURE);
-	}
-
-	for (size_t i = 0; i < o->length; i++) {
-		if (o->keys[i]->type != JSON_STRING || o->values[i]->type != JSON_STRING) {
-			fprintf(stderr, "%s: non-string in metadata\n", name.c_str());
-		}
-
-		char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string, o->values[i]->string);
-		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string, err);
-		}
-		sqlite3_free(sql);
-	}
-
-	json_end(jp);
-	fclose(f);
-
-	// XXX deduplicate from dirtiles
-	DIR *d1 = opendir(fname);
-	if (d1 != NULL) {
-		struct dirent *dp;
-		while ((dp = readdir(d1)) != NULL) {
-			if (numeric(dp->d_name)) {
-				std::string z = std::string(fname) + "/" + dp->d_name;
-				int tz = atoi(dp->d_name);
-
-				DIR *d2 = opendir(z.c_str());
-				if (d2 == NULL) {
-					perror(z.c_str());
-					exit(EXIT_FAILURE);
-				}
-
-				struct dirent *dp2;
-				while ((dp2 = readdir(d2)) != NULL) {
-					if (numeric(dp2->d_name)) {
-						std::string x = z + "/" + dp2->d_name;
-						int tx = atoi(dp2->d_name);
-
-						DIR *d3 = opendir(x.c_str());
-						if (d3 == NULL) {
-							perror(x.c_str());
-							exit(EXIT_FAILURE);
-						}
-
-						struct dirent *dp3;
-						while ((dp3 = readdir(d3)) != NULL) {
-							if (pbfname(dp3->d_name)) {
-								int ty = atoi(dp3->d_name);
-								tiles.push_back(zxy(tz, tx, ty));
-							}
-						}
-
-						closedir(d3);
-					}
-				}
-
-				closedir(d2);
-			}
-		}
-
-		closedir(d1);
-	}
-
-	std::sort(tiles.begin(), tiles.end());
-	return db;
-}
-
 void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
 	sqlite3 *db = NULL;
 	bool isdir = false;
@@ -330,7 +186,8 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	if (stat(fname, &st) == 0 && (st.st_mode & S_IFDIR) != 0) {
 		isdir = true;
 
-		db = meta2tmp(fname, tiles);
+		db = dirmeta2tmp(fname);
+		tiles = enumerate_dirtiles(fname);
 	} else {
 		if (sqlite3_open(fname, &db) != SQLITE_OK) {
 			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
@@ -397,7 +254,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					within = 1;
 				}
 
-				std::string fn = std::string(fname) + "/" + std::to_string(tiles[i].z) + "/" + std::to_string(tiles[i].x) + "/" + std::to_string(tiles[i].y) + ".pbf";
+				std::string fn = std::string(fname) + "/" + tiles[i].path();
 				FILE *f = fopen(fn.c_str(), "rb");
 				if (f == NULL) {
 					perror(fn.c_str());
