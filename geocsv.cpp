@@ -74,12 +74,17 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 		for (size_t i = 0; i < line.size(); i++) {
 			if (i != (size_t) latcol && i != (size_t) loncol) {
-				full_keys.push_back(header[i]);
+				line[i] = csv_dequote(line[i]);
 
 				serial_val sv;
-				sv.type = mvt_string;
+				if (is_number(line[i])) {
+					sv.type = mvt_double;
+				} else {
+					sv.type = mvt_string;
+				}
 				sv.s = line[i];
 
+				full_keys.push_back(header[i]);
 				full_values.push_back(sv);
 			}
 		}
