@@ -20,6 +20,12 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 	ssize_t latcol = -1, loncol = -1;
 
 	if ((s = csv_getline(f)).size() > 0) {
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s: %s\n", fname.c_str(), err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
@@ -41,6 +47,12 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 	size_t seq = 0;
 	while ((s = csv_getline(f)).size() > 0) {
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s: %s\n", fname.c_str(), err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		seq++;
 		std::vector<std::string> line = csv_split(s.c_str());
 

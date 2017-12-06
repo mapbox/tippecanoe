@@ -9,6 +9,7 @@
 #include <vector>
 #include "jsonpull/jsonpull.h"
 #include "csv.hpp"
+#include "text.hpp"
 
 int fail = EXIT_SUCCESS;
 bool wrap = false;
@@ -208,6 +209,12 @@ void join_csv(json_object *j) {
 			exit(EXIT_FAILURE);
 		}
 
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s\n", err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
@@ -262,6 +269,12 @@ void join_csv(json_object *j) {
 			if (s.size() == 0) {
 				fields.clear();
 				break;
+			}
+
+			std::string err = check_utf8(s);
+			if (err != "") {
+				fprintf(stderr, "%s\n", err.c_str());
+				exit(EXIT_FAILURE);
 			}
 
 			fields = csv_split(s.c_str());
