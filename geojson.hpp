@@ -13,10 +13,12 @@ struct parse_json_args {
 	json_pull *jp;
 	int layer;
 	std::string *layername;
-	std::map<std::string, int> const *attribute_types;
-	bool want_dist;
 
 	struct serialization_state *sst;
+
+	parse_json_args(json_pull *jp1, int layer1, std::string *layername1, struct serialization_state *sst1)
+	    : jp(jp1), layer(layer1), layername(layername1), sst(sst1) {
+	}
 };
 
 struct json_pull *json_begin_map(char *map, long long len);

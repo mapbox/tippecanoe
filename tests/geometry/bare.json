@@ -1,3 +1,7 @@
 { "type": "LineString", "coordinates": [ [ 2.460937, 46.073230 ], [ 43.242187, 59.9 ] ] }
 
 { "something": [ { "type": "LineString", "coordinates": [ [ -1.40625, 28.921631 ], [ 26.71875, 17.978733 ], [ 22.148437, -23.563987 ] ] } ] }
+
+{ "something": { "type": "LineString", "coordinates": [ [ 1, 2 ], [ 3, 4 ] ] } }
+
+[ { "type": "LineString", "coordinates": [ [ 5, 6 ], [ 7, 8 ] ] } ]

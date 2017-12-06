@@ -93,13 +93,15 @@ delete the file that already exists with that name.
 If you aren't sure what the right maxzoom is for your data, \fB\fC\-zg\fR will guess one for you
 based on the density of features.
 .PP
-If you are mapping point features, you will often want to use \fB\fC\-Bg\fR to automatically choose
-a base zoom level for dot dropping. If that doesn't work out for you, try
-\fB\fC\-r1 \-\-drop\-fraction\-as\-needed\fR to turn off the normal dot dropping and instead
-only drop features if the tiles get too big.
+Tippecanoe will normally drop a fraction of point features at zooms below the maxzoom,
+to keep the low\-zoom tiles from getting too big. If you have a smaller data set where
+all the points would fit without dropping any of them, use \fB\fC\-r1\fR to keep them all.
+If you do want point dropping, but you still want the tiles to be denser than \fB\fC\-zg\fR
+thinks they should be, use \fB\fC\-B\fR to set a basezoom lower than the maxzoom.
 .PP
-If you are mapping points or polygons, you will often want to use \fB\fC\-\-drop\-densest\-as\-needed\fR
-to drop some of them if necessary to make the low zoom levels work.
+If some of your tiles are coming out too big in spite of the settings above, you will
+often want to use \fB\fC\-\-drop\-densest\-as\-needed\fR to drop whatever fraction of the features
+is necessary at each zoom level to make that zoom level's tiles work.
 .PP
 If your features have a lot of attributes, use \fB\fC\-y\fR to keep only the ones you really need.
 .PP
@@ -239,6 +241,8 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
+\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
+.IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .RE
 .SS Dropping tightly overlapping features
@@ -319,7 +323,9 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .SS Progress indicator
 .RS
 .IP \(bu 2
-\fB\fC\-q\fR or \fB\fC\-\-quiet\fR: Work quietly instead of reporting progress
+\fB\fC\-q\fR or \fB\fC\-\-quiet\fR: Work quietly instead of reporting progress or warning messages
+.IP \(bu 2
+\fB\fC\-Q\fR or \fB\fC\-\-no\-progress\-indicator\fR: Don't report progress, but still give warnings
 .IP \(bu 2
 \fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
 .RE
@@ -425,35 +431,6 @@ the filename or name specified using \fB\fC\-\-layer\fR, like this:
         "coordinates" : [ [ \-121.733350, 37.767671 ], [ \-121.733600, 37.767483 ], [ \-121.733131, 37.766952 ] ]
     }
 }
-.fi
-.RE
-.SH Point styling
-.PP
-To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
-coordinated with the base zoom level and dot\-dropping rate. You can use this shell script to
-calculate the appropriate marker\-width at high zoom levels to match the fraction of dots
-that were dropped at low zoom levels.
-.PP
-If you used \fB\fC\-B\fR or \fB\fC\-z\fR to change the base zoom level or \fB\fC\-r\fR to change the
-dot\-dropping rate, replace them in the \fB\fCbasezoom\fR and \fB\fCrate\fR below.
-.PP
-.RS
-.nf
-awk 'BEGIN {
-    dotsize = 2;    # up to you to decide
-    basezoom = 14;  # tippecanoe \-z 14
-    rate = 2.5;     # tippecanoe \-r 2.5
-
-    print "  marker\-line\-width: 0;";
-    print "  marker\-ignore\-placement: true;";
-    print "  marker\-allow\-overlap: true;";
-    print "  marker\-width: " dotsize ";";
-    for (i = basezoom + 1; i <= 22; i++) {
-        print "  [zoom >= " i "] { marker\-width: " (dotsize * exp(log(sqrt(rate)) * (i \- basezoom))) "; }";
-    }
-
-    exit(0);
-}'
 .fi
 .RE
 .SH Geometric simplifications
@@ -579,15 +556,20 @@ The options are:
 .SS Tileset description and attribution
 .RS
 .IP \(bu 2
-\fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
-.IP \(bu 2
-\fB\fC\-L\fR \fIlayer\fP or \fB\fC\-\-exclude\-layer=\fR\fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
-.IP \(bu 2
 \fB\fC\-A\fR \fIattribution\fP or \fB\fC\-\-attribution=\fR\fIattribution\fP: Set the attribution string.
 .IP \(bu 2
 \fB\fC\-n\fR \fIname\fP or \fB\fC\-\-name=\fR\fIname\fP: Set the tileset name.
 .IP \(bu 2
 \fB\fC\-N\fR \fIdescription\fP or \fB\fC\-\-description=\fR\fIdescription\fP: Set the tileset description.
+.RE
+.SS Layer filtering and naming
+.RS
+.IP \(bu 2
+\fB\fC\-l\fR \fIlayer\fP or \fB\fC\-\-layer=\fR\fIlayer\fP: Include the named layer in the output. You can specify multiple \fB\fC\-l\fR options to keep multiple layers. If you don't specify, they will all be retained.
+.IP \(bu 2
+\fB\fC\-L\fR \fIlayer\fP or \fB\fC\-\-exclude\-layer=\fR\fIlayer\fP: Remove the named layer from the output. You can specify multiple \fB\fC\-L\fR options to remove multiple layers.
+.IP \(bu 2
+\fB\fC\-R\fR\fIold\fP\fB\fC:\fR\fInew\fP or \fB\fC\-\-rename\-layer=\fR\fIold\fP\fB\fC:\fR\fInew\fP: Rename the layer named \fIold\fP to be named \fInew\fP instead. You can specify multiple \fB\fC\-R\fR options to rename multiple layers. Renaming happens before filtering.
 .RE
 .SS Zoom levels
 .RS
@@ -763,5 +745,81 @@ resolutions.
 .IP \(bu 2
 \fB\fC\-c\fR or \fB\fC\-\-tag\-layer\-and\-zoom\fR: Include each feature's layer and zoom level as part of its \fB\fCtippecanoe\fR object rather than as a FeatureCollection wrapper
 .IP \(bu 2
+\fB\fC\-S\fR or \fB\fC\-\-stats\fR: Just report statistics about each tile's size and the number of features in it, as a JSON structure.
+.IP \(bu 2
 \fB\fC\-f\fR or \fB\fC\-\-force\fR: Decode tiles even if polygon ring order or closure problems are detected
+.RE
+.SH tippecanoe\-json\-tool
+.PP
+Extracts GeoJSON features or standalone geometries as line\-delimited JSON objects from a larger JSON file,
+following the same extraction rules that Tippecanoe uses when parsing JSON.
+.PP
+.RS
+.nf
+tippecanoe\-json\-tool file.json [... file.json]
+.fi
+.RE
+.PP
+Optionally also wraps them in a FeatureCollection or GeometryCollection as appropriate.
+.PP
+Optionally extracts an attribute from the GeoJSON \fB\fCproperties\fR for sorting.
+.PP
+Optionally joins a sorted CSV of new attributes to a sorted GeoJSON file.
+.PP
+The reason for requiring sorting is so that it is possible to work on CSV and GeoJSON files that are larger
+than can comfortably fit in memory by streaming through them in parallel, in the same way that the Unix
+\fB\fCjoin\fR command does. The Unix \fB\fCsort\fR command can be used to sort large files to prepare them for joining.
+.PP
+The sorting interface is weird, and future version of \fB\fCtippecanoe\-json\-tool\fR will replace it with
+something better.
+.SS Options
+.RS
+.IP \(bu 2
+\fB\fC\-w\fR or \fB\fC\-\-wrap\fR: Add the FeatureCollection or GeometryCollection wrapper.
+.IP \(bu 2
+\fB\fC\-e\fR \fIattribute\fP or \fB\fC\-\-extract=\fR\fIattribute\fP: Extract the named attribute as a prefix to each feature.
+The formatting makes excessive use of \fB\fC\\u\fR quoting so that it follows JSON string rules but will still
+be sorted correctly by tools that just do ASCII comparisons.
+.IP \(bu 2
+\fB\fC\-c\fR \fIfile.csv\fP or \fB\fC\-\-csv=\fR\fIfile.csv\fP: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+.RE
+.SS Example
+.PP
+Join Census LEHD (Longitudinal Employer\-Household Dynamics \[la]https://lehd.ces.census.gov/\[ra]) employment data to a file of Census block geography
+for Tippecanoe County, Indiana.
+.PP
+Download Census block geometry, and convert to GeoJSON:
+.PP
+.RS
+.nf
+$ curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_18157_tabblock10.zip
+$ unzip tl_2010_18157_tabblock10.zip
+$ ogr2ogr \-f GeoJSON tl_2010_18157_tabblock10.json tl_2010_18157_tabblock10.shp
+.fi
+.RE
+.PP
+Download Indiana employment data, and fix name of join key in header
+.PP
+.RS
+.nf
+$ curl \-L \-O https://lehd.ces.census.gov/data/lodes/LODES7/in/wac/in_wac_S000_JT00_2015.csv.gz
+$ gzip \-dc in_wac_S000_JT00_2015.csv.gz | sed '1s/w_geocode/GEOID10/' > in_wac_S000_JT00_2015.csv
+.fi
+.RE
+.PP
+Sort GeoJSON block geometry so it is ordered by block ID. If you don't do this, you will get a
+"GeoJSON file is out of sort" error.
+.PP
+.RS
+.nf
+$ tippecanoe\-json\-tool \-e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C sort > tl_2010_18157_tabblock10.sort.json
+.fi
+.RE
+.PP
+Join block geometries to employment properties:
+.PP
+.RS
+.nf
+$ tippecanoe\-json\-tool \-c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks\-wac.json
+.fi
 .RE

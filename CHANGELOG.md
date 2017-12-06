@@ -1,3 +1,66 @@
+## 1.27.3
+
+* Clean up duplicated code for reading tiles from a directory
+
+## 1.27.2
+
+* Tippecanoe-decode can decode directories of tiles, not just mbtiles
+* The --allow-existing option works on directories of tiles
+* Trim .geojson, not just .json, when making layer names from filenames
+
+## 1.27.1
+
+* Fix a potential null pointer when parsing GeoJSON with bare geometries
+* Fix a bug that could cause the wrong features to be coalesced when
+  input was parsed in parallel
+
+## 1.27.0
+
+* Add tippecanoe-json-tool for sorting and joining GeoJSON files
+* Fix problem where --detect-shared-borders could simplify polygons away
+* Attach --coalesce-smallest-as-needed leftovers to the last feature, not the first
+* Fix overflow when iterating through 0-length lists backwards
+
+## 1.26.7
+
+* Add an option to quiet the progress indicator but not warnings
+* Enable more compiler warnings and fix related problems
+
+## 1.26.6
+
+* Be more careful about checking for overflow when parsing numbers
+
+## 1.26.5
+
+* Support UTF-16 surrogate pairs in JSON strings
+* Support arbitrarily long lines in CSV files.
+* Treat CSV fields as numbers only if they follow JSON number syntax
+
+## 1.26.4
+
+* Array bounds bug fix in binary to decimal conversion library
+
+## 1.26.3
+
+* Guard against impossible coordinates when decoding tilesets
+
+## 1.26.2
+
+* Make sure to encode tile-joined integers as ints, not doubles
+
+## 1.26.1
+
+* Add tile-join option to rename layers
+
+## 1.26.0
+
+Fix error when parsing attributes with empty-string keys
+
+## 1.25.0
+
+* Add --coalesce-smallest-as-needed strategy for reducing tile sizes
+* Add --stats option to tipppecanoe-decode
+
 ## 1.24.1
 
 * Limit the size and depth of the string pool for better performance

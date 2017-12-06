@@ -105,7 +105,17 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 
 void canonicalize(json_object *o) {
 	if (o->type == JSON_NUMBER) {
-		std::string s = milo::dtoa_milo(o->number);
+		std::string s;
+		long long v;
+		unsigned long long uv;
+
+		if (is_integer(o->string, &v)) {
+			s = std::to_string(v);
+		} else if (is_unsigned_integer(o->string, &uv)) {
+			s = std::to_string(uv);
+		} else {
+			s = milo::dtoa_milo(o->number);
+		}
 		free(o->string);
 		o->string = strdup(s.c_str());
 	} else if (o->type == JSON_HASH) {
@@ -119,7 +129,7 @@ void canonicalize(json_object *o) {
 	}
 }
 
-void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature, std::string const &key) {
+void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature) {
 	if (value != NULL) {
 		int vt = value->type;
 		std::string val;
@@ -150,7 +160,17 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			}
 		} else if (vt == JSON_NUMBER) {
 			type = mvt_double;
-			stringified = milo::dtoa_milo(value->number);
+
+			long long v;
+			unsigned long long uv;
+
+			if (is_integer(value->string, &v)) {
+				stringified = std::to_string(v);
+			} else if (is_unsigned_integer(value->string, &uv)) {
+				stringified = std::to_string(uv);
+			} else {
+				stringified = milo::dtoa_milo(value->number);
+			}
 		} else if (vt == JSON_TRUE || vt == JSON_FALSE) {
 			type = mvt_bool;
 			stringified = val;

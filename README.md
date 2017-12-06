@@ -96,13 +96,15 @@ delete the file that already exists with that name.
 If you aren't sure what the right maxzoom is for your data, `-zg` will guess one for you
 based on the density of features.
 
-If you are mapping point features, you will often want to use `-Bg` to automatically choose
-a base zoom level for dot dropping. If that doesn't work out for you, try
-`-r1 --drop-fraction-as-needed` to turn off the normal dot dropping and instead
-only drop features if the tiles get too big.
+Tippecanoe will normally drop a fraction of point features at zooms below the maxzoom,
+to keep the low-zoom tiles from getting too big. If you have a smaller data set where
+all the points would fit without dropping any of them, use `-r1` to keep them all.
+If you do want point dropping, but you still want the tiles to be denser than `-zg`
+thinks they should be, use `-B` to set a basezoom lower than the maxzoom.
 
-If you are mapping points or polygons, you will often want to use `--drop-densest-as-needed`
-to drop some of them if necessary to make the low zoom levels work.
+If some of your tiles are coming out too big in spite of the settings above, you will
+often want to use `--drop-densest-as-needed` to drop whatever fraction of the features
+is necessary at each zoom level to make that zoom level's tiles work.
 
 If your features have a lot of attributes, use `-y` to keep only the ones you really need.
 
@@ -206,6 +208,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-as` or `--drop-densest-as-needed`: If a tile is too large, try to reduce it to under 500K by increasing the minimum spacing between features. The discovered spacing applies to the entire zoom level.
  * `-ad` or `--drop-fraction-as-needed`: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
  * `-an` or `--drop-smallest-as-needed`: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
+ * `-aN` or `--coalesce-smallest-as-needed`: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are *not* preserved into the combined features, only their geometry.
  * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 
 ### Dropping tightly overlapping features
@@ -262,7 +265,8 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
 ### Progress indicator
 
- * `-q` or `--quiet`: Work quietly instead of reporting progress
+ * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
+ * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
  * `-v` or `--version`: Report Tippecanoe's version number
 
 ### Filters
@@ -355,33 +359,6 @@ the filename or name specified using `--layer`, like this:
     }
 }
 ```
-
-Point styling
--------------
-
-To provide a consistent density gradient as you zoom, the Mapbox Studio style needs to be
-coordinated with the base zoom level and dot-dropping rate. You can use this shell script to
-calculate the appropriate marker-width at high zoom levels to match the fraction of dots
-that were dropped at low zoom levels.
-
-If you used `-B` or `-z` to change the base zoom level or `-r` to change the
-dot-dropping rate, replace them in the `basezoom` and `rate` below.
-
-    awk 'BEGIN {
-        dotsize = 2;    # up to you to decide
-        basezoom = 14;  # tippecanoe -z 14
-        rate = 2.5;     # tippecanoe -r 2.5
-
-        print "  marker-line-width: 0;";
-        print "  marker-ignore-placement: true;";
-        print "  marker-allow-overlap: true;";
-        print "  marker-width: " dotsize ";";
-        for (i = basezoom + 1; i <= 22; i++) {
-            print "  [zoom >= " i "] { marker-width: " (dotsize * exp(log(sqrt(rate)) * (i - basezoom))) "; }";
-        }
-
-        exit(0);
-    }'
 
 Geometric simplifications
 -------------------------
@@ -498,11 +475,15 @@ The options are:
 
 ### Tileset description and attribution
 
- * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
- * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
  * `-A` *attribution* or `--attribution=`*attribution*: Set the attribution string.
  * `-n` *name* or `--name=`*name*: Set the tileset name.
  * `-N` *description* or `--description=`*description*: Set the tileset description.
+
+### Layer filtering and naming
+
+ * `-l` *layer* or `--layer=`*layer*: Include the named layer in the output. You can specify multiple `-l` options to keep multiple layers. If you don't specify, they will all be retained.
+ * `-L` *layer* or `--exclude-layer=`*layer*: Remove the named layer from the output. You can specify multiple `-L` options to remove multiple layers.
+ * `-R`*old*`:`*new* or `--rename-layer=`*old*`:`*new*: Rename the layer named *old* to be named *new* instead. You can specify multiple `-R` options to rename multiple layers. Renaming happens before filtering.
 
 ### Zoom levels
 
@@ -644,4 +625,67 @@ resolutions.
  * `-Z` _minzoom_ or `--minimum-zoom=`*minzoom*: Specify the lowest zoom level to decode from the tileset
  * `-l` _layer_ or `--layer=`*layer*: Decode only layers with the specified names. (Multiple `-l` options can be specified.)
  * `-c` or `--tag-layer-and-zoom`: Include each feature's layer and zoom level as part of its `tippecanoe` object rather than as a FeatureCollection wrapper
+ * `-S` or `--stats`: Just report statistics about each tile's size and the number of features in it, as a JSON structure.
  * `-f` or `--force`: Decode tiles even if polygon ring order or closure problems are detected
+
+tippecanoe-json-tool
+====================
+
+Extracts GeoJSON features or standalone geometries as line-delimited JSON objects from a larger JSON file,
+following the same extraction rules that Tippecanoe uses when parsing JSON.
+
+    tippecanoe-json-tool file.json [... file.json]
+
+Optionally also wraps them in a FeatureCollection or GeometryCollection as appropriate.
+
+Optionally extracts an attribute from the GeoJSON `properties` for sorting.
+
+Optionally joins a sorted CSV of new attributes to a sorted GeoJSON file.
+
+The reason for requiring sorting is so that it is possible to work on CSV and GeoJSON files that are larger
+than can comfortably fit in memory by streaming through them in parallel, in the same way that the Unix
+`join` command does. The Unix `sort` command can be used to sort large files to prepare them for joining.
+
+The sorting interface is weird, and future version of `tippecanoe-json-tool` will replace it with
+something better.
+
+### Options
+
+ * `-w` or `--wrap`: Add the FeatureCollection or GeometryCollection wrapper.
+ * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
+   The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
+   be sorted correctly by tools that just do ASCII comparisons.
+ * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+
+### Example
+
+Join Census LEHD ([Longitudinal Employer-Household Dynamics](https://lehd.ces.census.gov/)) employment data to a file of Census block geography
+for Tippecanoe County, Indiana.
+
+Download Census block geometry, and convert to GeoJSON:
+
+```
+$ curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_18157_tabblock10.zip
+$ unzip tl_2010_18157_tabblock10.zip
+$ ogr2ogr -f GeoJSON tl_2010_18157_tabblock10.json tl_2010_18157_tabblock10.shp
+```
+
+Download Indiana employment data, and fix name of join key in header
+
+```
+$ curl -L -O https://lehd.ces.census.gov/data/lodes/LODES7/in/wac/in_wac_S000_JT00_2015.csv.gz
+$ gzip -dc in_wac_S000_JT00_2015.csv.gz | sed '1s/w_geocode/GEOID10/' > in_wac_S000_JT00_2015.csv
+```
+
+Sort GeoJSON block geometry so it is ordered by block ID. If you don't do this, you will get a
+"GeoJSON file is out of sort" error.
+
+```
+$ tippecanoe-json-tool -e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C sort > tl_2010_18157_tabblock10.sort.json
+```
+
+Join block geometries to employment properties:
+
+```
+$ tippecanoe-json-tool -c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks-wac.json
+```

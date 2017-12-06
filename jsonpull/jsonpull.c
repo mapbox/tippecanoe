@@ -569,29 +569,21 @@ again:
 		struct string val;
 		string_init(&val);
 
+		int surrogate = -1;
 		while ((c = read_wrap(j)) != EOF) {
 			if (c == '"') {
+				if (surrogate >= 0) {
+					string_append(&val, 0xE0 | (surrogate >> 12));
+					string_append(&val, 0x80 | ((surrogate >> 6) & 0x3F));
+					string_append(&val, 0x80 | (surrogate & 0x3F));
+					surrogate = -1;
+				}
+
 				break;
 			} else if (c == '\\') {
 				c = read_wrap(j);
 
-				if (c == '"') {
-					string_append(&val, '"');
-				} else if (c == '\\') {
-					string_append(&val, '\\');
-				} else if (c == '/') {
-					string_append(&val, '/');
-				} else if (c == 'b') {
-					string_append(&val, '\b');
-				} else if (c == 'f') {
-					string_append(&val, '\f');
-				} else if (c == 'n') {
-					string_append(&val, '\n');
-				} else if (c == 'r') {
-					string_append(&val, '\r');
-				} else if (c == 't') {
-					string_append(&val, '\t');
-				} else if (c == 'u') {
+				if (c == 'u') {
 					char hex[5] = "aaaa";
 					int i;
 					for (i = 0; i < 4; i++) {
@@ -602,27 +594,93 @@ again:
 							return NULL;
 						}
 					}
+
 					unsigned long ch = strtoul(hex, NULL, 16);
+					if (ch >= 0xd800 && ch <= 0xdbff) {
+						if (surrogate < 0) {
+							surrogate = ch;
+						} else {
+							// Impossible surrogate, so output the first half,
+							// keep what might be a legitimate new first half.
+							string_append(&val, 0xE0 | (surrogate >> 12));
+							string_append(&val, 0x80 | ((surrogate >> 6) & 0x3F));
+							string_append(&val, 0x80 | (surrogate & 0x3F));
+							surrogate = ch;
+						}
+						continue;
+					} else if (ch >= 0xdc00 && c <= 0xdfff) {
+						if (surrogate >= 0) {
+							long c1 = surrogate - 0xd800;
+							long c2 = ch - 0xdc00;
+							ch = ((c1 << 10) | c2) + 0x010000;
+							surrogate = -1;
+						}
+					}
+
+					if (surrogate >= 0) {
+						string_append(&val, 0xE0 | (surrogate >> 12));
+						string_append(&val, 0x80 | ((surrogate >> 6) & 0x3F));
+						string_append(&val, 0x80 | (surrogate & 0x3F));
+						surrogate = -1;
+					}
+
 					if (ch <= 0x7F) {
 						string_append(&val, ch);
 					} else if (ch <= 0x7FF) {
 						string_append(&val, 0xC0 | (ch >> 6));
 						string_append(&val, 0x80 | (ch & 0x3F));
-					} else {
+					} else if (ch < 0xFFFF) {
 						string_append(&val, 0xE0 | (ch >> 12));
+						string_append(&val, 0x80 | ((ch >> 6) & 0x3F));
+						string_append(&val, 0x80 | (ch & 0x3F));
+					} else {
+						string_append(&val, 0xF0 | (ch >> 18));
+						string_append(&val, 0x80 | ((ch >> 12) & 0x3F));
 						string_append(&val, 0x80 | ((ch >> 6) & 0x3F));
 						string_append(&val, 0x80 | (ch & 0x3F));
 					}
 				} else {
-					j->error = "Found backslash followed by unknown character";
-					string_free(&val);
-					return NULL;
+					if (surrogate >= 0) {
+						string_append(&val, 0xE0 | (surrogate >> 12));
+						string_append(&val, 0x80 | ((surrogate >> 6) & 0x3F));
+						string_append(&val, 0x80 | (surrogate & 0x3F));
+						surrogate = -1;
+					}
+
+					if (c == '"') {
+						string_append(&val, '"');
+					} else if (c == '\\') {
+						string_append(&val, '\\');
+					} else if (c == '/') {
+						string_append(&val, '/');
+					} else if (c == 'b') {
+						string_append(&val, '\b');
+					} else if (c == 'f') {
+						string_append(&val, '\f');
+					} else if (c == 'n') {
+						string_append(&val, '\n');
+					} else if (c == 'r') {
+						string_append(&val, '\r');
+					} else if (c == 't') {
+						string_append(&val, '\t');
+					} else {
+						j->error = "Found backslash followed by unknown character";
+						string_free(&val);
+						return NULL;
+					}
 				}
 			} else if (c < ' ') {
 				j->error = "Found control character in string";
 				string_free(&val);
 				return NULL;
 			} else {
+				if (surrogate >= 0) {
+					string_append(&val, 0xE0 | (surrogate >> 12));
+					string_append(&val, 0x80 | ((surrogate >> 6) & 0x3F));
+					string_append(&val, 0x80 | (surrogate & 0x3F));
+					surrogate = -1;
+				}
+
 				string_append(&val, c);
 			}
 		}

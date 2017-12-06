@@ -146,10 +146,15 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		nprop = properties->length;
 	}
 
-	char *metakey[nprop];
+	std::vector<char *> metakey;
+	metakey.resize(nprop);
+
 	std::vector<std::string> metaval;
 	metaval.resize(nprop);
-	int metatype[nprop];
+
+	std::vector<int> metatype;
+	metatype.resize(nprop);
+
 	size_t m = 0;
 
 	for (size_t i = 0; i < nprop; i++) {
@@ -158,7 +163,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 			int type = -1;
 			std::string val;
-			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature, properties->keys[i]->string);
+			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature);
 
 			if (type >= 0) {
 				metakey[m] = properties->keys[i]->string;
@@ -219,8 +224,10 @@ void check_crs(json_object *j, const char *reading) {
 			json_object *name = json_hash_get(properties, "name");
 			if (name->type == JSON_STRING) {
 				if (strcmp(name->string, projection->alias) != 0) {
-					fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
-					fprintf(stderr, "%s: If \"%s\" is not the expected projection, use -s to specify the right one.\n", reading, projection->alias);
+					if (!quiet) {
+						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
+						fprintf(stderr, "%s: If \"%s\" is not the expected projection, use -s to specify the right one.\n", reading, projection->alias);
+					}
 				}
 			}
 		}
@@ -271,7 +278,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 
 			if (is_geometry) {
 				if (j->parent != NULL) {
-					if (j->parent->type == JSON_ARRAY) {
+					if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
 						if (j->parent->parent->type == JSON_HASH) {
 							json_object *geometries = json_hash_get(j->parent->parent, "geometries");
 							if (geometries != NULL) {

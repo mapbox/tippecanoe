@@ -198,7 +198,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		}
 
 		if (mb_geometry[t] == VT_POLYGON) {
-			dv = clean_or_clip_poly(dv, 0, 0, 0, false);
+			dv = clean_or_clip_poly(dv, 0, 0, false);
 			if (dv.size() < 3) {
 				dv.clear();
 			}
@@ -257,7 +257,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				int tp = -1;
 				std::string s;
 
-				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j, "");
+				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
 				if (tp >= 0) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
@@ -486,7 +486,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				serial_val v;
 				v.type = -1;
 
-				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j, "");
+				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
 
 				if (v.type >= 0) {
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));

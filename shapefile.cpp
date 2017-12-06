@@ -196,7 +196,7 @@ drawvec decode_geometry(unsigned char *data, size_t len, int *type) {
 	return dv;
 }
 
-void parse_shapefile(struct serialization_state *sst, std::string fname, int layer, std::string layername) {
+void parse_shapefile(std::vector<struct serialization_state> &sst, std::string fname, int layer, std::string layername) {
 	std::string dbfname = fname.substr(0, fname.size() - 3) + "dbf";
 	std::string prjname = fname.substr(0, fname.size() - 3) + "prj";
 
@@ -335,22 +335,24 @@ void parse_shapefile(struct serialization_state *sst, std::string fname, int lay
 				}
 			}
 
+			// sst[0] because this is only using one CPU
+
 			sf.layer = layer;
 			sf.layername = layername;
-			sf.segment = sst->segment;
+			sf.segment = sst[0].segment;
 			sf.has_id = false;
 			sf.id = 0;
 			sf.has_tippecanoe_minzoom = false;
 			sf.has_tippecanoe_maxzoom = false;
 			sf.feature_minzoom = false;
-			sf.seq = *(sst->layer_seq);
+			sf.seq = *(sst[0].layer_seq);
 			sf.geometry = dv;
 			sf.t = type;
 			sf.full_keys = full_keys;
 			sf.full_values = full_values;
 			sf.m = sf.full_values.size();
 
-			serialize_feature(sst, sf);
+			serialize_feature(&sst[0], sf);
 		}
 	}
 
