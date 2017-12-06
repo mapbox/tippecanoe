@@ -51,6 +51,7 @@
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geobuf.hpp"
+#include "geocsv.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
 #include "options.hpp"
@@ -1284,6 +1285,51 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				perror("close");
 				exit(EXIT_FAILURE);
 			}
+
+			overall_offset = layer_seq[0];
+			checkdisk(&readers);
+			continue;
+		}
+
+		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv")) {
+			long long layer_seq[CPUS];
+			double dist_sums[CPUS];
+			size_t dist_counts[CPUS];
+
+			std::vector<struct serialization_state> sst;
+			sst.resize(CPUS);
+
+			// XXX factor out this duplicated setup
+			for (size_t i = 0; i < CPUS; i++) {
+				layer_seq[i] = overall_offset;
+				dist_sums[i] = 0;
+				dist_counts[i] = 0;
+
+				sst[i].fname = reading.c_str();
+				sst[i].line = 0;
+				sst[i].layer_seq = &layer_seq[i];
+				sst[i].progress_seq = &progress_seq;
+				sst[i].readers = &readers;
+				sst[i].segment = i;
+				sst[i].initial_x = &initial_x[i];
+				sst[i].initial_y = &initial_y[i];
+				sst[i].initialized = &initialized[i];
+				sst[i].dist_sum = &dist_sums[i];
+				sst[i].dist_count = &dist_counts[i];
+				sst[i].want_dist = guess_maxzoom;
+				sst[i].maxzoom = maxzoom;
+				sst[i].filters = prefilter != NULL || postfilter != NULL;
+				sst[i].uses_gamma = uses_gamma;
+				sst[i].layermap = &layermaps[i];
+				sst[i].exclude = exclude;
+				sst[i].include = include;
+				sst[i].exclude_all = exclude_all;
+				sst[i].filter = filter;
+				sst[i].basezoom = basezoom;
+				sst[i].attribute_types = attribute_types;
+			}
+
+			parse_geocsv(sst, sources[source].file, layer, sources[layer].layer);
 
 			overall_offset = layer_seq[0];
 			checkdisk(&readers);
