@@ -31,10 +31,13 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		for (size_t i = 0; i < header.size(); i++) {
 			header[i] = csv_dequote(header[i]);
 
-			if (header[i] == "lat" || header[i] == "latitude") {
+			std::string lower(header[i]);
+			std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+			if (lower == "y" || lower == "lat" || (lower.find("latitude") != std::string::npos)) {
 				latcol = i;
 			}
-			if (header[i] == "lon" || header[i] == "longitude" || header[i] == "long") {
+			if (lower == "x" || lower == "lon" || lower == "lng" || lower == "long" || (lower.find("longitude") != std::string::npos)) {
 				loncol = i;
 			}
 		}

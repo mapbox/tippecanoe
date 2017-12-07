@@ -157,7 +157,12 @@ bool is_number(std::string const &s) {
 			}
 		}
 
-		return true;
+		if (*cp == '\0') {
+			return true;
+		} else {
+			// Something non-numeric at the end
+			return false;
+		}
 	}
 
 	return false;
