@@ -5,7 +5,7 @@ std::vector<std::string> csv_split(const char *s) {
 
 	while (*s && *s != '\n' && *s != '\r') {
 		const char *start = s;
-		int within = 0;
+		bool within = false;
 
 		for (; *s && *s != '\n' && *s != '\r'; s++) {
 			if (*s == '"') {
