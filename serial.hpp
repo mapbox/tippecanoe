@@ -108,7 +108,7 @@ struct serialization_state {
 
 	unsigned *initial_x = NULL;  // relative offset of all geometries
 	unsigned *initial_y = NULL;
-	int *initialized = NULL;
+	bool *initialized = NULL;
 
 	double *dist_sum = NULL;  // running tally for calculation of resolution within features
 	size_t *dist_count = NULL;

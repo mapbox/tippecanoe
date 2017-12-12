@@ -20,8 +20,8 @@ struct index {
 void checkdisk(std::vector<struct reader> *r);
 
 extern int geometry_scale;
-extern int quiet;
-extern int quiet_progress;
+extern bool quiet;
+extern bool quiet_progress;
 
 extern size_t CPUS;
 extern size_t TEMP_FILES;
