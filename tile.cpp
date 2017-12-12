@@ -72,7 +72,7 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-int metacmp(int m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, int m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2);
+int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, size_t m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
@@ -85,7 +85,7 @@ struct coalesce {
 	unsigned long index = 0;
 	long original_seq = 0;
 	int type = 0;
-	int m = 0;
+	size_t m = 0;
 	bool coalesced = false;
 	double spacing = 0;
 	bool has_id = false;
@@ -150,9 +150,8 @@ mvt_value retrieve_string(long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(int m, std::vector<long> const &metakeys, std::vector<long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
-	int i;
-	for (i = 0; i < m; i++) {
+void decode_meta(size_t m, std::vector<long> const &metakeys, std::vector<long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+	for (size_t i = 0; i < m; i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
@@ -161,9 +160,8 @@ void decode_meta(int m, std::vector<long> const &metakeys, std::vector<long> con
 	}
 }
 
-int metacmp(int m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, int m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2) {
-	int i;
-	for (i = 0; i < m1 && i < m2; i++) {
+int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, size_t m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2) {
+	for (size_t i = 0; i < m1 && i < m2; i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
 		mvt_value key2 = retrieve_string(keys2[i], stringpool2, NULL);
 
@@ -199,16 +197,15 @@ int metacmp(int m1, const std::vector<long> &keys1, const std::vector<long> &val
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long> &metakeys, std::vector<long> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, long *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, unsigned *initial_x, unsigned *initial_y, size_t m, std::vector<long> &metakeys, std::vector<long> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
-		int xo, yo;
+		long xo, yo;
 		int span = 1 << (nextzoom - z);
 
 		// Get the feature bounding box in pixel (256) coordinates at the child zoom
 		// in order to calculate which sub-tiles it can touch including the buffer.
 		long bbox2[4];
-		int k;
-		for (k = 0; k < 4; k++) {
+		for (size_t k = 0; k < 4; k++) {
 			// Division instead of right-shift because coordinates can be negative
 			bbox2[k] = bbox[k] / (1 << (32 - nextzoom - 8));
 		}
@@ -219,7 +216,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 		bbox2[2] += buffer;
 		bbox2[3] += buffer;
 
-		for (k = 0; k < 4; k++) {
+		for (size_t k = 0; k < 4; k++) {
 			if (bbox2[k] < 0) {
 				bbox2[k] = 0;
 			}
@@ -263,9 +260,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 				// shard X more widely than Y. XXX Is there a better way to do this
 				// without causing collisions?
 
-				int j = ((jx << max_zoom_increment) |
-					 ((jy & ((1 << max_zoom_increment) - 1)))) &
-					(child_shards - 1);
+				long j = ((jx << max_zoom_increment) |
+					  ((jy & ((1 << max_zoom_increment) - 1)))) &
+					 (child_shards - 1);
 
 				{
 					if (!within[j]) {
@@ -294,7 +291,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 					sf.feature_minzoom = feature_minzoom;
 
 					if (metastart < 0) {
-						for (int i = 0; i < m; i++) {
+						for (size_t i = 0; i < m; i++) {
 							sf.keys.push_back(metakeys[i]);
 							sf.values.push_back(metavals[i]);
 						}
@@ -317,8 +314,8 @@ struct partial {
 	long layer = 0;
 	long original_seq = 0;
 	unsigned long index = 0;
-	int m = 0;
-	int segment = 0;
+	size_t m = 0;
+	size_t segment = 0;
 	bool reduced = 0;
 	int z = 0;
 	int line_detail = 0;
@@ -333,8 +330,8 @@ struct partial {
 
 struct partial_arg {
 	std::vector<struct partial> *partials = NULL;
-	int task = 0;
-	int tasks = 0;
+	size_t task = 0;
+	size_t tasks = 0;
 };
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
@@ -346,8 +343,8 @@ drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 		return drawvec();
 	}
 
-	int height = ceil(sqrt(area));
-	int width = round(area / height);
+	long height = ceil(sqrt(area));
+	long width = round(area / height);
 	if (width == 0) {
 		width = 1;
 	}
@@ -462,7 +459,7 @@ void *partial_feature_worker(void *v) {
 	return NULL;
 }
 
-int manage_gap(unsigned long index, unsigned long *previndex, double scale, double gamma, double *gap) {
+bool manage_gap(unsigned long index, unsigned long *previndex, double scale, double gamma, double *gap) {
 	if (gamma > 0) {
 		if (*gap > 0) {
 			if (index == *previndex) {
@@ -1116,14 +1113,14 @@ struct write_tile_args {
 	int min_detail = 0;
 	sqlite3 *outdb = NULL;
 	const char *outdir = NULL;
-	int buffer = 0;
+	long buffer = 0;
 	const char *fname = NULL;
 	FILE **geomfile = NULL;
 	double todo = 0;
 	volatile long *along = NULL;
 	double gamma = 0;
 	double gamma_out = 0;
-	int child_shards = 0;
+	size_t child_shards = 0;
 	int *geomfd = NULL;
 	off_t *geom_size = NULL;
 	volatile unsigned *midx = NULL;
@@ -1138,7 +1135,7 @@ struct write_tile_args {
 	long *pool_off = NULL;
 	unsigned *initial_x = NULL;
 	unsigned *initial_y = NULL;
-	volatile int *running = NULL;
+	volatile size_t *running = NULL;
 	int err = 0;
 	std::vector<std::map<std::string, layermap_entry>> *layermaps = NULL;
 	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
@@ -1153,7 +1150,7 @@ struct write_tile_args {
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
 	bool still_dropping = false;
-	int wrote_zoom = 0;
+	bool wrote_zoom = 0;
 	size_t tiling_seg = 0;
 };
 
@@ -1233,7 +1230,7 @@ bool clip_to_tile(serial_feature &sf, int z, long buffer) {
 	return false;
 }
 
-serial_feature next_feature(FILE *geoms, long *geompos_in, char *metabase, long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long *original_features, long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile long *along, long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, long *geompos, volatile double *oprogress, double todo, const char *fname, int child_shards) {
+serial_feature next_feature(FILE *geoms, long *geompos_in, char *metabase, long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long *original_features, long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile long *along, long alongminus, long buffer, bool *within, bool *first_time, FILE **geomfile, long *geompos, volatile double *oprogress, double todo, const char *fname, size_t child_shards) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
 		if (sf.t < 0) {
@@ -1302,15 +1299,15 @@ struct run_prefilter_args {
 	size_t passes = 0;
 	volatile long *along = 0;
 	long alongminus = 0;
-	int buffer = 0;
-	int *within = NULL;
+	long buffer = 0;
+	bool *within = NULL;
 	bool *first_time = NULL;
 	FILE **geomfile = NULL;
 	long *geompos = NULL;
 	volatile double *oprogress = NULL;
 	double todo = 0;
 	const char *fname = 0;
-	int child_shards = 0;
+	size_t child_shards = 0;
 	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
 	char *stringpool = NULL;
 	long *pool_off = NULL;
@@ -1372,7 +1369,7 @@ void *run_prefilter(void *v) {
 	return NULL;
 }
 
-long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long *along, long alongminus, double gamma, int child_shards, long *meta_off, long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
+long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long *along, long alongminus, double gamma, size_t child_shards, long *meta_off, long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile size_t *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
@@ -1384,11 +1381,11 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 	// XXX is there a way to do this without floating point?
 	int max_zoom_increment = std::log(child_shards) / std::log(4);
 	if (child_shards < 4 || max_zoom_increment < 1) {
-		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
+		fprintf(stderr, "Internal error: %zu shards, max zoom increment %d\n", child_shards, max_zoom_increment);
 		exit(EXIT_FAILURE);
 	}
 	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
-		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
+		fprintf(stderr, "Internal error: %zu shards not a power of 2\n", child_shards);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1426,10 +1423,12 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 		std::vector<long> extents;
 		std::vector<serial_feature> coalesced_geometry;
 
-		int within[child_shards];
+		bool within[child_shards];
 		long geompos[child_shards];
-		memset(within, '\0', child_shards * sizeof(int));
-		memset(geompos, '\0', child_shards * sizeof(long));
+		for (size_t i = 0; i < child_shards; i++) {
+			within[i] = false;
+			geompos[i] = 0;
+		}
 
 		if (*geompos_in != og) {
 			if (fseek(geoms, og, SEEK_SET) != 0) {
@@ -1656,7 +1655,7 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
 		}
 
-		int tasks = ceil((double) CPUS / *running);
+		size_t tasks = ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
 		}
@@ -1664,7 +1663,7 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 		pthread_t pthreads[tasks];
 		std::vector<partial_arg> args;
 		args.resize(tasks);
-		for (int i = 0; i < tasks; i++) {
+		for (size_t i = 0; i < tasks; i++) {
 			args[i].task = i;
 			args[i].tasks = tasks;
 			args[i].partials = &partials;
@@ -1680,7 +1679,7 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 		}
 
 		if (tasks > 1) {
-			for (int i = 0; i < tasks; i++) {
+			for (size_t i = 0; i < tasks; i++) {
 				void *retval;
 
 				if (pthread_join(pthreads[i], &retval) != 0) {
@@ -1726,8 +1725,8 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 					auto l = layers.find(layername);
 					if (l == layers.end()) {
 						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
-						fprintf(stderr, "segment %d\n", partials[i].segment);
-						fprintf(stderr, "layer %ld\n", partials[i].layer);
+						fprintf(stderr, "segment %zu\n", partials[i].segment);
+						fprintf(stderr, "layer %zu\n", partials[i].layer);
 						exit(EXIT_FAILURE);
 					}
 					l->second.push_back(c);
@@ -1737,8 +1736,7 @@ long write_tile(FILE *geoms, long *geompos_in, char *metabase, char *stringpool,
 
 		partials.clear();
 
-		int j;
-		for (j = 0; j < child_shards; j++) {
+		for (size_t j = 0; j < child_shards; j++) {
 			if (within[j]) {
 				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
@@ -2181,7 +2179,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long *meta_off, long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long *meta_off, long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.
@@ -2203,8 +2201,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 	}
 
-	int i;
-	for (i = 0; i <= maxzoom; i++) {
+	for (int i = 0; i <= maxzoom; i++) {
 		long most = 0;
 
 		FILE *sub[TEMP_FILES];
@@ -2247,7 +2244,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		// Round down to a power of 2
-		for (int e = 0; e < 30; e++) {
+		for (size_t e = 0; e < 30; e++) {
 			if (threads >= (1U << e) && threads < (1U << (e + 1))) {
 				threads = 1U << e;
 				break;
@@ -2321,7 +2318,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			pthread_t pthreads[threads];
 			std::vector<write_tile_args> args;
 			args.resize(threads);
-			int running = threads;
+			size_t running = threads;
 			long along = 0;
 
 			for (size_t thread = 0; thread < threads; thread++) {

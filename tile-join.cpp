@@ -31,11 +31,13 @@
 #include "jsonpull/jsonpull.h"
 #include "milo/dtoa_milo.h"
 
+// These are int for the sake of getopt_long
 int pk = false;
 int pC = false;
 int pg = false;
+
 size_t CPUS;
-int quiet = false;
+bool quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
 std::map<std::string, std::string> renames;
@@ -47,9 +49,9 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, bool ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
-	int features_added = 0;
+	size_t features_added = 0;
 	bool was_compressed;
 
 	if (!tile.decode(message, was_compressed)) {
@@ -144,7 +146,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			mvt_feature outfeature;
-			int matched = 0;
+			bool matched = 0;
 
 			if (feat.has_id) {
 				outfeature.has_id = true;
@@ -326,7 +328,7 @@ struct reader {
 	long x = 0;
 	long sorty = 0;
 	long y = 0;
-	int z_flag = 0;
+	bool z_flag = 0;
 
 	std::string data = "";
 
@@ -439,7 +441,7 @@ struct arg {
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *keep_layers = NULL;
 	std::set<std::string> *remove_layers = NULL;
-	int ifmatched = 0;
+	bool ifmatched = 0;
 	json_object *filter = NULL;
 };
 
@@ -485,7 +487,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, bool ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -541,7 +543,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
+void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, bool ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -738,8 +740,8 @@ int main(int argc, char **argv) {
 	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	char *csv = NULL;
-	int force = 0;
-	int ifmatched = 0;
+	bool force = false;
+	bool ifmatched = false;
 	json_object *filter = NULL;
 
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
