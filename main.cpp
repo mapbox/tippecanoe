@@ -1382,7 +1382,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 #define PARSE_MAX (1LL * 1024 * 1024 * 1024)
 
 				char buf[READ_BUF];
-				int n;
+				size_t n;
 
 				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
@@ -1425,7 +1425,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 						}
 					}
 				}
-				if (n < 0) {
+				if (ferror(fp)) {
 					perror(reading.c_str());
 				}
 
