@@ -38,12 +38,12 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
+bool serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, size_t layer, json_object *tippecanoe, json_object *feature, std::string layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
-		static int warned = 0;
+		static bool warned = 0;
 		if (!warned) {
-			fprintf(stderr, "%s:%d: null geometry (additional not reported)\n", sst->fname, sst->line);
+			fprintf(stderr, "%s:%zu: null geometry (additional not reported)\n", sst->fname, sst->line);
 			json_context(feature);
 			warned = 1;
 		}
@@ -52,14 +52,14 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	}
 
 	if (geometry_type->type != JSON_STRING) {
-		fprintf(stderr, "%s:%d: geometry type is not a string\n", sst->fname, sst->line);
+		fprintf(stderr, "%s:%zu: geometry type is not a string\n", sst->fname, sst->line);
 		json_context(feature);
 		return 0;
 	}
 
 	json_object *coordinates = json_hash_get(geometry, "coordinates");
 	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: feature without coordinates array\n", sst->fname, sst->line);
+		fprintf(stderr, "%s:%zu: feature without coordinates array\n", sst->fname, sst->line);
 		json_context(feature);
 		return 0;
 	}
@@ -71,7 +71,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string);
+		fprintf(stderr, "%s:%zu: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string);
 		json_context(feature);
 		return 0;
 	}
@@ -234,7 +234,7 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
+void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, std::string layername) {
 	long found_hashes = 0;
 	long found_features = 0;
 	long found_geometries = 0;
@@ -267,9 +267,8 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		}
 
 		if (found_features == 0) {
-			int i;
-			int is_geometry = 0;
-			for (i = 0; i < GEOM_TYPES; i++) {
+			bool is_geometry = 0;
+			for (size_t i = 0; i < GEOM_TYPES; i++) {
 				if (strcmp(type->string, geometry_names[i]) == 0) {
 					is_geometry = 1;
 					break;

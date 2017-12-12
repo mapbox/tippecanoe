@@ -12,23 +12,23 @@
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
 void serialize_int(FILE *out, int n, long *fpos, const char *fname);
-void serialize_long_long(FILE *out, long n, long *fpos, const char *fname);
-void serialize_ulong_long(FILE *out, unsigned long n, long *fpos, const char *fname);
+void serialize_long(FILE *out, long n, long *fpos, const char *fname);
+void serialize_ulong(FILE *out, unsigned long n, long *fpos, const char *fname);
 void serialize_byte(FILE *out, signed char n, long *fpos, const char *fname);
 void serialize_uint(FILE *out, unsigned n, long *fpos, const char *fname);
 void serialize_string(FILE *out, const char *s, long *fpos, const char *fname);
 
 void deserialize_int(char **f, int *n);
-void deserialize_long_long(char **f, long *n);
-void deserialize_ulong_long(char **f, unsigned long *n);
+void deserialize_long(char **f, long *n);
+void deserialize_ulong(char **f, unsigned long *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
 
-int deserialize_int_io(FILE *f, int *n, long *geompos);
-int deserialize_long_long_io(FILE *f, long *n, long *geompos);
-int deserialize_ulong_long_io(FILE *f, unsigned long *n, long *geompos);
-int deserialize_uint_io(FILE *f, unsigned *n, long *geompos);
-int deserialize_byte_io(FILE *f, signed char *n, long *geompos);
+bool deserialize_int_io(FILE *f, int *n, long *geompos);
+bool deserialize_long_io(FILE *f, long *n, long *geompos);
+bool deserialize_ulong_io(FILE *f, unsigned long *n, long *geompos);
+bool deserialize_uint_io(FILE *f, unsigned *n, long *geompos);
+bool deserialize_byte_io(FILE *f, signed char *n, long *geompos);
 
 struct serial_val {
 	int type = 0;
@@ -37,7 +37,7 @@ struct serial_val {
 
 struct serial_feature {
 	long layer = 0;
-	int segment = 0;
+	size_t segment = 0;
 	long seq = 0;
 
 	signed char t = 0;
@@ -98,13 +98,13 @@ struct reader {
 
 struct serialization_state {
 	const char *fname = NULL;  // source file name
-	int line = 0;		   // user-oriented location within source for error reports
+	size_t line = 0;	   // user-oriented location within source for error reports
 
 	volatile long *layer_seq = NULL;     // sequence within current layer
 	volatile long *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
-	int segment = 0;			     // the current input thread
+	size_t segment = 0;			     // the current input thread
 
 	unsigned *initial_x = NULL;  // relative offset of all geometries
 	unsigned *initial_y = NULL;
@@ -125,11 +125,11 @@ struct serialization_state {
 	std::map<std::string, int> const *attribute_types = NULL;
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
-	int exclude_all = 0;
+	bool exclude_all = false;
 	json_object *filter = NULL;
 };
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf);
+bool serialize_feature(struct serialization_state *sst, serial_feature &sf);
 void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types);
 
 #endif

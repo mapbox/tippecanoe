@@ -68,10 +68,10 @@ void tiletoepsg3857(long ix, long iy, int zoom, double *ox, double *oy) {
 	*oy = ((1LL << 32) - 1 - iy - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
 }
 
-unsigned long encode(unsigned int wx, unsigned int wy) {
+unsigned long encode(unsigned wx, unsigned wy) {
 	unsigned long out = 0;
 
-	int i;
+	size_t i;
 	for (i = 0; i < 32; i++) {
 		unsigned long v = ((wx >> (32 - (i + 1))) & 1) << 1;
 		v |= (wy >> (32 - (i + 1))) & 1;
@@ -87,7 +87,7 @@ static unsigned char decodex[256];
 static unsigned char decodey[256];
 
 void decode(unsigned long index, unsigned *wx, unsigned *wy) {
-	static int initialized = 0;
+	static bool initialized = false;
 	if (!initialized) {
 		for (size_t ix = 0; ix < 256; ix++) {
 			size_t xx = 0, yy = 0;

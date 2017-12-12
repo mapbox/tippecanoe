@@ -14,6 +14,7 @@ int swizzlecmp(const char *a, const char *b) {
 		return 0;
 	}
 
+	// This is long to avoid complaints about overflow
 	long hash1 = 0, hash2 = 0;
 	for (ssize_t i = alen - 1; i >= 0; i--) {
 		hash1 = (hash1 * 37 + a[i]) & INT_MAX;
@@ -22,7 +23,7 @@ int swizzlecmp(const char *a, const char *b) {
 		hash2 = (hash2 * 37 + b[i]) & INT_MAX;
 	}
 
-	int h1 = hash1, h2 = hash2;
+	int h1 = (int) hash1, h2 = (int) hash2;
 	if (h1 == h2) {
 		return strcmp(a, b);
 	}

@@ -112,8 +112,8 @@ struct mvt_tile {
 };
 
 bool is_compressed(std::string const &data);
-int decompress(std::string const &input, std::string &output);
-int compress(std::string const &input, std::string &output);
+bool decompress(std::string const &input, std::string &output);
+bool compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);

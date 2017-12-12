@@ -26,7 +26,7 @@ bool is_compressed(std::string const &data) {
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int decompress(std::string const &input, std::string &output) {
+bool decompress(std::string const &input, std::string &output) {
 	z_stream inflate_s;
 	inflate_s.zalloc = Z_NULL;
 	inflate_s.zfree = Z_NULL;
@@ -46,18 +46,18 @@ int decompress(std::string const &input, std::string &output) {
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
 			fprintf(stderr, "error: %s\n", inflate_s.msg);
-			return 0;
+			return false;
 		}
 
 		length += (2 * input.size() - inflate_s.avail_out);
 	} while (inflate_s.avail_out == 0);
 	inflateEnd(&inflate_s);
 	output.resize(length);
-	return 1;
+	return true;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int compress(std::string const &input, std::string &output) {
+bool compress(std::string const &input, std::string &output) {
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
@@ -75,13 +75,13 @@ int compress(std::string const &input, std::string &output) {
 		deflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			return -1;
+			return true;
 		}
 		length += (increase - deflate_s.avail_out);
 	} while (deflate_s.avail_out == 0);
 	deflateEnd(&deflate_s);
 	output.resize(length);
-	return 0;
+	return false;
 }
 
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
@@ -321,10 +321,10 @@ std::string mvt_tile::encode() {
 
 			std::vector<uint32_t> geometry;
 
-			int px = 0, py = 0;
+			long px = 0, py = 0;
 			int cmd_idx = -1;
 			int cmd = -1;
-			int length = 0;
+			size_t length = 0;
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
@@ -346,8 +346,8 @@ std::string mvt_tile::encode() {
 					long wwx = geom[g].x;
 					long wwy = geom[g].y;
 
-					int dx = wwx - px;
-					int dy = wwy - py;
+					long dx = wwx - px;
+					long dy = wwy - py;
 
 					geometry.push_back(protozero::encode_zigzag32(dx));
 					geometry.push_back(protozero::encode_zigzag32(dy));

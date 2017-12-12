@@ -17,7 +17,7 @@
 #include "text.hpp"
 #include "milo/dtoa_milo.h"
 
-sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
+sqlite3 *mbtiles_open(char *dbname, char **argv, bool forcetable) {
 	sqlite3 *outdb;
 
 	if (sqlite3_open(dbname, &outdb) != SQLITE_OK) {
@@ -66,7 +66,7 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	return outdb;
 }
 
-void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size) {
+void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, size_t size) {
 	sqlite3_stmt *stmt;
 	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
 	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
@@ -307,7 +307,7 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1, si
 	return out2;
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, bool forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -448,7 +448,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 					aprintf(&buf, "\"");
 					quote(buf, j->first.c_str());
 
-					int type = 0;
+					unsigned type = 0;
 					for (auto s : j->second.sample_values) {
 						type |= (1 << s.type);
 					}

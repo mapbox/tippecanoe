@@ -41,9 +41,9 @@ void json_context(json_object *j) {
 	free(s);  // stringify
 }
 
-void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature) {
+void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, size_t line, json_object *feature) {
 	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
+		fprintf(stderr, "%s:%zu: expected array for type %d\n", fname, line, t);
 		json_context(feature);
 		return;
 	}
@@ -70,10 +70,10 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			projection->project(lon, lat, 32, &x, &y);
 
 			if (j->length > 2) {
-				static int warned = 0;
+				static bool warned = false;
 
 				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
+					fprintf(stderr, "%s:%zu: ignoring dimensions beyond two\n", fname, line);
 					json_context(j);
 					json_context(feature);
 					warned = 1;
@@ -83,7 +83,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			draw d(op, x, y);
 			out.push_back(draw(op, x, y));
 		} else {
-			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
+			fprintf(stderr, "%s:%zu: malformed point\n", fname, line);
 			json_context(j);
 			json_context(feature);
 		}
@@ -129,7 +129,7 @@ void canonicalize(json_object *o) {
 	}
 }
 
-void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature) {
+void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, size_t line, json_object *feature) {
 	if (value != NULL) {
 		int vt = value->type;
 		std::string val;
@@ -154,7 +154,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			stringified = val;
 			std::string err = check_utf8(val);
 			if (err != "") {
-				fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
+				fprintf(stderr, "%s:%zu: %s\n", reading, line, err.c_str());
 				json_context(feature);
 				exit(EXIT_FAILURE);
 			}

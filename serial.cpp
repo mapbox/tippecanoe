@@ -31,16 +31,16 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 }
 
 void serialize_int(FILE *out, int n, long *fpos, const char *fname) {
-	serialize_long_long(out, n, fpos, fname);
+	serialize_long(out, n, fpos, fname);
 }
 
-void serialize_long_long(FILE *out, long n, long *fpos, const char *fname) {
+void serialize_long(FILE *out, long n, long *fpos, const char *fname) {
 	unsigned long zigzag = protozero::encode_zigzag64(n);
 
-	serialize_ulong_long(out, zigzag, fpos, fname);
+	serialize_ulong(out, zigzag, fpos, fname);
 }
 
-void serialize_ulong_long(FILE *out, unsigned long zigzag, long *fpos, const char *fname) {
+void serialize_ulong(FILE *out, unsigned long zigzag, long *fpos, const char *fname) {
 	while (1) {
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
@@ -74,19 +74,19 @@ void serialize_uint(FILE *out, unsigned n, long *fpos, const char *fname) {
 
 void deserialize_int(char **f, int *n) {
 	long ll;
-	deserialize_long_long(f, &ll);
+	deserialize_long(f, &ll);
 	*n = ll;
 }
 
-void deserialize_long_long(char **f, long *n) {
+void deserialize_long(char **f, long *n) {
 	unsigned long zigzag = 0;
-	deserialize_ulong_long(f, &zigzag);
+	deserialize_ulong(f, &zigzag);
 	*n = protozero::decode_zigzag64(zigzag);
 }
 
-void deserialize_ulong_long(char **f, unsigned long *zigzag) {
+void deserialize_ulong(char **f, unsigned long *zigzag) {
 	*zigzag = 0;
-	int shift = 0;
+	size_t shift = 0;
 
 	while (1) {
 		if ((**f & 0x80) == 0) {
@@ -112,16 +112,16 @@ void deserialize_byte(char **f, signed char *n) {
 	*f += sizeof(signed char);
 }
 
-int deserialize_long_long_io(FILE *f, long *n, long *geompos) {
+bool deserialize_long_io(FILE *f, long *n, long *geompos) {
 	unsigned long zigzag = 0;
-	int ret = deserialize_ulong_long_io(f, &zigzag, geompos);
+	bool ret = deserialize_ulong_io(f, &zigzag, geompos);
 	*n = protozero::decode_zigzag64(zigzag);
 	return ret;
 }
 
-int deserialize_ulong_long_io(FILE *f, unsigned long *zigzag, long *geompos) {
+bool deserialize_ulong_io(FILE *f, unsigned long *zigzag, long *geompos) {
 	*zigzag = 0;
-	int shift = 0;
+	size_t shift = 0;
 
 	while (1) {
 		int c = getc(f);
@@ -143,14 +143,14 @@ int deserialize_ulong_long_io(FILE *f, unsigned long *zigzag, long *geompos) {
 	return 1;
 }
 
-int deserialize_int_io(FILE *f, int *n, long *geompos) {
+bool deserialize_int_io(FILE *f, int *n, long *geompos) {
 	long ll = 0;
-	int ret = deserialize_long_long_io(f, &ll, geompos);
+	bool ret = deserialize_long_io(f, &ll, geompos);
 	*n = ll;
 	return ret;
 }
 
-int deserialize_uint_io(FILE *f, unsigned *n, long *geompos) {
+bool deserialize_uint_io(FILE *f, unsigned *n, long *geompos) {
 	if (fread(n, sizeof(unsigned), 1, f) != 1) {
 		return 0;
 	}
@@ -158,7 +158,7 @@ int deserialize_uint_io(FILE *f, unsigned *n, long *geompos) {
 	return 1;
 }
 
-int deserialize_byte_io(FILE *f, signed char *n, long *geompos) {
+bool deserialize_byte_io(FILE *f, signed char *n, long *geompos) {
 	int c = getc(f);
 	if (c == EOF) {
 		return 0;
@@ -172,8 +172,8 @@ static void write_geometry(drawvec const &dv, long *fpos, FILE *out, const char 
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			serialize_byte(out, dv[i].op, fpos, fname);
-			serialize_long_long(out, dv[i].x - wx, fpos, fname);
-			serialize_long_long(out, dv[i].y - wy, fpos, fname);
+			serialize_long(out, dv[i].x - wx, fpos, fname);
+			serialize_long(out, dv[i].y - wy, fpos, fname);
 			wx = dv[i].x;
 			wy = dv[i].y;
 		} else {
@@ -194,9 +194,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const 
 	layer |= sf->has_tippecanoe_minzoom << 1;
 	layer |= sf->has_tippecanoe_maxzoom << 0;
 
-	serialize_long_long(geomfile, layer, geompos, fname);
+	serialize_long(geomfile, layer, geompos, fname);
 	if (sf->seq != 0) {
-		serialize_long_long(geomfile, sf->seq, geompos, fname);
+		serialize_long(geomfile, sf->seq, geompos, fname);
 	}
 	if (sf->has_tippecanoe_minzoom) {
 		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
@@ -205,23 +205,23 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const 
 		serialize_int(geomfile, sf->tippecanoe_maxzoom, geompos, fname);
 	}
 	if (sf->has_id) {
-		serialize_ulong_long(geomfile, sf->id, geompos, fname);
+		serialize_ulong(geomfile, sf->id, geompos, fname);
 	}
 
-	serialize_int(geomfile, sf->segment, geompos, fname);
+	serialize_ulong(geomfile, sf->segment, geompos, fname);
 
 	write_geometry(sf->geometry, geompos, geomfile, fname, wx, wy);
 	serialize_byte(geomfile, VT_END, geompos, fname);
 	if (sf->index != 0) {
-		serialize_ulong_long(geomfile, sf->index, geompos, fname);
+		serialize_ulong(geomfile, sf->index, geompos, fname);
 	}
 	if (sf->extent != 0) {
-		serialize_long_long(geomfile, sf->extent, geompos, fname);
+		serialize_long(geomfile, sf->extent, geompos, fname);
 	}
 
-	serialize_int(geomfile, sf->m, geompos, fname);
+	serialize_ulong(geomfile, sf->m, geompos, fname);
 	if (sf->m != 0) {
-		serialize_long_long(geomfile, sf->metapos, geompos, fname);
+		serialize_long(geomfile, sf->metapos, geompos, fname);
 	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
@@ -230,8 +230,8 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const 
 	}
 
 	for (size_t i = 0; i < sf->keys.size(); i++) {
-		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
-		serialize_long_long(geomfile, sf->values[i], geompos, fname);
+		serialize_long(geomfile, sf->keys[i], geompos, fname);
+		serialize_long(geomfile, sf->values[i], geompos, fname);
 	}
 
 	if (include_minzoom) {
@@ -247,11 +247,11 @@ serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase
 		return sf;
 	}
 
-	deserialize_long_long_io(geoms, &sf.layer, geompos_in);
+	deserialize_long_io(geoms, &sf.layer, geompos_in);
 
 	sf.seq = 0;
 	if (sf.layer & (1 << 5)) {
-		deserialize_long_long_io(geoms, &sf.seq, geompos_in);
+		deserialize_long_io(geoms, &sf.seq, geompos_in);
 	}
 
 	sf.tippecanoe_minzoom = -1;
@@ -266,32 +266,32 @@ serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase
 	}
 	if (sf.layer & (1 << 2)) {
 		sf.has_id = true;
-		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
+		deserialize_ulong_io(geoms, &sf.id, geompos_in);
 	}
 
-	deserialize_int_io(geoms, &sf.segment, geompos_in);
+	deserialize_ulong_io(geoms, &sf.segment, geompos_in);
 
 	sf.index = 0;
 	sf.extent = 0;
 
 	sf.geometry = decode_geometry(geoms, geompos_in, z, tx, ty, sf.bbox, initial_x[sf.segment], initial_y[sf.segment]);
 	if (sf.layer & (1 << 4)) {
-		deserialize_ulong_long_io(geoms, &sf.index, geompos_in);
+		deserialize_ulong_io(geoms, &sf.index, geompos_in);
 	}
 	if (sf.layer & (1 << 3)) {
-		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
+		deserialize_long_io(geoms, &sf.extent, geompos_in);
 	}
 
 	sf.layer >>= 6;
 
 	sf.metapos = 0;
 	{
-		int m;
-		deserialize_int_io(geoms, &m, geompos_in);
+		size_t m;
+		deserialize_ulong_io(geoms, &m, geompos_in);
 		sf.m = m;
 	}
 	if (sf.m != 0) {
-		deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
+		deserialize_long_io(geoms, &sf.metapos, geompos_in);
 	}
 
 	if (sf.metapos >= 0) {
@@ -299,16 +299,16 @@ serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase
 
 		for (size_t i = 0; i < sf.m; i++) {
 			long k, v;
-			deserialize_long_long(&meta, &k);
-			deserialize_long_long(&meta, &v);
+			deserialize_long(&meta, &k);
+			deserialize_long(&meta, &v);
 			sf.keys.push_back(k);
 			sf.values.push_back(v);
 		}
 	} else {
 		for (size_t i = 0; i < sf.m; i++) {
 			long k, v;
-			deserialize_long_long_io(geoms, &k, geompos_in);
-			deserialize_long_long_io(geoms, &v, geompos_in);
+			deserialize_long_io(geoms, &k, geompos_in);
+			deserialize_long_io(geoms, &v, geompos_in);
 			sf.keys.push_back(k);
 			sf.values.push_back(v);
 		}
@@ -378,7 +378,7 @@ static long scale_geometry(struct serialization_state *sst, long *bbox, drawvec 
 	return geom.size();
 }
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
+bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	struct reader *r = &(*sst->readers)[sst->segment];
 
 	sf.bbox[0] = LLONG_MAX;
@@ -435,7 +435,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 			static volatile long warned = 0;
 			long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
 			if (extent > warned) {
-				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %ld tiles\n", sst->fname, sst->line, extent);
+				fprintf(stderr, "Warning: %s:%zu: Large unclipped (-pc) feature may be duplicated across %ld tiles\n", sst->fname, sst->line, extent);
 				warned = extent;
 
 				if (extent > 10000) {
@@ -565,7 +565,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
 
 		if (!evaluate(attributes, sf.layername, sst->filter)) {
-			return 0;
+			return false;
 		}
 	}
 
@@ -597,8 +597,8 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	} else {
 		sf.metapos = r->metapos;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
-			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
+			serialize_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
+			serialize_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
 		}
 	}
 
@@ -636,7 +636,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	(*(sst->progress_seq))++;
 	(*(sst->layer_seq))++;
 
-	return 1;
+	return true;
 }
 
 void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types) {

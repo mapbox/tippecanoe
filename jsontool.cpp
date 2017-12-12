@@ -377,7 +377,7 @@ void process(FILE *fp, const char *fname) {
 			   strcmp(type->string, "LineString") == 0 ||
 			   strcmp(type->string, "MultiLineString") == 0 ||
 			   strcmp(type->string, "MultiPolygon") == 0) {
-			int is_geometry = 1;
+			bool is_geometry = true;
 
 			if (j->parent != NULL) {
 				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
