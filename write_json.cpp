@@ -180,7 +180,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				fprintf(fp, " ]");
 			}
 		} else if (feat.type == VT_LINE) {
-			int movetos = 0;
+			size_t movetos = 0;
 			for (size_t i = 0; i < ops.size(); i++) {
 				if (ops[i].op == VT_MOVETO) {
 					movetos++;
@@ -225,7 +225,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 					areas.push_back(0);
 				}
 
-				int n = rings.size() - 1;
+				ssize_t n = rings.size() - 1;
 				if (n >= 0) {
 					if (ops[i].op == VT_CLOSEPATH) {
 						rings[n].push_back(rings[n][0]);
@@ -250,7 +250,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 			}
 
-			int outer = 0;
+			size_t outer = 0;
 
 			for (size_t i = 0; i < rings.size(); i++) {
 				long double area = 0;

@@ -20,8 +20,8 @@
 #include "serial.hpp"
 #include "main.hpp"
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy);
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
+static bool pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy);
+static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
 drawvec decode_geometry(FILE *meta, long *geompos, int z, unsigned tx, unsigned ty, long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
@@ -91,7 +91,7 @@ void to_tile_scale(drawvec &geom, int z, int detail) {
 	}
 }
 
-drawvec remove_noop(drawvec geom, int type, int shift) {
+drawvec remove_noop(drawvec geom, int type, size_t shift) {
 	// first pass: remove empty linetos
 
 	long x = 0, y = 0;
@@ -219,7 +219,7 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long> &t, drawvec &ou
 	}
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
+drawvec clean_or_clip_poly(drawvec &geom, int z, long buffer, bool clip) {
 	mapbox::geometry::wagyu::wagyu<long> wagyu;
 
 	geom = remove_noop(geom, VT_POLYGON, 0);
@@ -334,7 +334,7 @@ The name of W. Randolph Franklin may not be used to endorse or promote products 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy) {
+static bool pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy) {
 	size_t i, j;
 	bool c = false;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
@@ -507,7 +507,7 @@ drawvec simple_clip_poly(drawvec &geom, long minx, long miny, long maxx, long ma
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
+drawvec simple_clip_poly(drawvec &geom, int z, long buffer) {
 	long area = 1LL << (32 - z);
 	long clip_buffer = buffer * area / 256;
 
@@ -579,7 +579,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			i = j - 1;
 		} else {
-			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
+			fprintf(stderr, "how did we get here with %d in %zu?\n", geom[i].op, geom.size());
 
 			for (size_t n = 0; n < geom.size(); n++) {
 				fprintf(stderr, "%d/%ld/%ld ", geom[n].op, geom[n].x, geom[n].y);
@@ -701,13 +701,13 @@ static double square_distance_from_line(long point_x, long point_y, long segA_x,
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t kept, size_t retain) {
+static void douglas_peucker(drawvec &geom, size_t start, size_t n, double e, size_t kept, size_t retain) {
 	e = e * e;
-	std::stack<int> recursion_stack;
+	std::stack<size_t> recursion_stack;
 
 	{
-		int left_border = 0;
-		int right_border = 1;
+		size_t left_border = 0;
+		size_t right_border = 1;
 		// Sweep linerarily over array and identify those ranges that need to be checked
 		do {
 			if (geom[start + right_border].necessary) {
@@ -721,17 +721,16 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t ke
 
 	while (!recursion_stack.empty()) {
 		// pop next element
-		int second = recursion_stack.top();
+		size_t second = recursion_stack.top();
 		recursion_stack.pop();
-		int first = recursion_stack.top();
+		size_t first = recursion_stack.top();
 		recursion_stack.pop();
 
 		double max_distance = -1;
-		int farthest_element_index = second;
+		size_t farthest_element_index = second;
 
 		// find index idx of element with max_distance
-		int i;
-		for (i = first + 1; i < second; i++) {
+		for (size_t i = first + 1; i < second; i++) {
 			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y, geom[start + first].x, geom[start + first].y, geom[start + second].x, geom[start + second].y);
 
 			double distance = std::fabs(temp_dist);
@@ -794,7 +793,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long extent) {
 }
 
 drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
-	int res = 1 << (32 - detail - z);
+	long res = 1 << (32 - detail - z);
 	long area = 1LL << (32 - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -882,7 +881,7 @@ drawvec reorder_lines(drawvec &geom) {
 }
 
 drawvec fix_polygon(drawvec &geom) {
-	int outer = 1;
+	bool outer = 1;
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -915,7 +914,7 @@ drawvec fix_polygon(drawvec &geom) {
 			double area = get_area(ring, 0, ring.size());
 			if ((area > 0) != outer) {
 				drawvec tmp;
-				for (int a = ring.size() - 1; a >= 0; a--) {
+				for (ssize_t a = ring.size() - 1; a >= 0; a--) {
 					tmp.push_back(ring[a]);
 				}
 				ring = tmp;
@@ -1031,8 +1030,8 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 #define BOTTOM 4
 #define TOP 8
 
-static int computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
-	int code = INSIDE;
+static unsigned computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
+	unsigned code = INSIDE;
 
 	if (x < xmin) {
 		code |= LEFT;
@@ -1049,11 +1048,11 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 	return code;
 }
 
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
-	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
-	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
-	int accept = 0;
-	int changed = 0;
+static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
+	unsigned outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
+	unsigned outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
+	bool accept = 0;
+	size_t changed = 0;
 
 	while (1) {
 		if (!(outcode0 | outcode1)) {  // Bitwise OR is 0. Trivially accept and get out of loop
@@ -1067,7 +1066,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 			double x = *x0, y = *y0;
 
 			// At least one endpoint is outside the clip rectangle; pick it.
-			int outcodeOut = outcode0 ? outcode0 : outcode1;
+			unsigned outcodeOut = outcode0 ? outcode0 : outcode1;
 
 			// Now find the intersection point;
 			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
