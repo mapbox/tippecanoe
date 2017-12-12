@@ -64,7 +64,7 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 
 		case 4:
 			sv.type = mvt_double;
-			sv.s = std::to_string(-(long long) pbf.get_uint64());
+			sv.s = std::to_string(-(long) pbf.get_uint64());
 			break;
 
 		case 5:
@@ -94,21 +94,21 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 	return sv;
 }
 
-drawvec readPoint(std::vector<long long> &coords, size_t dim, double e) {
+drawvec readPoint(std::vector<long> &coords, size_t dim, double e) {
 	ensureDim(dim);
 
-	long long x, y;
+	long x, y;
 	projection->project(coords[0] / e, coords[1] / e, 32, &x, &y);
 	drawvec dv;
 	dv.push_back(draw(VT_MOVETO, x, y));
 	return dv;
 }
 
-drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_t start, size_t end, bool closed) {
+drawvec readLinePart(std::vector<long> &coords, size_t dim, double e, size_t start, size_t end, bool closed) {
 	ensureDim(dim);
 
 	drawvec dv;
-	std::vector<long long> prev;
+	std::vector<long> prev;
 	std::vector<double> p;
 	prev.resize(dim);
 	p.resize(dim);
@@ -124,7 +124,7 @@ drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_
 			p[d] = prev[d] / e;
 		}
 
-		long long x, y;
+		long x, y;
 		projection->project(p[0], p[1], 32, &x, &y);
 
 		if (i == start) {
@@ -141,11 +141,11 @@ drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_
 	return dv;
 }
 
-drawvec readLine(std::vector<long long> &coords, size_t dim, double e, bool closed) {
+drawvec readLine(std::vector<long> &coords, size_t dim, double e, bool closed) {
 	return readLinePart(coords, dim, e, 0, coords.size(), closed);
 }
 
-drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, bool closed) {
+drawvec readMultiLine(std::vector<long> &coords, std::vector<int> &lengths, size_t dim, double e, bool closed) {
 	if (lengths.size() == 0) {
 		return readLinePart(coords, dim, e, 0, coords.size(), closed);
 	}
@@ -164,7 +164,7 @@ drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths,
 	return dv;
 }
 
-drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
+drawvec readMultiPolygon(std::vector<long> &coords, std::vector<int> &lengths, size_t dim, double e) {
 	ensureDim(dim);
 
 	if (lengths.size() == 0) {
@@ -202,7 +202,7 @@ struct drawvec_type {
 
 std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys) {
 	std::vector<drawvec_type> ret;
-	std::vector<long long> coords;
+	std::vector<long> coords;
 	std::vector<int> lengths;
 	int type = -1;
 
@@ -267,7 +267,7 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 
 void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
 	std::vector<drawvec_type> dv;
-	long long id = 0;
+	long id = 0;
 	bool has_id = false;
 	std::vector<serial_val> values;
 	std::map<std::string, serial_val> other;
@@ -302,7 +302,7 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 			if (id < 0) {
 				static bool warned = false;
 				if (!warned) {
-					fprintf(stderr, "Out of range feature id %lld\n", id);
+					fprintf(stderr, "Out of range feature id %ld\n", id);
 					warned = true;
 				}
 				has_id = false;

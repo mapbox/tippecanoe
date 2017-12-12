@@ -47,7 +47,7 @@ int memfile_close(struct memfile *file) {
 	return 0;
 }
 
-int memfile_write(struct memfile *file, void *s, long long len) {
+int memfile_write(struct memfile *file, void *s, long len) {
 	if (file->off + len > file->len) {
 		if (munmap(file->map, file->len) != 0) {
 			return -1;

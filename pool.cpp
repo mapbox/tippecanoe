@@ -14,7 +14,7 @@ int swizzlecmp(const char *a, const char *b) {
 		return 0;
 	}
 
-	long long hash1 = 0, hash2 = 0;
+	long hash1 = 0, hash2 = 0;
 	for (ssize_t i = alen - 1; i >= 0; i--) {
 		hash1 = (hash1 * 37 + a[i]) & INT_MAX;
 	}
@@ -30,7 +30,7 @@ int swizzlecmp(const char *a, const char *b) {
 	return h1 - h2;
 }
 
-long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
+long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
 	unsigned long *sp = &treefile->tree;
 	size_t depth = 0;
 
@@ -60,7 +60,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 			// Search is very deep, so string is probably unique.
 			// Add it to the pool without adding it to the search tree.
 
-			long long off = poolfile->off;
+			long off = poolfile->off;
 			if (memfile_write(poolfile, &type, 1) < 0) {
 				perror("memfile write");
 				exit(EXIT_FAILURE);
@@ -74,14 +74,14 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	}
 
 	// *sp is probably in the memory-mapped file, and will move if the file grows.
-	long long ssp;
+	long ssp;
 	if (sp == &treefile->tree) {
 		ssp = -1;
 	} else {
 		ssp = ((char *) sp) - treefile->map;
 	}
 
-	long long off = poolfile->off;
+	long off = poolfile->off;
 	if (memfile_write(poolfile, &type, 1) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
@@ -106,7 +106,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	tsp.right = 0;
 	tsp.off = off;
 
-	long long p = treefile->off;
+	long p = treefile->off;
 	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
@@ -115,7 +115,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	if (ssp == -1) {
 		treefile->tree = p;
 	} else {
-		*((long long *) (treefile->map + ssp)) = p;
+		*((long *) (treefile->map + ssp)) = p;
 	}
 	return off;
 }

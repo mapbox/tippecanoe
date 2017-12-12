@@ -192,7 +192,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
-			long long scale = 1LL << (32 - z);
+			long scale = 1LL << (32 - z);
 			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
 			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}

@@ -7,6 +7,6 @@ struct stringpool {
 	unsigned long off = 0;
 };
 
-long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
+long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
 
 #endif

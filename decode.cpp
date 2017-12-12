@@ -48,7 +48,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 			}
 		}
 
-		printf(": { \"points\": %d, \"lines\": %d, \"polygons\": %d, \"extent\": %lld }", points, lines, polygons, tile.layers[i].extent);
+		printf(": { \"points\": %d, \"lines\": %d, \"polygons\": %d, \"extent\": %ld }", points, lines, polygons, tile.layers[i].extent);
 	}
 
 	printf(" } }\n");
@@ -98,7 +98,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		mvt_layer &layer = tile.layers[l];
 
 		if (layer.extent <= 0) {
-			fprintf(stderr, "Impossible layer extent %lld in mbtiles\n", layer.extent);
+			fprintf(stderr, "Impossible layer extent %ld in mbtiles\n", layer.extent);
 			exit(EXIT_FAILURE);
 		}
 
@@ -115,7 +115,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 				printf("{ \"type\": \"FeatureCollection\"");
 				printf(", \"properties\": { \"layer\": ");
 				fprintq(stdout, layer.name.c_str());
-				printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
+				printf(", \"version\": %d, \"extent\": %ld", layer.version, layer.extent);
 				printf(" }");
 				printf(", \"features\": [\n");
 

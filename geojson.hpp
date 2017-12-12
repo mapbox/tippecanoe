@@ -21,7 +21,7 @@ struct parse_json_args {
 	}
 };
 
-struct json_pull *json_begin_map(char *map, long long len);
+struct json_pull *json_begin_map(char *map, long len);
 void json_end_map(struct json_pull *jp);
 
 void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername);

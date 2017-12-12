@@ -64,7 +64,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 		}
 	} else {
 		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			long long x, y;
+			long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			projection->project(lon, lat, 32, &x, &y);
@@ -106,8 +106,8 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 void canonicalize(json_object *o) {
 	if (o->type == JSON_NUMBER) {
 		std::string s;
-		long long v;
-		unsigned long long uv;
+		long v;
+		unsigned long uv;
 
 		if (is_integer(o->string, &v)) {
 			s = std::to_string(v);
@@ -161,8 +161,8 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 		} else if (vt == JSON_NUMBER) {
 			type = mvt_double;
 
-			long long v;
-			unsigned long long uv;
+			long v;
+			unsigned long uv;
 
 			if (is_integer(value->string, &v)) {
 				stringified = std::to_string(v);

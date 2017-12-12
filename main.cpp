@@ -78,11 +78,11 @@ struct source {
 
 size_t CPUS;
 size_t TEMP_FILES;
-long long MAX_FILES;
-static long long diskfree;
+long MAX_FILES;
+static long diskfree;
 
 void checkdisk(std::vector<struct reader> *r) {
-	long long used = 0;
+	long used = 0;
 	for (size_t i = 0; i < r->size(); i++) {
 		// Meta, pool, and tree are used once.
 		// Geometry and index will be duplicated during sorting and tiling.
@@ -91,7 +91,7 @@ void checkdisk(std::vector<struct reader> *r) {
 
 	static int warned = 0;
 	if (used > diskfree * .9 && !warned) {
-		fprintf(stderr, "You will probably run out of disk space.\n%lld bytes used or committed, of %lld originally available\n", used, diskfree);
+		fprintf(stderr, "You will probably run out of disk space.\n%ld bytes used or committed, of %ld originally available\n", used, diskfree);
 		warned = 1;
 	}
 };
@@ -134,15 +134,15 @@ void init_cpus() {
 	// MacOS can run out of system file descriptors
 	// even if we stay under the rlimit, so try to
 	// find out the real limit.
-	long long fds[MAX_FILES];
-	long long i;
+	long fds[MAX_FILES];
+	long i;
 	for (i = 0; i < MAX_FILES; i++) {
 		fds[i] = open("/dev/null", O_RDONLY | O_CLOEXEC);
 		if (fds[i] < 0) {
 			break;
 		}
 	}
-	long long j;
+	long j;
 	for (j = 0; j < i; j++) {
 		if (close(fds[j]) < 0) {
 			perror("close");
@@ -153,7 +153,7 @@ void init_cpus() {
 	// Scale down because we really don't want to run the system out of files
 	MAX_FILES = i * 3 / 4;
 	if (MAX_FILES < 32) {
-		fprintf(stderr, "Can't open a useful number of files: %lld\n", MAX_FILES);
+		fprintf(stderr, "Can't open a useful number of files: %ld\n", MAX_FILES);
 		exit(EXIT_FAILURE);
 	}
 
@@ -183,8 +183,8 @@ int indexcmp(const void *v1, const void *v2) {
 }
 
 struct mergelist {
-	long long start;
-	long long end;
+	long start;
+	long end;
 
 	struct mergelist *next;
 };
@@ -200,11 +200,11 @@ static void insert(struct mergelist *m, struct mergelist **head, unsigned char *
 
 struct drop_state {
 	double gap;
-	unsigned long long previndex;
+	unsigned long previndex;
 	double interval;
 	double scale;
 	double seq;
-	long long included;
+	long included;
 	unsigned x;
 	unsigned y;
 };
@@ -255,7 +255,7 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 	return feature_minzoom;
 }
 
-static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, int bytes, char *geom_map, FILE *geom_out, long long *geompos, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, double gamma, struct drop_state *ds) {
+static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, int bytes, char *geom_map, FILE *geom_out, long *geompos, long *progress, long *progress_max, long *progress_reported, int maxzoom, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
 	for (size_t i = 0; i < nmerges; i++) {
@@ -266,7 +266,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 
 	while (head != NULL) {
 		struct index ix = *((struct index *) (map + head->start));
-		long long pos = *geompos;
+		long pos = *geompos;
 		fwrite_check(geom_map + ix.start, 1, ix.end - ix.start, geom_out, "merge geometry");
 		*geompos += ix.end - ix.start;
 		int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, gamma);
@@ -275,7 +275,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
 		*progress += (ix.end - ix.start) * 3 / 4;
 		if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
-			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+			fprintf(stderr, "Reordering geometry: %ld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
 		}
 
@@ -297,14 +297,14 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 struct sort_arg {
 	int task;
 	int cpus;
-	long long indexpos;
+	long indexpos;
 	struct mergelist *merges;
 	int indexfd;
 	size_t nmerges;
-	long long unit;
+	long unit;
 	int bytes;
 
-	sort_arg(int task1, int cpus1, long long indexpos1, struct mergelist *merges1, int indexfd1, size_t nmerges1, long long unit1, int bytes1)
+	sort_arg(int task1, int cpus1, long indexpos1, struct mergelist *merges1, int indexfd1, size_t nmerges1, long unit1, int bytes1)
 	    : task(task1), cpus(cpus1), indexpos(indexpos1), merges(merges1), indexfd(indexfd1), nmerges(nmerges1), unit(unit1), bytes(bytes1) {
 	}
 };
@@ -312,9 +312,9 @@ struct sort_arg {
 void *run_sort(void *v) {
 	struct sort_arg *a = (struct sort_arg *) v;
 
-	long long start;
+	long start;
 	for (start = a->task * a->unit; start < a->indexpos; start += a->unit * a->cpus) {
-		long long end = start + a->unit;
+		long end = start + a->unit;
 		if (end > a->indexpos) {
 			end = a->indexpos;
 		}
@@ -354,8 +354,8 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
-	long long segs[CPUS + 1];
+void do_read_parallel(char *map, long len, long initial_offset, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+	long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
 
@@ -370,7 +370,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	double dist_sums[CPUS];
 	size_t dist_counts[CPUS];
 
-	volatile long long layer_seq[CPUS];
+	volatile long layer_seq[CPUS];
 	for (size_t i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
@@ -445,14 +445,14 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 struct read_parallel_arg {
 	int fd = 0;
 	FILE *fp = NULL;
-	long long offset = 0;
-	long long len = 0;
+	long offset = 0;
+	long len = 0;
 	volatile int *is_parsing = NULL;
 	int separator = 0;
 
 	const char *reading = NULL;
 	std::vector<struct reader> *readers = NULL;
-	volatile long long *progress_seq = NULL;
+	volatile long *progress_seq = NULL;
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
 	int exclude_all = 0;
@@ -481,7 +481,7 @@ void *run_read_parallel(void *v) {
 		perror("stat read temp");
 	}
 	if (rpa->len != st.st_size) {
-		fprintf(stderr, "wrong number of bytes in temporary: %lld vs %lld\n", rpa->len, (long long) st.st_size);
+		fprintf(stderr, "wrong number of bytes in temporary: %ld vs %ld\n", rpa->len, (long) st.st_size);
 	}
 	rpa->len = st.st_size;
 
@@ -509,7 +509,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, FILE *fp, long offset, long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -558,7 +558,7 @@ void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile i
 	parser_created = true;
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long long mem, const char *tmpdir, long long *availfiles, FILE *geomfile, FILE *indexfile, long long *geompos_out, long long *progress, long long *progress_max, long long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
+void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int splits, long mem, const char *tmpdir, long *availfiles, FILE *geomfile, FILE *indexfile, long *geompos_out, long *progress, long *progress_max, long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	int splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -567,7 +567,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 	FILE *indexfiles[splits];
 	int geomfds[splits];
 	int indexfds[splits];
-	long long sub_geompos[splits];
+	long sub_geompos[splits];
 
 	int i;
 	for (i = 0; i < splits; i++) {
@@ -620,7 +620,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 		if (indexst.st_size != 0) {
 			struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds_in[i], 0);
 			if (indexmap == MAP_FAILED) {
-				fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds_in[i], (long long) indexst.st_size);
+				fprintf(stderr, "fd %ld, len %ld\n", (long) indexfds_in[i], (long) indexst.st_size);
 				perror("map index");
 				exit(EXIT_FAILURE);
 			}
@@ -636,8 +636,8 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 			for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 				struct index ix = indexmap[a];
-				unsigned long long which = (ix.ix << prefix) >> (64 - splitbits);
-				long long pos = sub_geompos[which];
+				unsigned long which = (ix.ix << prefix) >> (64 - splitbits);
+				long pos = sub_geompos[which];
 
 				fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfiles[which], "geom");
 				sub_geompos[which] += ix.end - ix.start;
@@ -645,7 +645,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 				// Count this as a 25%-accomplishment, since we will copy again
 				*progress += (ix.end - ix.start) / 4;
 				if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
-					fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+					fprintf(stderr, "Reordering geometry: %ld%% \r", 100 * *progress / *progress_max);
 					*progress_reported = 100 * *progress / *progress_max;
 				}
 
@@ -707,14 +707,14 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 		if (indexst.st_size > 0) {
 			if (indexst.st_size + geomst.st_size < mem) {
-				long long indexpos = indexst.st_size;
+				long indexpos = indexst.st_size;
 				int bytes = sizeof(struct index);
 
 				int page = sysconf(_SC_PAGESIZE);
 				// Don't try to sort more than 2GB at once,
 				// which used to crash Macs and may still
-				long long max_unit = 2LL * 1024 * 1024 * 1024;
-				long long unit = ((indexpos / CPUS + bytes - 1) / bytes) * bytes;
+				long max_unit = 2LL * 1024 * 1024 * 1024;
+				long unit = ((indexpos / CPUS + bytes - 1) / bytes) * bytes;
 				if (unit > max_unit) {
 					unit = max_unit;
 				}
@@ -762,7 +762,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				struct indexmap *indexmap = (struct indexmap *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
-					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					fprintf(stderr, "fd %ld, len %ld\n", (long) indexfds[i], (long) indexst.st_size);
 					perror("map index");
 					exit(EXIT_FAILURE);
 				}
@@ -791,7 +791,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 			} else if (indexst.st_size == sizeof(struct index) || prefix + splitbits >= 64) {
 				struct index *indexmap = (struct index *) mmap(NULL, indexst.st_size, PROT_READ, MAP_PRIVATE, indexfds[i], 0);
 				if (indexmap == MAP_FAILED) {
-					fprintf(stderr, "fd %lld, len %lld\n", (long long) indexfds[i], (long long) indexst.st_size);
+					fprintf(stderr, "fd %ld, len %ld\n", (long) indexfds[i], (long) indexst.st_size);
 					perror("map index");
 					exit(EXIT_FAILURE);
 				}
@@ -807,7 +807,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
-					long long pos = *geompos_out;
+					long pos = *geompos_out;
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
@@ -817,7 +817,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
 					*progress += (ix.end - ix.start) * 3 / 4;
 					if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
-						fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
+						fprintf(stderr, "Reordering geometry: %ld%% \r", 100 * *progress / *progress_max);
 						*progress_reported = 100 * *progress / *progress_max;
 					}
 
@@ -883,7 +883,7 @@ void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double d
 	}
 }
 
-void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FILE *indexfile, const char *tmpdir, long long *geompos, int maxzoom, int basezoom, double droprate, double gamma) {
+void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FILE *indexfile, const char *tmpdir, long *geompos, int maxzoom, int basezoom, double droprate, double gamma) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -893,7 +893,7 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 
 	// Then concatenate each of the sub-outputs into a final output.
 
-	long long mem;
+	long mem;
 
 #ifdef __APPLE__
 	int64_t hw_memsize;
@@ -904,14 +904,14 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 	}
 	mem = hw_memsize;
 #else
-	long long pagesize = sysconf(_SC_PAGESIZE);
-	long long pages = sysconf(_SC_PHYS_PAGES);
+	long pagesize = sysconf(_SC_PAGESIZE);
+	long pages = sysconf(_SC_PHYS_PAGES);
 	if (pages < 0 || pagesize < 0) {
 		perror("sysconf _SC_PAGESIZE or _SC_PHYS_PAGES");
 		exit(EXIT_FAILURE);
 	}
 
-	mem = (long long) pages * pagesize;
+	mem = (long) pages * pagesize;
 #endif
 
 	// Just for code coverage testing. Deeply recursive sorting is very slow
@@ -920,10 +920,10 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 		mem = 8192;
 	}
 
-	long long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
-			       - 4			 // pool, meta, mbtiles, mbtiles journal
-			       - 4			 // top-level geom and index output, both FILE and fd
-			       - 3;			 // stdin, stdout, stderr
+	long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
+			  - 4			    // pool, meta, mbtiles, mbtiles journal
+			  - 4			    // top-level geom and index output, both FILE and fd
+			  - 3;			    // stdin, stdout, stderr
 
 	// 4 because for each we have output and input FILE and fd for geom and index
 	int splits = availfiles / 4;
@@ -932,7 +932,7 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 	// is to keep from thrashing by working on chunks that will fit in memory.
 	mem /= 2;
 
-	long long geom_total = 0;
+	long geom_total = 0;
 	int geomfds[nreaders];
 	int indexfds[nreaders];
 	for (int i = 0; i < nreaders; i++) {
@@ -950,17 +950,17 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 	struct drop_state ds[maxzoom + 1];
 	prep_drop_states(ds, maxzoom, basezoom, droprate);
 
-	long long progress = 0, progress_max = geom_total, progress_reported = -1;
-	long long availfiles_before = availfiles;
+	long progress = 0, progress_max = geom_total, progress_reported = -1;
+	long availfiles_before = availfiles;
 	radix1(geomfds, indexfds, nreaders, 0, splits, mem, tmpdir, &availfiles, geomfile, indexfile, geompos, &progress, &progress_max, &progress_reported, maxzoom, basezoom, droprate, gamma, ds);
 
 	if (availfiles - 2 * nreaders != availfiles_before) {
-		fprintf(stderr, "Internal error: miscounted available file descriptors: %lld vs %lld\n", availfiles - 2 * nreaders, availfiles);
+		fprintf(stderr, "Internal error: miscounted available file descriptors: %ld vs %ld\n", availfiles - 2 * nreaders, availfiles);
 		exit(EXIT_FAILURE);
 	}
 }
 
-void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers, unsigned *iz, unsigned *ix, unsigned *iy, int minzoom, int buffer) {
+void choose_first_zoom(long *file_bbox, std::vector<struct reader> &readers, unsigned *iz, unsigned *ix, unsigned *iy, int minzoom, int buffer) {
 	for (size_t i = 0; i < CPUS; i++) {
 		if (readers[i].file_bbox[0] < file_bbox[0]) {
 			file_bbox[0] = readers[i].file_bbox[0];
@@ -995,12 +995,12 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 
 	for (ssize_t z = minzoom; z >= 0; z--) {
-		long long shift = 1LL << (32 - z);
+		long shift = 1LL << (32 - z);
 
-		long long left = (file_bbox[0] - buffer * shift / 256) / shift;
-		long long top = (file_bbox[1] - buffer * shift / 256) / shift;
-		long long right = (file_bbox[2] + buffer * shift / 256) / shift;
-		long long bottom = (file_bbox[3] + buffer * shift / 256) / shift;
+		long left = (file_bbox[0] - buffer * shift / 256) / shift;
+		long top = (file_bbox[1] - buffer * shift / 256) / shift;
+		long right = (file_bbox[2] + buffer * shift / 256) / shift;
+		long bottom = (file_bbox[3] + buffer * shift / 256) / shift;
 
 		if (left == right && top == bottom) {
 			*iz = z;
@@ -1011,7 +1011,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -1109,9 +1109,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		perror("fstatfs");
 		exit(EXIT_FAILURE);
 	}
-	diskfree = (long long) fsstat.f_bsize * fsstat.f_bavail;
+	diskfree = (long) fsstat.f_bsize * fsstat.f_bavail;
 
-	volatile long long progress_seq = 0;
+	volatile long progress_seq = 0;
 
 	// 2 * CPUS: One per reader thread, one per tiling thread
 	int initialized[2 * CPUS];
@@ -1234,7 +1234,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 
-			long long layer_seq[CPUS];
+			long layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
 			std::vector<struct serialization_state> sst;
@@ -1372,8 +1372,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				unlink(readname);
 
 				volatile int is_parsing = 0;
-				long long ahead = 0;
-				long long initial_offset = overall_offset;
+				long ahead = 0;
+				long initial_offset = overall_offset;
 				pthread_t parallel_parser;
 				bool parser_created = false;
 
@@ -1455,7 +1455,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			} else {
 				// Plain serial reading
 
-				long long layer_seq = overall_offset;
+				long layer_seq = overall_offset;
 				json_pull *jp = json_begin_file(fp);
 				struct serialization_state sst;
 
@@ -1530,8 +1530,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	// segment+offset to find the data.
 
 	// 2 * CPUS: One per input thread, one per tiling thread
-	long long pool_off[2 * CPUS];
-	long long meta_off[2 * CPUS];
+	long pool_off[2 * CPUS];
+	long meta_off[2 * CPUS];
 	for (size_t i = 0; i < 2 * CPUS; i++) {
 		pool_off[i] = meta_off[i] = 0;
 	}
@@ -1570,8 +1570,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	unlink(metaname);
 
-	long long metapos = 0;
-	long long poolpos = 0;
+	long metapos = 0;
+	long poolpos = 0;
 
 	for (size_t i = 0; i < CPUS; i++) {
 		if (readers[i].metapos > 0) {
@@ -1670,7 +1670,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	unsigned iz = 0, ix = 0, iy = 0;
 	choose_first_zoom(file_bbox, readers, &iz, &ix, &iy, minzoom, buffer);
 
-	long long geompos = 0;
+	long geompos = 0;
 
 	/* initial tile is 0/0/0 */
 	serialize_int(geomfile, iz, &geompos, fname);
@@ -1696,11 +1696,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		perror("stat index");
 		exit(EXIT_FAILURE);
 	}
-	long long indexpos = indexst.st_size;
+	long indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
 
 	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+		fprintf(stderr, "%ld features, %ld bytes of geometry, %ld bytes of separate metadata, %ld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
 
 	if (indexpos == 0) {
@@ -1718,26 +1718,26 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 	madvise(map, indexpos, MADV_SEQUENTIAL);
 	madvise(map, indexpos, MADV_WILLNEED);
-	long long indices = indexpos / sizeof(struct index);
+	long indices = indexpos / sizeof(struct index);
 	bool fix_dropping = false;
 
 	if (guess_maxzoom) {
 		double sum = 0;
 		size_t count = 0;
 
-		long long progress = -1;
-		long long ip;
+		long progress = -1;
+		long ip;
 		for (ip = 1; ip < indices; ip++) {
 			if (map[ip].ix != map[ip - 1].ix) {
 				count++;
 				sum += log(map[ip].ix - map[ip - 1].ix);
 			}
 
-			long long nprogress = 100 * ip / indices;
+			long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
 				if (!quiet && !quiet_progress) {
-					fprintf(stderr, "Maxzoom: %lld%% \r", progress);
+					fprintf(stderr, "Maxzoom: %ld%% \r", progress);
 				}
 			}
 		}
@@ -1808,10 +1808,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		struct tile {
 			unsigned x;
 			unsigned y;
-			long long count;
-			long long fullcount;
+			long count;
+			long fullcount;
 			double gap;
-			unsigned long long previndex;
+			unsigned long previndex;
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		{
@@ -1822,18 +1822,18 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
-		long long progress = -1;
+		long progress = -1;
 
-		long long ip;
+		long ip;
 		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
 			decode(map[ip].ix, &xx, &yy);
 
-			long long nprogress = 100 * ip / indices;
+			long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
 				if (!quiet && !quiet_progress) {
-					fprintf(stderr, "Base zoom/drop rate: %lld%% \r", progress);
+					fprintf(stderr, "Base zoom/drop rate: %ld%% \r", progress);
 				}
 			}
 
@@ -1888,10 +1888,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					basezoom = z;
 				}
 
-				// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
+				// printf("%d/%u/%u %ld\n", z, max[z].x, max[z].y, max[z].count);
 			}
 
-			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+			fprintf(stderr, "Choosing a base zoom of -B%d to keep %ld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
 		}
 
 		if (obasezoom < 0 && basezoom > maxzoom) {
@@ -1905,7 +1905,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					droprate = 2.5;
 				} else {
 					droprate = exp(log((long double) max[0].count / max[maxzoom].count) / (maxzoom));
-					fprintf(stderr, "Choosing a drop rate of -r%f to get from %lld to %lld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
+					fprintf(stderr, "Choosing a drop rate of -r%f to get from %ld to %ld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
 				}
 			}
 
@@ -1987,9 +1987,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		struct drop_state ds[maxzoom + 1];
 		prep_drop_states(ds, maxzoom, basezoom, droprate);
 
-		for (long long ip = 0; ip < indices; ip++) {
+		for (long ip = 0; ip < indices; ip++) {
 			if (ip > 0 && map[ip].start != map[ip - 1].end) {
-				fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+				fprintf(stderr, "Mismatched index at %ld: %ld vs %ld\n", ip, map[ip].start, map[ip].end);
 			}
 			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
 			geom[map[ip].end - 1] = feature_minzoom;
@@ -2704,7 +2704,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
+	long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
 	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0]);
 

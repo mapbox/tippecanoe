@@ -4,12 +4,12 @@
 #include <stddef.h>
 
 struct index {
-	long long start = 0;
-	long long end = 0;
-	unsigned long long ix = 0;
+	long start = 0;
+	long end = 0;
+	unsigned long ix = 0;
 	short segment = 0;
 	unsigned short t : 2;
-	unsigned long long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
+	unsigned long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
 
 	index()
 	    : t(0),

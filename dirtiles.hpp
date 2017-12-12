@@ -9,9 +9,9 @@ void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const
 void check_dir(const char *d, bool force, bool forcetable);
 
 struct zxy {
-	long long z;
-	long long x;
-	long long y;
+	long z;
+	long x;
+	long y;
 
 	zxy(int _z, int _x, int _y)
 	    : z(_z), x(_x), y(_y) {

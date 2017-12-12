@@ -164,7 +164,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					value = val.string_value;
 					type = mvt_string;
 				} else if (val.type == mvt_int) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
+					aprintf(&value, "%ld", (long) val.numeric_value.int_value);
 					type = mvt_double;
 				} else if (val.type == mvt_double) {
 					aprintf(&value, "%s", milo::dtoa_milo(val.numeric_value.double_value).c_str());
@@ -176,10 +176,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
 					type = mvt_bool;
 				} else if (val.type == mvt_sint) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
+					aprintf(&value, "%ld", (long) val.numeric_value.sint_value);
 					type = mvt_double;
 				} else if (val.type == mvt_uint) {
-					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
+					aprintf(&value, "%lu", (long) val.numeric_value.uint_value);
 					type = mvt_double;
 				} else {
 					continue;
@@ -322,10 +322,10 @@ double max(double a, double b) {
 }
 
 struct reader {
-	long long zoom = 0;
-	long long x = 0;
-	long long sorty = 0;
-	long long y = 0;
+	long zoom = 0;
+	long x = 0;
+	long sorty = 0;
+	long y = 0;
 	int z_flag = 0;
 
 	std::string data = "";
@@ -475,7 +475,7 @@ void *join_worker(void *v) {
 			}
 
 			if (!pk && compressed.size() > 500000) {
-				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
+				fprintf(stderr, "Tile %ld/%ld/%ld size is %ld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long) compressed.size());
 			} else {
 				a->outputs.insert(std::pair<zxy, std::string>(ai->first, compressed));
 			}
@@ -512,7 +512,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 
 		if (ai == tasks.begin()) {
 			if (!quiet) {
-				fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+				fprintf(stderr, "%ld/%ld/%ld  \r", ai->first.z, ai->first.x, ai->first.y);
 			}
 		}
 	}

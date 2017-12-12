@@ -11,24 +11,24 @@
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname);
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname);
-void serialize_ulong_long(FILE *out, unsigned long long n, long long *fpos, const char *fname);
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname);
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname);
-void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname);
+void serialize_int(FILE *out, int n, long *fpos, const char *fname);
+void serialize_long_long(FILE *out, long n, long *fpos, const char *fname);
+void serialize_ulong_long(FILE *out, unsigned long n, long *fpos, const char *fname);
+void serialize_byte(FILE *out, signed char n, long *fpos, const char *fname);
+void serialize_uint(FILE *out, unsigned n, long *fpos, const char *fname);
+void serialize_string(FILE *out, const char *s, long *fpos, const char *fname);
 
 void deserialize_int(char **f, int *n);
-void deserialize_long_long(char **f, long long *n);
-void deserialize_ulong_long(char **f, unsigned long long *n);
+void deserialize_long_long(char **f, long *n);
+void deserialize_ulong_long(char **f, unsigned long *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
 
-int deserialize_int_io(FILE *f, int *n, long long *geompos);
-int deserialize_long_long_io(FILE *f, long long *n, long long *geompos);
-int deserialize_ulong_long_io(FILE *f, unsigned long long *n, long long *geompos);
-int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos);
-int deserialize_byte_io(FILE *f, signed char *n, long long *geompos);
+int deserialize_int_io(FILE *f, int *n, long *geompos);
+int deserialize_long_long_io(FILE *f, long *n, long *geompos);
+int deserialize_ulong_long_io(FILE *f, unsigned long *n, long *geompos);
+int deserialize_uint_io(FILE *f, unsigned *n, long *geompos);
+int deserialize_byte_io(FILE *f, signed char *n, long *geompos);
 
 struct serial_val {
 	int type = 0;
@@ -36,15 +36,15 @@ struct serial_val {
 };
 
 struct serial_feature {
-	long long layer = 0;
+	long layer = 0;
 	int segment = 0;
-	long long seq = 0;
+	long seq = 0;
 
 	signed char t = 0;
 	signed char feature_minzoom = 0;
 
 	bool has_id = false;
-	unsigned long long id = 0;
+	unsigned long id = 0;
 
 	bool has_tippecanoe_minzoom = false;
 	int tippecanoe_minzoom = 0;
@@ -53,23 +53,23 @@ struct serial_feature {
 	int tippecanoe_maxzoom = 0;
 
 	drawvec geometry = drawvec();
-	unsigned long long index = 0;
-	long long extent = 0;
+	unsigned long index = 0;
+	long extent = 0;
 
 	size_t m = 0;
-	std::vector<long long> keys{};
-	std::vector<long long> values{};
-	long long metapos = 0;
+	std::vector<long> keys{};
+	std::vector<long> values{};
+	long metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
-	long long bbox[4] = {0, 0, 0, 0};
+	long bbox[4] = {0, 0, 0, 0};
 	std::vector<std::string> full_keys{};
 	std::vector<serial_val> full_values{};
 	std::string layername = "";
 };
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const char *fname, long wx, long wy, bool include_minzoom);
+serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase, long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
 
 struct reader {
 	int metafd = -1;
@@ -84,11 +84,11 @@ struct reader {
 	FILE *geomfile = NULL;
 	FILE *indexfile = NULL;
 
-	long long metapos = 0;
-	long long geompos = 0;
-	long long indexpos = 0;
+	long metapos = 0;
+	long geompos = 0;
+	long indexpos = 0;
 
-	long long file_bbox[4] = {0, 0, 0, 0};
+	long file_bbox[4] = {0, 0, 0, 0};
 
 	struct stat geomst {};
 	struct stat metast {};
@@ -100,8 +100,8 @@ struct serialization_state {
 	const char *fname = NULL;  // source file name
 	int line = 0;		   // user-oriented location within source for error reports
 
-	volatile long long *layer_seq = NULL;     // sequence within current layer
-	volatile long long *progress_seq = NULL;  // overall sequence for progress indicator
+	volatile long *layer_seq = NULL;     // sequence within current layer
+	volatile long *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
 	int segment = 0;			     // the current input thread

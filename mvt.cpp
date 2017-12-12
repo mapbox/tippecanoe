@@ -14,7 +14,7 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 
-mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
+mvt_geometry::mvt_geometry(int nop, long nx, long ny) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
@@ -218,7 +218,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
-					long long px = 0, py = 0;
+					long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
 						uint32_t op = geom & 7;
@@ -343,8 +343,8 @@ std::string mvt_tile::encode() {
 				}
 
 				if (op == mvt_moveto || op == mvt_lineto) {
-					long long wwx = geom[g].x;
-					long long wwy = geom[g].y;
+					long wwx = geom[g].x;
+					long wwy = geom[g].y;
 
 					int dx = wwx - px;
 					int dy = wwy - py;
@@ -424,15 +424,15 @@ std::string mvt_value::toString() {
 		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
 		double v = numeric_value.double_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (long) v) {
+			return std::to_string((long) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
 	} else if (type == mvt_float) {
 		double v = numeric_value.float_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (long) v) {
+			return std::to_string((long) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
@@ -473,7 +473,7 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	feature.tags.push_back(vo);
 }
 
-bool is_integer(const char *s, long long *v) {
+bool is_integer(const char *s, long *v) {
 	errno = 0;
 	char *endptr;
 
@@ -504,7 +504,7 @@ bool is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-bool is_unsigned_integer(const char *s, unsigned long long *v) {
+bool is_unsigned_integer(const char *s, unsigned long *v) {
 	errno = 0;
 	char *endptr;
 
@@ -548,8 +548,8 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	mvt_value tv;
 
 	if (type == mvt_double) {
-		long long v;
-		unsigned long long uv;
+		long v;
+		unsigned long uv;
 		if (is_unsigned_integer(s, &uv)) {
 			if (uv <= LLONG_MAX) {
 				tv.type = mvt_int;

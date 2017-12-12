@@ -569,7 +569,7 @@ again:
 		struct string val;
 		string_init(&val);
 
-		int surrogate = -1;
+		long surrogate = -1;
 		while ((c = read_wrap(j)) != EOF) {
 			if (c == '"') {
 				if (surrogate >= 0) {

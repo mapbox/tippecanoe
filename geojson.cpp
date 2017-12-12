@@ -104,7 +104,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	}
 
 	bool has_id = false;
-	unsigned long long id_value = 0;
+	unsigned long id_value = 0;
 	if (id != NULL) {
 		if (id->type == JSON_NUMBER) {
 			if (id->number >= 0) {
@@ -235,9 +235,9 @@ void check_crs(json_object *j, const char *reading) {
 }
 
 void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
-	long long found_hashes = 0;
-	long long found_features = 0;
-	long long found_geometries = 0;
+	long found_hashes = 0;
+	long found_features = 0;
+	long found_geometries = 0;
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -367,8 +367,8 @@ void *run_parse_json(void *v) {
 
 struct jsonmap {
 	char *map;
-	unsigned long long off;
-	unsigned long long end;
+	unsigned long off;
+	unsigned long end;
 };
 
 ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
@@ -384,7 +384,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	return n;
 }
 
-struct json_pull *json_begin_map(char *map, long long len) {
+struct json_pull *json_begin_map(char *map, long len) {
 	struct jsonmap *jm = new jsonmap;
 	if (jm == NULL) {
 		perror("Out of memory");
