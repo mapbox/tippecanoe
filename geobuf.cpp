@@ -64,7 +64,7 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 
 		case 4:
 			sv.type = mvt_double;
-			sv.s = std::to_string(-(long) pbf.get_uint64());
+			sv.s = std::string("-") + std::to_string(pbf.get_uint64());
 			break;
 
 		case 5:
