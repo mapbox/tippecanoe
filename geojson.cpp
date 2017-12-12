@@ -235,9 +235,9 @@ void check_crs(json_object *j, const char *reading) {
 }
 
 void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, std::string layername) {
-	long found_hashes = 0;
-	long found_features = 0;
-	long found_geometries = 0;
+	size_t found_hashes = 0;
+	size_t found_features = 0;
+	size_t found_geometries = 0;
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -366,8 +366,8 @@ void *run_parse_json(void *v) {
 
 struct jsonmap {
 	char *map;
-	unsigned long off;
-	unsigned long end;
+	size_t off;
+	size_t end;
 };
 
 ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
@@ -383,7 +383,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	return n;
 }
 
-struct json_pull *json_begin_map(char *map, long len) {
+struct json_pull *json_begin_map(char *map, size_t len) {
 	struct jsonmap *jm = new jsonmap;
 	if (jm == NULL) {
 		perror("Out of memory");

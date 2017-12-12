@@ -256,7 +256,7 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 	return feature_minzoom;
 }
 
-static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, size_t bytes, char *geom_map, FILE *geom_out, long *geompos, long *progress, long *progress_max, long *progress_reported, int maxzoom, double gamma, struct drop_state *ds) {
+static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, FILE *indexfile, size_t bytes, char *geom_map, FILE *geom_out, off_t *geompos, long *progress, long *progress_max, long *progress_reported, int maxzoom, double gamma, struct drop_state *ds) {
 	struct mergelist *head = NULL;
 
 	for (size_t i = 0; i < nmerges; i++) {
@@ -267,7 +267,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 
 	while (head != NULL) {
 		struct index ix = *((struct index *) (map + head->start));
-		long pos = *geompos;
+		off_t pos = *geompos;
 		fwrite_check(geom_map + ix.start, 1, ix.end - ix.start, geom_out, "merge geometry");
 		*geompos += ix.end - ix.start;
 		int feature_minzoom = calc_feature_minzoom(&ix, ds, maxzoom, gamma);
@@ -298,7 +298,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 struct sort_arg {
 	size_t task;
 	size_t cpus;
-	long indexpos;
+	off_t indexpos;
 	struct mergelist *merges;
 	int indexfd;
 	size_t nmerges;
@@ -559,7 +559,7 @@ void start_parsing(int fd, FILE *fp, long offset, long len, volatile bool *is_pa
 	parser_created = true;
 }
 
-void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, size_t splits, long mem, const char *tmpdir, long *availfiles, FILE *geomfile, FILE *indexfile, long *geompos_out, long *progress, long *progress_max, long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
+void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, size_t splits, long mem, const char *tmpdir, long *availfiles, FILE *geomfile, FILE *indexfile, off_t *geompos_out, long *progress, long *progress_max, long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
 	size_t splitbits = log(splits) / log(2);
 	splits = 1 << splitbits;
@@ -568,7 +568,7 @@ void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, siz
 	FILE *indexfiles[splits];
 	int geomfds[splits];
 	int indexfds[splits];
-	long sub_geompos[splits];
+	off_t sub_geompos[splits];
 
 	for (size_t i = 0; i < splits; i++) {
 		sub_geompos[i] = 0;
@@ -707,7 +707,7 @@ void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, siz
 
 		if (indexst.st_size > 0) {
 			if (indexst.st_size + geomst.st_size < mem) {
-				long indexpos = indexst.st_size;
+				off_t indexpos = indexst.st_size;
 				size_t bytes = sizeof(struct index);
 
 				size_t page = sysconf(_SC_PAGESIZE);
@@ -807,7 +807,7 @@ void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, siz
 
 				for (size_t a = 0; a < indexst.st_size / sizeof(struct index); a++) {
 					struct index ix = indexmap[a];
-					long pos = *geompos_out;
+					off_t pos = *geompos_out;
 
 					fwrite_check(geommap + ix.start, ix.end - ix.start, 1, geomfile, "geom");
 					*geompos_out += ix.end - ix.start;
@@ -883,7 +883,7 @@ void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double d
 	}
 }
 
-void radix(std::vector<struct reader> &readers, size_t nreaders, FILE *geomfile, FILE *indexfile, const char *tmpdir, long *geompos, int maxzoom, int basezoom, double droprate, double gamma) {
+void radix(std::vector<struct reader> &readers, size_t nreaders, FILE *geomfile, FILE *indexfile, const char *tmpdir, off_t *geompos, int maxzoom, int basezoom, double droprate, double gamma) {
 	// Run through the index and geometry for each reader,
 	// splitting the contents out by index into as many
 	// sub-files as we can write to simultaneously.
@@ -1191,7 +1191,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		layermaps.push_back(layermap);
 	}
 
-	long overall_offset = 0;
+	off_t overall_offset = 0;
 	double dist_sum = 0;
 	size_t dist_count = 0;
 
@@ -1530,8 +1530,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	// segment+offset to find the data.
 
 	// 2 * CPUS: One per input thread, one per tiling thread
-	long pool_off[2 * CPUS];
-	long meta_off[2 * CPUS];
+	off_t pool_off[2 * CPUS];
+	off_t meta_off[2 * CPUS];
 	for (size_t i = 0; i < 2 * CPUS; i++) {
 		pool_off[i] = meta_off[i] = 0;
 	}
@@ -1570,8 +1570,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	unlink(metaname);
 
-	long metapos = 0;
-	long poolpos = 0;
+	off_t metapos = 0;
+	off_t poolpos = 0;
 
 	for (size_t i = 0; i < CPUS; i++) {
 		if (readers[i].metapos > 0) {
@@ -1670,7 +1670,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	unsigned iz = 0, ix = 0, iy = 0;
 	choose_first_zoom(file_bbox, readers, &iz, &ix, &iy, minzoom, buffer);
 
-	long geompos = 0;
+	off_t geompos = 0;
 
 	/* initial tile is 0/0/0 */
 	serialize_int(geomfile, iz, &geompos, fname);
@@ -1696,11 +1696,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		perror("stat index");
 		exit(EXIT_FAILURE);
 	}
-	long indexpos = indexst.st_size;
+	off_t indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
 
 	if (!quiet) {
-		fprintf(stderr, "%ld features, %ld bytes of geometry, %ld bytes of separate metadata, %ld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+		fprintf(stderr, "%ld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
 
 	if (indexpos == 0) {
@@ -1718,7 +1718,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 	madvise(map, indexpos, MADV_SEQUENTIAL);
 	madvise(map, indexpos, MADV_WILLNEED);
-	long indices = indexpos / sizeof(struct index);
+	size_t indices = indexpos / sizeof(struct index);
 	bool fix_dropping = false;
 
 	if (guess_maxzoom) {
@@ -1726,8 +1726,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		size_t count = 0;
 
 		long progress = -1;
-		long ip;
-		for (ip = 1; ip < indices; ip++) {
+		for (size_t ip = 1; ip < indices; ip++) {
 			if (map[ip].ix != map[ip - 1].ix) {
 				count++;
 				sum += log(map[ip].ix - map[ip - 1].ix);
@@ -1821,8 +1820,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		long progress = -1;
 
-		long ip;
-		for (ip = 0; ip < indices; ip++) {
+		for (size_t ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
 			decode(map[ip].ix, &xx, &yy);
 
@@ -1982,7 +1980,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		struct drop_state ds[maxzoom + 1];
 		prep_drop_states(ds, maxzoom, basezoom, droprate);
 
-		for (long ip = 0; ip < indices; ip++) {
+		for (size_t ip = 0; ip < indices; ip++) {
 			if (ip > 0 && map[ip].start != map[ip - 1].end) {
 				fprintf(stderr, "Mismatched index at %ld: %ld vs %ld\n", ip, map[ip].start, map[ip].end);
 			}

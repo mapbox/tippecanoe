@@ -30,17 +30,17 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 	return w;
 }
 
-void serialize_int(FILE *out, int n, long *fpos, const char *fname) {
+void serialize_int(FILE *out, int n, off_t *fpos, const char *fname) {
 	serialize_long(out, n, fpos, fname);
 }
 
-void serialize_long(FILE *out, long n, long *fpos, const char *fname) {
+void serialize_long(FILE *out, long n, off_t *fpos, const char *fname) {
 	unsigned long zigzag = protozero::encode_zigzag64(n);
 
 	serialize_ulong(out, zigzag, fpos, fname);
 }
 
-void serialize_ulong(FILE *out, unsigned long zigzag, long *fpos, const char *fname) {
+void serialize_ulong(FILE *out, unsigned long zigzag, off_t *fpos, const char *fname) {
 	while (1) {
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
@@ -62,12 +62,12 @@ void serialize_ulong(FILE *out, unsigned long zigzag, long *fpos, const char *fn
 	}
 }
 
-void serialize_byte(FILE *out, signed char n, long *fpos, const char *fname) {
+void serialize_byte(FILE *out, signed char n, off_t *fpos, const char *fname) {
 	fwrite_check(&n, sizeof(signed char), 1, out, fname);
 	*fpos += sizeof(signed char);
 }
 
-void serialize_uint(FILE *out, unsigned n, long *fpos, const char *fname) {
+void serialize_uint(FILE *out, unsigned n, off_t *fpos, const char *fname) {
 	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
 	*fpos += sizeof(unsigned);
 }
@@ -112,14 +112,14 @@ void deserialize_byte(char **f, signed char *n) {
 	*f += sizeof(signed char);
 }
 
-bool deserialize_long_io(FILE *f, long *n, long *geompos) {
+bool deserialize_long_io(FILE *f, long *n, off_t *geompos) {
 	unsigned long zigzag = 0;
 	bool ret = deserialize_ulong_io(f, &zigzag, geompos);
 	*n = protozero::decode_zigzag64(zigzag);
 	return ret;
 }
 
-bool deserialize_ulong_io(FILE *f, unsigned long *zigzag, long *geompos) {
+bool deserialize_ulong_io(FILE *f, unsigned long *zigzag, off_t *geompos) {
 	*zigzag = 0;
 	size_t shift = 0;
 
@@ -143,14 +143,14 @@ bool deserialize_ulong_io(FILE *f, unsigned long *zigzag, long *geompos) {
 	return 1;
 }
 
-bool deserialize_int_io(FILE *f, int *n, long *geompos) {
+bool deserialize_int_io(FILE *f, int *n, off_t *geompos) {
 	long ll = 0;
 	bool ret = deserialize_long_io(f, &ll, geompos);
 	*n = ll;
 	return ret;
 }
 
-bool deserialize_uint_io(FILE *f, unsigned *n, long *geompos) {
+bool deserialize_uint_io(FILE *f, unsigned *n, off_t *geompos) {
 	if (fread(n, sizeof(unsigned), 1, f) != 1) {
 		return 0;
 	}
@@ -158,7 +158,7 @@ bool deserialize_uint_io(FILE *f, unsigned *n, long *geompos) {
 	return 1;
 }
 
-bool deserialize_byte_io(FILE *f, signed char *n, long *geompos) {
+bool deserialize_byte_io(FILE *f, signed char *n, off_t *geompos) {
 	int c = getc(f);
 	if (c == EOF) {
 		return 0;
@@ -168,7 +168,7 @@ bool deserialize_byte_io(FILE *f, signed char *n, long *geompos) {
 	return 1;
 }
 
-static void write_geometry(drawvec const &dv, long *fpos, FILE *out, const char *fname, long wx, long wy) {
+static void write_geometry(drawvec const &dv, off_t *fpos, FILE *out, const char *fname, long wx, long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			serialize_byte(out, dv[i].op, fpos, fname);
@@ -182,7 +182,7 @@ static void write_geometry(drawvec const &dv, long *fpos, FILE *out, const char 
 	}
 }
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const char *fname, long wx, long wy, bool include_minzoom) {
+void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const char *fname, long wx, long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
 	long layer = 0;
@@ -239,7 +239,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long *geompos, const 
 	}
 }
 
-serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase, long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
 	serial_feature sf;
 
 	deserialize_byte_io(geoms, &sf.t, geompos_in);
@@ -291,7 +291,10 @@ serial_feature deserialize_feature(FILE *geoms, long *geompos_in, char *metabase
 		sf.m = m;
 	}
 	if (sf.m != 0) {
-		deserialize_long_io(geoms, &sf.metapos, geompos_in);
+		long off;
+		// XXX should off_t serialization be native?
+		deserialize_long_io(geoms, &off, geompos_in);
+		sf.metapos = off;
 	}
 
 	if (sf.metapos >= 0) {
@@ -602,7 +605,7 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	long geomstart = r->geompos;
+	off_t geomstart = r->geompos;
 	serialize_feature(r->geomfile, &sf, &r->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
 
 	struct index index;

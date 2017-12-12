@@ -23,7 +23,7 @@
 static bool pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy);
 static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
-drawvec decode_geometry(FILE *meta, long *geompos, int z, unsigned tx, unsigned ty, long *bbox, unsigned initial_x, unsigned initial_y) {
+drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
 	bbox[0] = LLONG_MAX;
@@ -396,7 +396,7 @@ void check_polygon(drawvec &geom) {
 			double area = get_area(geom, i, j);
 
 #if 0
-			fprintf(stderr, "looking at %ld to %ld, area %f\n", (long) i, (long) j, area);
+			fprintf(stderr, "looking at %zu to %zu, area %f\n", i, j, area);
 #endif
 
 			if (area > 0) {
@@ -415,7 +415,7 @@ void check_polygon(drawvec &geom) {
 						}
 
 						if (!on_edge) {
-							printf("%ld,%ld at %ld not in outer ring (%ld to %ld)\n", geom[k].x, geom[k].y, (long) k, (long) outer_start, (long) (outer_start + outer_len));
+							printf("%ld,%ld at %zu not in outer ring (%zu to %zu)\n", geom[k].x, geom[k].y, k, outer_start, (outer_start + outer_len));
 
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
