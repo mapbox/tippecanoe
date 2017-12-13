@@ -69,7 +69,7 @@ struct serial_feature {
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const char *fname, long wx, long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
 
 struct reader {
 	int metafd = -1;
@@ -106,8 +106,8 @@ struct serialization_state {
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
 	size_t segment = 0;			     // the current input thread
 
-	unsigned *initial_x = NULL;  // relative offset of all geometries
-	unsigned *initial_y = NULL;
+	long *initial_x = NULL;  // relative offset of all geometries
+	long *initial_y = NULL;
 	bool *initialized = NULL;
 
 	double *dist_sum = NULL;  // running tally for calculation of resolution within features

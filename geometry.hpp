@@ -55,7 +55,7 @@ struct draw {
 
 typedef std::vector<draw> drawvec;
 
-drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, unsigned initial_x, unsigned initial_y);
+drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y);
 void to_tile_scale(drawvec &geom, int z, int detail);
 drawvec remove_noop(drawvec geom, int type, size_t shift);
 drawvec clip_point(drawvec &geom, int z, long buffer);
@@ -68,7 +68,7 @@ drawvec stairstep(drawvec &geom, int z, int detail);
 bool point_within_tile(long x, long y, int z);
 int quick_check(long *bbox, int z, long buffer);
 drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain);
-drawvec reorder_lines(drawvec &geom);
+drawvec reverse_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom);

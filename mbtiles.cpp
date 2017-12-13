@@ -77,7 +77,7 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	sqlite3_bind_int(stmt, 1, z);
 	sqlite3_bind_int(stmt, 2, tx);
 	sqlite3_bind_int(stmt, 3, (1 << z) - 1 - ty);
-	sqlite3_bind_blob(stmt, 4, data, size, NULL);
+	sqlite3_bind_blob64(stmt, 4, data, size, NULL);
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		fprintf(stderr, "sqlite3 insert failed: %s\n", sqlite3_errmsg(outdb));

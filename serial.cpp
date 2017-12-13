@@ -75,7 +75,7 @@ void serialize_uint(FILE *out, unsigned n, off_t *fpos, const char *fname) {
 void deserialize_int(char **f, int *n) {
 	long ll;
 	deserialize_long(f, &ll);
-	*n = ll;
+	*n = (int) ll;
 }
 
 void deserialize_long(char **f, long *n) {
@@ -146,7 +146,7 @@ bool deserialize_ulong_io(FILE *f, unsigned long *zigzag, off_t *geompos) {
 bool deserialize_int_io(FILE *f, int *n, off_t *geompos) {
 	long ll = 0;
 	bool ret = deserialize_long_io(f, &ll, geompos);
-	*n = ll;
+	*n = (int) ll;
 	return ret;
 }
 
@@ -239,7 +239,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const
 	}
 }
 
-serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, long *initial_x, long *initial_y) {
 	serial_feature sf;
 
 	deserialize_byte_io(geoms, &sf.t, geompos_in);

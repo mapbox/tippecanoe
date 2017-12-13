@@ -23,7 +23,7 @@
 static bool pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy);
 static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
-drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, unsigned initial_x, unsigned initial_y) {
+drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y) {
 	drawvec out;
 
 	bbox[0] = LLONG_MAX;
@@ -660,7 +660,7 @@ drawvec clip_lines(drawvec &geom, int z, long buffer) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
+			size_t c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) {  // clipped
 				out.push_back(draw(VT_MOVETO, x1, y1));
@@ -772,7 +772,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long extent) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
+			size_t c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
 
 			if (c > 1) {  // clipped
 				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
@@ -839,7 +839,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 	return out;
 }
 
-drawvec reorder_lines(drawvec &geom) {
+drawvec reverse_lines(drawvec &geom) {
 	// Only reorder simple linestrings with a single moveto
 
 	if (geom.size() == 0) {
@@ -864,8 +864,8 @@ drawvec reorder_lines(drawvec &geom) {
 	// instead of down and to the right
 	// so that it will coalesce better
 
-	unsigned long l1 = encode(geom[0].x, geom[0].y);
-	unsigned long l2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+	unsigned long l1 = encode((unsigned) geom[0].x, (unsigned) geom[0].y);
+	unsigned long l2 = encode((unsigned) geom[geom.size() - 1].x, (unsigned) geom[geom.size() - 1].y);
 
 	if (l1 > l2) {
 		drawvec out;

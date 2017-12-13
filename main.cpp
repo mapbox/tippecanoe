@@ -79,7 +79,7 @@ struct source {
 
 size_t CPUS;
 size_t TEMP_FILES;
-long MAX_FILES;
+size_t MAX_FILES;
 static long diskfree;
 
 void checkdisk(std::vector<struct reader> *r) {
@@ -135,15 +135,15 @@ void init_cpus() {
 	// MacOS can run out of system file descriptors
 	// even if we stay under the rlimit, so try to
 	// find out the real limit.
-	long fds[MAX_FILES];
-	long i;
+	int fds[MAX_FILES];
+	size_t i;
 	for (i = 0; i < MAX_FILES; i++) {
 		fds[i] = open("/dev/null", O_RDONLY | O_CLOEXEC);
 		if (fds[i] < 0) {
 			break;
 		}
 	}
-	long j;
+	size_t j;
 	for (j = 0; j < i; j++) {
 		if (close(fds[j]) < 0) {
 			perror("close");
@@ -355,7 +355,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long len, long initial_offset, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, bool exclude_all, json_object *filter, int basezoom, size_t source, std::vector<std::map<std::string, layermap_entry> > *layermaps, bool *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, wchar_t separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void do_read_parallel(char *map, long len, long initial_offset, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, bool exclude_all, json_object *filter, int basezoom, size_t source, std::vector<std::map<std::string, layermap_entry> > *layermaps, bool *initialized, long *initial_x, long *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, wchar_t separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -463,8 +463,8 @@ struct read_parallel_arg {
 	size_t source = 0;
 	std::vector<std::map<std::string, layermap_entry> > *layermaps = NULL;
 	bool *initialized = NULL;
-	unsigned *initial_x = NULL;
-	unsigned *initial_y = NULL;
+	long *initial_x = NULL;
+	long *initial_y = NULL;
 	std::string layername = "";
 	bool uses_gamma = false;
 	std::map<std::string, int> const *attribute_types = NULL;
@@ -510,7 +510,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long offset, long len, volatile bool *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, bool exclude_all, json_object *filter, int basezoom, size_t source, std::vector<std::map<std::string, layermap_entry> > &layermaps, bool *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, wchar_t separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, FILE *fp, long offset, long len, volatile bool *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, volatile long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, bool exclude_all, json_object *filter, int basezoom, size_t source, std::vector<std::map<std::string, layermap_entry> > &layermaps, bool *initialized, long *initial_x, long *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, wchar_t separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -1115,7 +1115,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	// 2 * CPUS: One per reader thread, one per tiling thread
 	bool initialized[2 * CPUS];
-	unsigned initial_x[2 * CPUS], initial_y[2 * CPUS];
+	long initial_x[2 * CPUS], initial_y[2 * CPUS];
 	for (size_t i = 0; i < 2 * CPUS; i++) {
 		initialized[i] = initial_x[i] = initial_y[i] = 0;
 	}
