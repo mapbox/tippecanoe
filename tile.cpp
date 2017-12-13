@@ -266,9 +266,18 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 
 				{
 					if (!within[j]) {
+						long next_x = tx * span + xo;
+						long next_y = ty * span + yo;
+
+						if (next_x < 0 || next_x >= (1L << nextzoom) ||
+						    next_y < 0 || next_y >= (1L << nextzoom)) {
+							fprintf(stderr, "Internal error: bad tile number %d/%ld/%ld\n", nextzoom, next_x, next_y);
+							exit(EXIT_FAILURE);
+						}
+
 						serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
-						serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
-						serialize_uint(geomfile[j], ty * span + yo, &geompos[j], fname);
+						serialize_uint(geomfile[j], (unsigned) next_x, &geompos[j], fname);
+						serialize_uint(geomfile[j], (unsigned) next_y, &geompos[j], fname);
 						within[j] = 1;
 					}
 
@@ -568,6 +577,15 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 	return true;
 }
 
+static void check_coords_int(draw dv0, draw dv1) {
+	if (dv0.x < 0 || dv0.x > UINT_MAX ||
+	    dv0.y < 0 || dv0.y > UINT_MAX ||
+	    dv1.x < 0 || dv1.x > UINT_MAX ||
+	    dv1.y < 0 || dv1.y > UINT_MAX) {
+		fprintf(stderr, "Internal error: Out of bounds coordinate %ld,%ld to %ld,%ld\n", dv0.x, dv0.y, dv1.x, dv1.y);
+	}
+}
+
 bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom, double merge_fraction) {
 	size_t merge_count = ceil((1 - merge_fraction) * partials.size());
 
@@ -614,7 +632,13 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							dv.push_back(partials[i].geoms[j][k]);
 						}
 
-						edges.push_back(edge(dv[0].x, dv[0].y, dv[1].x, dv[1].y, ring));
+						check_coords_int(dv[0], dv[1]);
+						if (ring > UINT_MAX) {
+							fprintf(stderr, "Internal error: Too many polygon rings %ld\n", ring);
+							exit(EXIT_FAILURE);
+						}
+
+						edges.push_back(edge((unsigned) dv[0].x, (unsigned) dv[0].y, (unsigned) dv[1].x, (unsigned) dv[1].y, (unsigned) ring));
 					}
 				}
 			}
@@ -661,7 +685,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
 							}
-							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge(left[0].x, left[0].y, left[1].x, left[1].y, 0));
+							check_coords_int(left[0], left[1]);
+							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge((int) left[0].x, (int) left[0].y, (int) left[1].x, (int) left[1].y, 0));
 
 							for (size_t k = 0; k < s; k++) {
 								drawvec right;
@@ -674,7 +699,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									right.push_back(g[a + k]);
 								}
 
-								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge(right[0].x, right[0].y, right[1].x, right[1].y, 0));
+								check_coords_int(right[0], right[1]);
+								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge((int) right[0].x, (int) right[0].y, (int) right[1].x, (int) right[1].y, 0));
 
 								if (right[1] < right[0]) {
 									fprintf(stderr, "left misordered\n");
