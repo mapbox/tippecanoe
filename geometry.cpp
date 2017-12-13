@@ -864,6 +864,8 @@ drawvec reverse_lines(drawvec &geom) {
 	// instead of down and to the right
 	// so that it will coalesce better
 
+	// Cast without warning here because reversing
+	// doesn't make any guarantees about correctness
 	unsigned long l1 = encode((unsigned) geom[0].x, (unsigned) geom[0].y);
 	unsigned long l2 = encode((unsigned) geom[geom.size() - 1].x, (unsigned) geom[geom.size() - 1].y);
 
