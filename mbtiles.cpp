@@ -12,6 +12,7 @@
 #include <set>
 #include <map>
 #include <sys/stat.h>
+#include <limits.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "text.hpp"

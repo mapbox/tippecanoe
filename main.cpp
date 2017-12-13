@@ -1117,7 +1117,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	bool initialized[2 * CPUS];
 	long initial_x[2 * CPUS], initial_y[2 * CPUS];
 	for (size_t i = 0; i < 2 * CPUS; i++) {
-		initialized[i] = initial_x[i] = initial_y[i] = 0;
+		initialized[i] = false;
+		initial_x[i] = initial_y[i] = 0;
 	}
 
 	size_t nlayers = sources.size();
@@ -1986,7 +1987,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		for (size_t ip = 0; ip < indices; ip++) {
 			if (ip > 0 && map[ip].start != map[ip - 1].end) {
-				fprintf(stderr, "Mismatched index at %zu: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+				std::string st = std::to_string(map[ip].start);
+				std::string en = std::to_string(map[ip].end);
+
+				fprintf(stderr, "Mismatched index at %zu: %s vs %s\n", ip, st.c_str(), en.c_str());
 			}
 			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
 			geom[map[ip].end - 1] = feature_minzoom;
