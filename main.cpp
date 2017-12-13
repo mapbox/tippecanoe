@@ -1700,7 +1700,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	progress_seq = indexpos / sizeof(struct index);
 
 	if (!quiet) {
-		fprintf(stderr, "%ld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+		std::string gp = std::to_string(geompos);
+		std::string mp = std::to_string(metapos);
+		std::string pp = std::to_string(poolpos);
+
+		fprintf(stderr, "%ld features, %s bytes of geometry, %s bytes of separate metadata, %s bytes of string pool\n", progress_seq, gp.c_str(), mp.c_str(), pp.c_str());
 	}
 
 	if (indexpos == 0) {
