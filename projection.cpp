@@ -2,12 +2,159 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <vector>
+#include <string>
+#include <ctype.h>
 #include "projection.hpp"
 
+struct wkt {
+	std::string s;
+	std::vector<wkt> sublist;
+
+	wkt(std::string s_) {
+		s = s_;
+	}
+};
+
+static int peekc(FILE *f) {
+	int c = getc(f);
+	ungetc(c, f);
+	return c;
+}
+
+static void parsewkt(FILE *f, std::vector<wkt> &w) {
+	int c;
+
+	while ((c = getc(f)) != EOF) {
+		if (c == ' ' || c == '\t' || c == '\n' || c == ',') {
+			continue;
+		}
+
+		if (c == '"') {
+			std::string s;
+
+			while ((c = getc(f)) != EOF) {
+				if (c == '"' && peekc(f) == '"') {
+					getc(f);
+					s.push_back('"');
+					continue;
+				}
+
+				if (c == '"') {
+					break;
+				}
+
+				s.push_back(c);
+			}
+
+			w.push_back(wkt(s));
+			continue;
+		}
+
+		if (isalpha(c)) {
+			std::string s;
+			s.push_back(tolower(c));
+
+			while ((c = peekc(f)) != EOF && isalpha(c)) {
+				s.push_back(tolower(c));
+				c = getc(f);
+			}
+
+			w.push_back(wkt(s));
+			continue;
+		}
+
+		if (isdigit(c) || c == '.' || c == '-') {
+			std::string s;
+			s.push_back(c);
+
+			while ((c = peekc(f)) != EOF && (isdigit(c) || c == '.')) {
+				s.push_back(c);
+				c = getc(f);
+			}
+
+			w.push_back(wkt(s));
+			continue;
+		}
+
+		if (c == ')' || c == ']') {
+			return;
+		}
+
+		if (c == '(' || c == '[') {
+			if (w.size() == 0) {
+				fprintf(stderr, "[ or ( in projection without a leading token\n");
+				exit(EXIT_FAILURE);
+			}
+
+			parsewkt(f, w[w.size() - 1].sublist);
+			continue;
+		}
+
+		fprintf(stderr, "Unexpected character %c in projection\n", c);
+		exit(EXIT_FAILURE);
+	}
+}
+
+wkt *find(std::vector<wkt> *w, std::string s) {
+	for (size_t i = 0; i < w->size(); i++) {
+		if ((*w)[i].s == s) {
+			return &(*w)[i];
+		}
+	}
+
+	return NULL;
+}
+
+void warn_wgs84_inner(std::vector<wkt> *w) {
+	wkt *geogcs = find(w, "geogcs");
+	if (geogcs == NULL) {
+		fprintf(stderr, "Warning: expected geographic coordinate system for projection WGS84\n");
+		return;
+	}
+
+	wkt *datum = find(&(geogcs->sublist), "datum");
+	if (datum == NULL) {
+		fprintf(stderr, "Warning: expected datum in projection\n");
+		return;
+	}
+
+	wkt *spheroid = find(&(datum->sublist), "spheroid");
+	if (spheroid == NULL || spheroid->sublist.size() == 0) {
+		fprintf(stderr, "Warning: expected spheroid in projection\n");
+		return;
+	}
+
+	if (spheroid->sublist[0].s != "WGS_1984") {
+		fprintf(stderr, "Warning: expected WGS_1984 spheroid in projection, not %s\n", spheroid->sublist[0].s.c_str());
+		return;
+	}
+}
+
+void warn_wgs84(FILE *f) {
+	std::vector<wkt> w;
+	parsewkt(f, w);
+
+	warn_wgs84_inner(&w);
+}
+
+void warn_epsg3857(FILE *f) {
+	std::vector<wkt> w;
+	parsewkt(f, w);
+
+	wkt *projcs = find(&w, "projcs");
+	if (projcs == NULL) {
+		fprintf(stderr, "Warning: expected projected coordinate system for projection EPSG:3857\n");
+		return;
+	}
+
+	warn_wgs84_inner(&(projcs->sublist));
+}
+
 struct projection projections[] = {
-	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84"},
-	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857"},
-	{NULL, NULL, NULL, NULL},
+	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84", warn_wgs84},
+	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857", warn_epsg3857},
+	{NULL, NULL, NULL, NULL, NULL},
 };
 
 struct projection *projection = &projections[0];
