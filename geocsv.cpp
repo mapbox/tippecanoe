@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <algorithm>
 #include "geocsv.hpp"
 #include "mvt.hpp"
 #include "serial.hpp"
