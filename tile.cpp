@@ -116,6 +116,19 @@ int coalcmp(const void *v1, const void *v2) {
 		return cmp;
 	}
 
+	if (c1->has_id != c2->has_id) {
+		return (int) c1->has_id - (int) c2->has_id;
+	}
+
+	if (c1->has_id && c2->has_id) {
+		if (c1->id < c2->id) {
+			return -1;
+		}
+		if (c1->id > c2->id) {
+			return 1;
+		}
+	}
+
 	return metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
 }
 
@@ -1765,7 +1778,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && out[y].geom.size() + layer_features[x].geom.size() < 700 && coalcmp(&layer_features[x], &out[y]) == 0 && layer_features[x].type != VT_POINT) {
+				if (additional[A_COALESCE] && out.size() > 0 && coalcmp(&layer_features[x], &out[y]) == 0 && layer_features[x].type != VT_POINT) {
 					for (size_t g = 0; g < layer_features[x].geom.size(); g++) {
 						out[y].geom.push_back(layer_features[x].geom[g]);
 					}
