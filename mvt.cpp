@@ -37,11 +37,22 @@ bool decompress(std::string const &input, std::string &output) {
 		fprintf(stderr, "error: %s\n", inflate_s.msg);
 	}
 	inflate_s.next_in = (Bytef *) input.data();
-	inflate_s.avail_in = input.size();
+
+	if (input.size() > INT_MAX) {
+		fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
+		exit(EXIT_FAILURE);
+	}
+
+	inflate_s.avail_in = (int) input.size();
 	size_t length = 0;
 	do {
+		if (length + 2 * input.size() > INT_MAX) {
+			fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
+			exit(EXIT_FAILURE);
+		}
+
 		output.resize(length + 2 * input.size());
-		inflate_s.avail_out = 2 * input.size();
+		inflate_s.avail_out = (int) (2 * input.size());
 		inflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
@@ -66,12 +77,24 @@ bool compress(std::string const &input, std::string &output) {
 	deflate_s.next_in = Z_NULL;
 	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
 	deflate_s.next_in = (Bytef *) input.data();
-	deflate_s.avail_in = input.size();
+
+	if (input.size() > INT_MAX) {
+		fprintf(stderr, "Tile too big to encode: %zu\n", input.size());
+		exit(EXIT_FAILURE);
+	}
+
+	deflate_s.avail_in = (int) input.size();
 	size_t length = 0;
 	do {
 		size_t increase = input.size() / 2 + 1024;
 		output.resize(length + increase);
-		deflate_s.avail_out = increase;
+
+		if (increase > INT_MAX) {
+			fprintf(stderr, "Tile too big to encode: %zu\n", increase);
+			exit(EXIT_FAILURE);
+		}
+
+		deflate_s.avail_out = (int) increase;
 		deflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
@@ -276,9 +299,14 @@ std::string mvt_tile::encode() {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
-		layer_writer.add_uint32(15, layers[i].version); /* version */
-		layer_writer.add_string(1, layers[i].name);     /* name */
-		layer_writer.add_uint32(5, layers[i].extent);   /* extent */
+		if (layers[i].extent > INT_MAX) {
+			fprintf(stderr, "Tile extent too big: %ld\n", layers[i].extent);
+			exit(EXIT_FAILURE);
+		}
+
+		layer_writer.add_uint32(15, layers[i].version);     /* version */
+		layer_writer.add_string(1, layers[i].name);	 /* name */
+		layer_writer.add_uint32(5, (int) layers[i].extent); /* extent */
 
 		for (size_t j = 0; j < layers[i].keys.size(); j++) {
 			layer_writer.add_string(3, layers[i].keys[j]); /* key */
@@ -319,10 +347,10 @@ std::string mvt_tile::encode() {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
 			}
 
-			std::vector<uint32_t> geometry;
+			std::vector<unsigned> geometry;
 
 			long px = 0, py = 0;
-			int cmd_idx = -1;
+			ssize_t cmd_idx = -1;
 			int cmd = -1;
 			size_t length = 0;
 
@@ -333,7 +361,13 @@ std::string mvt_tile::encode() {
 
 				if (op != cmd) {
 					if (cmd_idx >= 0) {
-						geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
+						size_t enc = (length << 3) | (cmd & ((1 << 3) - 1));
+						if (enc > UINT_MAX) {
+							fprintf(stderr, "Geometry encoding overflow: %ld\n", enc);
+							exit(EXIT_FAILURE);
+						}
+
+						geometry[cmd_idx] = (unsigned) enc;
 					}
 
 					cmd = op;
@@ -349,8 +383,13 @@ std::string mvt_tile::encode() {
 					long dx = wwx - px;
 					long dy = wwy - py;
 
-					geometry.push_back(protozero::encode_zigzag32(dx));
-					geometry.push_back(protozero::encode_zigzag32(dy));
+					if (dx < INT_MIN || dx > INT_MAX || dy < INT_MIN || dy > INT_MAX) {
+						fprintf(stderr, "Geometry delta overflow: %ld,%ld\n", dx, dy);
+						exit(EXIT_FAILURE);
+					}
+
+					geometry.push_back(protozero::encode_zigzag32((int) dx));
+					geometry.push_back(protozero::encode_zigzag32((int) dy));
 
 					px = wwx;
 					py = wwy;
@@ -364,7 +403,13 @@ std::string mvt_tile::encode() {
 			}
 
 			if (cmd_idx >= 0) {
-				geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
+				size_t enc = (length << 3) | (cmd & ((1 << 3) - 1));
+				if (enc > UINT_MAX) {
+					fprintf(stderr, "Geometry encoding overflow: %ld\n", enc);
+					exit(EXIT_FAILURE);
+				}
+
+				geometry[cmd_idx] = (unsigned) enc;
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));

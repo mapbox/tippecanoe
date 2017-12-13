@@ -43,7 +43,7 @@ enum mvt_geometry_type {
 };
 
 struct mvt_feature {
-	std::vector<unsigned> tags{};
+	std::vector<size_t> tags{};
 	std::vector<mvt_geometry> geometry{};
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long id = 0;
