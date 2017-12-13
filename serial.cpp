@@ -335,12 +335,12 @@ static long scale_geometry(struct serialization_state *sst, long *bbox, drawvec 
 			if (additional[A_DETECT_WRAPAROUND]) {
 				x += offset;
 				if (has_prev) {
-					if (x - prev > (1LL << 31)) {
-						offset -= 1LL << 32;
-						x -= 1LL << 32;
-					} else if (prev - x > (1LL << 31)) {
-						offset += 1LL << 32;
-						x += 1LL << 32;
+					if (x - prev > (1L << 31)) {
+						offset -= 1L << 32;
+						x -= 1L << 32;
+					} else if (prev - x > (1L << 31)) {
+						offset += 1L << 32;
+						x += 1L << 32;
 					}
 				}
 
@@ -362,9 +362,9 @@ static long scale_geometry(struct serialization_state *sst, long *bbox, drawvec 
 			}
 
 			if (!*(sst->initialized)) {
-				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
-					*(sst->initial_x) = 1LL << 31;
-					*(sst->initial_y) = 1LL << 31;
+				if (x < 0 || x >= (1L << 32) || y < 0 || y >= (1L < 32)) {
+					*(sst->initial_x) = 1L << 31;
+					*(sst->initial_y) = 1L << 31;
 				} else {
 					*(sst->initial_x) = (x >> geometry_scale) << geometry_scale;
 					*(sst->initial_y) = (y >> geometry_scale) << geometry_scale;
@@ -431,12 +431,12 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	if (sf.bbox[0] == LLONG_MAX) {
 		// No bounding box (empty geometry)
 		// Shouldn't happen, but avoid arithmetic overflow below
-	} else if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - sst->maxzoom))) {
+	} else if (sf.bbox[2] - sf.bbox[0] > (2L << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2L << (32 - sst->maxzoom))) {
 		inline_meta = false;
 
 		if (prevent[P_CLIPPING]) {
 			static volatile long warned = 0;
-			long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
+			long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1L << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1L << (32 - sst->maxzoom)) + 1));
 			if (extent > warned) {
 				fprintf(stderr, "Warning: %s:%zu: Large unclipped (-pc) feature may be duplicated across %ld tiles\n", sst->fname, sst->line, extent);
 				warned = extent;
@@ -486,8 +486,8 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
-	long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
-	long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
+	long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1L << 32) - 1);
+	long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1L << 32) - 1);
 	bbox_index = encode(midx, midy);
 
 	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma) {

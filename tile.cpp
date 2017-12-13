@@ -345,7 +345,7 @@ struct partial_arg {
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	// From area in world coordinates to area in tile coordinates
-	long divisor = 1LL << (32 - detail - z);
+	long divisor = 1L << (32 - detail - z);
 	area /= divisor * divisor;
 
 	if (area == 0) {
@@ -1187,7 +1187,7 @@ bool clip_to_tile(serial_feature &sf, int z, long buffer) {
 	}
 
 	if (z == 0) {
-		if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
+		if (sf.bbox[0] < 0 || sf.bbox[2] > 1L << 32) {
 			// If the geometry extends off the edge of the world, concatenate on another copy
 			// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
@@ -1195,18 +1195,18 @@ bool clip_to_tile(serial_feature &sf, int z, long buffer) {
 
 			if (sf.bbox[0] < 0) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1L << 32), sf.geometry[i].y));
 				}
 			}
 
-			if (sf.bbox[2] > 1LL << 32) {
+			if (sf.bbox[2] > 1L << 32) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1L << 32), sf.geometry[i].y));
 				}
 			}
 
 			sf.bbox[0] = 0;
-			sf.bbox[2] = 1LL << 32;
+			sf.bbox[2] = 1L << 32;
 
 			quick = -1;
 		}
@@ -1350,7 +1350,7 @@ void *run_prefilter(void *v) {
 		}
 
 		mvt_layer tmp_layer;
-		tmp_layer.extent = 1LL << 32;
+		tmp_layer.extent = 1L << 32;
 		tmp_layer.name = (*(rpa->layer_unmaps))[sf.segment][sf.layer];
 
 		if (sf.t == VT_POLYGON) {
@@ -1436,7 +1436,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 		double fraction_accum = 0;
 
 		unsigned long previndex = 0, density_previndex = 0, merge_previndex = 0;
-		double scale = (double) (1LL << (64 - 2 * (z + 8)));
+		double scale = (double) (1L << (64 - 2 * (z + 8)));
 		double gap = 0, density_gap = 0;
 		double spacing = 0;
 

@@ -192,7 +192,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
-			long scale = 1LL << (32 - z);
+			long scale = 1L << (32 - z);
 			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
 			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}
@@ -372,7 +372,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		}
 
 		// Scale and offset geometry from global to tile
-		double scale = 1LL << geometry_scale;
+		double scale = 1L << geometry_scale;
 		for (size_t i = 0; i < dv.size(); i++) {
 			unsigned sx = 0, sy = 0;
 			if (z != 0) {

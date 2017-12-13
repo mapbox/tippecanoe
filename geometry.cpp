@@ -251,7 +251,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, long buffer, bool clip) {
 	if (clip) {
 		long area = 0xFFFFFFFF;
 		if (z != 0) {
-			area = 1LL << (32 - z);
+			area = 1L << (32 - z);
 		}
 		long clip_buffer = buffer * area / 256;
 
@@ -508,7 +508,7 @@ drawvec simple_clip_poly(drawvec &geom, long minx, long miny, long maxx, long ma
 }
 
 drawvec simple_clip_poly(drawvec &geom, int z, long buffer) {
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 	long clip_buffer = buffer * area / 256;
 
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
@@ -597,7 +597,7 @@ drawvec clip_point(drawvec &geom, int z, long buffer) {
 	drawvec out;
 
 	long min = 0;
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
@@ -613,7 +613,7 @@ drawvec clip_point(drawvec &geom, int z, long buffer) {
 
 int quick_check(long *bbox, int z, long buffer) {
 	long min = 0;
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
@@ -639,7 +639,7 @@ bool point_within_tile(long x, long y, int z) {
 	// No adjustment for buffer, because the point must be
 	// strictly within the tile to appear exactly once
 
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
@@ -648,7 +648,7 @@ drawvec clip_lines(drawvec &geom, int z, long buffer) {
 	drawvec out;
 
 	long min = 0;
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
 
@@ -794,7 +794,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long extent) {
 
 drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
 	long res = 1 << (32 - detail - z);
-	long area = 1LL << (32 - z);
+	long area = 1L << (32 - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {

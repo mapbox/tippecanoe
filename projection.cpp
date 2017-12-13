@@ -32,7 +32,7 @@ void lonlat2tile(double lon, double lat, int zoom, long *x, long *y) {
 	}
 
 	double lat_rad = lat * M_PI / 180;
-	unsigned long n = 1LL << zoom;
+	unsigned long n = 1L << zoom;
 
 	long llx = n * ((lon + 180) / 360);
 	long lly = n * (1 - (log(tan(lat_rad) + 1 / cos(lat_rad)) / M_PI)) / 2;
@@ -43,14 +43,14 @@ void lonlat2tile(double lon, double lat, int zoom, long *x, long *y) {
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void tile2lonlat(long x, long y, int zoom, double *lon, double *lat) {
-	unsigned long n = 1LL << zoom;
+	unsigned long n = 1L << zoom;
 	*lon = 360.0 * x / n - 180.0;
 	*lat = atan(sinh(M_PI * (1 - 2.0 * y / n))) * 180.0 / M_PI;
 }
 
 void epsg3857totile(double ix, double iy, int zoom, long *x, long *y) {
-	*x = ix * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31);
-	*y = ((1LL << 32) - 1) - (iy * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31));
+	*x = ix * (1L << 31) / 6378137.0 / M_PI + (1L << 31);
+	*y = ((1L << 32) - 1) - (iy * (1L << 31) / 6378137.0 / M_PI + (1L << 31));
 
 	if (zoom != 0) {
 		*x >>= (32 - zoom);
@@ -64,8 +64,8 @@ void tiletoepsg3857(long ix, long iy, int zoom, double *ox, double *oy) {
 		iy <<= (32 - zoom);
 	}
 
-	*ox = (ix - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
-	*oy = ((1LL << 32) - 1 - iy - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
+	*ox = (ix - (1L << 31)) * M_PI * 6378137.0 / (1L << 31);
+	*oy = ((1L << 32) - 1 - iy - (1L << 31)) * M_PI * 6378137.0 / (1L << 31);
 }
 
 unsigned long encode(unsigned wx, unsigned wy) {

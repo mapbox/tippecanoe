@@ -153,7 +153,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			long py = feat.geometry[g].y;
 
 			if (op == VT_MOVETO || op == VT_LINETO) {
-				long scale = 1LL << (32 - z);
+				long scale = 1L << (32 - z);
 				long wx = scale * x + (scale / layer.extent) * px;
 				long wy = scale * y + (scale / layer.extent) * py;
 

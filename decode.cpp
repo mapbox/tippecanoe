@@ -307,7 +307,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					exit(EXIT_FAILURE);
 				}
 
-				ty = (1LL << tz) - 1 - ty;
+				ty = (1L << tz) - 1 - ty;
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
 				handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
@@ -334,7 +334,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 
 			sqlite3_bind_int(stmt, 1, z);
 			sqlite3_bind_int(stmt, 2, x);
-			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
+			sqlite3_bind_int(stmt, 3, (1L << z) - 1 - y);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				size_t len = sqlite3_column_bytes(stmt, 0);

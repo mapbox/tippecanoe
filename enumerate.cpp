@@ -29,7 +29,7 @@ void enumerate(char *fname) {
 			exit(EXIT_FAILURE);
 		}
 
-		y = (1LL << zoom) - 1 - y;
+		y = (1L << zoom) - 1 - y;
 		printf("%s %ld %ld %ld\n", fname, zoom, x, y);
 	}
 

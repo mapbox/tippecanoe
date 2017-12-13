@@ -713,7 +713,7 @@ void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, siz
 				size_t page = sysconf(_SC_PAGESIZE);
 				// Don't try to sort more than 2GB at once,
 				// which used to crash Macs and may still
-				size_t max_unit = 2LL * 1024 * 1024 * 1024;
+				size_t max_unit = 2L * 1024 * 1024 * 1024;
 				size_t unit = ((indexpos / CPUS + bytes - 1) / bytes) * bytes;
 				if (unit > max_unit) {
 					unit = max_unit;
@@ -875,7 +875,7 @@ void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double d
 			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
 		}
 
-		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
+		ds[i].scale = (double) (1L << (64 - 2 * (i + 8)));
 		ds[i].seq = 0;
 		ds[i].included = 0;
 		ds[i].x = 0;
@@ -981,21 +981,21 @@ void choose_first_zoom(long *file_bbox, std::vector<struct reader> &readers, uns
 	// bounding box is the whole world.
 	if (file_bbox[0] < 0) {
 		file_bbox[0] = 0;
-		file_bbox[2] = (1LL << 32) - 1;
+		file_bbox[2] = (1L << 32) - 1;
 	}
-	if (file_bbox[2] > (1LL << 32) - 1) {
+	if (file_bbox[2] > (1L << 32) - 1) {
 		file_bbox[0] = 0;
-		file_bbox[2] = (1LL << 32) - 1;
+		file_bbox[2] = (1L << 32) - 1;
 	}
 	if (file_bbox[1] < 0) {
 		file_bbox[1] = 0;
 	}
-	if (file_bbox[3] > (1LL << 32) - 1) {
-		file_bbox[3] = (1LL << 32) - 1;
+	if (file_bbox[3] > (1L << 32) - 1) {
+		file_bbox[3] = (1L << 32) - 1;
 	}
 
 	for (ssize_t z = minzoom; z >= 0; z--) {
-		long shift = 1LL << (32 - z);
+		long shift = 1L << (32 - z);
 
 		long left = (file_bbox[0] - buffer * shift / 256) / shift;
 		long top = (file_bbox[1] - buffer * shift / 256) / shift;
@@ -1380,7 +1380,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 #define READ_BUF 2000
 #define PARSE_MIN 10000000
-#define PARSE_MAX (1LL * 1024 * 1024 * 1024)
+#define PARSE_MAX (1L * 1024 * 1024 * 1024)
 
 				char buf[READ_BUF];
 				size_t n;
@@ -1844,7 +1844,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					yyy = yy >> (32 - z);
 				}
 
-				double scale = (double) (1LL << (64 - 2 * (z + 8)));
+				double scale = (double) (1L << (64 - 2 * (z + 8)));
 
 				if (tile[z].x != xxx || tile[z].y != yyy) {
 					if (tile[z].count > max[z].count) {
