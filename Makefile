@@ -82,7 +82,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test
 	./unit
 
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
@@ -259,6 +259,12 @@ allow-existing-test:
 	./tippecanoe-decode tests/allow-existing/both.dir | sed 's/both\.dir/both.mbtiles/g' > tests/allow-existing/both.dir.json.check
 	cmp tests/allow-existing/both.dir.json.check tests/allow-existing/both.mbtiles.json
 	rm -r tests/allow-existing/both.dir.json.check tests/allow-existing/both.dir tests/allow-existing/both.mbtiles.json.check tests/allow-existing/both.mbtiles
+
+csv-test:
+	./tippecanoe -zg -f -o tests/csv/out.mbtiles tests/csv/ne_110m_populated_places_simple.csv
+	./tippecanoe-decode tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
+	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
+	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
