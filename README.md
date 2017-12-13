@@ -1,7 +1,7 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/) or [Geobuf](https://github.com/mapbox/geobuf) features,
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [Shapefile](https://en.wikipedia.org/wiki/Shapefile) features,
 [like these](MADE_WITH.md).
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
@@ -128,6 +128,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
  * _name_`.geobuf` or _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
+ * _name_`.shp` or _name_`.shp`: Read the named Shapefile input file into a layer called _name_. Note that _name_`.dbf` must also exist.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
@@ -167,7 +168,7 @@ Parallel processing will also be automatic if the input file is in Geobuf format
  * `-m` _detail_ or `--minimum-detail=`_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
-or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
+or about 1cm, is the smallest distinguishable distance. If _maxzoom_  _detail_ > 32, no additional
 resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filtering feature attributes
@@ -410,15 +411,15 @@ and perhaps
 
     make install
 
-Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
+Tippecanoe now requires features from the 2011 C standard. If your compiler is older than
 that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
-get you a new enough version of `clang++`. On Linux, you should be able to upgrade `g++` with
+get you a new enough version of `clang`. On Linux, you should be able to upgrade `g` with
 
 ```
 sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get update -y
-sudo apt-get install -y g++-5
-export CXX=g++-5
+sudo apt-get install -y g-5
+export CXX=g-5
 ```
 
 Docker Image
@@ -532,7 +533,7 @@ awk 'BEGIN {
     print "GEOID10,population"
 }
 (substr($0, 9, 3) == "750") {
-    print "\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\"," (0 + substr($0, 328, 9))
+    print "\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\"," (0  substr($0, 328, 9))
 }' > population.csv
 ```
 
@@ -555,6 +556,37 @@ Then you can join those populations to the geometries and discard the no-longer-
 
 ```sh
 ./tile-join -o population.mbtiles -x GEOID10 -c population.csv tl_2010_06001_tabblock10.mbtiles
+```
+
+Another example
+---------------
+
+If you have this GeoJSON `points.json`, with attribute `id`:
+
+```
+{ "type": "Feature", "properties": { "id": 1 }, "geometry": { "type": "Point", "coordinates": [ 0, 0 ] } }
+{ "type": "Feature", "properties": { "id": 2 }, "geometry": { "type": "Point", "coordinates": [ 1, 1 ] } }
+{ "type": "Feature", "properties": { "id": 3 }, "geometry": { "type": "Point", "coordinates": [ 2, 2 ] } }
+{ "type": "Feature", "properties": { "id": 4 }, "geometry": { "type": "Point", "coordinates": [ 3, 3 ] } }
+{ "type": "Feature", "properties": { "id": 5 }, "geometry": { "type": "Point", "coordinates": [ 4, 4 ] } }
+```
+
+and this CSV `join.csv`, with first column `id`:
+
+```
+id,name,square
+1,One,1
+2,Two,4
+3,Three,9
+4,Four,16
+5,Five,25
+```
+
+it will add `name` and `square` attributes to each feature based on the matching `id` if you do:
+
+```
+tippecanoe -o points.mbtiles points.json
+tile-join -o joined.mbtiles -c join.csv points.mbtiles
 ```
 
 tippecanoe-enumerate

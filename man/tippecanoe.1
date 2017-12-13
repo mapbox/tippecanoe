@@ -1,7 +1,7 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] or Geobuf \[la]https://github.com/mapbox/geobuf\[ra] features,
-like these \[la]MADE_WITH.md\[ra]\&.
+ Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or Shapefile \[la]https://en.wikipedia.org/wiki/Shapefile\[ra] features,
+ like these \[la]MADE_WITH.md\[ra]\&.
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
 [Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github) \[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
@@ -134,6 +134,8 @@ or if metadata fields can't be set. You probably don't want to use this.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.geobuf\fR or \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
 .IP \(bu 2
+\fIname\fP\fB\fC\&.shp\fR or \fIname\fP\fB\fC\&.shp\fR: Read the named Shapefile input file into a layer called \fIname\fP\&. Note that \fIname\fP\fB\fC\&.dbf\fR must also exist.
+.IP \(bu 2
 \fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
 specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
 .IP \(bu 2
@@ -184,7 +186,7 @@ specified maximum zoom and to any levels added beyond that.
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
-or about 1cm, is the smallest distinguishable distance. If \fImaxzoom\fP + \fIdetail\fP > 32, no additional
+or about 1cm, is the smallest distinguishable distance. If \fImaxzoom\fP  \fIdetail\fP > 32, no additional
 resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .SS Filtering feature attributes
 .RS
@@ -491,16 +493,16 @@ make install
 .fi
 .RE
 .PP
-Tippecanoe now requires features from the 2011 C++ standard. If your compiler is older than
+Tippecanoe now requires features from the 2011 C standard. If your compiler is older than
 that, you will need to install a newer one. On MacOS, updating to the lastest XCode should
-get you a new enough version of \fB\fCclang++\fR\&. On Linux, you should be able to upgrade \fB\fCg++\fR with
+get you a new enough version of \fB\fCclang\fR\&. On Linux, you should be able to upgrade \fB\fCg\fR with
 .PP
 .RS
 .nf
 sudo add\-apt\-repository \-y ppa:ubuntu\-toolchain\-r/test
 sudo apt\-get update \-y
-sudo apt\-get install \-y g++\-5
-export CXX=g++\-5
+sudo apt\-get install \-y g\-5
+export CXX=g\-5
 .fi
 .RE
 .SH Docker Image
@@ -629,7 +631,7 @@ awk 'BEGIN {
     print "GEOID10,population"
 }
 (substr($0, 9, 3) == "750") {
-    print "\\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\\"," (0 + substr($0, 328, 9))
+    print "\\"" substr($0, 28, 2) substr($0, 30, 3) substr($0, 55, 6) substr($0, 62, 4) "\\"," (0  substr($0, 328, 9))
 }' > population.csv
 .fi
 .RE
@@ -656,6 +658,41 @@ Then you can join those populations to the geometries and discard the no\-longer
 .RS
 .nf
 \&./tile\-join \-o population.mbtiles \-x GEOID10 \-c population.csv tl_2010_06001_tabblock10.mbtiles
+.fi
+.RE
+.SH Another example
+.PP
+If you have this GeoJSON \fB\fCpoints.json\fR, with attribute \fB\fCid\fR:
+.PP
+.RS
+.nf
+{ "type": "Feature", "properties": { "id": 1 }, "geometry": { "type": "Point", "coordinates": [ 0, 0 ] } }
+{ "type": "Feature", "properties": { "id": 2 }, "geometry": { "type": "Point", "coordinates": [ 1, 1 ] } }
+{ "type": "Feature", "properties": { "id": 3 }, "geometry": { "type": "Point", "coordinates": [ 2, 2 ] } }
+{ "type": "Feature", "properties": { "id": 4 }, "geometry": { "type": "Point", "coordinates": [ 3, 3 ] } }
+{ "type": "Feature", "properties": { "id": 5 }, "geometry": { "type": "Point", "coordinates": [ 4, 4 ] } }
+.fi
+.RE
+.PP
+and this CSV \fB\fCjoin.csv\fR, with first column \fB\fCid\fR:
+.PP
+.RS
+.nf
+id,name,square
+1,One,1
+2,Two,4
+3,Three,9
+4,Four,16
+5,Five,25
+.fi
+.RE
+.PP
+it will add \fB\fCname\fR and \fB\fCsquare\fR attributes to each feature based on the matching \fB\fCid\fR if you do:
+.PP
+.RS
+.nf
+tippecanoe \-o points.mbtiles points.json
+tile\-join \-o joined.mbtiles \-c join.csv points.mbtiles
 .fi
 .RE
 .SH tippecanoe\-enumerate
