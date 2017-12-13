@@ -245,7 +245,7 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 				ds[i].seq -= ds[i].interval;
 				ds[i].included++;
 			} else {
-				feature_minzoom = i + 1;
+				feature_minzoom = (int) (i + 1);
 				break;
 			}
 		}
@@ -1003,10 +1003,12 @@ void choose_first_zoom(long *file_bbox, std::vector<struct reader> &readers, uns
 		long bottom = (file_bbox[3] + buffer * shift / 256) / shift;
 
 		if (left == right && top == bottom) {
-			*iz = z;
-			*ix = left;
-			*iy = top;
-			break;
+			if (left >= 0 && left <= UINT_MAX && right >= 0 && right <= UINT_MAX) {
+				*iz = (int) z;
+				*ix = (unsigned) left;
+				*iy = (unsigned) top;
+				break;
+			}
 		}
 	}
 }
@@ -1819,8 +1821,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		} tile[MAX_ZOOM + 1], max[MAX_ZOOM + 1];
 
 		for (size_t z = 0; z <= MAX_ZOOM; z++) {
-			tile[z].x = tile[z].y = tile[z].count = tile[z].fullcount = tile[z].gap = tile[z].previndex = 0;
-			max[z].x = max[z].y = max[z].count = max[z].fullcount = 0;
+			tile[z].x = tile[z].y = 0;
+			tile[z].count = tile[z].fullcount = 0;
+			tile[z].gap = 0;
+			tile[z].previndex = 0;
+			max[z].x = max[z].y = 0;
+			max[z].count = max[z].fullcount = 0;
 		}
 
 		long progress = -1;
@@ -1883,7 +1889,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			for (ssize_t z = MAX_ZOOM; z >= 0; z--) {
 				if (max[z].count < max_features) {
-					basezoom = z;
+					basezoom = (int) z;
 				}
 
 				// printf("%d/%u/%u %ld\n", z, max[z].x, max[z].y, max[z].count);
