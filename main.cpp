@@ -111,8 +111,8 @@ void init_cpus() {
 	}
 
 	// Guard against short struct index.segment
-	if (CPUS > 32767) {
-		CPUS = 32767;
+	if (CPUS > SHRT_MAX) {
+		CPUS = SHRT_MAX;
 	}
 
 	// Round down to a power of 2
@@ -1982,7 +1982,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		for (size_t ip = 0; ip < indices; ip++) {
 			if (ip > 0 && map[ip].start != map[ip - 1].end) {
-				fprintf(stderr, "Mismatched index at %ld: %ld vs %ld\n", ip, map[ip].start, map[ip].end);
+				fprintf(stderr, "Mismatched index at %zu: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
 			}
 			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
 			geom[map[ip].end - 1] = feature_minzoom;
