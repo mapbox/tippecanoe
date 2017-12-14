@@ -599,9 +599,7 @@ static void check_coords_unsigned(draw dv0, draw dv1) {
 	}
 }
 
-bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom, double merge_fraction) {
-	size_t merge_count = (size_t) ceil((1 - merge_fraction) * partials.size());
-
+void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
@@ -888,168 +886,6 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		count++;
 	}
 
-	// If necessary, merge some adjacent polygons into some other polygons
-
-	struct merge_order {
-		ssize_t edge = 0;
-		unsigned long gap = 0;
-		size_t p1 = 0;
-		size_t p2 = 0;
-
-		bool operator<(const merge_order &m) const {
-			return gap < m.gap;
-		}
-	};
-	std::vector<merge_order> order;
-
-	for (ssize_t i = 0; i < (ssize_t) simplified_arcs.size(); i++) {
-		auto r1 = merge_candidates.equal_range(i);
-		for (auto r1i = r1.first; r1i != r1.second; ++r1i) {
-			auto r2 = merge_candidates.equal_range(-i);
-			for (auto r2i = r2.first; r2i != r2.second; ++r2i) {
-				if (r1i->second != r2i->second) {
-					merge_order mo;
-					mo.edge = i;
-					if (partials[r1i->second].index > partials[r2i->second].index) {
-						mo.gap = partials[r1i->second].index - partials[r2i->second].index;
-					} else {
-						mo.gap = partials[r2i->second].index - partials[r1i->second].index;
-					}
-					mo.p1 = r1i->second;
-					mo.p2 = r2i->second;
-					order.push_back(mo);
-				}
-			}
-		}
-	}
-	std::sort(order.begin(), order.end());
-
-	size_t merged = 0;
-	for (size_t o = 0; o < order.size(); o++) {
-		if (merged >= merge_count) {
-			break;
-		}
-
-		size_t i = order[o].p1;
-		while (partials[i].renamed >= 0) {
-			i = partials[i].renamed;
-		}
-		size_t i2 = order[o].p2;
-		while (partials[i2].renamed >= 0) {
-			i2 = partials[i2].renamed;
-		}
-
-		for (size_t j = 0; j < partials[i].arc_polygon.size() && merged < merge_count; j++) {
-			if (partials[i].arc_polygon[j] == order[o].edge) {
-				{
-					// XXX snap links
-					if (partials[order[o].p2].arc_polygon.size() > 0) {
-						// This has to merge the ring that contains the anti-arc to this arc
-						// into the current ring, and then add whatever other rings were in
-						// that feature on to the end.
-						//
-						// This can't be good for keeping parent-child relationships among
-						// the rings in order, but Wagyu should sort that out later
-
-						std::vector<ssize_t> additions;
-						std::vector<ssize_t> &here = partials[i].arc_polygon;
-						std::vector<ssize_t> &other = partials[i2].arc_polygon;
-
-#if 0
-						printf("seeking %zd\n", partials[i].arc_polygon[j]);
-						printf("before: ");
-						for (size_t k = 0; k < here.size(); k++) {
-							printf("%zd ", here[k]);
-						}
-						printf("\n");
-						printf("other: ");
-						for (size_t k = 0; k < other.size(); k++) {
-							printf("%zd ", other[k]);
-						}
-						printf("\n");
-#endif
-
-						for (size_t k = 0; k < other.size(); k++) {
-							size_t l;
-							for (l = k; l < other.size(); l++) {
-								if (other[l] == 0) {
-									break;
-								}
-							}
-							if (l >= other.size()) {
-								l--;
-							}
-
-#if 0
-							for (size_t m = k; m <= l; m++) {
-								printf("%zd ", other[m]);
-							}
-							printf("\n");
-#endif
-
-							size_t m;
-							for (m = k; m <= l; m++) {
-								if (other[m] == -partials[i].arc_polygon[j]) {
-									break;
-								}
-							}
-
-							if (m <= l) {
-								// Found the shared arc
-
-								here.erase(here.begin() + j);
-
-								size_t off = 0;
-								for (size_t n = m + 1; n < l; n++) {
-									here.insert(here.begin() + j + off, other[n]);
-									off++;
-								}
-								for (size_t n = k; n < m; n++) {
-									here.insert(here.begin() + j + off, other[n]);
-									off++;
-								}
-							} else {
-								// Looking at some other ring
-
-								for (size_t n = k; n <= l; n++) {
-									additions.push_back(other[n]);
-								}
-							}
-
-							k = l;
-						}
-
-						partials[i2].arc_polygon.clear();
-						partials[i2].renamed = i;
-						merged++;
-
-						for (size_t k = 0; k < additions.size(); k++) {
-							partials[i].arc_polygon.push_back(additions[k]);
-						}
-
-#if 0
-						printf("after: ");
-						for (size_t k = 0; k < here.size(); k++) {
-							printf("%zd ", here[k]);
-						}
-						printf("\n");
-#endif
-
-#if 0
-						for (size_t k = 0; k + 1 < here.size(); k++) {
-							if (here[k] != 0 && here[k + 1] != 0) {
-								if (simplified_arcs[here[k + 1]][0] != simplified_arcs[here[k]][simplified_arcs[here[k]].size() - 1]) {
-									printf("error from %zd to %zd\n", here[k], here[k + 1]);
-								}
-							}
-						}
-#endif
-					}
-				}
-			}
-		}
-	}
-
 	// Turn the arc representations of the polygons back into standard polygon geometries
 
 	for (size_t i = 0; i < partials.size(); i++) {
@@ -1091,12 +927,6 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 				}
 			}
 		}
-	}
-
-	if (merged >= merge_count) {
-		return true;
-	} else {
-		return false;
 	}
 }
 
@@ -1688,10 +1518,9 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 		}
 
 		first_time = false;
-		bool merge_successful = true;
 
-		if (additional[A_DETECT_SHARED_BORDERS] || (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction < 1)) {
-			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
+		if (additional[A_DETECT_SHARED_BORDERS]) {
+			find_common_edges(partials, z, line_detail, simplification, maxzoom);
 		}
 
 		size_t tasks = (size_t) ceil((double) CPUS / *running);
@@ -1926,14 +1755,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %ld features, >200000    \n", z, tx, ty, totalsize);
 
-				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * 200000 / tile.layers.size() * 0.95;
-					if (!quiet) {
-						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
-					}
-					line_detail++;  // to keep it the same when the loop decrements it
-					continue;
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
+				if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
@@ -2012,13 +1834,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 					fprintf(stderr, "tile %d/%u/%u size is %ld with detail %d, >%zu    \n", z, tx, ty, (long) compressed.size(), line_detail, max_tile_size);
 				}
 
-				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
-					if (!quiet) {
-						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
-					}
-					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
+				if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
