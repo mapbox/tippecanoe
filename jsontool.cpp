@@ -116,19 +116,19 @@ std::string sort_quote(const char *s) {
 			unsigned long c = utf32[i];
 
 			if (c <= 0x7f) {
-				ret.push_back(c);
+				ret.push_back((char) c);
 			} else if (c <= 0x7ff) {
-				ret.push_back(0xc0 | (c >> 6));
-				ret.push_back(0x80 | (c & 0x3f));
+				ret.push_back((char) (0xc0 | (c >> 6)));
+				ret.push_back((char) (0x80 | (c & 0x3f)));
 			} else if (c <= 0xffff) {
-				ret.push_back(0xe0 | (c >> 12));
-				ret.push_back(0x80 | ((c >> 6) & 0x3f));
-				ret.push_back(0x80 | (c & 0x3f));
+				ret.push_back((char) (0xe0 | (c >> 12)));
+				ret.push_back((char) (0x80 | ((c >> 6) & 0x3f)));
+				ret.push_back((char) (0x80 | (c & 0x3f)));
 			} else {
-				ret.push_back(0xf0 | (c >> 18));
-				ret.push_back(0x80 | ((c >> 12) & 0x3f));
-				ret.push_back(0x80 | ((c >> 6) & 0x3f));
-				ret.push_back(0x80 | (c & 0x3f));
+				ret.push_back((char) (0xf0 | (c >> 18)));
+				ret.push_back((char) (0x80 | ((c >> 12) & 0x3f)));
+				ret.push_back((char) (0x80 | ((c >> 6) & 0x3f)));
+				ret.push_back((char) (0x80 | (c & 0x3f)));
 			}
 		}
 	}
@@ -438,7 +438,7 @@ int main(int argc, char **argv) {
 	std::string getopt_str;
 	for (size_t lo = 0; long_options[lo].name != NULL; lo++) {
 		if (long_options[lo].val > ' ') {
-			getopt_str.push_back(long_options[lo].val);
+			getopt_str.push_back((char) long_options[lo].val);
 
 			if (long_options[lo].has_arg == required_argument) {
 				getopt_str.push_back(':');

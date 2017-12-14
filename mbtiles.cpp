@@ -67,7 +67,7 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, bool forcetable) {
 	return outdb;
 }
 
-void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, size_t size) {
+void mbtiles_write_tile(sqlite3 *outdb, int z, unsigned tx, unsigned ty, const char *data, size_t size) {
 	sqlite3_stmt *stmt;
 	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
 	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
