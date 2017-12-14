@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <protozero/pbf_reader.hpp>
 #include <sys/stat.h>
+#include <limits.h>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
