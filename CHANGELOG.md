@@ -1,3 +1,10 @@
+## 1.27.4
+
+* Support CSV point input
+* Don't coalesce features that have different IDs but are otherwise identical
+* Remove the 700-point limit on coalesced features, since polygon merging
+  is no longer a performance problem
+
 ## 1.27.3
 
 * Clean up duplicated code for reading tiles from a directory

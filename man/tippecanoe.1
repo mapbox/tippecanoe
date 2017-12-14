@@ -1,6 +1,6 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra] or Geobuf \[la]https://github.com/mapbox/geobuf\[ra] features,
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
@@ -132,13 +132,17 @@ or if metadata fields can't be set. You probably don't want to use this.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
-\fIname\fP\fB\fC\&.geobuf\fR or \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+\fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.csv\fR: Read the named CSV input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
 specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
 .IP \(bu 2
 \fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
 .RE
+.PP
+CSV input files currently support only Point geometries, from columns named \fB\fClatitude\fR, \fB\fClongitude\fR, \fB\fClat\fR, \fB\fClon\fR, \fB\fClong\fR, \fB\fClng\fR, \fB\fCx\fR, or \fB\fCy\fR\&.
 .SS Parallel processing of input
 .RS
 .IP \(bu 2
