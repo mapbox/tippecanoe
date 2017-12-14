@@ -27,6 +27,7 @@ extern size_t CPUS;
 extern size_t TEMP_FILES;
 
 extern size_t max_tile_size;
+extern size_t max_tile_features;
 
 int mkstemp_cloexec(char *name);
 FILE *fopen_oflag(const char *name, const char *mode, int oflag);
