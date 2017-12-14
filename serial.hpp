@@ -38,7 +38,7 @@ struct serial_val {
 struct serial_feature {
 	long layer = 0;
 	size_t segment = 0;
-	long seq = 0;
+	size_t seq = 0;
 
 	signed char t = 0;
 	signed char feature_minzoom = 0;

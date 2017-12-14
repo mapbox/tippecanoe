@@ -34,8 +34,8 @@ void lonlat2tile(double lon, double lat, int zoom, long *x, long *y) {
 	double lat_rad = lat * M_PI / 180;
 	unsigned long n = 1L << zoom;
 
-	long llx = n * ((lon + 180) / 360);
-	long lly = n * (1 - (log(tan(lat_rad) + 1 / cos(lat_rad)) / M_PI)) / 2;
+	long llx = (long) floor(n * ((lon + 180) / 360));
+	long lly = (long) floor(n * (1 - (log(tan(lat_rad) + 1 / cos(lat_rad)) / M_PI)) / 2);
 
 	*x = llx;
 	*y = lly;
@@ -49,8 +49,8 @@ void tile2lonlat(long x, long y, int zoom, double *lon, double *lat) {
 }
 
 void epsg3857totile(double ix, double iy, int zoom, long *x, long *y) {
-	*x = ix * (1L << 31) / 6378137.0 / M_PI + (1L << 31);
-	*y = ((1L << 32) - 1) - (iy * (1L << 31) / 6378137.0 / M_PI + (1L << 31));
+	*x = (long) floor(ix * (1L << 31) / 6378137.0 / M_PI + (1L << 31));
+	*y = (long) floor(((1L << 32) - 1) - (iy * (1L << 31) / 6378137.0 / M_PI + (1L << 31)));
 
 	if (zoom != 0) {
 		*x >>= (32 - zoom);

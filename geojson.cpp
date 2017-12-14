@@ -83,7 +83,7 @@ bool serialize_geojson_feature(struct serialization_state *sst, json_object *geo
 	if (tippecanoe != NULL) {
 		json_object *min = json_hash_get(tippecanoe, "minzoom");
 		if (min != NULL && min->type == JSON_NUMBER) {
-			tippecanoe_minzoom = min->number;
+			tippecanoe_minzoom = (int) min->number;
 		}
 		if (min != NULL && min->type == JSON_STRING) {
 			tippecanoe_minzoom = atoi(min->string);
@@ -91,7 +91,7 @@ bool serialize_geojson_feature(struct serialization_state *sst, json_object *geo
 
 		json_object *max = json_hash_get(tippecanoe, "maxzoom");
 		if (max != NULL && max->type == JSON_NUMBER) {
-			tippecanoe_maxzoom = max->number;
+			tippecanoe_maxzoom = (int) max->number;
 		}
 		if (max != NULL && max->type == JSON_STRING) {
 			tippecanoe_maxzoom = atoi(max->string);

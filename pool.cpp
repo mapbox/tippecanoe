@@ -36,7 +36,7 @@ long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, 
 	size_t depth = 0;
 
 	// In typical data, traversal depth generally stays under 2.5x
-	size_t max = 3 * log(treefile->off / sizeof(struct stringpool)) / log(2);
+	size_t max = (size_t) floor(3 * log(treefile->off / sizeof(struct stringpool)) / log(2));
 	if (max < 30) {
 		max = 30;
 	}

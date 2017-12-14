@@ -561,7 +561,7 @@ void start_parsing(int fd, FILE *fp, long offset, long len, volatile bool *is_pa
 
 void radix1(int *geomfds_in, int *indexfds_in, size_t inputs, size_t prefix, size_t splits, long mem, const char *tmpdir, long *availfiles, FILE *geomfile, FILE *indexfile, off_t *geompos_out, long *progress, long *progress_max, long *progress_reported, int maxzoom, int basezoom, double droprate, double gamma, struct drop_state *ds) {
 	// Arranged as bits to facilitate subdividing again if a subdivided file is still huge
-	size_t splitbits = log(splits) / log(2);
+	size_t splitbits = (size_t) floor(log(splits) / log(2));
 	splits = 1 << splitbits;
 
 	FILE *geomfiles[splits];
@@ -1766,7 +1766,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			// Factor of 8 (3 zooms) beyond minimum required to distinguish features
 			double want = dist_ft / 8;
 
-			maxzoom = ceil(log(360 / (.00000274 * want)) / log(2) - full_detail);
+			maxzoom = (int) ceil(log(360 / (.00000274 * want)) / log(2) - full_detail);
 			if (maxzoom < 0) {
 				maxzoom = 0;
 			}
@@ -1781,7 +1781,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		if (dist_count != 0) {
 			double want2 = exp(dist_sum / dist_count) / 8;
-			int mz = ceil(log(360 / (.00000274 * want2)) / log(2) - full_detail);
+			int mz = (int) ceil(log(360 / (.00000274 * want2)) / log(2) - full_detail);
 
 			if (mz < 0) {
 				mz = 0;
@@ -1881,7 +1881,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
-		size_t max_features = 50000 / (basezoom_marker_width * basezoom_marker_width);
+		size_t max_features = (size_t) floor(50000 / (basezoom_marker_width * basezoom_marker_width));
+		if (max_features < 1) {
+			max_features = 1;
+		}
 
 		int obasezoom = basezoom;
 		if (basezoom < 0) {
@@ -1917,7 +1920,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			for (int z = 0; z <= maxzoom; z++) {
 				double zoomdiff = log((long double) max[z].count / max_features) / log(droprate);
 				if (zoomdiff + z > basezoom) {
-					basezoom = ceil(zoomdiff + z);
+					basezoom = (int) ceil(zoomdiff + z);
 				}
 			}
 

@@ -352,8 +352,8 @@ drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 		return drawvec();
 	}
 
-	long height = ceil(sqrt(area));
-	long width = round(area / height);
+	long height = (long) ceil(sqrt(area));
+	long width = (long) round(area / height);
 	if (width == 0) {
 		width = 1;
 	}
@@ -587,7 +587,7 @@ static void check_coords_int(draw dv0, draw dv1) {
 }
 
 bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom, double merge_fraction) {
-	size_t merge_count = ceil((1 - merge_fraction) * partials.size());
+	size_t merge_count = (size_t) ceil((1 - merge_fraction) * partials.size());
 
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
@@ -1102,7 +1102,7 @@ unsigned long choose_mingap(std::vector<unsigned long> const &indices, double f)
 		}
 	}
 
-	size_t want = indices.size() * f;
+	size_t want = (size_t) floor(indices.size() * f);
 	while (top - bot > 2) {
 		unsigned long guess = bot / 2 + top / 2;
 		size_t count = 0;
@@ -1129,7 +1129,7 @@ unsigned long choose_mingap(std::vector<unsigned long> const &indices, double f)
 
 long choose_minextent(std::vector<long> &extents, double f) {
 	std::sort(extents.begin(), extents.end());
-	return extents[(extents.size() - 1) * (1 - f)];
+	return extents[(size_t) floor((extents.size() - 1) * (1 - f))];
 }
 
 struct write_tile_args {
@@ -1405,7 +1405,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 	off_t og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
-	int max_zoom_increment = std::log(child_shards) / std::log(4);
+	int max_zoom_increment = (int) floor(std::log(child_shards) / std::log(4));
 	if (child_shards < 4 || max_zoom_increment < 1) {
 		fprintf(stderr, "Internal error: %zu shards, max zoom increment %d\n", child_shards, max_zoom_increment);
 		exit(EXIT_FAILURE);
@@ -1681,7 +1681,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
 		}
 
-		size_t tasks = ceil((double) CPUS / *running);
+		size_t tasks = (size_t) ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
 		}
@@ -1867,7 +1867,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 					int glow = 255;
 					if (layer_features[x].spacing > 0) {
-						glow = (1 / layer_features[x].spacing);
+						glow = (int) floor(1 / layer_features[x].spacing);
 						if (glow > 255) {
 							glow = 255;
 						}
@@ -1941,7 +1941,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
 					unsigned long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (unsigned long) floor(mingap * 1.5);
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -2025,7 +2025,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (unsigned long) floor(mingap * 1.5);
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {

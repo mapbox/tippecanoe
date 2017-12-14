@@ -663,8 +663,8 @@ drawvec clip_lines(drawvec &geom, int z, long buffer) {
 			size_t c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) {  // clipped
-				out.push_back(draw(VT_MOVETO, x1, y1));
-				out.push_back(draw(VT_LINETO, x2, y2));
+				out.push_back(draw(VT_MOVETO, (long) floor(x1), (long) floor(y1)));
+				out.push_back(draw(VT_LINETO, (long) floor(x2), (long) floor(y2)));
 				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 			} else if (c == 1) {  // unchanged
 				out.push_back(geom[i]);
@@ -776,11 +776,11 @@ drawvec impose_tile_boundaries(drawvec &geom, long extent) {
 
 			if (c > 1) {  // clipped
 				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
-					out.push_back(draw(VT_LINETO, x1, y1));
+					out.push_back(draw(VT_LINETO, (long) floor(x1), (long) floor(y1)));
 					out[out.size() - 1].necessary = 1;
 				}
 				if (x2 != geom[i - 0].x || y2 != geom[i - 0].y) {
-					out.push_back(draw(VT_LINETO, x2, y2));
+					out.push_back(draw(VT_LINETO, (long) floor(x2), (long) floor(y2)));
 					out[out.size() - 1].necessary = 1;
 				}
 			}
@@ -1114,8 +1114,8 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 	double scale = 1 << (32 - detail - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		geom[i].x = std::round(geom[i].x / scale);
-		geom[i].y = std::round(geom[i].y / scale);
+		geom[i].x = (long) std::round(geom[i].x / scale);
+		geom[i].y = (long) std::round(geom[i].y / scale);
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {

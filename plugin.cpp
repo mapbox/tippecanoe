@@ -193,8 +193,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
 			long scale = 1L << (32 - z);
-			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
-			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
+			dv[i].x = (long) std::round((dv[i].x - scale * x) * extent / (double) scale);
+			dv[i].y = (long) std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}
 
 		if (mb_geometry[t] == VT_POLYGON) {
@@ -379,8 +379,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				sx = x << (32 - z);
 				sy = y << (32 - z);
 			}
-			dv[i].x = std::round(dv[i].x / scale) * scale - sx;
-			dv[i].y = std::round(dv[i].y / scale) * scale - sy;
+			dv[i].x = (long) std::floor(std::round(dv[i].x / scale) * scale - sx);
+			dv[i].y = (long) std::floor(std::round(dv[i].y / scale) * scale - sy);
 		}
 
 		if (dv.size() > 0) {
@@ -406,17 +406,17 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 				json_object *index = json_hash_get(tippecanoe, "index");
 				if (index != NULL && index->type == JSON_NUMBER) {
-					sf.index = index->number;
+					sf.index = strtoul(index->string, NULL, 10);
 				}
 
 				json_object *sequence = json_hash_get(tippecanoe, "sequence");
 				if (sequence != NULL && sequence->type == JSON_NUMBER) {
-					sf.seq = sequence->number;
+					sf.seq = strtoul(sequence->string, NULL, 10);
 				}
 
 				json_object *extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && sequence->type == JSON_NUMBER) {
-					sf.extent = extent->number;
+					sf.extent = strtol(extent->string, NULL, 10);
 				}
 			}
 

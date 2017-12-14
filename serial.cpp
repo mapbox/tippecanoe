@@ -196,7 +196,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const
 
 	serialize_long(geomfile, layer, geompos, fname);
 	if (sf->seq != 0) {
-		serialize_long(geomfile, sf->seq, geompos, fname);
+		serialize_ulong(geomfile, sf->seq, geompos, fname);
 	}
 	if (sf->has_tippecanoe_minzoom) {
 		serialize_int(geomfile, sf->tippecanoe_minzoom, geompos, fname);
@@ -251,7 +251,7 @@ serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabas
 
 	sf.seq = 0;
 	if (sf.layer & (1 << 5)) {
-		deserialize_long_io(geoms, &sf.seq, geompos_in);
+		deserialize_ulong_io(geoms, &sf.seq, geompos_in);
 	}
 
 	sf.tippecanoe_minzoom = -1;

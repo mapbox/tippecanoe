@@ -307,22 +307,6 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 	}
 }
 
-double min(double a, double b) {
-	if (a < b) {
-		return a;
-	} else {
-		return b;
-	}
-}
-
-double max(double a, double b) {
-	if (a > b) {
-		return a;
-	} else {
-		return b;
-	}
-}
-
 struct reader {
 	int zoom = 0;
 	unsigned x = 0;
@@ -581,10 +565,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		double lat1, lon1, lat2, lon2;
 		tile2lonlat(r->x, r->y, r->zoom, &lon1, &lat1);
 		tile2lonlat(r->x + 1, r->y + 1, r->zoom, &lon2, &lat2);
-		minlat = min(lat2, minlat);
-		minlon = min(lon1, minlon);
-		maxlat = max(lat1, maxlat);
-		maxlon = max(lon2, maxlon);
+		minlat = std::min(lat2, minlat);
+		minlon = std::min(lon1, minlon);
+		maxlat = std::max(lat1, maxlat);
+		maxlon = std::max(lon2, maxlon);
 
 		if (r->zoom >= minzoom && r->zoom <= maxzoom) {
 			zxy tile = zxy(r->zoom, r->x, r->y);
@@ -641,10 +625,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		*rr = r;
 	}
 
-	st->minlon = min(minlon, st->minlon);
-	st->maxlon = max(maxlon, st->maxlon);
-	st->minlat = min(minlat, st->minlat);
-	st->maxlat = max(maxlat, st->maxlat);
+	st->minlon = std::min(minlon, st->minlon);
+	st->maxlon = std::max(maxlon, st->maxlon);
+	st->minlat = std::min(minlat, st->minlat);
+	st->maxlat = std::max(maxlat, st->maxlat);
 
 	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 	layermap = merge_layermaps(layermaps);
@@ -662,15 +646,15 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
-				st->minzoom = min(st->minzoom, minz);
+				int minz = std::max(sqlite3_column_int(r->stmt, 0), minzoom);
+				st->minzoom = std::min(st->minzoom, minz);
 			}
 			sqlite3_finalize(r->stmt);
 		}
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
-				st->maxzoom = max(st->maxzoom, maxz);
+				int maxz = std::min(sqlite3_column_int(r->stmt, 0), maxzoom);
+				st->maxzoom = std::max(st->maxzoom, maxz);
 			}
 			sqlite3_finalize(r->stmt);
 		}
@@ -719,10 +703,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
 				if (s != NULL) {
 					if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-						st->minlon = min(minlon, st->minlon);
-						st->maxlon = max(maxlon, st->maxlon);
-						st->minlat = min(minlat, st->minlat);
-						st->maxlat = max(maxlat, st->maxlat);
+						st->minlon = std::min(minlon, st->minlon);
+						st->maxlon = std::max(maxlon, st->maxlon);
+						st->minlat = std::min(minlat, st->minlat);
+						st->maxlat = std::max(maxlat, st->maxlat);
 					}
 				}
 			}
@@ -944,8 +928,10 @@ int main(int argc, char **argv) {
 
 	struct stats st;
 	memset(&st, 0, sizeof(st));
-	st.minzoom = st.minlat = st.minlon = INT_MAX;
-	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
+	st.minzoom = INT_MAX;
+	st.minlat = st.minlon = INT_MAX;
+	st.maxzoom = INT_MIN;
+	st.maxlat = st.maxlon = INT_MIN;
 
 	std::map<std::string, layermap_entry> layermap;
 	std::string attribution;
