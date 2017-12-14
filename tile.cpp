@@ -210,7 +210,7 @@ int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, off_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<long> &metakeys, std::vector<long> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, off_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<long> &metakeys, std::vector<long> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		long xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -254,8 +254,8 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
 			for (yo = bbox2[1]; yo <= bbox2[3]; yo++) {
-				long jx = tx * span + xo;
-				long jy = ty * span + yo;
+				long jx = (long) tx * span + xo;
+				long jy = (long) ty * span + yo;
 
 				// j is the shard that the child tile's data is being written to.
 				//
@@ -274,13 +274,13 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 				// without causing collisions?
 
 				long j = ((jx << max_zoom_increment) |
-					  ((jy & ((1 << max_zoom_increment) - 1)))) &
+					  ((jy & ((1U << max_zoom_increment) - 1)))) &
 					 (child_shards - 1);
 
 				{
 					if (!within[j]) {
-						long next_x = tx * span + xo;
-						long next_y = ty * span + yo;
+						long next_x = (long) tx * span + xo;
+						long next_y = (long) ty * span + yo;
 
 						if (next_x < 0 || next_x >= (1L << nextzoom) ||
 						    next_y < 0 || next_y >= (1L << nextzoom)) {
@@ -333,9 +333,9 @@ struct partial {
 	std::vector<std::string> full_keys = std::vector<std::string>();
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	std::vector<ssize_t> arc_polygon = std::vector<ssize_t>();
-	long layer = 0;
-	long original_seq = 0;
-	unsigned long index = 0;
+	size_t layer = 0;
+	size_t original_seq = 0;
+	size_t index = 0;
 	size_t m = 0;
 	size_t segment = 0;
 	bool reduced = 0;
@@ -590,7 +590,7 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 	return true;
 }
 
-static void check_coords_int(draw dv0, draw dv1) {
+static void check_coords_unsigned(draw dv0, draw dv1) {
 	if (dv0.x < 0 || dv0.x > UINT_MAX ||
 	    dv0.y < 0 || dv0.y > UINT_MAX ||
 	    dv1.x < 0 || dv1.x > UINT_MAX ||
@@ -645,7 +645,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							dv.push_back(partials[i].geoms[j][k]);
 						}
 
-						check_coords_int(dv[0], dv[1]);
+						check_coords_unsigned(dv[0], dv[1]);
 						if (ring > UINT_MAX) {
 							fprintf(stderr, "Internal error: Too many polygon rings %ld\n", ring);
 							exit(EXIT_FAILURE);
@@ -698,8 +698,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
 							}
-							check_coords_int(left[0], left[1]);
-							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge((int) left[0].x, (int) left[0].y, (int) left[1].x, (int) left[1].y, 0));
+							check_coords_unsigned(left[0], left[1]);
+							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge((unsigned) left[0].x, (unsigned) left[0].y, (unsigned) left[1].x, (unsigned) left[1].y, 0));
 
 							for (size_t k = 0; k < s; k++) {
 								drawvec right;
@@ -712,8 +712,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									right.push_back(g[a + k]);
 								}
 
-								check_coords_int(right[0], right[1]);
-								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge((int) right[0].x, (int) right[0].y, (int) right[1].x, (int) right[1].y, 0));
+								check_coords_unsigned(right[0], right[1]);
+								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge((unsigned) right[0].x, (unsigned) right[0].y, (unsigned) right[1].x, (unsigned) right[1].y, 0));
 
 								if (right[1] < right[0]) {
 									fprintf(stderr, "left misordered\n");

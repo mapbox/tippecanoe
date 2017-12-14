@@ -95,17 +95,17 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 
 static void quote(std::string &buf, std::string const &s) {
 	for (size_t i = 0; i < s.size(); i++) {
-		unsigned char ch = s[i];
+		unsigned char ch = (unsigned char) s[i];
 
 		if (ch == '\\' || ch == '\"') {
 			buf.push_back('\\');
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		} else if (ch < ' ') {
 			char tmp[7];
 			sprintf(tmp, "\\u%04x", ch);
 			buf.append(std::string(tmp));
 		} else {
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		}
 	}
 }

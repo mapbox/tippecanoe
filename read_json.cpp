@@ -26,7 +26,7 @@ int geometry_within[GEOM_TYPES] = {
 	GEOM_POLYGON,    /* multipolygon */
 };
 
-int mb_geometry[GEOM_TYPES] = {
+signed char mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 

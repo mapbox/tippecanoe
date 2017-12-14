@@ -8,10 +8,10 @@
 #define VT_LINE 2
 #define VT_POLYGON 3
 
-#define VT_END 0
-#define VT_MOVETO 1
-#define VT_LINETO 2
-#define VT_CLOSEPATH 7
+#define VT_END ((signed char) 0)
+#define VT_MOVETO ((signed char) 1)
+#define VT_LINETO ((signed char) 2)
+#define VT_CLOSEPATH ((signed char) 7)
 
 // The bitfield is to make sizeof(draw) be 16 instead of 24
 // at the cost, apparently, of a 0.7% increase in running time
@@ -22,7 +22,7 @@ struct draw {
 	long y : 40;
 	signed char necessary;
 
-	draw(int nop, long nx, long ny)
+	draw(signed char nop, long nx, long ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),

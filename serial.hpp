@@ -36,7 +36,7 @@ struct serial_val {
 };
 
 struct serial_feature {
-	long layer = 0;
+	size_t layer = 0;
 	size_t segment = 0;
 	size_t seq = 0;
 
@@ -100,8 +100,8 @@ struct serialization_state {
 	const char *fname = NULL;  // source file name
 	size_t line = 0;	   // user-oriented location within source for error reports
 
-	volatile long *layer_seq = NULL;     // sequence within current layer
-	volatile long *progress_seq = NULL;  // overall sequence for progress indicator
+	volatile size_t *layer_seq = NULL;     // sequence within current layer
+	volatile size_t *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
 	size_t segment = 0;			     // the current input thread

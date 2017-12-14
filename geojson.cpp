@@ -380,7 +380,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	memcpy(buffer, jm->map + jm->off, n);
 	jm->off += n;
 
-	return n;
+	return (ssize_t) n;
 }
 
 struct json_pull *json_begin_map(char *map, size_t len) {

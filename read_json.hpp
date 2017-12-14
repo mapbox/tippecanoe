@@ -8,7 +8,7 @@
 
 extern const char *geometry_names[GEOM_TYPES];
 extern int geometry_within[GEOM_TYPES];
-extern int mb_geometry[GEOM_TYPES];
+extern signed char mb_geometry[GEOM_TYPES];
 
 void json_context(json_object *j);
 void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, size_t line, json_object *feature);

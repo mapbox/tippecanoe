@@ -208,7 +208,7 @@ inline void GrisuRound(std::string &buffer, int len, uint64_t delta, uint64_t re
 	while (rest < wp_w && delta - rest >= ten_kappa &&
 		   (rest + ten_kappa < wp_w ||  /// closer
 			wp_w - rest > rest + ten_kappa - wp_w)) {
-		buffer[len - 1]--;
+		buffer[(size_t) (len - 1)]--;
 		rest += ten_kappa;
 	}
 }

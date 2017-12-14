@@ -25,7 +25,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long index, long sequence, long extent, bool complain) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, size_t index, size_t sequence, long extent, bool complain) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -66,7 +66,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"index\": %lu", index);
+				fprintf(fp, "\"index\": %zu", index);
 				need_comma = true;
 			}
 
@@ -74,7 +74,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"sequence\": %ld", sequence);
+				fprintf(fp, "\"sequence\": %zu", sequence);
 				need_comma = true;
 			}
 
