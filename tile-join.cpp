@@ -324,10 +324,10 @@ double max(double a, double b) {
 }
 
 struct reader {
-	long zoom = 0;
-	long x = 0;
-	long sorty = 0;
-	long y = 0;
+	int zoom = 0;
+	unsigned x = 0;
+	unsigned sorty = 0;
+	unsigned y = 0;
 	bool z_flag = 0;
 
 	std::string data = "";
@@ -369,6 +369,15 @@ struct reader {
 	}
 };
 
+static unsigned flip(int z, unsigned x, unsigned y) {
+	long yy = (1LL << z) - 1 - y;
+	if (yy < 0 || yy > UINT_MAX) {
+		fprintf(stderr, "Impossible tile coordinate %d/%u/%u\n", z, x, y);
+		exit(EXIT_FAILURE);
+	}
+	return (unsigned) yy;
+}
+
 struct reader *begin_reading(char *fname) {
 	struct reader *r = new reader;
 	struct stat st;
@@ -387,7 +396,7 @@ struct reader *begin_reading(char *fname) {
 			r->zoom = r->dirtiles[0].z;
 			r->x = r->dirtiles[0].x;
 			r->y = r->dirtiles[0].y;
-			r->sorty = (1L << r->zoom) - 1 - r->y;
+			r->sorty = flip(r->zoom, r->x, r->y);
 			r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 			r->dirtiles.erase(r->dirtiles.begin());
@@ -416,7 +425,7 @@ struct reader *begin_reading(char *fname) {
 			r->zoom = sqlite3_column_int(stmt, 0);
 			r->x = sqlite3_column_int(stmt, 1);
 			r->sorty = sqlite3_column_int(stmt, 2);
-			r->y = (1L << r->zoom) - 1 - r->sorty;
+			r->y = flip(r->zoom, r->x, r->sorty);
 
 			const char *data = (const char *) sqlite3_column_blob(stmt, 3);
 			size_t len = sqlite3_column_bytes(stmt, 3);
@@ -477,7 +486,7 @@ void *join_worker(void *v) {
 			}
 
 			if (!pk && compressed.size() > 500000) {
-				fprintf(stderr, "Tile %ld/%ld/%ld size is %ld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long) compressed.size());
+				fprintf(stderr, "Tile %d/%u/%u size is %zu, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, compressed.size());
 			} else {
 				a->outputs.insert(std::pair<zxy, std::string>(ai->first, compressed));
 			}
@@ -514,7 +523,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 
 		if (ai == tasks.begin()) {
 			if (!quiet) {
-				fprintf(stderr, "%ld/%ld/%ld  \r", ai->first.z, ai->first.x, ai->first.y);
+				fprintf(stderr, "%d/%u/%u  \r", ai->first.z, ai->first.x, ai->first.y);
 			}
 		}
 	}
@@ -598,7 +607,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				r->zoom = sqlite3_column_int(r->stmt, 0);
 				r->x = sqlite3_column_int(r->stmt, 1);
 				r->sorty = sqlite3_column_int(r->stmt, 2);
-				r->y = (1L << r->zoom) - 1 - r->sorty;
+				r->y = flip(r->zoom, r->x, r->sorty);
 				const char *data = (const char *) sqlite3_column_blob(r->stmt, 3);
 				size_t len = sqlite3_column_bytes(r->stmt, 3);
 
@@ -613,7 +622,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				r->zoom = r->dirtiles[0].z;
 				r->x = r->dirtiles[0].x;
 				r->y = r->dirtiles[0].y;
-				r->sorty = (1L << r->zoom) - 1 - r->y;
+				r->sorty = flip(r->zoom, r->x, r->y);
 				r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 				r->dirtiles.erase(r->dirtiles.begin());

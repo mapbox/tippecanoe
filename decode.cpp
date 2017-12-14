@@ -299,15 +299,23 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 
 				size_t len = sqlite3_column_bytes(stmt, 0);
 				int tz = sqlite3_column_int(stmt, 1);
-				int tx = sqlite3_column_int(stmt, 2);
-				int ty = sqlite3_column_int(stmt, 3);
+				unsigned tx = sqlite3_column_int(stmt, 2);
+				unsigned ty = sqlite3_column_int(stmt, 3);
 
 				if (tz < 0 || tz >= 32) {
 					fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
 					exit(EXIT_FAILURE);
 				}
 
-				ty = (1L << tz) - 1 - ty;
+				long lty = (1L << tz) - 1 - ty;
+
+				if (lty < 0 || lty > UINT_MAX) {
+					fprintf(stderr, "Impossible tile coordinate %d/%u/%ld in mbtiles\n", tz, tx, lty);
+					exit(EXIT_FAILURE);
+				}
+
+				ty = (unsigned) lty;
+
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
 				handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
@@ -334,7 +342,13 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 
 			sqlite3_bind_int(stmt, 1, z);
 			sqlite3_bind_int(stmt, 2, x);
-			sqlite3_bind_int(stmt, 3, (1L << z) - 1 - y);
+
+			long yy = (1L << z) - 1 - y;
+			if (yy < 0 || yy > INT_MAX) {
+				fprintf(stderr, "Impossible tile coordinate %d/%u/%u\n", z, x, y);
+				exit(EXIT_FAILURE);
+			}
+			sqlite3_bind_int(stmt, 3, (int) yy);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				size_t len = sqlite3_column_bytes(stmt, 0);
