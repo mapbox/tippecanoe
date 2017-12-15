@@ -757,8 +757,9 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_MOVETO) {
-						ssize_t necessary = -1;
-						ssize_t lowest = k;
+						bool has_necessary = false;
+						size_t necessary = 0;
+						size_t lowest = k;
 						size_t l;
 						for (l = k + 1; l < g.size(); l++) {
 							if (g[l].op != VT_LINETO) {
@@ -767,14 +768,16 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 							if (g[l].necessary) {
 								necessary = l;
+								has_necessary = true;
 							}
 							if (g[l] < g[lowest]) {
 								lowest = l;
 							}
 						}
 
-						if (necessary < 0) {
+						if (!has_necessary) {
 							necessary = lowest;
+							has_necessary = true;
 							// Add a necessary marker if there was none in the ring,
 							// so the arc code below can find it.
 							g[lowest].necessary = 1;
@@ -787,7 +790,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							for (size_t m = necessary; m < l - 1; m++) {
 								tmp.push_back(g[m]);
 							}
-							for (ssize_t m = k; m < necessary; m++) {
+							for (size_t m = k; m < necessary; m++) {
 								tmp.push_back(g[m]);
 							}
 
@@ -837,14 +840,14 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									// Add new arc
 									size_t added = arcs.size() + 1;
 									arcs.insert(std::pair<drawvec, size_t>(arc, added));
-									partials[i].arc_polygon.push_back(added);
+									partials[i].arc_polygon.push_back((ssize_t) added);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(added, i));
 								} else {
 									partials[i].arc_polygon.push_back(-(ssize_t) f2->second);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(-(ssize_t) f2->second, i));
 								}
 							} else {
-								partials[i].arc_polygon.push_back(f->second);
+								partials[i].arc_polygon.push_back((ssize_t) f->second);
 								merge_candidates.insert(std::pair<ssize_t, size_t>(f->second, i));
 							}
 
@@ -905,22 +908,24 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 					}
 					at_start = true;
 				} else if (p > 0) {
-					for (size_t k = 0; k + 1 < simplified_arcs[p].size(); k++) {
+					size_t ix = (size_t) p;
+					for (size_t k = 0; k + 1 < simplified_arcs[ix].size(); k++) {
 						if (at_start) {
-							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
-							first = draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y);
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
+							first = draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y);
 						} else {
-							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
 						}
 						at_start = 0;
 					}
 				} else { /* p < 0 */
-					for (ssize_t k = simplified_arcs[-p].size() - 1; k > 0; k--) {
+					size_t ix = (size_t) -p;
+					for (size_t k = simplified_arcs[ix].size() - 1; k > 0; k--) {
 						if (at_start) {
-							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
-							first = draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y);
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
+							first = draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y);
 						} else {
-							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
 						}
 						at_start = 0;
 					}

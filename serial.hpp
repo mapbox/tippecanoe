@@ -69,7 +69,7 @@ struct serial_feature {
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const char *fname, long wx, long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
+serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
 
 struct reader {
 	int metafd = -1;

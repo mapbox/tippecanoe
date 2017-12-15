@@ -57,7 +57,7 @@ typedef std::vector<draw> drawvec;
 
 drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y);
 void to_tile_scale(drawvec &geom, int z, int detail);
-drawvec remove_noop(drawvec geom, int type, size_t shift);
+drawvec remove_noop(drawvec geom, int type, int shift);
 drawvec clip_point(drawvec &geom, int z, long buffer);
 drawvec clean_or_clip_poly(drawvec &geom, int z, long buffer, bool clip);
 drawvec simple_clip_poly(drawvec &geom, int z, long buffer);

@@ -91,7 +91,7 @@ void to_tile_scale(drawvec &geom, int z, int detail) {
 	}
 }
 
-drawvec remove_noop(drawvec geom, int type, size_t shift) {
+drawvec remove_noop(drawvec geom, int type, int shift) {
 	// first pass: remove empty linetos
 
 	long x = 0, y = 0;

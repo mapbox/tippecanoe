@@ -239,7 +239,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const
 	}
 }
 
-serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, unsigned z, unsigned tx, unsigned ty, long *initial_x, long *initial_y) {
+serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y) {
 	serial_feature sf;
 
 	deserialize_byte_io(geoms, &sf.t, geompos_in);

@@ -36,7 +36,7 @@ extern "C" {
 struct writer_arg {
 	int write_to;
 	std::vector<mvt_layer> *layers;
-	unsigned z;
+	int z;
 	unsigned x;
 	unsigned y;
 	long extent;
@@ -215,7 +215,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				feature.id = atoll(id->string);
+				feature.id = strtoull(id->string, NULL, 10);
 				feature.has_id = true;
 			}
 
@@ -439,7 +439,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				sf.id = atoll(id->string);
+				sf.id = strtoull(id->string, NULL, 10);
 				sf.has_id = true;
 			}
 
@@ -512,7 +512,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 static pthread_mutex_t pipe_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, unsigned z, unsigned x, unsigned y) {
+void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, int z, unsigned x, unsigned y) {
 	// This will create two pipes, a new thread, and a new process.
 	//
 	// The new process will read from one pipe and write to the other, and execute the filter.
@@ -606,7 +606,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, long extent) {
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, long extent) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
