@@ -79,10 +79,15 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, unsigned tx, unsigned ty, const c
 		fprintf(stderr, "Tile is too large (%zu) to be written to mbtiles\n", size);
 		exit(EXIT_FAILURE);
 	}
+	unsigned flipped = ((1 << z) - 1 - ty);
+	if (tx > INT_MAX || flipped > INT_MAX) {
+		fprintf(stderr, "Impossible tile coordinate %d/%u/%u\n", z, tx, ty);
+		exit(EXIT_FAILURE);
+	}
 
 	sqlite3_bind_int(stmt, 1, z);
-	sqlite3_bind_int(stmt, 2, tx);
-	sqlite3_bind_int(stmt, 3, (1 << z) - 1 - ty);
+	sqlite3_bind_int(stmt, 2, (int) tx);
+	sqlite3_bind_int(stmt, 3, (int) flipped);
 	sqlite3_bind_blob(stmt, 4, data, (int) size, NULL);
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {

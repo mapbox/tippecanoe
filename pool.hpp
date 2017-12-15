@@ -2,8 +2,8 @@
 #define POOL_HPP
 
 struct stringpool {
-	unsigned long left = 0;
-	unsigned long right = 0;
+	size_t left = 0;
+	size_t right = 0;
 	size_t off = 0;
 };
 

@@ -32,7 +32,7 @@ int swizzlecmp(const char *a, const char *b) {
 }
 
 size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
-	unsigned long *sp = &treefile->tree;
+	size_t *sp = &treefile->tree;
 	size_t depth = 0;
 
 	// In typical data, traversal depth generally stays under 2.5x
@@ -61,7 +61,7 @@ size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s
 			// Search is very deep, so string is probably unique.
 			// Add it to the pool without adding it to the search tree.
 
-			long off = poolfile->off;
+			size_t off = poolfile->off;
 			if (memfile_write(poolfile, &type, 1) < 0) {
 				perror("memfile write");
 				exit(EXIT_FAILURE);
@@ -75,14 +75,16 @@ size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s
 	}
 
 	// *sp is probably in the memory-mapped file, and will move if the file grows.
-	long ssp;
+	ssize_t ssp;
+	bool is_root = false;
 	if (sp == &treefile->tree) {
-		ssp = -1;
+		ssp = 0;
+		is_root = true;
 	} else {
 		ssp = ((char *) sp) - treefile->map;
 	}
 
-	long off = poolfile->off;
+	size_t off = poolfile->off;
 	if (memfile_write(poolfile, &type, 1) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
@@ -107,16 +109,16 @@ size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s
 	tsp.right = 0;
 	tsp.off = off;
 
-	long p = treefile->off;
+	size_t p = treefile->off;
 	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
 	}
 
-	if (ssp == -1) {
+	if (is_root) {
 		treefile->tree = p;
 	} else {
-		*((long *) (treefile->map + ssp)) = p;
+		*((size_t *) (treefile->map + ssp)) = p;
 	}
 	return off;
 }
