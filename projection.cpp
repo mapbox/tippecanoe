@@ -89,6 +89,10 @@ static unsigned char decodey[256];
 void decode(unsigned long index, unsigned *wx, unsigned *wy) {
 	static bool initialized = false;
 	if (!initialized) {
+		// This is an optimization to precalculate the output nibbles that correspond
+		// to each possible input byte so each bit doesn't have to be shifted into place
+		// individually every time.
+
 		for (size_t ix = 0; ix < 256; ix++) {
 			size_t xx = 0, yy = 0;
 
@@ -97,8 +101,8 @@ void decode(unsigned long index, unsigned *wx, unsigned *wy) {
 				yy |= ((ix >> (64 - 2 * (i + 1) + 0)) & 1) << (32 - (i + 1));
 			}
 
-			decodex[ix] = xx;
-			decodey[ix] = yy;
+			decodex[ix] = (unsigned char) xx;
+			decodey[ix] = (unsigned char) yy;
 		}
 
 		initialized = 1;

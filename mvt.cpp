@@ -14,7 +14,7 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 
-mvt_geometry::mvt_geometry(int nop, long nx, long ny) {
+mvt_geometry::mvt_geometry(unsigned nop, long nx, long ny) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
@@ -38,21 +38,21 @@ bool decompress(std::string const &input, std::string &output) {
 	}
 	inflate_s.next_in = (Bytef *) input.data();
 
-	if (input.size() > INT_MAX) {
+	if (input.size() > UINT_MAX) {
 		fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
 		exit(EXIT_FAILURE);
 	}
 
-	inflate_s.avail_in = (int) input.size();
+	inflate_s.avail_in = (unsigned) input.size();
 	size_t length = 0;
 	do {
-		if (length + 2 * input.size() > INT_MAX) {
+		if (length + 2 * input.size() > UINT_MAX) {
 			fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
 			exit(EXIT_FAILURE);
 		}
 
 		output.resize(length + 2 * input.size());
-		inflate_s.avail_out = (int) (2 * input.size());
+		inflate_s.avail_out = (unsigned) (2 * input.size());
 		inflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
@@ -83,18 +83,18 @@ bool compress(std::string const &input, std::string &output) {
 		exit(EXIT_FAILURE);
 	}
 
-	deflate_s.avail_in = (int) input.size();
+	deflate_s.avail_in = (unsigned) input.size();
 	size_t length = 0;
 	do {
 		size_t increase = input.size() / 2 + 1024;
 		output.resize(length + increase);
 
-		if (increase > INT_MAX) {
+		if (increase > UINT_MAX) {
 			fprintf(stderr, "Tile too big to encode: %zu\n", increase);
 			exit(EXIT_FAILURE);
 		}
 
-		deflate_s.avail_out = (int) increase;
+		deflate_s.avail_out = (unsigned) increase;
 		deflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
@@ -304,9 +304,9 @@ std::string mvt_tile::encode() {
 			exit(EXIT_FAILURE);
 		}
 
-		layer_writer.add_uint32(15, layers[i].version);     /* version */
-		layer_writer.add_string(1, layers[i].name);	 /* name */
-		layer_writer.add_uint32(5, (int) layers[i].extent); /* extent */
+		layer_writer.add_uint32(15, layers[i].version); /* version */
+		layer_writer.add_string(1, layers[i].name);     /* name */
+		layer_writer.add_uint32(5, layers[i].extent);   /* extent */
 
 		for (size_t j = 0; j < layers[i].keys.size(); j++) {
 			layer_writer.add_string(3, layers[i].keys[j]); /* key */
@@ -357,7 +357,7 @@ std::string mvt_tile::encode() {
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
-				int op = geom[g].op;
+				unsigned op = geom[g].op;
 
 				if (op != cmd) {
 					if (cmd_idx >= 0) {
@@ -445,17 +445,17 @@ static std::string quote(std::string const &s) {
 	std::string buf;
 
 	for (size_t i = 0; i < s.size(); i++) {
-		unsigned char ch = s[i];
+		unsigned char ch = (unsigned char) s[i];
 
 		if (ch == '\\' || ch == '\"') {
 			buf.push_back('\\');
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		} else if (ch < ' ') {
 			char tmp[7];
 			sprintf(tmp, "\\u%04x", ch);
 			buf.append(std::string(tmp));
 		} else {
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		}
 	}
 
@@ -522,11 +522,11 @@ bool is_integer(const char *s, long *v) {
 	errno = 0;
 	char *endptr;
 
-	*v = strtoll(s, &endptr, 0);
+	*v = strtol(s, &endptr, 0);
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+	if ((*v == LONG_MIN || *v == LONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
@@ -553,7 +553,7 @@ bool is_unsigned_integer(const char *s, unsigned long *v) {
 	errno = 0;
 	char *endptr;
 
-	// Special check because MacOS stroull() returns 1
+	// Special check MacOS stroull() returns 1
 	// for -18446744073709551615
 	while (isspace(*s)) {
 		s++;
@@ -562,11 +562,11 @@ bool is_unsigned_integer(const char *s, unsigned long *v) {
 		return 0;
 	}
 
-	*v = strtoull(s, &endptr, 0);
+	*v = strtoul(s, &endptr, 0);
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == ULLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+	if ((*v == ULONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
@@ -596,9 +596,9 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 		long v;
 		unsigned long uv;
 		if (is_unsigned_integer(s, &uv)) {
-			if (uv <= LLONG_MAX) {
+			if (uv <= LONG_MAX) {
 				tv.type = mvt_int;
-				tv.numeric_value.int_value = uv;
+				tv.numeric_value.int_value = (long) uv;
 			} else {
 				tv.type = mvt_uint;
 				tv.numeric_value.uint_value = uv;

@@ -19,9 +19,9 @@ enum mvt_operation {
 struct mvt_geometry {
 	long x = 0;
 	long y = 0;
-	int /* mvt_operation */ op = 0;
+	unsigned /* mvt_operation */ op = 0;
 
-	mvt_geometry(int op, long x, long y);
+	mvt_geometry(unsigned op, long x, long y);
 
 	bool operator<(mvt_geometry const &s) const {
 		if (y < s.y || (y == s.y && x < s.x)) {
@@ -89,7 +89,7 @@ struct mvt_value {
 };
 
 struct mvt_layer {
-	int version = 0;
+	unsigned version = 0;
 	std::string name = "";
 	std::vector<mvt_feature> features{};
 	std::vector<std::string> keys{};

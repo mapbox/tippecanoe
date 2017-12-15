@@ -55,7 +55,7 @@ ssize_t memfile_write(struct memfile *file, void *s, size_t len) {
 
 		file->len += (len + INCREMENT + 1) / INCREMENT * INCREMENT;
 
-		if (ftruncate(file->fd, file->len) != 0) {
+		if (ftruncate(file->fd, (off_t) file->len) != 0) {
 			return -1;
 		}
 
@@ -67,5 +67,5 @@ ssize_t memfile_write(struct memfile *file, void *s, size_t len) {
 
 	memcpy(file->map + file->off, s, len);
 	file->off += len;
-	return len;
+	return (ssize_t) len;
 }

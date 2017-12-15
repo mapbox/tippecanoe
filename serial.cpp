@@ -434,7 +434,7 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
 		fprintf(stderr, "Internal error: impossible feature bounding box %lx,%lx,%lx,%lx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
 	}
-	if (sf.bbox[0] == LLONG_MAX) {
+	if (sf.bbox[0] == LONG_MAX) {
 		// No bounding box (empty geometry)
 		// Shouldn't happen, but avoid arithmetic overflow below
 	} else if (sf.bbox[2] - sf.bbox[0] > (2L << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2L << (32 - sst->maxzoom))) {

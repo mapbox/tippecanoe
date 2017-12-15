@@ -936,7 +936,7 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 }
 
 unsigned long choose_mingap(std::vector<unsigned long> const &indices, double f) {
-	unsigned long bot = ULLONG_MAX;
+	unsigned long bot = ULONG_MAX;
 	unsigned long top = 0;
 
 	for (size_t i = 0; i < indices.size(); i++) {

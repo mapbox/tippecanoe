@@ -26,10 +26,10 @@ static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, 
 drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y) {
 	drawvec out;
 
-	bbox[0] = LLONG_MAX;
-	bbox[1] = LLONG_MAX;
-	bbox[2] = LLONG_MIN;
-	bbox[3] = LLONG_MIN;
+	bbox[0] = LONG_MAX;
+	bbox[1] = LONG_MAX;
+	bbox[2] = LONG_MIN;
+	bbox[3] = LONG_MIN;
 
 	long wx = initial_x, wy = initial_y;
 
@@ -961,7 +961,7 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 				}
 
 				long midx = 0, midy = 0, count = 0;
-				long maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
+				long maxx = LONG_MIN, maxy = LONG_MIN, minx = LONG_MAX, miny = LONG_MAX;
 
 				for (size_t j = 0; j < geoms[i].size(); j++) {
 					if (geoms[i][j].op == VT_MOVETO || geoms[i][j].op == VT_LINETO) {

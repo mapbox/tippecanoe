@@ -215,7 +215,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				feature.id = strtoull(id->string, NULL, 10);
+				feature.id = strtoul(id->string, NULL, 10);
 				feature.has_id = true;
 			}
 
@@ -389,8 +389,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.geometry = dv;
 			sf.seq = 0;
 			sf.index = 0;
-			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
-			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
+			sf.bbox[0] = sf.bbox[1] = LONG_MAX;
+			sf.bbox[2] = sf.bbox[3] = LONG_MIN;
 			sf.extent = 0;
 			sf.m = 0;
 			sf.metapos = 0;
@@ -439,7 +439,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				sf.id = strtoull(id->string, NULL, 10);
+				sf.id = strtoul(id->string, NULL, 10);
 				sf.has_id = true;
 			}
 

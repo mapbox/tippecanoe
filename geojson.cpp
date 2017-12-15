@@ -109,7 +109,7 @@ bool serialize_geojson_feature(struct serialization_state *sst, json_object *geo
 		if (id->type == JSON_NUMBER) {
 			if (id->number >= 0) {
 				char *err = NULL;
-				id_value = strtoull(id->string, &err, 10);
+				id_value = strtoul(id->string, &err, 10);
 
 				if (err != NULL && *err != '\0') {
 					static bool warned_frac = false;
