@@ -4,8 +4,8 @@
 #include <stddef.h>
 
 struct index {
-	off_t start = 0;
-	off_t end = 0;
+	size_t start = 0;
+	size_t end = 0;
 	unsigned long ix = 0;
 	unsigned short segment = 0;  // size_t elsewhere
 	unsigned short t : 2;

@@ -23,7 +23,7 @@
 static bool pnpoly(drawvec &vert, size_t start, size_t nvert, long testx, long testy);
 static size_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
-drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y) {
+drawvec decode_geometry(FILE *meta, size_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y) {
 	drawvec out;
 
 	bbox[0] = LONG_MAX;

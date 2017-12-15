@@ -55,7 +55,7 @@ struct draw {
 
 typedef std::vector<draw> drawvec;
 
-drawvec decode_geometry(FILE *meta, off_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y);
+drawvec decode_geometry(FILE *meta, size_t *geompos, int z, unsigned tx, unsigned ty, long *bbox, long initial_x, long initial_y);
 void to_tile_scale(drawvec &geom, int z, int detail);
 drawvec remove_noop(drawvec geom, int type, int shift);
 drawvec clip_point(drawvec &geom, int z, long buffer);

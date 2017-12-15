@@ -210,7 +210,7 @@ int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, off_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<size_t> &metakeys, std::vector<size_t> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, size_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, size_t metastart, bool has_metapos, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<size_t> &metakeys, std::vector<size_t> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		long xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -306,13 +306,14 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
 					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 					sf.metapos = metastart;
+					sf.has_metapos = has_metapos;
 					sf.geometry = geom2;
 					sf.index = index;
 					sf.extent = extent;
 					sf.m = m;
 					sf.feature_minzoom = feature_minzoom;
 
-					if (metastart < 0) {
+					if (!has_metapos) {
 						for (size_t i = 0; i < m; i++) {
 							sf.keys.push_back(metakeys[i]);
 							sf.values.push_back(metavals[i]);
@@ -991,12 +992,12 @@ struct write_tile_args {
 	const char *fname = NULL;
 	FILE **geomfile = NULL;
 	double todo = 0;
-	volatile long *along = NULL;
+	volatile size_t *along = NULL;
 	double gamma = 0;
 	double gamma_out = 0;
 	size_t child_shards = 0;
 	int *geomfd = NULL;
-	off_t *geom_size = NULL;
+	size_t *geom_size = NULL;
 	volatile unsigned *midx = NULL;
 	volatile unsigned *midy = NULL;
 	int maxzoom = 0;
@@ -1005,8 +1006,8 @@ struct write_tile_args {
 	int low_detail = 0;
 	double simplification = 0;
 	volatile long *most = NULL;
-	off_t *meta_off = NULL;
-	off_t *pool_off = NULL;
+	size_t *meta_off = NULL;
+	size_t *pool_off = NULL;
 	long *initial_x = NULL;
 	long *initial_y = NULL;
 	volatile size_t *running = NULL;
@@ -1104,7 +1105,7 @@ bool clip_to_tile(serial_feature &sf, int z, long buffer) {
 	return false;
 }
 
-serial_feature next_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y, long *original_features, long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile long *along, long alongminus, long buffer, bool *within, bool *first_time, FILE **geomfile, off_t *geompos, volatile double *oprogress, double todo, const char *fname, size_t child_shards) {
+serial_feature next_feature(FILE *geoms, size_t *geompos_in, char *metabase, size_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y, long *original_features, long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile size_t *along, size_t alongminus, long buffer, bool *within, bool *first_time, FILE **geomfile, size_t *geompos, volatile double *oprogress, double todo, const char *fname, size_t child_shards) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
 		if (sf.t < 0) {
@@ -1131,7 +1132,7 @@ serial_feature next_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.has_metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
 			}
 		}
 
@@ -1155,9 +1156,9 @@ serial_feature next_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_
 
 struct run_prefilter_args {
 	FILE *geoms = NULL;
-	off_t *geompos_in = NULL;
+	size_t *geompos_in = NULL;
 	char *metabase = NULL;
-	off_t *meta_off = NULL;
+	size_t *meta_off = NULL;
 	int z = 0;
 	unsigned tx = 0;
 	unsigned ty = 0;
@@ -1171,20 +1172,20 @@ struct run_prefilter_args {
 	int max_zoom_increment = 0;
 	size_t pass = 0;
 	size_t passes = 0;
-	volatile long *along = 0;
-	long alongminus = 0;
+	volatile size_t *along = 0;
+	size_t alongminus = 0;
 	long buffer = 0;
 	bool *within = NULL;
 	bool *first_time = NULL;
 	FILE **geomfile = NULL;
-	off_t *geompos = NULL;
+	size_t *geompos = NULL;
 	volatile double *oprogress = NULL;
 	double todo = 0;
 	const char *fname = 0;
 	size_t child_shards = 0;
 	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
 	char *stringpool = NULL;
-	off_t *pool_off = NULL;
+	size_t *pool_off = NULL;
 	FILE *prefilter_fp = NULL;
 };
 
@@ -1243,13 +1244,13 @@ void *run_prefilter(void *v) {
 	return NULL;
 }
 
-long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long *along, long alongminus, double gamma, size_t child_shards, off_t *meta_off, off_t *pool_off, long *initial_x, long *initial_y, volatile size_t *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
+long write_tile(FILE *geoms, size_t *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile size_t *along, size_t alongminus, double gamma, size_t child_shards, size_t *meta_off, size_t *pool_off, long *initial_x, long *initial_y, volatile size_t *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double mingap_fraction = 1;
 	double minextent_fraction = 1;
 
 	static volatile double oprogress = 0;
-	off_t og = *geompos_in;
+	size_t og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
 	int max_zoom_increment = (int) floor(std::log(child_shards) / std::log(4));
@@ -1297,7 +1298,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 		std::vector<serial_feature> coalesced_geometry;
 
 		bool within[child_shards];
-		off_t geompos[child_shards];
+		size_t geompos[child_shards];
 		for (size_t i = 0; i < child_shards; i++) {
 			within[i] = false;
 			geompos[i] = 0;
@@ -1956,8 +1957,8 @@ void *run_thread(void *vargs) {
 			exit(EXIT_FAILURE);
 		}
 
-		off_t geompos = 0;
-		off_t prevgeom = 0;
+		size_t geompos = 0;
+		size_t prevgeom = 0;
 
 		while (1) {
 			int z;
@@ -2038,7 +2039,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, off_t *meta_off, off_t *pool_off, long *initial_x, long *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
+int traverse_zooms(int *geomfd, size_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, size_t *meta_off, size_t *pool_off, long *initial_x, long *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.
@@ -2178,7 +2179,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			std::vector<write_tile_args> args;
 			args.resize(threads);
 			size_t running = threads;
-			long along = 0;
+			size_t along = 0;
 
 			for (size_t thread = 0; thread < threads; thread++) {
 				args[thread].metabase = metabase;
@@ -2289,7 +2290,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 
 			geomfd[j] = subfd[j];
-			geom_size[j] = geomst.st_size;
+			geom_size[j] = (size_t) geomst.st_size;
 		}
 
 		if (err != INT_MAX) {

@@ -11,12 +11,12 @@
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
-void serialize_int(FILE *out, int n, off_t *fpos, const char *fname);
-void serialize_long(FILE *out, long n, off_t *fpos, const char *fname);
-void serialize_ulong(FILE *out, unsigned long n, off_t *fpos, const char *fname);
-void serialize_byte(FILE *out, signed char n, off_t *fpos, const char *fname);
-void serialize_uint(FILE *out, unsigned n, off_t *fpos, const char *fname);
-void serialize_string(FILE *out, const char *s, off_t *fpos, const char *fname);
+void serialize_int(FILE *out, int n, size_t *fpos, const char *fname);
+void serialize_long(FILE *out, long n, size_t *fpos, const char *fname);
+void serialize_ulong(FILE *out, unsigned long n, size_t *fpos, const char *fname);
+void serialize_byte(FILE *out, signed char n, size_t *fpos, const char *fname);
+void serialize_uint(FILE *out, unsigned n, size_t *fpos, const char *fname);
+void serialize_string(FILE *out, const char *s, size_t *fpos, const char *fname);
 
 void deserialize_int(char **f, int *n);
 void deserialize_long(char **f, long *n);
@@ -24,11 +24,11 @@ void deserialize_ulong(char **f, unsigned long *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
 
-bool deserialize_int_io(FILE *f, int *n, off_t *geompos);
-bool deserialize_long_io(FILE *f, long *n, off_t *geompos);
-bool deserialize_ulong_io(FILE *f, unsigned long *n, off_t *geompos);
-bool deserialize_uint_io(FILE *f, unsigned *n, off_t *geompos);
-bool deserialize_byte_io(FILE *f, signed char *n, off_t *geompos);
+bool deserialize_int_io(FILE *f, int *n, size_t *geompos);
+bool deserialize_long_io(FILE *f, long *n, size_t *geompos);
+bool deserialize_ulong_io(FILE *f, unsigned long *n, size_t *geompos);
+bool deserialize_uint_io(FILE *f, unsigned *n, size_t *geompos);
+bool deserialize_byte_io(FILE *f, signed char *n, size_t *geompos);
 
 struct serial_val {
 	int type = 0;
@@ -59,7 +59,9 @@ struct serial_feature {
 	size_t m = 0;
 	std::vector<size_t> keys{};
 	std::vector<size_t> values{};
-	off_t metapos = 0;
+
+	bool has_metapos = false;
+	size_t metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
 	long bbox[4] = {0, 0, 0, 0};
@@ -68,8 +70,8 @@ struct serial_feature {
 	std::string layername = "";
 };
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const char *fname, long wx, long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabase, off_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
+void serialize_feature(FILE *geomfile, serial_feature *sf, size_t *geompos, const char *fname, long wx, long wy, bool include_minzoom);
+serial_feature deserialize_feature(FILE *geoms, size_t *geompos_in, char *metabase, size_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
 
 struct reader {
 	int metafd = -1;
@@ -84,9 +86,9 @@ struct reader {
 	FILE *geomfile = NULL;
 	FILE *indexfile = NULL;
 
-	off_t metapos = 0;
-	off_t geompos = 0;
-	off_t indexpos = 0;
+	size_t metapos = 0;
+	size_t geompos = 0;
+	size_t indexpos = 0;
 
 	long file_bbox[4] = {0, 0, 0, 0};
 
