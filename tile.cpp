@@ -83,7 +83,7 @@ struct coalesce {
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	drawvec geom = drawvec();
 	unsigned long index = 0;
-	long original_seq = 0;
+	size_t original_seq = 0;
 	int type = 0;
 	size_t m = 0;
 	bool coalesced = false;
@@ -1245,7 +1245,6 @@ void *run_prefilter(void *v) {
 
 long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long *along, long alongminus, double gamma, size_t child_shards, off_t *meta_off, off_t *pool_off, long *initial_x, long *initial_y, volatile size_t *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
-	double merge_fraction = 1;
 	double mingap_fraction = 1;
 	double minextent_fraction = 1;
 
@@ -1421,12 +1420,12 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 			}
 
 			if (coalesced_geometry.size() != 0) {
-				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
-						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
-							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
+				for (size_t i = coalesced_geometry.size(); i > 0; i--) {
+					if (coalesced_geometry[i - 1].t == sf.t && coalesced_geometry[i - 1].layer == sf.layer) {
+						for (size_t j = 0; j < coalesced_geometry[i - 1].geometry.size(); j++) {
+							sf.geometry.push_back(coalesced_geometry[i - 1].geometry[j]);
 						}
-						coalesced_geometry.erase(coalesced_geometry.begin() + i);
+						coalesced_geometry.erase(coalesced_geometry.begin() + i - 1);
 					}
 				}
 			}
@@ -1486,14 +1485,14 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 		}
 
 		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
-		for (ssize_t i = (ssize_t) coalesced_geometry.size() - 1; i >= 0; i--) {
-			for (ssize_t j = partials.size() - 1; j >= 0; j--) {
-				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
-					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
-						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
+		for (size_t i = coalesced_geometry.size(); i > 0; i--) {
+			for (size_t j = partials.size(); j > 0; j--) {
+				if (partials[j - 1].layer == coalesced_geometry[i - 1].layer && partials[j - 1].t == coalesced_geometry[i - 1].t) {
+					for (size_t k = 0; k < coalesced_geometry[i - 1].geometry.size(); k++) {
+						partials[j - 1].geoms[0].push_back(coalesced_geometry[i - 1].geometry[k]);
 					}
 
-					coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					coalesced_geometry.erase(coalesced_geometry.begin() + i - 1);
 					break;
 				}
 			}
@@ -1564,7 +1563,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> &pgeoms = partials[i].geoms;
 			signed char t = partials[i].t;
-			long original_seq = partials[i].original_seq;
+			size_t original_seq = partials[i].original_seq;
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.

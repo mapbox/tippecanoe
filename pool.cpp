@@ -7,8 +7,8 @@
 #include "pool.hpp"
 
 int swizzlecmp(const char *a, const char *b) {
-	ssize_t alen = strlen(a);
-	ssize_t blen = strlen(b);
+	size_t alen = strlen(a);
+	size_t blen = strlen(b);
 
 	if (strcmp(a, b) == 0) {
 		return 0;
@@ -16,11 +16,11 @@ int swizzlecmp(const char *a, const char *b) {
 
 	// This is long to avoid complaints about overflow
 	long hash1 = 0, hash2 = 0;
-	for (ssize_t i = alen - 1; i >= 0; i--) {
-		hash1 = (hash1 * 37 + a[i]) & INT_MAX;
+	for (size_t i = alen; i > 0; i--) {
+		hash1 = (hash1 * 37 + a[i - 1]) & INT_MAX;
 	}
-	for (ssize_t i = blen - 1; i >= 0; i--) {
-		hash2 = (hash2 * 37 + b[i]) & INT_MAX;
+	for (size_t i = blen; i > 0; i--) {
+		hash2 = (hash2 * 37 + b[i - 1]) & INT_MAX;
 	}
 
 	int h1 = (int) hash1, h2 = (int) hash2;
@@ -31,7 +31,7 @@ int swizzlecmp(const char *a, const char *b) {
 	return h1 - h2;
 }
 
-long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
+size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
 	unsigned long *sp = &treefile->tree;
 	size_t depth = 0;
 

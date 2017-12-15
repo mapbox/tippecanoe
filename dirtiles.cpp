@@ -21,7 +21,7 @@ std::string dir_read_tile(std::string base, struct zxy tile) {
 	return (contents.str());
 }
 
-void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
+void dir_write_tile(const char *outdir, int z, unsigned tx, unsigned ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string curdir(outdir);
 	std::string slash("/");

@@ -230,8 +230,8 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const
 	}
 
 	for (size_t i = 0; i < sf->keys.size(); i++) {
-		serialize_long(geomfile, sf->keys[i], geompos, fname);
-		serialize_long(geomfile, sf->values[i], geompos, fname);
+		serialize_ulong(geomfile, sf->keys[i], geompos, fname);
+		serialize_ulong(geomfile, sf->values[i], geompos, fname);
 	}
 
 	if (include_minzoom) {
@@ -301,17 +301,17 @@ serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabas
 		char *meta = metabase + sf.metapos + meta_off[sf.segment];
 
 		for (size_t i = 0; i < sf.m; i++) {
-			long k, v;
-			deserialize_long(&meta, &k);
-			deserialize_long(&meta, &v);
+			size_t k, v;
+			deserialize_ulong(&meta, &k);
+			deserialize_ulong(&meta, &v);
 			sf.keys.push_back(k);
 			sf.values.push_back(v);
 		}
 	} else {
 		for (size_t i = 0; i < sf.m; i++) {
-			long k, v;
-			deserialize_long_io(geoms, &k, geompos_in);
-			deserialize_long_io(geoms, &v, geompos_in);
+			size_t k, v;
+			deserialize_ulong_io(geoms, &k, geompos_in);
+			deserialize_ulong_io(geoms, &v, geompos_in);
 			sf.keys.push_back(k);
 			sf.values.push_back(v);
 		}
@@ -609,8 +609,8 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	} else {
 		sf.metapos = r->metapos;
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			serialize_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
-			serialize_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
+			serialize_ulong(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
+			serialize_ulong(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
 		}
 	}
 
