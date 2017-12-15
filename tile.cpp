@@ -152,7 +152,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-mvt_value retrieve_string(long off, char *stringpool, int *otype) {
+mvt_value retrieve_string(size_t off, char *stringpool, int *otype) {
 	int type = stringpool[off];
 	char *s = stringpool + off + 1;
 
@@ -184,11 +184,11 @@ int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_
 			return 1;
 		}
 
-		long off1 = values1[i];
+		size_t off1 = values1[i];
 		int type1 = stringpool1[off1];
 		char *s1 = stringpool1 + off1 + 1;
 
-		long off2 = values2[i];
+		size_t off2 = values2[i];
 		int type2 = stringpool2[off2];
 		char *s2 = stringpool2 + off2 + 1;
 

@@ -102,9 +102,9 @@ void init_cpus() {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
 	if (TIPPECANOE_MAX_THREADS != NULL) {
-		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+		CPUS = strtoul(TIPPECANOE_MAX_THREADS, NULL, 10);
 	} else {
-		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+		CPUS = (size_t) sysconf(_SC_NPROCESSORS_ONLN);
 	}
 
 	if (CPUS < 1) {
@@ -2608,7 +2608,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'M':
-			max_tile_size = atoll(optarg);
+			max_tile_size = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'c':
