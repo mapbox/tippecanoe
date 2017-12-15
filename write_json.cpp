@@ -253,11 +253,11 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, int z, unsigned x, unsig
 			size_t outer = 0;
 
 			for (size_t i = 0; i < rings.size(); i++) {
-				long double area = 0;
+				double area = 0;
 				for (size_t k = 0; k < rings[i].size(); k++) {
 					if (rings[i][k].op != VT_CLOSEPATH) {
-						area += (long double) rings[i][k].x * (long double) rings[i][(k + 1) % rings[i].size()].y;
-						area -= (long double) rings[i][k].y * (long double) rings[i][(k + 1) % rings[i].size()].x;
+						area += (double) rings[i][k].x * (double) rings[i][(k + 1) % rings[i].size()].y;
+						area -= (double) rings[i][k].y * (double) rings[i][(k + 1) % rings[i].size()].x;
 					}
 				}
 				area /= 2;

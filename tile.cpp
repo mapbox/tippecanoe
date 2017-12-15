@@ -72,13 +72,13 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, size_t m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2);
+int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_t> &values1, char *stringpool1, size_t m2, const std::vector<size_t> &keys2, const std::vector<size_t> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
 	char *stringpool = NULL;
-	std::vector<long> keys = std::vector<long>();
-	std::vector<long> values = std::vector<long>();
+	std::vector<size_t> keys = std::vector<size_t>();
+	std::vector<size_t> values = std::vector<size_t>();
 	std::vector<std::string> full_keys = std::vector<std::string>();
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	drawvec geom = drawvec();
@@ -163,7 +163,7 @@ mvt_value retrieve_string(long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(size_t m, std::vector<long> const &metakeys, std::vector<long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+void decode_meta(size_t m, std::vector<size_t> const &metakeys, std::vector<size_t> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	for (size_t i = 0; i < m; i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
@@ -173,7 +173,7 @@ void decode_meta(size_t m, std::vector<long> const &metakeys, std::vector<long> 
 	}
 }
 
-int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &values1, char *stringpool1, size_t m2, const std::vector<long> &keys2, const std::vector<long> &values2, char *stringpool2) {
+int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_t> &values1, char *stringpool1, size_t m2, const std::vector<size_t> &keys2, const std::vector<size_t> &values2, char *stringpool2) {
 	for (size_t i = 0; i < m1 && i < m2; i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
 		mvt_value key2 = retrieve_string(keys2[i], stringpool2, NULL);
@@ -210,7 +210,7 @@ int metacmp(size_t m1, const std::vector<long> &keys1, const std::vector<long> &
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, off_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<long> &metakeys, std::vector<long> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, off_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, long metastart, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<size_t> &metakeys, std::vector<size_t> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		long xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -328,8 +328,8 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsign
 
 struct partial {
 	std::vector<drawvec> geoms = std::vector<drawvec>();
-	std::vector<long> keys = std::vector<long>();
-	std::vector<long> values = std::vector<long>();
+	std::vector<size_t> keys = std::vector<size_t>();
+	std::vector<size_t> values = std::vector<size_t>();
 	std::vector<std::string> full_keys = std::vector<std::string>();
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	std::vector<ssize_t> arc_polygon = std::vector<ssize_t>();
@@ -1425,7 +1425,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 						for (size_t j = 0; j < coalesced_geometry[i - 1].geometry.size(); j++) {
 							sf.geometry.push_back(coalesced_geometry[i - 1].geometry[j]);
 						}
-						coalesced_geometry.erase(coalesced_geometry.begin() + i - 1);
+						coalesced_geometry.erase(coalesced_geometry.begin() + (ssize_t) i - 1);
 					}
 				}
 			}
@@ -1492,7 +1492,7 @@ long write_tile(FILE *geoms, off_t *geompos_in, char *metabase, char *stringpool
 						partials[j - 1].geoms[0].push_back(coalesced_geometry[i - 1].geometry[k]);
 					}
 
-					coalesced_geometry.erase(coalesced_geometry.begin() + i - 1);
+					coalesced_geometry.erase(coalesced_geometry.begin() + (ssize_t) i - 1);
 					break;
 				}
 			}

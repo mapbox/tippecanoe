@@ -187,12 +187,12 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, off_t *geompos, const
 
 	size_t layer = 0;
 	layer |= sf->layer << 6;
-	layer |= (sf->seq != 0) << 5;
-	layer |= (sf->index != 0) << 4;
-	layer |= (sf->extent != 0) << 3;
-	layer |= sf->has_id << 2;
-	layer |= sf->has_tippecanoe_minzoom << 1;
-	layer |= sf->has_tippecanoe_maxzoom << 0;
+	layer |= (sf->seq != 0 ? 1U : 0U) << 5;
+	layer |= (sf->index != 0 ? 1U : 0U) << 4;
+	layer |= (sf->extent != 0 ? 1U : 0U) << 3;
+	layer |= (sf->has_id ? 1U : 0U) << 2;
+	layer |= (sf->has_tippecanoe_minzoom ? 1U : 0U) << 1;
+	layer |= (sf->has_tippecanoe_maxzoom ? 1U : 0U) << 0;
 
 	serialize_ulong(geomfile, layer, geompos, fname);
 	if (sf->seq != 0) {
@@ -322,7 +322,7 @@ serial_feature deserialize_feature(FILE *geoms, off_t *geompos_in, char *metabas
 	return sf;
 }
 
-static long scale_geometry(struct serialization_state *sst, long *bbox, drawvec &geom) {
+static size_t scale_geometry(struct serialization_state *sst, long *bbox, drawvec &geom) {
 	long offset = 0;
 	long prev = 0;
 	bool has_prev = false;
@@ -488,7 +488,7 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.seq = 0;
 	}
 
-	long bbox_index;
+	unsigned long bbox_index;
 
 	// Calculate the center even if off the edge of the plane,
 	// and then mask to bring it back into the addressable area
@@ -528,21 +528,23 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
+		size_t ii = (size_t) i;
+
 		if (sst->exclude_all) {
-			if (sst->include->count(sf.full_keys[i]) == 0) {
+			if (sst->include->count(sf.full_keys[ii]) == 0) {
 				sf.full_keys.erase(sf.full_keys.begin() + i);
 				sf.full_values.erase(sf.full_values.begin() + i);
 				sf.m--;
 				continue;
 			}
-		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+		} else if (sst->exclude->count(sf.full_keys[ii]) != 0) {
 			sf.full_keys.erase(sf.full_keys.begin() + i);
 			sf.full_values.erase(sf.full_values.begin() + i);
 			sf.m--;
 			continue;
 		}
 
-		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
+		coerce_value(sf.full_keys[ii], sf.full_values[ii].type, sf.full_values[ii].s, sst->attribute_types);
 	}
 
 	if (sst->filter != NULL) {
@@ -582,7 +584,7 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-		if (sf.full_values[i].type == mvt_null) {
+		if (sf.full_values[(size_t) i].type == mvt_null) {
 			sf.full_keys.erase(sf.full_keys.begin() + i);
 			sf.full_values.erase(sf.full_values.begin() + i);
 			sf.m--;
@@ -617,10 +619,15 @@ bool serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	off_t geomstart = r->geompos;
 	serialize_feature(r->geomfile, &sf, &r->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
 
+	if (sst->segment > USHRT_MAX) {
+		fprintf(stderr, "Internal error: too many CPUs used to parse input: %zu\n", sst->segment);
+		exit(EXIT_FAILURE);
+	}
+
 	struct index index;
 	index.start = geomstart;
 	index.end = r->geompos;
-	index.segment = sst->segment;
+	index.segment = (unsigned short) sst->segment;
 	index.seq = *(sst->layer_seq);
 	index.t = sf.t;
 	index.ix = bbox_index;

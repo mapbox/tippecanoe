@@ -161,8 +161,8 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 double get_area(drawvec &geom, size_t i, size_t j) {
 	double area = 0;
 	for (size_t k = i; k < j; k++) {
-		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+		area += (double) geom[k].x * (double) geom[i + ((k - i + 1) % (j - i))].y;
+		area -= (double) geom[k].y * (double) geom[i + ((k - i + 1) % (j - i))].x;
 	}
 	area /= 2;
 	return area;
@@ -381,7 +381,7 @@ void check_polygon(drawvec &geom) {
 		fprintf(stderr, "Internal error: self-intersecting polygon\n");
 	}
 
-	size_t outer_start = -1;
+	size_t outer_start = 0;
 	size_t outer_len = 0;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -916,8 +916,8 @@ drawvec fix_polygon(drawvec &geom) {
 			double area = get_area(ring, 0, ring.size());
 			if ((area > 0) != outer) {
 				drawvec tmp;
-				for (ssize_t a = ring.size() - 1; a >= 0; a--) {
-					tmp.push_back(ring[a]);
+				for (size_t a = ring.size(); a > 0; a--) {
+					tmp.push_back(ring[a - 1]);
 				}
 				ring = tmp;
 			}

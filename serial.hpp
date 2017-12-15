@@ -57,8 +57,8 @@ struct serial_feature {
 	long extent = 0;
 
 	size_t m = 0;
-	std::vector<long> keys{};
-	std::vector<long> values{};
+	std::vector<size_t> keys{};
+	std::vector<size_t> values{};
 	off_t metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?

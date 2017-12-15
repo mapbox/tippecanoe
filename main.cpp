@@ -1957,14 +1957,14 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				if (maxzoom == 0) {
 					droprate = 2.5;
 				} else {
-					droprate = exp(log((long double) max[0].count / max[maxzoom].count) / (maxzoom));
+					droprate = exp(log((double) max[0].count / max[maxzoom].count) / (maxzoom));
 					fprintf(stderr, "Choosing a drop rate of -r%f to get from %ld to %ld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
 				}
 			}
 
 			basezoom = 0;
 			for (int z = 0; z <= maxzoom; z++) {
-				double zoomdiff = log((long double) max[z].count / max_features) / log(droprate);
+				double zoomdiff = log((double) max[z].count / max_features) / log(droprate);
 				if (zoomdiff + z > basezoom) {
 					basezoom = (int) ceil(zoomdiff + z);
 				}
@@ -1978,7 +1978,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				double interval = exp(log(droprate) * (basezoom - z));
 
 				if (max[z].count / interval >= max_features) {
-					interval = (long double) max[z].count / max_features;
+					interval = (double) max[z].count / max_features;
 					droprate = exp(log(interval) / (basezoom - z));
 					interval = exp(log(droprate) * (basezoom - z));
 
