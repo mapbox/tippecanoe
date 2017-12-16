@@ -243,7 +243,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, st
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", sst->fname, jp->line, jp->error);
+				fprintf(stderr, "%s:%zu: %s\n", sst->fname, jp->line, jp->error);
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
@@ -257,7 +257,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, st
 			found_hashes++;
 
 			if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
-				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
+				fprintf(stderr, "%s:%zu: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
 			}
 		}
 
@@ -297,7 +297,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, st
 
 			if (is_geometry) {
 				if (found_features != 0 && found_geometries == 0) {
-					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
+					fprintf(stderr, "%s:%zu: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 				}
 				found_geometries++;
 
@@ -317,13 +317,13 @@ void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, st
 		}
 
 		if (found_features == 0 && found_geometries != 0) {
-			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 		}
 		found_features++;
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: feature with no geometry\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;
@@ -331,7 +331,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, size_t layer, st
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: feature without properties hash\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;

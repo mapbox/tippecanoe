@@ -38,7 +38,7 @@ void dir_write_tile(const char *outdir, int z, unsigned tx, unsigned ty, std::st
 	}
 
 	std::ofstream pbfFile(newdir, std::ios::out | std::ios::binary);
-	pbfFile.write(pbf.data(), pbf.size());
+	pbfFile.write(pbf.data(), (std::streamsize) pbf.size());
 	pbfFile.close();
 }
 
@@ -120,7 +120,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 				while ((dp2 = readdir(d2)) != NULL) {
 					if (numeric(dp2->d_name)) {
 						std::string x = z + "/" + dp2->d_name;
-						int tx = atoi(dp2->d_name);
+						unsigned tx = (unsigned) atoi(dp2->d_name);
 
 						DIR *d3 = opendir(x.c_str());
 						if (d3 == NULL) {
@@ -131,7 +131,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 						struct dirent *dp3;
 						while ((dp3 = readdir(d3)) != NULL) {
 							if (pbfname(dp3->d_name)) {
-								int ty = atoi(dp3->d_name);
+								unsigned ty = (unsigned) atoi(dp3->d_name);
 								tiles.push_back(zxy(tz, tx, ty));
 							}
 						}

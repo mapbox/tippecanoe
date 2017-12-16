@@ -267,7 +267,7 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 
 void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, size_t layer, std::string layername) {
 	std::vector<drawvec_type> dv;
-	long id = 0;
+	unsigned long id = 0;
 	bool has_id = false;
 	std::vector<serial_val> values;
 	std::map<std::string, serial_val> other;
@@ -296,18 +296,21 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 			break;
 		}
 
-		case 12:
-			has_id = true;
-			id = pbf.get_sint64();
-			if (id < 0) {
+		case 12: {
+			long sid = pbf.get_sint64();
+			if (sid < 0) {
 				static bool warned = false;
 				if (!warned) {
-					fprintf(stderr, "Out of range feature id %ld\n", id);
+					fprintf(stderr, "Out of range feature id %ld\n", sid);
 					warned = true;
 				}
 				has_id = false;
+			} else {
+				id = (unsigned long) sid;
+				has_id = true;
 			}
 			break;
+		}
 
 		case 13: {
 			protozero::pbf_reader value_reader(pbf.get_message());
@@ -543,9 +546,15 @@ void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src,
 			keys.push_back(pbf.get_string());
 			break;
 
-		case 2:
-			dim = pbf.get_int64();
+		case 2: {
+			long sdim = pbf.get_int64();
+			if (sdim < 0) {
+				fprintf(stderr, "Impossible dimension %ld\n", sdim);
+				exit(EXIT_FAILURE);
+			}
+			dim = (size_t) sdim;
 			break;
+		}
 
 		case 3:
 			e = pow(10, pbf.get_int64());

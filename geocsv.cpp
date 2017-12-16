@@ -18,7 +18,9 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 	std::string s;
 	std::vector<std::string> header;
-	ssize_t latcol = -1, loncol = -1;
+	size_t latcol = 0, loncol = 0;
+	bool found_lat = false;
+	bool found_lon = false;
 
 	if ((s = csv_getline(f)).size() > 0) {
 		std::string err = check_utf8(s);
@@ -37,14 +39,16 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 			if (lower == "y" || lower == "lat" || (lower.find("latitude") != std::string::npos)) {
 				latcol = i;
+				found_lat = true;
 			}
 			if (lower == "x" || lower == "lon" || lower == "lng" || lower == "long" || (lower.find("longitude") != std::string::npos)) {
 				loncol = i;
+				found_lon = true;
 			}
 		}
 	}
 
-	if (latcol < 0 || loncol < 0) {
+	if (!found_lat || !found_lon) {
 		fprintf(stderr, "%s: Can't find \"lat\" and \"lon\" columns\n", fname.c_str());
 		exit(EXIT_FAILURE);
 	}

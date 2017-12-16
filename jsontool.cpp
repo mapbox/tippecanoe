@@ -364,7 +364,7 @@ void process(FILE *fp, const char *fname) {
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
+				fprintf(stderr, "%s:%zu: %s\n", fname, jp->line, jp->error);
 			}
 
 			json_free(jp->root);
