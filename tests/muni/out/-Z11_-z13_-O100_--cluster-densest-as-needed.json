@@ -14,7 +14,7 @@
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "FIELD RD/Nike Site" }, "geometry": { "type": "Point", "coordinates": [ -122.527685, 37.829074 ] } }
+{ "type": "Feature", "properties": { "name": "FIELD RD/Nike Site", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.527685, 37.829074 ] } }
 ] }
 ] }
 ,
@@ -56,7 +56,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Delta St & Wilde Ave", "clustered": true, "point_count": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.407479, 37.717776 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Blanken Ave & Nueva Ave", "clustered": true, "point_count": 13 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.711223 ] } }
+{ "type": "Feature", "properties": { "name": "Blanken Ave & Nueva Ave", "clustered": true, "point_count": 15 }, "geometry": { "type": "Point", "coordinates": [ -122.397480, 37.711223 ] } }
 ] }
 ] }
 ,
@@ -246,7 +246,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 954, "y": 791 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
 ] }
 ] }
 ,
@@ -256,7 +256,7 @@
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Miwok Trail", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.527256, 37.832599 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "FIELD RD/Nike Site" }, "geometry": { "type": "Point", "coordinates": [ -122.527685, 37.829074 ] } }
+{ "type": "Feature", "properties": { "name": "FIELD RD/Nike Site", "clustered": true, "point_count": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.527685, 37.829074 ] } }
 ] }
 ] }
 ,
@@ -762,13 +762,13 @@
 ,
 { "type": "Feature", "properties": { "name": "Geary Blvd & Powell St", "clustered": true, "point_count": 9 }, "geometry": { "type": "Point", "coordinates": [ -122.408402, 37.787403 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Folsom St & 1st St", "clustered": true, "point_count": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.394197, 37.787437 ] } }
+{ "type": "Feature", "properties": { "name": "Folsom St & 1st St", "clustered": true, "point_count": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.394197, 37.787437 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 1908, "y": 1582 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820006 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "clustered": true, "point_count": 5 }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820006 ] } }
 ] }
 ] }
 ,
@@ -790,7 +790,7 @@
 ,
 { "type": "Feature", "properties": { "name": "FIELD RD/Nike Site" }, "geometry": { "type": "Point", "coordinates": [ -122.527674, 37.829065 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Field Rd/Visitor Center", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.524413, 37.830480 ] } }
+{ "type": "Feature", "properties": { "name": "Field Rd/Visitor Center", "clustered": true, "point_count": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.524413, 37.830480 ] } }
 ] }
 ] }
 ,
@@ -920,7 +920,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Lake Merced Blvd & Higuera Ave", "clustered": true, "point_count": 14 }, "geometry": { "type": "Point", "coordinates": [ -122.485210, 37.718429 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Font Blvd & Juan Bautisa Cir." }, "geometry": { "type": "Point", "coordinates": [ -122.478697, 37.718480 ] } }
+{ "type": "Feature", "properties": { "name": "Font Blvd & Juan Bautisa Cir.", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.478697, 37.718480 ] } }
 ] }
 ] }
 ,
@@ -1034,7 +1034,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Fulton St & 16th Ave", "clustered": true, "point_count": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.474921, 37.773055 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Lincoln Way & 17th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475425, 37.765618 ] } }
+{ "type": "Feature", "properties": { "name": "Lincoln Way & 17th Ave", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.475425, 37.765618 ] } }
 ] }
 ] }
 ,
@@ -1068,7 +1068,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Alexander Dr & Conzelman Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.483386, 37.833149 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "CONZELMAN RD/Kirby Cove", "clustered": true, "point_count": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.484030, 37.829523 ] } }
+{ "type": "Feature", "properties": { "name": "CONZELMAN RD/Kirby Cove", "clustered": true, "point_count": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.484030, 37.829523 ] } }
 ] }
 ] }
 ,
@@ -1136,7 +1136,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Moscow St & France Ave", "clustered": true, "point_count": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.431136, 37.716698 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "South Hill Blvd & Chicago Way" }, "geometry": { "type": "Point", "coordinates": [ -122.431512, 37.710714 ] } }
+{ "type": "Feature", "properties": { "name": "South Hill Blvd & Chicago Way", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.431512, 37.710714 ] } }
 ] }
 ] }
 ,
@@ -1320,7 +1320,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Plymouth Ave & Lakeview Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.456210, 37.718455 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "San Jose Ave & Mt Vernon Ave", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.448667, 37.718522 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & Mt Vernon Ave", "clustered": true, "point_count": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.448667, 37.718522 ] } }
 ] }
 ] }
 ,
@@ -1498,7 +1498,7 @@
 ,
 { "type": "Feature", "properties": { "name": "14th St & Sanchez St", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.431287, 37.767543 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Market St & Sanchez St", "clustered": true, "point_count": 4 }, "geometry": { "type": "Point", "coordinates": [ -122.431222, 37.765635 ] } }
+{ "type": "Feature", "properties": { "name": "Market St & Sanchez St", "clustered": true, "point_count": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.431222, 37.765635 ] } }
 ] }
 ] }
 ,
@@ -1820,7 +1820,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Mansell St & John F Shelley Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.414474, 37.718124 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Ingerson Ave & Hawes St", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.391000, 37.718047 ] } }
+{ "type": "Feature", "properties": { "name": "Ingerson Ave & Hawes St", "clustered": true, "point_count": 3 }, "geometry": { "type": "Point", "coordinates": [ -122.391000, 37.718047 ] } }
 ] }
 ] }
 ,
@@ -2180,7 +2180,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Not a public stop", "clustered": true, "point_count": 5 }, "geometry": { "type": "Point", "coordinates": [ -122.386891, 37.755388 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & 25th St", "clustered": true, "point_count": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.387663, 37.753132 ] } }
+{ "type": "Feature", "properties": { "name": "3rd St & 25th St", "clustered": true, "point_count": 8 }, "geometry": { "type": "Point", "coordinates": [ -122.387663, 37.753132 ] } }
 ] }
 ] }
 ,
@@ -2198,7 +2198,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Avenue M & 3rd St", "clustered": true, "point_count": 6 }, "geometry": { "type": "Point", "coordinates": [ -122.364886, 37.822235 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "62 Macalla St", "clustered": true, "point_count": 2 }, "geometry": { "type": "Point", "coordinates": [ -122.364832, 37.812005 ] } }
+{ "type": "Feature", "properties": { "name": "62 Macalla St", "clustered": true, "point_count": 7 }, "geometry": { "type": "Point", "coordinates": [ -122.364832, 37.812005 ] } }
 ] }
 ] }
 ,
@@ -2224,7 +2224,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 3817, "y": 3165 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240003, 37.820006 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE", "clustered": true, "point_count": 12 }, "geometry": { "type": "Point", "coordinates": [ -12.240003, 37.820006 ] } }
 ] }
 ] }
 ] }

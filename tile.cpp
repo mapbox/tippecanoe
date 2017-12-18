@@ -1695,6 +1695,44 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 		}
 
+		// Attach the leftover cluster count to the last feature that did make it
+		if (clustered > 0) {
+			if (partials.size() > 0) {
+				size_t n = partials.size() - 1;
+
+				size_t i;
+				for (i = 0; i < partials[n].full_keys.size(); i++) {
+					if (partials[n].full_keys[i] == std::string("point_count")) {
+						break;
+					}
+				}
+
+				std::string layername = (*layer_unmaps)[partials[n].segment][partials[n].layer];
+				if (i < partials[n].full_keys.size()) {
+					size_t sum = strtoul(partials[n].full_values[i].s.c_str(), NULL, 10) + clustered;
+					partials[n].full_values[i].s = std::to_string(sum);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", partials[n].full_values[i]);
+				} else {
+					serial_val sv, sv2;
+
+					partials[n].full_keys.push_back("clustered");
+					sv.type = mvt_bool;
+					sv.s = "true";
+					partials[n].full_values.push_back(sv);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
+
+					partials[n].full_keys.push_back("point_count");
+					sv2.type = mvt_double;
+					sv2.s = std::to_string(clustered + 1);
+					partials[n].full_values.push_back(sv2);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
+				}
+			}
+		}
+
 		if (prefilter != NULL) {
 			json_end(prefilter_jp);
 			if (fclose(prefilter_read_fp) != 0) {

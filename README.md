@@ -256,7 +256,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 ### Setting or disabling tile size limits
 
  * `-M` _bytes_ or `--maximum-tile-bytes=`_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
- * `-O` _features_ or `--maximum-tile-featuress=`_features_: Use the specified number of _features_ as the maximum in a tile instead of 200,000.
+ * `-O` _features_ or `--maximum-tile-features=`_features_: Use the specified number of _features_ as the maximum in a tile instead of 200,000.
  * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
  * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
