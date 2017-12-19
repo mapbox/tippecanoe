@@ -2024,7 +2024,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (mingap + 1) * 1.5;
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
