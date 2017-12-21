@@ -233,6 +233,8 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 \fB\fC\-al\fR or \fB\fC\-\-drop\-lines\fR: Let "dot" dropping at lower zooms apply to lines too
 .IP \(bu 2
 \fB\fC\-ap\fR or \fB\fC\-\-drop\-polygons\fR: Let "dot" dropping at lower zooms apply to polygons too
+.IP \(bu 2
+\fB\fC\-K\fR \fIdistance\fP or \fB\fC\-\-cluster\-distance=\fR\fIdistance\fP: Cluster points (as with \fB\fC\-\-cluster\-densest\-as\-needed\fR, but without the experimental discovery process) that are approximately within \fIdistance\fP of each other. The units are tile coordinates within a nominally 256\-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 20 are probably appropriate for typical marker sizes.
 .RE
 .SS Dropping a fraction of features to keep under tile size limits
 .RS
@@ -246,6 +248,8 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 \fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
 .IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
+.IP \(bu 2
+\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster and a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it.
 .RE
 .SS Dropping tightly overlapping features
 .RS
@@ -287,9 +291,9 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pi\fR or \fB\fC\-\-preserve\-input\-order\fR: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \fB\fC\-ao\fR).
 .IP \(bu 2
-\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably don't want to use this.
+\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably want to use this if you use \fB\fC\-\-coalesce\fR\&.
 .IP \(bu 2
-\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
+\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same properties. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
 .IP \(bu 2
 \fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 .RE
@@ -307,6 +311,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .RS
 .IP \(bu 2
 \fB\fC\-M\fR \fIbytes\fP or \fB\fC\-\-maximum\-tile\-bytes=\fR\fIbytes\fP: Use the specified number of \fIbytes\fP as the maximum compressed tile size instead of 500K.
+.IP \(bu 2
+\fB\fC\-O\fR \fIfeatures\fP or \fB\fC\-\-maximum\-tile\-features=\fR\fIfeatures\fP: Use the specified number of \fIfeatures\fP as the maximum in a tile instead of 200,000.
 .IP \(bu 2
 \fB\fC\-pf\fR or \fB\fC\-\-no\-feature\-limit\fR: Don't limit tiles to 200,000 features
 .IP \(bu 2

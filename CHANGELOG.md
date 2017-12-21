@@ -1,3 +1,8 @@
+## 1.27.5
+
+* Add --cluster-densest-as-needed to cluster features
+* Add --maximum-tile-features to set the maximum number of features in a tile
+
 ## 1.27.4
 
 * Support CSV point input

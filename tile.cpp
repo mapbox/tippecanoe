@@ -1385,6 +1385,34 @@ void *run_prefilter(void *v) {
 	return NULL;
 }
 
+void add_tilestats(std::string const &layername, int z, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, std::string const &key, serial_val const &val) {
+	std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
+	if (layermap.count(layername) == 0) {
+		layermap_entry lme = layermap_entry(layermap.size());
+		lme.minzoom = z;
+		lme.maxzoom = z;
+		lme.retain = 1;
+
+		layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+
+		if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
+			(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
+			(*layer_unmaps)[tiling_seg][lme.id] = layername;
+		}
+	}
+	auto fk = layermap.find(layername);
+	if (fk == layermap.end()) {
+		fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	type_and_string attrib;
+	attrib.type = val.type;
+	attrib.string = val.s;
+
+	add_to_file_keys(fk->second.file_keys, key, attrib);
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1429,6 +1457,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
 		double gap = 0, density_gap = 0;
 		double spacing = 0;
+		size_t clustered = 0;
 
 		long long original_features = 0;
 		long long unclipped_features = 0;
@@ -1540,7 +1569,34 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
+			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
+				indices.push_back(sf.index);
+				if (sf.index - merge_previndex < mingap) {
+					clustered++;
+					continue;
+				} else {
+					if (clustered > 0) {
+						std::string layername = (*layer_unmaps)[sf.segment][sf.layer];
+						serial_val sv, sv2;
+
+						sf.full_keys.push_back("clustered");
+						sv.type = mvt_bool;
+						sv.s = "true";
+						sf.full_values.push_back(sv);
+
+						add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
+
+						sf.full_keys.push_back("point_count");
+						sv2.type = mvt_double;
+						sv2.s = std::to_string(clustered + 1);
+						sf.full_values.push_back(sv2);
+
+						add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
+					}
+
+					clustered = 0;
+				}
+			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
 					continue;
@@ -1635,6 +1691,44 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 					coalesced_geometry.erase(coalesced_geometry.begin() + i);
 					break;
+				}
+			}
+		}
+
+		// Attach the leftover cluster count to the last feature that did make it
+		if (clustered > 0) {
+			if (partials.size() > 0) {
+				size_t n = partials.size() - 1;
+
+				size_t i;
+				for (i = 0; i < partials[n].full_keys.size(); i++) {
+					if (partials[n].full_keys[i] == std::string("point_count")) {
+						break;
+					}
+				}
+
+				std::string layername = (*layer_unmaps)[partials[n].segment][partials[n].layer];
+				if (i < partials[n].full_keys.size()) {
+					size_t sum = strtoul(partials[n].full_values[i].s.c_str(), NULL, 10) + clustered;
+					partials[n].full_values[i].s = std::to_string(sum);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", partials[n].full_values[i]);
+				} else {
+					serial_val sv, sv2;
+
+					partials[n].full_keys.push_back("clustered");
+					sv.type = mvt_bool;
+					sv.s = "true";
+					partials[n].full_values.push_back(sv);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
+
+					partials[n].full_keys.push_back("point_count");
+					sv2.type = mvt_double;
+					sv2.s = std::to_string(clustered + 1);
+					partials[n].full_values.push_back(sv2);
+
+					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
 				}
 			}
 		}
@@ -1884,7 +1978,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
 		}
 
-		long long totalsize = 0;
+		size_t totalsize = 0;
 		for (auto layer_iterator = layers.begin(); layer_iterator != layers.end(); ++layer_iterator) {
 			std::vector<coalesce> &layer_features = layer_iterator->second;
 			totalsize += layer_features.size();
@@ -1899,11 +1993,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (totalsize > 0 && tile.layers.size() > 0) {
-			if (totalsize > 200000 && !prevent[P_FEATURE_LIMIT]) {
-				fprintf(stderr, "tile %d/%u/%u has %lld features, >200000    \n", z, tx, ty, totalsize);
+			if (totalsize > max_tile_features && !prevent[P_FEATURE_LIMIT]) {
+				fprintf(stderr, "tile %d/%u/%u has %zu features, >%zu    \n", z, tx, ty, totalsize, max_tile_features);
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * 200000 / tile.layers.size() * 0.95;
+					merge_fraction = merge_fraction * max_tile_features / tile.layers.size() * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
@@ -1926,11 +2020,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
-					mingap_fraction = mingap_fraction * 200000.0 / totalsize * 0.90;
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (mingap + 1) * 1.5;
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -1943,7 +2037,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;
 					continue;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
-					minextent_fraction = minextent_fraction * 200000.0 / totalsize * 0.90;
+					minextent_fraction = minextent_fraction * max_tile_features / totalsize * 0.90;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
 						minextent = m;
@@ -1958,7 +2052,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						continue;
 					}
 				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
-					fraction = fraction * 200000 / totalsize * 0.95;
+					fraction = fraction * max_tile_features / totalsize * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
@@ -2010,7 +2104,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
@@ -2321,12 +2415,12 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
 		double zoom_gamma = gamma;
-		unsigned long long zoom_mingap = 0;
+		unsigned long long zoom_mingap = ((1LL << (32 - i)) / 256 * cluster_distance) * ((1LL << (32 - i)) / 256 * cluster_distance);
 		long long zoom_minextent = 0;
 		double zoom_fraction = 1;
 
