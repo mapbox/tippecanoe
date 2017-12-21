@@ -1569,7 +1569,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			}
 
-			if (additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
 					clustered++;
@@ -2420,7 +2420,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		double zoom_gamma = gamma;
-		unsigned long long zoom_mingap = 0;
+		unsigned long long zoom_mingap = ((1LL << (32 - i)) / 256 * cluster_distance) * ((1LL << (32 - i)) / 256 * cluster_distance);
 		long long zoom_minextent = 0;
 		double zoom_fraction = 1;
 

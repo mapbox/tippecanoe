@@ -69,6 +69,7 @@ int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
+int cluster_distance = 0;
 
 int prevent[256];
 int additional[256];
@@ -2271,6 +2272,7 @@ int main(int argc, char **argv) {
 		{"base-zoom", required_argument, 0, 'B'},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
+		{"cluster-distance", required_argument, 0, 'K'},
 
 		{"Dropping a fraction of features to keep under tile size limits", 0, 0, 0},
 		{"drop-densest-as-needed", no_argument, &additional[A_DROP_DENSEST_AS_NEEDED], 1},
@@ -2446,6 +2448,14 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s: Couldn't understand -B%s\n", argv[0], optarg);
 					exit(EXIT_FAILURE);
 				}
+			}
+			break;
+
+		case 'K':
+			cluster_distance = atoi(optarg);
+			if (cluster_distance > 255) {
+				fprintf(stderr, "%s: --cluster-distance %d is too big; limit is 255\n", argv[0], cluster_distance);
+				exit(EXIT_FAILURE);
 			}
 			break;
 
