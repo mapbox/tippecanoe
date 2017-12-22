@@ -94,6 +94,20 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 			}
 
 			if (is_geometry) {
+				json_object *jo = j;
+				while (jo != NULL) {
+					if (jo->parent != NULL && jo->parent->type == JSON_HASH) {
+						if (json_hash_get(jo->parent, "properties") == jo) {
+							// Ancestor is the value corresponding to a properties key
+							is_geometry = 0;
+							break;
+						}
+					}
+					jo = jo->parent;
+				}
+			}
+
+			if (is_geometry) {
 				if (found_features != 0 && found_geometries == 0) {
 					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", jfa->fname.c_str(), jp->line);
 				}
@@ -132,6 +146,24 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 			fprintf(stderr, "%s:%d: feature without properties hash\n", jfa->fname.c_str(), jp->line);
 			json_context(j);
 			json_free(j);
+			continue;
+		}
+
+		bool is_feature = true;
+		{
+			json_object *jo = j;
+			while (jo != NULL) {
+				if (jo->parent != NULL && jo->parent->type == JSON_HASH) {
+					if (json_hash_get(jo->parent, "properties") == jo) {
+						// Ancestor is the value corresponding to a properties key
+						is_feature = false;
+						break;
+					}
+				}
+				jo = jo->parent;
+			}
+		}
+		if (!is_feature) {
 			continue;
 		}
 

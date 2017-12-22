@@ -364,7 +364,7 @@ void join_csv(json_object *j) {
 }
 
 struct json_join_action : json_feature_action {
-	int add_feature(json_object *geometry, bool geometrycollection, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
+	int add_feature(json_object *geometry, bool, json_object *, json_object *, json_object *, json_object *feature) {
 		if (feature != NULL) {
 			if (csvfile != NULL) {
 				join_csv(feature);
@@ -382,7 +382,7 @@ struct json_join_action : json_feature_action {
 		return 1;
 	}
 
-	void check_crs(json_object *j) {
+	void check_crs(json_object *) {
 	}
 };
 
@@ -390,6 +390,7 @@ void process(FILE *fp, const char *fname) {
 	json_pull *jp = json_begin_file(fp);
 
 	json_join_action jja;
+	jja.fname = fname;
 	parse_json(&jja, jp);
 	json_end(jp);
 }

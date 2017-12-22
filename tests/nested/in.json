@@ -1,0 +1,9 @@
+{"type":"Feature","properties":{"nested2":{"type":"Point","coordinates":[2,2]}},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+{"type":"Feature","properties":{"deeper2":[{"type":"Point","coordinates":[2,2]}]},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+{"type":"Feature","properties":{"more2":{"something":{"type":"Point","coordinates":[2,2]}}},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+
+{"type":"Feature","properties":{"nested":{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2,2]}}},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+{"type":"Feature","properties":{"deeper":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2,2]}}]},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+{"type":"Feature","properties":{"more":{"something":{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[2,2]}}}},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}
+
+{"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[0,0],[1,1]]}}

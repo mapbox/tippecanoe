@@ -1,3 +1,8 @@
+## 1.31.2
+
+* Don't accept anything inside another JSON object's properties as a
+  feature or geometry of its own.
+
 ## 1.31.1
 
 * Add --exclude-all to tile-join
