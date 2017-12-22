@@ -1,3 +1,8 @@
+## 1.27.6
+
+* Don't accept anything inside another JSON object's properties as a
+  feature or geometry of its own.
+
 ## 1.27.5
 
 * Add --cluster-densest-as-needed to cluster features
