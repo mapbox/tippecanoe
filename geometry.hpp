@@ -8,21 +8,22 @@
 #define VT_LINE 2
 #define VT_POLYGON 3
 
-#define VT_END ((signed char) 0)
-#define VT_MOVETO ((signed char) 1)
-#define VT_LINETO ((signed char) 2)
-#define VT_CLOSEPATH ((signed char) 7)
+#define VT_END ((unsigned char) 0)
+#define VT_MOVETO ((unsigned char) 1)
+#define VT_LINETO ((unsigned char) 2)
+#define VT_CLOSEPATH ((unsigned char) 7)
+#define VT_UNDEF ((unsigned char) 3)
 
 // The bitfield is to make sizeof(draw) be 16 instead of 24
 // at the cost, apparently, of a 0.7% increase in running time
 // for packing and unpacking.
 struct draw {
 	long x : 40;
-	signed char op;
+	unsigned char op;
 	long y : 40;
 	signed char necessary;
 
-	draw(signed char nop, long nx, long ny)
+	draw(unsigned char nop, long nx, long ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),

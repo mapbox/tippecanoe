@@ -67,6 +67,11 @@ void serialize_byte(FILE *out, signed char n, size_t *fpos, const char *fname) {
 	*fpos += sizeof(signed char);
 }
 
+void serialize_ubyte(FILE *out, unsigned char n, size_t *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(unsigned char), 1, out, fname);
+	*fpos += sizeof(unsigned char);
+}
+
 void serialize_uint(FILE *out, unsigned n, size_t *fpos, const char *fname) {
 	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
 	*fpos += sizeof(unsigned);
@@ -110,6 +115,11 @@ void deserialize_uint(char **f, unsigned *n) {
 void deserialize_byte(char **f, signed char *n) {
 	memcpy(n, *f, sizeof(signed char));
 	*f += sizeof(signed char);
+}
+
+void deserialize_ubyte(char **f, unsigned char *n) {
+	memcpy(n, *f, sizeof(unsigned char));
+	*f += sizeof(unsigned char);
 }
 
 bool deserialize_long_io(FILE *f, long *n, size_t *geompos) {
@@ -163,7 +173,17 @@ bool deserialize_byte_io(FILE *f, signed char *n, size_t *geompos) {
 	if (c == EOF) {
 		return 0;
 	}
-	*n = c;
+	*n = (signed char) c;
+	(*geompos)++;
+	return 1;
+}
+
+bool deserialize_ubyte_io(FILE *f, unsigned char *n, size_t *geompos) {
+	int c = getc(f);
+	if (c == EOF) {
+		return 0;
+	}
+	*n = (unsigned char) c;
 	(*geompos)++;
 	return 1;
 }
@@ -171,13 +191,13 @@ bool deserialize_byte_io(FILE *f, signed char *n, size_t *geompos) {
 static void write_geometry(drawvec const &dv, size_t *fpos, FILE *out, const char *fname, long wx, long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
-			serialize_byte(out, dv[i].op, fpos, fname);
+			serialize_ubyte(out, dv[i].op, fpos, fname);
 			serialize_long(out, dv[i].x - wx, fpos, fname);
 			serialize_long(out, dv[i].y - wy, fpos, fname);
 			wx = dv[i].x;
 			wy = dv[i].y;
 		} else {
-			serialize_byte(out, dv[i].op, fpos, fname);
+			serialize_ubyte(out, dv[i].op, fpos, fname);
 		}
 	}
 }

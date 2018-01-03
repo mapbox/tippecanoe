@@ -351,7 +351,7 @@ std::string mvt_tile::encode() {
 
 			long px = 0, py = 0;
 			ssize_t cmd_idx = -1;
-			int cmd = -1;
+			unsigned cmd = mvt_undef;
 			size_t length = 0;
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;

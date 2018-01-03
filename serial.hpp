@@ -15,6 +15,7 @@ void serialize_int(FILE *out, int n, size_t *fpos, const char *fname);
 void serialize_long(FILE *out, long n, size_t *fpos, const char *fname);
 void serialize_ulong(FILE *out, unsigned long n, size_t *fpos, const char *fname);
 void serialize_byte(FILE *out, signed char n, size_t *fpos, const char *fname);
+void serialize_ubyte(FILE *out, unsigned char n, size_t *fpos, const char *fname);
 void serialize_uint(FILE *out, unsigned n, size_t *fpos, const char *fname);
 void serialize_string(FILE *out, const char *s, size_t *fpos, const char *fname);
 
@@ -23,12 +24,14 @@ void deserialize_long(char **f, long *n);
 void deserialize_ulong(char **f, unsigned long *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
+void deserialize_ubyte(char **f, unsigned char *n);
 
 bool deserialize_int_io(FILE *f, int *n, size_t *geompos);
 bool deserialize_long_io(FILE *f, long *n, size_t *geompos);
 bool deserialize_ulong_io(FILE *f, unsigned long *n, size_t *geompos);
 bool deserialize_uint_io(FILE *f, unsigned *n, size_t *geompos);
 bool deserialize_byte_io(FILE *f, signed char *n, size_t *geompos);
+bool deserialize_ubyte_io(FILE *f, unsigned char *n, size_t *geompos);
 
 struct serial_val {
 	int type = 0;

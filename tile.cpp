@@ -897,15 +897,15 @@ void find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			partials[i].geoms.resize(0);
 			partials[i].geoms.push_back(drawvec());
 			bool at_start = true;
-			draw first(-1, 0, 0);
+			draw first(VT_UNDEF, 0, 0);
 
 			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
 				ssize_t p = partials[i].arc_polygon[j];
 
 				if (p == 0) {
-					if (first.op >= 0) {
+					if (first.op != VT_UNDEF) {
 						partials[i].geoms[0].push_back(first);
-						first = draw(-1, 0, 0);
+						first = draw(VT_UNDEF, 0, 0);
 					}
 					at_start = true;
 				} else if (p > 0) {
@@ -1334,7 +1334,7 @@ long write_tile(FILE *geoms, size_t *geompos_in, char *metabase, char *stringpoo
 		}
 
 		if (*geompos_in != og) {
-			if (fseek(geoms, og, SEEK_SET) != 0) {
+			if (fseeko(geoms, (off_t) og, SEEK_SET) != 0) {
 				perror("fseek geom");
 				exit(EXIT_FAILURE);
 			}
@@ -2264,7 +2264,7 @@ int traverse_zooms(int *geomfd, size_t *geom_size, char *metabase, char *stringp
 		}
 
 		double zoom_gamma = gamma;
-		unsigned long zoom_mingap = ((1L << (32 - i)) / 256 * cluster_distance) * ((1L << (32 - i)) / 256 * cluster_distance);
+		unsigned long zoom_mingap = ((1LU << (32 - i)) / 256 * cluster_distance) * ((1LU << (32 - i)) / 256 * cluster_distance);
 		long zoom_minextent = 0;
 		double zoom_fraction = 1;
 

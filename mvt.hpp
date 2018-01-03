@@ -13,6 +13,7 @@ struct mvt_layer;
 enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
+	mvt_undef = 3,
 	mvt_closepath = 7
 };
 

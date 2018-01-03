@@ -69,7 +69,7 @@ int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
-int cluster_distance = 0;
+unsigned cluster_distance = 0;
 
 // These should be bool, but getopt_long() wants int
 int prevent[256];

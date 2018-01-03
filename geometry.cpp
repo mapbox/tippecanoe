@@ -36,7 +36,7 @@ drawvec decode_geometry(FILE *meta, size_t *geompos, int z, unsigned tx, unsigne
 	while (1) {
 		draw d;
 
-		if (!deserialize_byte_io(meta, &d.op, geompos)) {
+		if (!deserialize_ubyte_io(meta, &d.op, geompos)) {
 			fprintf(stderr, "Internal error: Unexpected end of file in geometry\n");
 			exit(EXIT_FAILURE);
 		}

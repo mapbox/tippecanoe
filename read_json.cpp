@@ -41,7 +41,7 @@ void json_context(json_object *j) {
 	free(s);  // stringify
 }
 
-void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, size_t line, json_object *feature) {
+void parse_geometry(int t, json_object *j, drawvec &out, unsigned char op, const char *fname, size_t line, json_object *feature) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%zu: expected array for type %d\n", fname, line, t);
 		json_context(feature);
