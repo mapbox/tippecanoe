@@ -4,16 +4,16 @@
 #ifndef DIRTILES_HPP
 #define DIRTILES_HPP
 
-void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf);
+void dir_write_tile(const char *outdir, int z, unsigned tx, unsigned ty, std::string const &pbf);
 
 void check_dir(const char *d, bool force, bool forcetable);
 
 struct zxy {
-	long long z;
-	long long x;
-	long long y;
+	int z;
+	unsigned x;
+	unsigned y;
 
-	zxy(int _z, int _x, int _y)
+	zxy(int _z, unsigned _x, unsigned _y)
 	    : z(_z), x(_x), y(_y) {
 	}
 

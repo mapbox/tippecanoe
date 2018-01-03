@@ -21,7 +21,7 @@ std::string dir_read_tile(std::string base, struct zxy tile) {
 	return (contents.str());
 }
 
-void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
+void dir_write_tile(const char *outdir, int z, unsigned tx, unsigned ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string curdir(outdir);
 	std::string slash("/");
@@ -38,7 +38,7 @@ void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const
 	}
 
 	std::ofstream pbfFile(newdir, std::ios::out | std::ios::binary);
-	pbfFile.write(pbf.data(), pbf.size());
+	pbfFile.write(pbf.data(), (std::streamsize) pbf.size());
 	pbfFile.close();
 }
 
@@ -120,7 +120,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 				while ((dp2 = readdir(d2)) != NULL) {
 					if (numeric(dp2->d_name)) {
 						std::string x = z + "/" + dp2->d_name;
-						int tx = atoi(dp2->d_name);
+						unsigned tx = (unsigned) atoi(dp2->d_name);
 
 						DIR *d3 = opendir(x.c_str());
 						if (d3 == NULL) {
@@ -131,7 +131,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 						struct dirent *dp3;
 						while ((dp3 = readdir(d3)) != NULL) {
 							if (pbfname(dp3->d_name)) {
-								int ty = atoi(dp3->d_name);
+								unsigned ty = (unsigned) atoi(dp3->d_name);
 								tiles.push_back(zxy(tz, tx, ty));
 							}
 						}
@@ -152,48 +152,48 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 }
 
 sqlite3 *dirmeta2tmp(const char *fname) {
-        sqlite3 *db;
-        char *err = NULL;
+	sqlite3 *db;
+	char *err = NULL;
 
-        if (sqlite3_open("", &db) != SQLITE_OK) {
-                fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
-                exit(EXIT_FAILURE);
-        }
-        if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
-                fprintf(stderr, "Create metadata table: %s\n", err);
-                exit(EXIT_FAILURE);
-        }
+	if (sqlite3_open("", &db) != SQLITE_OK) {
+		fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
+		exit(EXIT_FAILURE);
+	}
+	if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "Create metadata table: %s\n", err);
+		exit(EXIT_FAILURE);
+	}
 
-        std::string name = fname;
-        name += "/metadata.json";
+	std::string name = fname;
+	name += "/metadata.json";
 
-        FILE *f = fopen(name.c_str(), "r");
-        if (f == NULL) {
-                perror(name.c_str());
-                exit(EXIT_FAILURE);
-        }
+	FILE *f = fopen(name.c_str(), "r");
+	if (f == NULL) {
+		perror(name.c_str());
+		exit(EXIT_FAILURE);
+	}
 
-        json_pull *jp = json_begin_file(f);
-        json_object *o = json_read_tree(jp);
+	json_pull *jp = json_begin_file(f);
+	json_object *o = json_read_tree(jp);
 
-        if (o->type != JSON_HASH) {
-                fprintf(stderr, "%s: bad metadata format\n", name.c_str());
-                exit(EXIT_FAILURE);
-        }
+	if (o->type != JSON_HASH) {
+		fprintf(stderr, "%s: bad metadata format\n", name.c_str());
+		exit(EXIT_FAILURE);
+	}
 
-        for (size_t i = 0; i < o->length; i++) {
-                if (o->keys[i]->type != JSON_STRING || o->values[i]->type != JSON_STRING) {
-                        fprintf(stderr, "%s: non-string in metadata\n", name.c_str());
-                }
+	for (size_t i = 0; i < o->length; i++) {
+		if (o->keys[i]->type != JSON_STRING || o->values[i]->type != JSON_STRING) {
+			fprintf(stderr, "%s: non-string in metadata\n", name.c_str());
+		}
 
-                char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string, o->values[i]->string);
-                if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-                        fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string, err);
-                }
-                sqlite3_free(sql);
-        }
+		char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string, o->values[i]->string);
+		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string, err);
+		}
+		sqlite3_free(sql);
+	}
 
-        json_end(jp);
-        fclose(f);
-        return db;
+	json_end(jp);
+	fclose(f);
+	return db;
 }

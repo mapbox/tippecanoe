@@ -7,22 +7,23 @@
 #include "pool.hpp"
 
 int swizzlecmp(const char *a, const char *b) {
-	ssize_t alen = strlen(a);
-	ssize_t blen = strlen(b);
+	size_t alen = strlen(a);
+	size_t blen = strlen(b);
 
 	if (strcmp(a, b) == 0) {
 		return 0;
 	}
 
-	long long hash1 = 0, hash2 = 0;
-	for (ssize_t i = alen - 1; i >= 0; i--) {
-		hash1 = (hash1 * 37 + a[i]) & INT_MAX;
+	// This is long to avoid complaints about overflow
+	long hash1 = 0, hash2 = 0;
+	for (size_t i = alen; i > 0; i--) {
+		hash1 = (hash1 * 37 + a[i - 1]) & INT_MAX;
 	}
-	for (ssize_t i = blen - 1; i >= 0; i--) {
-		hash2 = (hash2 * 37 + b[i]) & INT_MAX;
+	for (size_t i = blen; i > 0; i--) {
+		hash2 = (hash2 * 37 + b[i - 1]) & INT_MAX;
 	}
 
-	int h1 = hash1, h2 = hash2;
+	int h1 = (int) hash1, h2 = (int) hash2;
 	if (h1 == h2) {
 		return strcmp(a, b);
 	}
@@ -30,12 +31,12 @@ int swizzlecmp(const char *a, const char *b) {
 	return h1 - h2;
 }
 
-long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
-	unsigned long *sp = &treefile->tree;
+size_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type) {
+	size_t *sp = &treefile->tree;
 	size_t depth = 0;
 
 	// In typical data, traversal depth generally stays under 2.5x
-	size_t max = 3 * log(treefile->off / sizeof(struct stringpool)) / log(2);
+	size_t max = (size_t) floor(3 * log(treefile->off / sizeof(struct stringpool)) / log(2));
 	if (max < 30) {
 		max = 30;
 	}
@@ -60,7 +61,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 			// Search is very deep, so string is probably unique.
 			// Add it to the pool without adding it to the search tree.
 
-			long long off = poolfile->off;
+			size_t off = poolfile->off;
 			if (memfile_write(poolfile, &type, 1) < 0) {
 				perror("memfile write");
 				exit(EXIT_FAILURE);
@@ -74,14 +75,16 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	}
 
 	// *sp is probably in the memory-mapped file, and will move if the file grows.
-	long long ssp;
+	ssize_t ssp;
+	bool is_root = false;
 	if (sp == &treefile->tree) {
-		ssp = -1;
+		ssp = 0;
+		is_root = true;
 	} else {
 		ssp = ((char *) sp) - treefile->map;
 	}
 
-	long long off = poolfile->off;
+	size_t off = poolfile->off;
 	if (memfile_write(poolfile, &type, 1) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
@@ -106,16 +109,16 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	tsp.right = 0;
 	tsp.off = off;
 
-	long long p = treefile->off;
+	size_t p = treefile->off;
 	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
 		perror("memfile write");
 		exit(EXIT_FAILURE);
 	}
 
-	if (ssp == -1) {
+	if (is_root) {
 		treefile->tree = p;
 	} else {
-		*((long long *) (treefile->map + ssp)) = p;
+		*((size_t *) (treefile->map + ssp)) = p;
 	}
 	return off;
 }

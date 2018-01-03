@@ -43,7 +43,7 @@ typedef struct json_object {
 
 typedef struct json_pull {
 	char *error;
-	int line;
+	size_t line;
 
 	ssize_t (*read)(struct json_pull *, char *buf, size_t n);
 	void *source;

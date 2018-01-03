@@ -14,7 +14,7 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 
-mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
+mvt_geometry::mvt_geometry(unsigned nop, long nx, long ny) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
@@ -26,7 +26,7 @@ bool is_compressed(std::string const &data) {
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int decompress(std::string const &input, std::string &output) {
+bool decompress(std::string const &input, std::string &output) {
 	z_stream inflate_s;
 	inflate_s.zalloc = Z_NULL;
 	inflate_s.zfree = Z_NULL;
@@ -37,27 +37,38 @@ int decompress(std::string const &input, std::string &output) {
 		fprintf(stderr, "error: %s\n", inflate_s.msg);
 	}
 	inflate_s.next_in = (Bytef *) input.data();
-	inflate_s.avail_in = input.size();
+
+	if (input.size() > UINT_MAX) {
+		fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
+		exit(EXIT_FAILURE);
+	}
+
+	inflate_s.avail_in = (unsigned) input.size();
 	size_t length = 0;
 	do {
+		if (length + 2 * input.size() > UINT_MAX) {
+			fprintf(stderr, "Tile too big to decode: %zu\n", input.size());
+			exit(EXIT_FAILURE);
+		}
+
 		output.resize(length + 2 * input.size());
-		inflate_s.avail_out = 2 * input.size();
+		inflate_s.avail_out = (unsigned) (2 * input.size());
 		inflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = inflate(&inflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
 			fprintf(stderr, "error: %s\n", inflate_s.msg);
-			return 0;
+			return false;
 		}
 
 		length += (2 * input.size() - inflate_s.avail_out);
 	} while (inflate_s.avail_out == 0);
 	inflateEnd(&inflate_s);
 	output.resize(length);
-	return 1;
+	return true;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int compress(std::string const &input, std::string &output) {
+bool compress(std::string const &input, std::string &output) {
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
@@ -66,22 +77,34 @@ int compress(std::string const &input, std::string &output) {
 	deflate_s.next_in = Z_NULL;
 	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
 	deflate_s.next_in = (Bytef *) input.data();
-	deflate_s.avail_in = input.size();
+
+	if (input.size() > INT_MAX) {
+		fprintf(stderr, "Tile too big to encode: %zu\n", input.size());
+		exit(EXIT_FAILURE);
+	}
+
+	deflate_s.avail_in = (unsigned) input.size();
 	size_t length = 0;
 	do {
 		size_t increase = input.size() / 2 + 1024;
 		output.resize(length + increase);
-		deflate_s.avail_out = increase;
+
+		if (increase > UINT_MAX) {
+			fprintf(stderr, "Tile too big to encode: %zu\n", increase);
+			exit(EXIT_FAILURE);
+		}
+
+		deflate_s.avail_out = (unsigned) increase;
 		deflate_s.next_out = (Bytef *) (output.data() + length);
 		int ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			return -1;
+			return true;
 		}
 		length += (increase - deflate_s.avail_out);
 	} while (deflate_s.avail_out == 0);
 	deflateEnd(&deflate_s);
 	output.resize(length);
-	return 0;
+	return false;
 }
 
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
@@ -218,7 +241,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
-					long long px = 0, py = 0;
+					long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
 						uint32_t op = geom & 7;
@@ -276,6 +299,11 @@ std::string mvt_tile::encode() {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
 
+		if (layers[i].extent > INT_MAX) {
+			fprintf(stderr, "Tile extent too big: %ld\n", layers[i].extent);
+			exit(EXIT_FAILURE);
+		}
+
 		layer_writer.add_uint32(15, layers[i].version); /* version */
 		layer_writer.add_string(1, layers[i].name);     /* name */
 		layer_writer.add_uint32(5, layers[i].extent);   /* extent */
@@ -319,21 +347,27 @@ std::string mvt_tile::encode() {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
 			}
 
-			std::vector<uint32_t> geometry;
+			std::vector<unsigned> geometry;
 
-			int px = 0, py = 0;
-			int cmd_idx = -1;
-			int cmd = -1;
-			int length = 0;
+			long px = 0, py = 0;
+			ssize_t cmd_idx = -1;
+			unsigned cmd = mvt_undef;
+			size_t length = 0;
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
-				int op = geom[g].op;
+				unsigned op = geom[g].op;
 
 				if (op != cmd) {
 					if (cmd_idx >= 0) {
-						geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
+						size_t enc = (length << 3) | (cmd & ((1 << 3) - 1));
+						if (enc > UINT_MAX) {
+							fprintf(stderr, "Geometry encoding overflow: %ld\n", enc);
+							exit(EXIT_FAILURE);
+						}
+
+						geometry[cmd_idx] = (unsigned) enc;
 					}
 
 					cmd = op;
@@ -343,14 +377,19 @@ std::string mvt_tile::encode() {
 				}
 
 				if (op == mvt_moveto || op == mvt_lineto) {
-					long long wwx = geom[g].x;
-					long long wwy = geom[g].y;
+					long wwx = geom[g].x;
+					long wwy = geom[g].y;
 
-					int dx = wwx - px;
-					int dy = wwy - py;
+					long dx = wwx - px;
+					long dy = wwy - py;
 
-					geometry.push_back(protozero::encode_zigzag32(dx));
-					geometry.push_back(protozero::encode_zigzag32(dy));
+					if (dx < INT_MIN || dx > INT_MAX || dy < INT_MIN || dy > INT_MAX) {
+						fprintf(stderr, "Geometry delta overflow: %ld,%ld\n", dx, dy);
+						exit(EXIT_FAILURE);
+					}
+
+					geometry.push_back(protozero::encode_zigzag32((int) dx));
+					geometry.push_back(protozero::encode_zigzag32((int) dy));
 
 					px = wwx;
 					py = wwy;
@@ -364,7 +403,13 @@ std::string mvt_tile::encode() {
 			}
 
 			if (cmd_idx >= 0) {
-				geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
+				size_t enc = (length << 3) | (cmd & ((1 << 3) - 1));
+				if (enc > UINT_MAX) {
+					fprintf(stderr, "Geometry encoding overflow: %ld\n", enc);
+					exit(EXIT_FAILURE);
+				}
+
+				geometry[cmd_idx] = (unsigned) enc;
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
@@ -400,17 +445,17 @@ static std::string quote(std::string const &s) {
 	std::string buf;
 
 	for (size_t i = 0; i < s.size(); i++) {
-		unsigned char ch = s[i];
+		unsigned char ch = (unsigned char) s[i];
 
 		if (ch == '\\' || ch == '\"') {
 			buf.push_back('\\');
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		} else if (ch < ' ') {
 			char tmp[7];
 			sprintf(tmp, "\\u%04x", ch);
 			buf.append(std::string(tmp));
 		} else {
-			buf.push_back(ch);
+			buf.push_back((char) ch);
 		}
 	}
 
@@ -424,15 +469,15 @@ std::string mvt_value::toString() {
 		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
 		double v = numeric_value.double_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (long) v) {
+			return std::to_string((long) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
 	} else if (type == mvt_float) {
 		double v = numeric_value.float_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (long) v) {
+			return std::to_string((long) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
@@ -473,15 +518,15 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	feature.tags.push_back(vo);
 }
 
-bool is_integer(const char *s, long long *v) {
+bool is_integer(const char *s, long *v) {
 	errno = 0;
 	char *endptr;
 
-	*v = strtoll(s, &endptr, 0);
+	*v = strtol(s, &endptr, 0);
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == LLONG_MIN || *v == LLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+	if ((*v == LONG_MIN || *v == LONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
@@ -504,11 +549,11 @@ bool is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-bool is_unsigned_integer(const char *s, unsigned long long *v) {
+bool is_unsigned_integer(const char *s, unsigned long *v) {
 	errno = 0;
 	char *endptr;
 
-	// Special check because MacOS stroull() returns 1
+	// Special check MacOS stroull() returns 1
 	// for -18446744073709551615
 	while (isspace(*s)) {
 		s++;
@@ -517,11 +562,11 @@ bool is_unsigned_integer(const char *s, unsigned long long *v) {
 		return 0;
 	}
 
-	*v = strtoull(s, &endptr, 0);
+	*v = strtoul(s, &endptr, 0);
 	if (*v == 0 && errno != 0) {
 		return 0;
 	}
-	if ((*v == ULLONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
+	if ((*v == ULONG_MAX) && (errno == ERANGE || errno == EINVAL)) {
 		return 0;
 	}
 	if (*endptr != '\0') {
@@ -548,12 +593,12 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	mvt_value tv;
 
 	if (type == mvt_double) {
-		long long v;
-		unsigned long long uv;
+		long v;
+		unsigned long uv;
 		if (is_unsigned_integer(s, &uv)) {
-			if (uv <= LLONG_MAX) {
+			if (uv <= LONG_MAX) {
 				tv.type = mvt_int;
-				tv.numeric_value.int_value = uv;
+				tv.numeric_value.int_value = (long) uv;
 			} else {
 				tv.type = mvt_uint;
 				tv.numeric_value.uint_value = uv;

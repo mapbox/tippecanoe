@@ -27,7 +27,7 @@ struct queued_feature {
 	double e = 0;
 	std::vector<std::string> *keys = NULL;
 	std::vector<struct serialization_state> *sst = NULL;
-	int layer = 0;
+	size_t layer = 0;
 	std::string layername = "";
 };
 
@@ -64,7 +64,7 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 
 		case 4:
 			sv.type = mvt_double;
-			sv.s = std::to_string(-(long long) pbf.get_uint64());
+			sv.s = std::string("-") + std::to_string(pbf.get_uint64());
 			break;
 
 		case 5:
@@ -94,21 +94,21 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 	return sv;
 }
 
-drawvec readPoint(std::vector<long long> &coords, size_t dim, double e) {
+drawvec readPoint(std::vector<long> &coords, size_t dim, double e) {
 	ensureDim(dim);
 
-	long long x, y;
+	long x, y;
 	projection->project(coords[0] / e, coords[1] / e, 32, &x, &y);
 	drawvec dv;
 	dv.push_back(draw(VT_MOVETO, x, y));
 	return dv;
 }
 
-drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_t start, size_t end, bool closed) {
+drawvec readLinePart(std::vector<long> &coords, size_t dim, double e, size_t start, size_t end, bool closed) {
 	ensureDim(dim);
 
 	drawvec dv;
-	std::vector<long long> prev;
+	std::vector<long> prev;
 	std::vector<double> p;
 	prev.resize(dim);
 	p.resize(dim);
@@ -124,7 +124,7 @@ drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_
 			p[d] = prev[d] / e;
 		}
 
-		long long x, y;
+		long x, y;
 		projection->project(p[0], p[1], 32, &x, &y);
 
 		if (i == start) {
@@ -141,11 +141,11 @@ drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_
 	return dv;
 }
 
-drawvec readLine(std::vector<long long> &coords, size_t dim, double e, bool closed) {
+drawvec readLine(std::vector<long> &coords, size_t dim, double e, bool closed) {
 	return readLinePart(coords, dim, e, 0, coords.size(), closed);
 }
 
-drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e, bool closed) {
+drawvec readMultiLine(std::vector<long> &coords, std::vector<size_t> &lengths, size_t dim, double e, bool closed) {
 	if (lengths.size() == 0) {
 		return readLinePart(coords, dim, e, 0, coords.size(), closed);
 	}
@@ -164,7 +164,7 @@ drawvec readMultiLine(std::vector<long long> &coords, std::vector<int> &lengths,
 	return dv;
 }
 
-drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengths, size_t dim, double e) {
+drawvec readMultiPolygon(std::vector<long> &coords, std::vector<size_t> &lengths, size_t dim, double e) {
 	ensureDim(dim);
 
 	if (lengths.size() == 0) {
@@ -202,8 +202,8 @@ struct drawvec_type {
 
 std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys) {
 	std::vector<drawvec_type> ret;
-	std::vector<long long> coords;
-	std::vector<int> lengths;
+	std::vector<long> coords;
+	std::vector<size_t> lengths;
 	int type = -1;
 
 	while (pbf.next()) {
@@ -265,9 +265,9 @@ std::vector<drawvec_type> readGeometry(protozero::pbf_reader &pbf, size_t dim, d
 	return ret;
 }
 
-void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, int layer, std::string layername) {
+void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, struct serialization_state *sst, size_t layer, std::string layername) {
 	std::vector<drawvec_type> dv;
-	long long id = 0;
+	unsigned long id = 0;
 	bool has_id = false;
 	std::vector<serial_val> values;
 	std::map<std::string, serial_val> other;
@@ -296,18 +296,21 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 			break;
 		}
 
-		case 12:
-			has_id = true;
-			id = pbf.get_sint64();
-			if (id < 0) {
+		case 12: {
+			long sid = pbf.get_sint64();
+			if (sid < 0) {
 				static bool warned = false;
 				if (!warned) {
-					fprintf(stderr, "Out of range feature id %lld\n", id);
+					fprintf(stderr, "Out of range feature id %ld\n", sid);
 					warned = true;
 				}
 				has_id = false;
+			} else {
+				id = (unsigned long) sid;
+				has_id = true;
 			}
 			break;
+		}
 
 		case 13: {
 			protozero::pbf_reader value_reader(pbf.get_message());
@@ -480,7 +483,7 @@ void runQueue() {
 	feature_queue.clear();
 }
 
-void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
+void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, size_t layer, std::string layername) {
 	struct queued_feature qf;
 	qf.pbf = pbf;
 	qf.dim = dim;
@@ -497,7 +500,7 @@ void queueFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<
 	}
 }
 
-void outBareGeometry(drawvec const &dv, int type, struct serialization_state *sst, int layer, std::string layername) {
+void outBareGeometry(drawvec const &dv, int type, struct serialization_state *sst, size_t layer, std::string layername) {
 	serial_feature sf;
 
 	sf.layer = layer;
@@ -515,7 +518,7 @@ void outBareGeometry(drawvec const &dv, int type, struct serialization_state *ss
 	serialize_feature(sst, sf);
 }
 
-void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
+void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<std::string> &keys, std::vector<struct serialization_state> *sst, size_t layer, std::string layername) {
 	while (pbf.next()) {
 		switch (pbf.tag()) {
 		case 1: {
@@ -530,7 +533,7 @@ void readFeatureCollection(protozero::pbf_reader &pbf, size_t dim, double e, std
 	}
 }
 
-void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src, size_t len, int layer, std::string layername) {
+void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src, size_t len, size_t layer, std::string layername) {
 	protozero::pbf_reader pbf(src, len);
 
 	size_t dim = 2;
@@ -543,9 +546,15 @@ void parse_geobuf(std::vector<struct serialization_state> *sst, const char *src,
 			keys.push_back(pbf.get_string());
 			break;
 
-		case 2:
-			dim = pbf.get_int64();
+		case 2: {
+			long sdim = pbf.get_int64();
+			if (sdim < 0) {
+				fprintf(stderr, "Impossible dimension %ld\n", sdim);
+				exit(EXIT_FAILURE);
+			}
+			dim = (size_t) sdim;
 			break;
+		}
 
 		case 3:
 			e = pow(10, pbf.get_int64());

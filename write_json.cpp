@@ -13,10 +13,10 @@ struct lonlat {
 	int op;
 	double lon;
 	double lat;
-	long long x;
-	long long y;
+	long x;
+	long y;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	lonlat(int nop, double nlon, double nlat, long nx, long ny)
 	    : op(nop),
 	      lon(nlon),
 	      lat(nlat),
@@ -25,7 +25,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, int z, unsigned x, unsigned y, bool comma, bool name, bool zoom, size_t index, size_t sequence, long extent, bool complain) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -36,7 +36,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 		fprintf(fp, "{ \"type\": \"Feature\"");
 
 		if (feat.has_id) {
-			fprintf(fp, ", \"id\": %llu", feat.id);
+			fprintf(fp, ", \"id\": %lu", feat.id);
 		}
 
 		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
@@ -57,8 +57,8 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"minzoom\": %u, ", z);
-				fprintf(fp, "\"maxzoom\": %u", z);
+				fprintf(fp, "\"minzoom\": %d, ", z);
+				fprintf(fp, "\"maxzoom\": %d", z);
 				need_comma = true;
 			}
 
@@ -66,7 +66,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"index\": %llu", index);
+				fprintf(fp, "\"index\": %zu", index);
 				need_comma = true;
 			}
 
@@ -74,7 +74,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"sequence\": %lld", sequence);
+				fprintf(fp, "\"sequence\": %zu", sequence);
 				need_comma = true;
 			}
 
@@ -82,7 +82,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				if (need_comma) {
 					fprintf(fp, ", ");
 				}
-				fprintf(fp, "\"extent\": %lld", extent);
+				fprintf(fp, "\"extent\": %ld", extent);
 				need_comma = true;
 			}
 
@@ -97,11 +97,11 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			}
 
 			if (feat.tags[t] >= layer.keys.size()) {
-				fprintf(stderr, "Error: out of bounds feature key (%u in %zu)\n", feat.tags[t], layer.keys.size());
+				fprintf(stderr, "Error: out of bounds feature key (%zu in %zu)\n", feat.tags[t], layer.keys.size());
 				exit(EXIT_FAILURE);
 			}
 			if (feat.tags[t + 1] >= layer.values.size()) {
-				fprintf(stderr, "Error: out of bounds feature value (%u in %zu)\n", feat.tags[t + 1], layer.values.size());
+				fprintf(stderr, "Error: out of bounds feature value (%zu in %zu)\n", feat.tags[t + 1], layer.values.size());
 				exit(EXIT_FAILURE);
 			}
 
@@ -114,29 +114,29 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				fprintq(fp, val.string_value.c_str());
 			} else if (val.type == mvt_int) {
 				fprintq(fp, key);
-				fprintf(fp, ": %lld", val.numeric_value.int_value);
+				fprintf(fp, ": %ld", val.numeric_value.int_value);
 			} else if (val.type == mvt_double) {
 				fprintq(fp, key);
 				double v = val.numeric_value.double_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
+				if (v == (long) v) {
+					fprintf(fp, ": %ld", (long) v);
 				} else {
 					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 				}
 			} else if (val.type == mvt_float) {
 				fprintq(fp, key);
 				double v = val.numeric_value.float_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
+				if (v == (long) v) {
+					fprintf(fp, ": %ld", (long) v);
 				} else {
 					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 				}
 			} else if (val.type == mvt_sint) {
 				fprintq(fp, key);
-				fprintf(fp, ": %lld", val.numeric_value.sint_value);
+				fprintf(fp, ": %ld", val.numeric_value.sint_value);
 			} else if (val.type == mvt_uint) {
 				fprintq(fp, key);
-				fprintf(fp, ": %llu", val.numeric_value.uint_value);
+				fprintf(fp, ": %lu", val.numeric_value.uint_value);
 			} else if (val.type == mvt_bool) {
 				fprintq(fp, key);
 				fprintf(fp, ": %s", val.numeric_value.bool_value ? "true" : "false");
@@ -149,13 +149,13 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 
 		for (size_t g = 0; g < feat.geometry.size(); g++) {
 			int op = feat.geometry[g].op;
-			long long px = feat.geometry[g].x;
-			long long py = feat.geometry[g].y;
+			long px = feat.geometry[g].x;
+			long py = feat.geometry[g].y;
 
 			if (op == VT_MOVETO || op == VT_LINETO) {
-				long long scale = 1LL << (32 - z);
-				long long wx = scale * x + (scale / layer.extent) * px;
-				long long wy = scale * y + (scale / layer.extent) * py;
+				long scale = 1L << (32 - z);
+				long wx = scale * x + (scale / layer.extent) * px;
+				long wy = scale * y + (scale / layer.extent) * py;
 
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
@@ -180,7 +180,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				fprintf(fp, " ]");
 			}
 		} else if (feat.type == VT_LINE) {
-			int movetos = 0;
+			size_t movetos = 0;
 			for (size_t i = 0; i < ops.size(); i++) {
 				if (ops[i].op == VT_MOVETO) {
 					movetos++;
@@ -225,7 +225,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 					areas.push_back(0);
 				}
 
-				int n = rings.size() - 1;
+				ssize_t n = rings.size() - 1;
 				if (n >= 0) {
 					if (ops[i].op == VT_CLOSEPATH) {
 						rings[n].push_back(rings[n][0]);
@@ -250,14 +250,14 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 			}
 
-			int outer = 0;
+			size_t outer = 0;
 
 			for (size_t i = 0; i < rings.size(); i++) {
-				long double area = 0;
+				double area = 0;
 				for (size_t k = 0; k < rings[i].size(); k++) {
 					if (rings[i][k].op != VT_CLOSEPATH) {
-						area += (long double) rings[i][k].x * (long double) rings[i][(k + 1) % rings[i].size()].y;
-						area -= (long double) rings[i][k].y * (long double) rings[i][(k + 1) % rings[i].size()].x;
+						area += (double) rings[i][k].x * (double) rings[i][(k + 1) % rings[i].size()].y;
+						area -= (double) rings[i][k].y * (double) rings[i][(k + 1) % rings[i].size()].x;
 					}
 				}
 				area /= 2;

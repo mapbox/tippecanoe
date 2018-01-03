@@ -72,24 +72,24 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
+int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_t> &values1, char *stringpool1, size_t m2, const std::vector<size_t> &keys2, const std::vector<size_t> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
 	char *stringpool = NULL;
-	std::vector<long long> keys = std::vector<long long>();
-	std::vector<long long> values = std::vector<long long>();
+	std::vector<size_t> keys = std::vector<size_t>();
+	std::vector<size_t> values = std::vector<size_t>();
 	std::vector<std::string> full_keys = std::vector<std::string>();
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	drawvec geom = drawvec();
-	unsigned long long index = 0;
-	long long original_seq = 0;
+	unsigned long index = 0;
+	size_t original_seq = 0;
 	int type = 0;
-	int m = 0;
+	size_t m = 0;
 	bool coalesced = false;
 	double spacing = 0;
 	bool has_id = false;
-	unsigned long long id = 0;
+	unsigned long id = 0;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -152,7 +152,7 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
+mvt_value retrieve_string(size_t off, char *stringpool, int *otype) {
 	int type = stringpool[off];
 	char *s = stringpool + off + 1;
 
@@ -163,9 +163,8 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
-	int i;
-	for (i = 0; i < m; i++) {
+void decode_meta(size_t m, std::vector<size_t> const &metakeys, std::vector<size_t> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+	for (size_t i = 0; i < m; i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
@@ -174,9 +173,8 @@ void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long
 	}
 }
 
-int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
-	int i;
-	for (i = 0; i < m1 && i < m2; i++) {
+int metacmp(size_t m1, const std::vector<size_t> &keys1, const std::vector<size_t> &values1, char *stringpool1, size_t m2, const std::vector<size_t> &keys2, const std::vector<size_t> &values2, char *stringpool2) {
+	for (size_t i = 0; i < m1 && i < m2; i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
 		mvt_value key2 = retrieve_string(keys2[i], stringpool2, NULL);
 
@@ -186,11 +184,11 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 			return 1;
 		}
 
-		long long off1 = values1[i];
+		size_t off1 = values1[i];
 		int type1 = stringpool1[off1];
 		char *s1 = stringpool1 + off1 + 1;
 
-		long long off2 = values2[i];
+		size_t off2 = values2[i];
 		int type2 = stringpool2[off2];
 		char *s2 = stringpool2 + off2 + 1;
 
@@ -212,16 +210,15 @@ int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long 
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long *bbox, unsigned tx, unsigned ty, long buffer, bool *within, size_t *geompos, FILE **geomfile, const char *fname, signed char t, size_t layer, size_t metastart, bool has_metapos, signed char feature_minzoom, size_t child_shards, int max_zoom_increment, size_t seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, size_t segment, long *initial_x, long *initial_y, size_t m, std::vector<size_t> &metakeys, std::vector<size_t> &metavals, bool has_id, unsigned long id, unsigned long index, long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
-		int xo, yo;
+		long xo, yo;
 		int span = 1 << (nextzoom - z);
 
 		// Get the feature bounding box in pixel (256) coordinates at the child zoom
 		// in order to calculate which sub-tiles it can touch including the buffer.
-		long long bbox2[4];
-		int k;
-		for (k = 0; k < 4; k++) {
+		long bbox2[4];
+		for (size_t k = 0; k < 4; k++) {
 			// Division instead of right-shift because coordinates can be negative
 			bbox2[k] = bbox[k] / (1 << (32 - nextzoom - 8));
 		}
@@ -232,7 +229,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 		bbox2[2] += buffer;
 		bbox2[3] += buffer;
 
-		for (k = 0; k < 4; k++) {
+		for (size_t k = 0; k < 4; k++) {
 			if (bbox2[k] < 0) {
 				bbox2[k] = 0;
 			}
@@ -257,8 +254,8 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
 			for (yo = bbox2[1]; yo <= bbox2[3]; yo++) {
-				unsigned jx = tx * span + xo;
-				unsigned jy = ty * span + yo;
+				long jx = (long) tx * span + xo;
+				long jy = (long) ty * span + yo;
 
 				// j is the shard that the child tile's data is being written to.
 				//
@@ -276,15 +273,24 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 				// shard X more widely than Y. XXX Is there a better way to do this
 				// without causing collisions?
 
-				int j = ((jx << max_zoom_increment) |
-					 ((jy & ((1 << max_zoom_increment) - 1)))) &
-					(child_shards - 1);
+				long j = ((jx << max_zoom_increment) |
+					  ((jy & ((1U << max_zoom_increment) - 1)))) &
+					 (child_shards - 1);
 
 				{
 					if (!within[j]) {
+						long next_x = (long) tx * span + xo;
+						long next_y = (long) ty * span + yo;
+
+						if (next_x < 0 || next_x >= (1L << nextzoom) ||
+						    next_y < 0 || next_y >= (1L << nextzoom)) {
+							fprintf(stderr, "Internal error: bad tile number %d/%ld/%ld\n", nextzoom, next_x, next_y);
+							exit(EXIT_FAILURE);
+						}
+
 						serialize_int(geomfile[j], nextzoom, &geompos[j], fname);
-						serialize_uint(geomfile[j], tx * span + xo, &geompos[j], fname);
-						serialize_uint(geomfile[j], ty * span + yo, &geompos[j], fname);
+						serialize_uint(geomfile[j], (unsigned) next_x, &geompos[j], fname);
+						serialize_uint(geomfile[j], (unsigned) next_y, &geompos[j], fname);
 						within[j] = 1;
 					}
 
@@ -300,14 +306,15 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
 					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 					sf.metapos = metastart;
+					sf.has_metapos = has_metapos;
 					sf.geometry = geom2;
 					sf.index = index;
 					sf.extent = extent;
 					sf.m = m;
 					sf.feature_minzoom = feature_minzoom;
 
-					if (metastart < 0) {
-						for (int i = 0; i < m; i++) {
+					if (!has_metapos) {
+						for (size_t i = 0; i < m; i++) {
 							sf.keys.push_back(metakeys[i]);
 							sf.values.push_back(metavals[i]);
 						}
@@ -322,16 +329,16 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 struct partial {
 	std::vector<drawvec> geoms = std::vector<drawvec>();
-	std::vector<long long> keys = std::vector<long long>();
-	std::vector<long long> values = std::vector<long long>();
+	std::vector<size_t> keys = std::vector<size_t>();
+	std::vector<size_t> values = std::vector<size_t>();
 	std::vector<std::string> full_keys = std::vector<std::string>();
 	std::vector<serial_val> full_values = std::vector<serial_val>();
 	std::vector<ssize_t> arc_polygon = std::vector<ssize_t>();
-	long long layer = 0;
-	long long original_seq = 0;
-	unsigned long long index = 0;
-	int m = 0;
-	int segment = 0;
+	size_t layer = 0;
+	size_t original_seq = 0;
+	size_t index = 0;
+	size_t m = 0;
+	size_t segment = 0;
 	bool reduced = 0;
 	int z = 0;
 	int line_detail = 0;
@@ -339,33 +346,33 @@ struct partial {
 	double spacing = 0;
 	double simplification = 0;
 	signed char t = 0;
-	unsigned long long id = 0;
+	unsigned long id = 0;
 	bool has_id = 0;
 	ssize_t renamed = 0;
 };
 
 struct partial_arg {
 	std::vector<struct partial> *partials = NULL;
-	int task = 0;
-	int tasks = 0;
+	size_t task = 0;
+	size_t tasks = 0;
 };
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	// From area in world coordinates to area in tile coordinates
-	long long divisor = 1LL << (32 - detail - z);
+	long divisor = 1L << (32 - detail - z);
 	area /= divisor * divisor;
 
 	if (area == 0) {
 		return drawvec();
 	}
 
-	int height = ceil(sqrt(area));
-	int width = round(area / height);
+	long height = (long) ceil(sqrt(area));
+	long width = (long) round(area / height);
 	if (width == 0) {
 		width = 1;
 	}
 
-	long long sx = 0, sy = 0, n = 0;
+	long sx = 0, sy = 0, n = 0;
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
 			sx += geom[i].x;
@@ -440,7 +447,7 @@ void *partial_feature_worker(void *v) {
 #endif
 
 		if (t == VT_LINE && additional[A_REVERSE]) {
-			geom = reorder_lines(geom);
+			geom = reverse_lines(geom);
 		}
 
 		to_tile_scale(geom, z, line_detail);
@@ -475,7 +482,7 @@ void *partial_feature_worker(void *v) {
 	return NULL;
 }
 
-int manage_gap(unsigned long long index, unsigned long long *previndex, double scale, double gamma, double *gap) {
+bool manage_gap(unsigned long index, unsigned long *previndex, double scale, double gamma, double *gap) {
 	if (gamma > 0) {
 		if (*gap > 0) {
 			if (index == *previndex) {
@@ -534,15 +541,15 @@ struct edge {
 	}
 
 	bool operator<(const edge &s) const {
-		long long cmp = (long long) y1 - s.y1;
+		long cmp = (long) y1 - s.y1;
 		if (cmp == 0) {
-			cmp = (long long) x1 - s.x1;
+			cmp = (long) x1 - s.x1;
 		}
 		if (cmp == 0) {
-			cmp = (long long) y2 - s.y2;
+			cmp = (long) y2 - s.y2;
 		}
 		if (cmp == 0) {
-			cmp = (long long) x2 - s.x2;
+			cmp = (long) x2 - s.x2;
 		}
 		return cmp < 0;
 	}
@@ -550,18 +557,18 @@ struct edge {
 
 struct edgecmp_ring {
 	bool operator()(const edge &a, const edge &b) {
-		long long cmp = (long long) a.y1 - b.y1;
+		long cmp = (long) a.y1 - b.y1;
 		if (cmp == 0) {
-			cmp = (long long) a.x1 - b.x1;
+			cmp = (long) a.x1 - b.x1;
 		}
 		if (cmp == 0) {
-			cmp = (long long) a.y2 - b.y2;
+			cmp = (long) a.y2 - b.y2;
 		}
 		if (cmp == 0) {
-			cmp = (long long) a.x2 - b.x2;
+			cmp = (long) a.x2 - b.x2;
 		}
 		if (cmp == 0) {
-			cmp = (long long) a.ring - b.ring;
+			cmp = (long) a.ring - b.ring;
 		}
 		return cmp < 0;
 	}
@@ -584,9 +591,16 @@ bool edges_same(std::pair<std::vector<edge>::iterator, std::vector<edge>::iterat
 	return true;
 }
 
-bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom, double merge_fraction) {
-	size_t merge_count = ceil((1 - merge_fraction) * partials.size());
+static void check_coords_unsigned(draw dv0, draw dv1) {
+	if (dv0.x < 0 || dv0.x > UINT_MAX ||
+	    dv0.y < 0 || dv0.y > UINT_MAX ||
+	    dv1.x < 0 || dv1.x > UINT_MAX ||
+	    dv1.y < 0 || dv1.y > UINT_MAX) {
+		fprintf(stderr, "Internal error: Out of bounds coordinate %ld,%ld to %ld,%ld\n", dv0.x, dv0.y, dv1.x, dv1.y);
+	}
+}
 
+void find_common_edges(std::vector<partial> &partials, int z, int line_detail, double simplification, int maxzoom) {
 	for (size_t i = 0; i < partials.size(); i++) {
 		if (partials[i].t == VT_POLYGON) {
 			for (size_t j = 0; j < partials[i].geoms.size(); j++) {
@@ -630,7 +644,13 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							dv.push_back(partials[i].geoms[j][k]);
 						}
 
-						edges.push_back(edge(dv[0].x, dv[0].y, dv[1].x, dv[1].y, ring));
+						check_coords_unsigned(dv[0], dv[1]);
+						if (ring > UINT_MAX) {
+							fprintf(stderr, "Internal error: Too many polygon rings %ld\n", ring);
+							exit(EXIT_FAILURE);
+						}
+
+						edges.push_back(edge((unsigned) dv[0].x, (unsigned) dv[0].y, (unsigned) dv[1].x, (unsigned) dv[1].y, (unsigned) ring));
 					}
 				}
 			}
@@ -677,7 +697,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							if (left[1] < left[0]) {
 								fprintf(stderr, "left misordered\n");
 							}
-							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge(left[0].x, left[0].y, left[1].x, left[1].y, 0));
+							check_coords_unsigned(left[0], left[1]);
+							std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e1 = std::equal_range(edges.begin(), edges.end(), edge((unsigned) left[0].x, (unsigned) left[0].y, (unsigned) left[1].x, (unsigned) left[1].y, 0));
 
 							for (size_t k = 0; k < s; k++) {
 								drawvec right;
@@ -690,14 +711,15 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									right.push_back(g[a + k]);
 								}
 
-								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge(right[0].x, right[0].y, right[1].x, right[1].y, 0));
+								check_coords_unsigned(right[0], right[1]);
+								std::pair<std::vector<edge>::iterator, std::vector<edge>::iterator> e2 = std::equal_range(edges.begin(), edges.end(), edge((unsigned) right[0].x, (unsigned) right[0].y, (unsigned) right[1].x, (unsigned) right[1].y, 0));
 
 								if (right[1] < right[0]) {
 									fprintf(stderr, "left misordered\n");
 								}
 
 								if (e1.first == e1.second || e2.first == e2.second) {
-									fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
+									fprintf(stderr, "Internal error: polygon edge lookup failed for %ld,%ld to %ld,%ld or %ld,%ld to %ld,%ld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
 									exit(EXIT_FAILURE);
 								}
 
@@ -736,8 +758,9 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 				for (size_t k = 0; k < g.size(); k++) {
 					if (g[k].op == VT_MOVETO) {
-						ssize_t necessary = -1;
-						ssize_t lowest = k;
+						bool has_necessary = false;
+						size_t necessary = 0;
+						size_t lowest = k;
 						size_t l;
 						for (l = k + 1; l < g.size(); l++) {
 							if (g[l].op != VT_LINETO) {
@@ -746,14 +769,16 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 							if (g[l].necessary) {
 								necessary = l;
+								has_necessary = true;
 							}
 							if (g[l] < g[lowest]) {
 								lowest = l;
 							}
 						}
 
-						if (necessary < 0) {
+						if (!has_necessary) {
 							necessary = lowest;
+							has_necessary = true;
 							// Add a necessary marker if there was none in the ring,
 							// so the arc code below can find it.
 							g[lowest].necessary = 1;
@@ -766,7 +791,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 							for (size_t m = necessary; m < l - 1; m++) {
 								tmp.push_back(g[m]);
 							}
-							for (ssize_t m = k; m < necessary; m++) {
+							for (size_t m = k; m < necessary; m++) {
 								tmp.push_back(g[m]);
 							}
 
@@ -816,14 +841,14 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 									// Add new arc
 									size_t added = arcs.size() + 1;
 									arcs.insert(std::pair<drawvec, size_t>(arc, added));
-									partials[i].arc_polygon.push_back(added);
+									partials[i].arc_polygon.push_back((ssize_t) added);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(added, i));
 								} else {
 									partials[i].arc_polygon.push_back(-(ssize_t) f2->second);
 									merge_candidates.insert(std::pair<ssize_t, size_t>(-(ssize_t) f2->second, i));
 								}
 							} else {
-								partials[i].arc_polygon.push_back(f->second);
+								partials[i].arc_polygon.push_back((ssize_t) f->second);
 								merge_candidates.insert(std::pair<ssize_t, size_t>(f->second, i));
 							}
 
@@ -865,168 +890,6 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 		count++;
 	}
 
-	// If necessary, merge some adjacent polygons into some other polygons
-
-	struct merge_order {
-		ssize_t edge = 0;
-		unsigned long long gap = 0;
-		size_t p1 = 0;
-		size_t p2 = 0;
-
-		bool operator<(const merge_order &m) const {
-			return gap < m.gap;
-		}
-	};
-	std::vector<merge_order> order;
-
-	for (ssize_t i = 0; i < (ssize_t) simplified_arcs.size(); i++) {
-		auto r1 = merge_candidates.equal_range(i);
-		for (auto r1i = r1.first; r1i != r1.second; ++r1i) {
-			auto r2 = merge_candidates.equal_range(-i);
-			for (auto r2i = r2.first; r2i != r2.second; ++r2i) {
-				if (r1i->second != r2i->second) {
-					merge_order mo;
-					mo.edge = i;
-					if (partials[r1i->second].index > partials[r2i->second].index) {
-						mo.gap = partials[r1i->second].index - partials[r2i->second].index;
-					} else {
-						mo.gap = partials[r2i->second].index - partials[r1i->second].index;
-					}
-					mo.p1 = r1i->second;
-					mo.p2 = r2i->second;
-					order.push_back(mo);
-				}
-			}
-		}
-	}
-	std::sort(order.begin(), order.end());
-
-	size_t merged = 0;
-	for (size_t o = 0; o < order.size(); o++) {
-		if (merged >= merge_count) {
-			break;
-		}
-
-		size_t i = order[o].p1;
-		while (partials[i].renamed >= 0) {
-			i = partials[i].renamed;
-		}
-		size_t i2 = order[o].p2;
-		while (partials[i2].renamed >= 0) {
-			i2 = partials[i2].renamed;
-		}
-
-		for (size_t j = 0; j < partials[i].arc_polygon.size() && merged < merge_count; j++) {
-			if (partials[i].arc_polygon[j] == order[o].edge) {
-				{
-					// XXX snap links
-					if (partials[order[o].p2].arc_polygon.size() > 0) {
-						// This has to merge the ring that contains the anti-arc to this arc
-						// into the current ring, and then add whatever other rings were in
-						// that feature on to the end.
-						//
-						// This can't be good for keeping parent-child relationships among
-						// the rings in order, but Wagyu should sort that out later
-
-						std::vector<ssize_t> additions;
-						std::vector<ssize_t> &here = partials[i].arc_polygon;
-						std::vector<ssize_t> &other = partials[i2].arc_polygon;
-
-#if 0
-						printf("seeking %zd\n", partials[i].arc_polygon[j]);
-						printf("before: ");
-						for (size_t k = 0; k < here.size(); k++) {
-							printf("%zd ", here[k]);
-						}
-						printf("\n");
-						printf("other: ");
-						for (size_t k = 0; k < other.size(); k++) {
-							printf("%zd ", other[k]);
-						}
-						printf("\n");
-#endif
-
-						for (size_t k = 0; k < other.size(); k++) {
-							size_t l;
-							for (l = k; l < other.size(); l++) {
-								if (other[l] == 0) {
-									break;
-								}
-							}
-							if (l >= other.size()) {
-								l--;
-							}
-
-#if 0
-							for (size_t m = k; m <= l; m++) {
-								printf("%zd ", other[m]);
-							}
-							printf("\n");
-#endif
-
-							size_t m;
-							for (m = k; m <= l; m++) {
-								if (other[m] == -partials[i].arc_polygon[j]) {
-									break;
-								}
-							}
-
-							if (m <= l) {
-								// Found the shared arc
-
-								here.erase(here.begin() + j);
-
-								size_t off = 0;
-								for (size_t n = m + 1; n < l; n++) {
-									here.insert(here.begin() + j + off, other[n]);
-									off++;
-								}
-								for (size_t n = k; n < m; n++) {
-									here.insert(here.begin() + j + off, other[n]);
-									off++;
-								}
-							} else {
-								// Looking at some other ring
-
-								for (size_t n = k; n <= l; n++) {
-									additions.push_back(other[n]);
-								}
-							}
-
-							k = l;
-						}
-
-						partials[i2].arc_polygon.clear();
-						partials[i2].renamed = i;
-						merged++;
-
-						for (size_t k = 0; k < additions.size(); k++) {
-							partials[i].arc_polygon.push_back(additions[k]);
-						}
-
-#if 0
-						printf("after: ");
-						for (size_t k = 0; k < here.size(); k++) {
-							printf("%zd ", here[k]);
-						}
-						printf("\n");
-#endif
-
-#if 0
-						for (size_t k = 0; k + 1 < here.size(); k++) {
-							if (here[k] != 0 && here[k + 1] != 0) {
-								if (simplified_arcs[here[k + 1]][0] != simplified_arcs[here[k]][simplified_arcs[here[k]].size() - 1]) {
-									printf("error from %zd to %zd\n", here[k], here[k + 1]);
-								}
-							}
-						}
-#endif
-					}
-				}
-			}
-		}
-	}
-
 	// Turn the arc representations of the polygons back into standard polygon geometries
 
 	for (size_t i = 0; i < partials.size(); i++) {
@@ -1034,34 +897,36 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			partials[i].geoms.resize(0);
 			partials[i].geoms.push_back(drawvec());
 			bool at_start = true;
-			draw first(-1, 0, 0);
+			draw first(VT_UNDEF, 0, 0);
 
 			for (size_t j = 0; j < partials[i].arc_polygon.size(); j++) {
 				ssize_t p = partials[i].arc_polygon[j];
 
 				if (p == 0) {
-					if (first.op >= 0) {
+					if (first.op != VT_UNDEF) {
 						partials[i].geoms[0].push_back(first);
-						first = draw(-1, 0, 0);
+						first = draw(VT_UNDEF, 0, 0);
 					}
 					at_start = true;
 				} else if (p > 0) {
-					for (size_t k = 0; k + 1 < simplified_arcs[p].size(); k++) {
+					size_t ix = (size_t) p;
+					for (size_t k = 0; k + 1 < simplified_arcs[ix].size(); k++) {
 						if (at_start) {
-							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
-							first = draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y);
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
+							first = draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y);
 						} else {
-							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[p][k].x, simplified_arcs[p][k].y));
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
 						}
 						at_start = 0;
 					}
 				} else { /* p < 0 */
-					for (ssize_t k = simplified_arcs[-p].size() - 1; k > 0; k--) {
+					size_t ix = (size_t) -p;
+					for (size_t k = simplified_arcs[ix].size() - 1; k > 0; k--) {
 						if (at_start) {
-							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
-							first = draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y);
+							partials[i].geoms[0].push_back(draw(VT_MOVETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
+							first = draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y);
 						} else {
-							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[-p][k].x, simplified_arcs[-p][k].y));
+							partials[i].geoms[0].push_back(draw(VT_LINETO, simplified_arcs[ix][k].x, simplified_arcs[ix][k].y));
 						}
 						at_start = 0;
 					}
@@ -1069,17 +934,11 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 	}
-
-	if (merged >= merge_count) {
-		return true;
-	} else {
-		return false;
-	}
 }
 
-unsigned long long choose_mingap(std::vector<unsigned long long> const &indices, double f) {
-	unsigned long long bot = ULLONG_MAX;
-	unsigned long long top = 0;
+unsigned long choose_mingap(std::vector<unsigned long> const &indices, double f) {
+	unsigned long bot = ULONG_MAX;
+	unsigned long top = 0;
 
 	for (size_t i = 0; i < indices.size(); i++) {
 		if (i > 0 && indices[i] >= indices[i - 1]) {
@@ -1092,11 +951,11 @@ unsigned long long choose_mingap(std::vector<unsigned long long> const &indices,
 		}
 	}
 
-	size_t want = indices.size() * f;
+	size_t want = (size_t) floor(indices.size() * f);
 	while (top - bot > 2) {
-		unsigned long long guess = bot / 2 + top / 2;
+		unsigned long guess = bot / 2 + top / 2;
 		size_t count = 0;
-		unsigned long long prev = 0;
+		unsigned long prev = 0;
 
 		for (size_t i = 0; i < indices.size(); i++) {
 			if (indices[i] - prev >= guess) {
@@ -1117,9 +976,9 @@ unsigned long long choose_mingap(std::vector<unsigned long long> const &indices,
 	return top;
 }
 
-long long choose_minextent(std::vector<long long> &extents, double f) {
+long choose_minextent(std::vector<long> &extents, double f) {
 	std::sort(extents.begin(), extents.end());
-	return extents[(extents.size() - 1) * (1 - f)];
+	return extents[(size_t) floor((extents.size() - 1) * (1 - f))];
 }
 
 struct write_tile_args {
@@ -1129,16 +988,16 @@ struct write_tile_args {
 	int min_detail = 0;
 	sqlite3 *outdb = NULL;
 	const char *outdir = NULL;
-	int buffer = 0;
+	long buffer = 0;
 	const char *fname = NULL;
 	FILE **geomfile = NULL;
 	double todo = 0;
-	volatile long long *along = NULL;
+	volatile size_t *along = NULL;
 	double gamma = 0;
 	double gamma_out = 0;
-	int child_shards = 0;
+	size_t child_shards = 0;
 	int *geomfd = NULL;
-	off_t *geom_size = NULL;
+	size_t *geom_size = NULL;
 	volatile unsigned *midx = NULL;
 	volatile unsigned *midy = NULL;
 	int maxzoom = 0;
@@ -1146,38 +1005,38 @@ struct write_tile_args {
 	int full_detail = 0;
 	int low_detail = 0;
 	double simplification = 0;
-	volatile long long *most = NULL;
-	long long *meta_off = NULL;
-	long long *pool_off = NULL;
-	unsigned *initial_x = NULL;
-	unsigned *initial_y = NULL;
-	volatile int *running = NULL;
+	volatile long *most = NULL;
+	size_t *meta_off = NULL;
+	size_t *pool_off = NULL;
+	long *initial_x = NULL;
+	long *initial_y = NULL;
+	volatile size_t *running = NULL;
 	int err = 0;
 	std::vector<std::map<std::string, layermap_entry>> *layermaps = NULL;
 	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
 	size_t pass = 0;
 	size_t passes = 0;
-	unsigned long long mingap = 0;
-	unsigned long long mingap_out = 0;
-	long long minextent = 0;
-	long long minextent_out = 0;
+	unsigned long mingap = 0;
+	unsigned long mingap_out = 0;
+	long minextent = 0;
+	long minextent_out = 0;
 	double fraction = 0;
 	double fraction_out = 0;
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
 	bool still_dropping = false;
-	int wrote_zoom = 0;
+	bool wrote_zoom = 0;
 	size_t tiling_seg = 0;
 };
 
-bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
+bool clip_to_tile(serial_feature &sf, int z, long buffer) {
 	int quick = quick_check(sf.bbox, z, buffer);
 	if (quick == 0) {
 		return true;
 	}
 
 	if (z == 0) {
-		if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
+		if (sf.bbox[0] < 0 || sf.bbox[2] > 1L << 32) {
 			// If the geometry extends off the edge of the world, concatenate on another copy
 			// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
@@ -1185,18 +1044,18 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 
 			if (sf.bbox[0] < 0) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1L << 32), sf.geometry[i].y));
 				}
 			}
 
-			if (sf.bbox[2] > 1LL << 32) {
+			if (sf.bbox[2] > 1L << 32) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
+					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1L << 32), sf.geometry[i].y));
 				}
 			}
 
 			sf.bbox[0] = 0;
-			sf.bbox[2] = 1LL << 32;
+			sf.bbox[2] = 1L << 32;
 
 			quick = -1;
 		}
@@ -1246,7 +1105,7 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	return false;
 }
 
-serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile long long *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, long long *geompos, volatile double *oprogress, double todo, const char *fname, int child_shards) {
+serial_feature next_feature(FILE *geoms, size_t *geompos_in, char *metabase, size_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y, long *original_features, long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, volatile size_t *along, size_t alongminus, long buffer, bool *within, bool *first_time, FILE **geomfile, size_t *geompos, volatile double *oprogress, double todo, const char *fname, size_t child_shards) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
 		if (sf.t < 0) {
@@ -1273,7 +1132,7 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.has_metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
 			}
 		}
 
@@ -1297,36 +1156,36 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 
 struct run_prefilter_args {
 	FILE *geoms = NULL;
-	long long *geompos_in = NULL;
+	size_t *geompos_in = NULL;
 	char *metabase = NULL;
-	long long *meta_off = NULL;
+	size_t *meta_off = NULL;
 	int z = 0;
 	unsigned tx = 0;
 	unsigned ty = 0;
-	unsigned *initial_x = 0;
-	unsigned *initial_y = 0;
-	long long *original_features = 0;
-	long long *unclipped_features = 0;
+	long *initial_x = 0;
+	long *initial_y = 0;
+	long *original_features = 0;
+	long *unclipped_features = 0;
 	int nextzoom = 0;
 	int maxzoom = 0;
 	int minzoom = 0;
 	int max_zoom_increment = 0;
 	size_t pass = 0;
 	size_t passes = 0;
-	volatile long long *along = 0;
-	long long alongminus = 0;
-	int buffer = 0;
-	int *within = NULL;
+	volatile size_t *along = 0;
+	size_t alongminus = 0;
+	long buffer = 0;
+	bool *within = NULL;
 	bool *first_time = NULL;
 	FILE **geomfile = NULL;
-	long long *geompos = NULL;
+	size_t *geompos = NULL;
 	volatile double *oprogress = NULL;
 	double todo = 0;
 	const char *fname = 0;
-	int child_shards = 0;
+	size_t child_shards = 0;
 	std::vector<std::vector<std::string>> *layer_unmaps = NULL;
 	char *stringpool = NULL;
-	long long *pool_off = NULL;
+	size_t *pool_off = NULL;
 	FILE *prefilter_fp = NULL;
 };
 
@@ -1340,7 +1199,7 @@ void *run_prefilter(void *v) {
 		}
 
 		mvt_layer tmp_layer;
-		tmp_layer.extent = 1LL << 32;
+		tmp_layer.extent = 1L << 32;
 		tmp_layer.name = (*(rpa->layer_unmaps))[sf.segment][sf.layer];
 
 		if (sf.t == VT_POLYGON) {
@@ -1413,23 +1272,22 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
+long write_tile(FILE *geoms, size_t *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile size_t *along, size_t alongminus, double gamma, size_t child_shards, size_t *meta_off, size_t *pool_off, long *initial_x, long *initial_y, volatile size_t *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long mingap, long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
-	double merge_fraction = 1;
 	double mingap_fraction = 1;
 	double minextent_fraction = 1;
 
 	static volatile double oprogress = 0;
-	long long og = *geompos_in;
+	size_t og = *geompos_in;
 
 	// XXX is there a way to do this without floating point?
-	int max_zoom_increment = std::log(child_shards) / std::log(4);
+	int max_zoom_increment = (int) floor(std::log(child_shards) / std::log(4));
 	if (child_shards < 4 || max_zoom_increment < 1) {
-		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
+		fprintf(stderr, "Internal error: %zu shards, max zoom increment %d\n", child_shards, max_zoom_increment);
 		exit(EXIT_FAILURE);
 	}
 	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
-		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
+		fprintf(stderr, "Internal error: %zu shards not a power of 2\n", child_shards);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1448,33 +1306,35 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
-		long long count = 0;
+		long count = 0;
 		double accum_area = 0;
 
 		double fraction_accum = 0;
 
-		unsigned long long previndex = 0, density_previndex = 0, merge_previndex = 0;
-		double scale = (double) (1LL << (64 - 2 * (z + 8)));
+		unsigned long previndex = 0, density_previndex = 0, merge_previndex = 0;
+		double scale = (double) (1L << (64 - 2 * (z + 8)));
 		double gap = 0, density_gap = 0;
 		double spacing = 0;
 		size_t clustered = 0;
 
-		long long original_features = 0;
-		long long unclipped_features = 0;
+		long original_features = 0;
+		long unclipped_features = 0;
 
 		std::vector<struct partial> partials;
 		std::map<std::string, std::vector<coalesce>> layers;
-		std::vector<unsigned long long> indices;
-		std::vector<long long> extents;
+		std::vector<unsigned long> indices;
+		std::vector<long> extents;
 		std::vector<serial_feature> coalesced_geometry;
 
-		int within[child_shards];
-		long long geompos[child_shards];
-		memset(within, '\0', child_shards * sizeof(int));
-		memset(geompos, '\0', child_shards * sizeof(long long));
+		bool within[child_shards];
+		size_t geompos[child_shards];
+		for (size_t i = 0; i < child_shards; i++) {
+			within[i] = false;
+			geompos[i] = 0;
+		}
 
 		if (*geompos_in != og) {
-			if (fseek(geoms, og, SEEK_SET) != 0) {
+			if (fseeko(geoms, (off_t) og, SEEK_SET) != 0) {
 				perror("fseek geom");
 				exit(EXIT_FAILURE);
 			}
@@ -1617,12 +1477,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (coalesced_geometry.size() != 0) {
-				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
-						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
-							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
+				for (size_t i = coalesced_geometry.size(); i > 0; i--) {
+					if (coalesced_geometry[i - 1].t == sf.t && coalesced_geometry[i - 1].layer == sf.layer) {
+						for (size_t j = 0; j < coalesced_geometry[i - 1].geometry.size(); j++) {
+							sf.geometry.push_back(coalesced_geometry[i - 1].geometry[j]);
 						}
-						coalesced_geometry.erase(coalesced_geometry.begin() + i);
+						coalesced_geometry.erase(coalesced_geometry.begin() + (ssize_t) i - 1);
 					}
 				}
 			}
@@ -1682,14 +1542,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
-		for (ssize_t i = (ssize_t) coalesced_geometry.size() - 1; i >= 0; i--) {
-			for (ssize_t j = partials.size() - 1; j >= 0; j--) {
-				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
-					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
-						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
+		for (size_t i = coalesced_geometry.size(); i > 0; i--) {
+			for (size_t j = partials.size(); j > 0; j--) {
+				if (partials[j - 1].layer == coalesced_geometry[i - 1].layer && partials[j - 1].t == coalesced_geometry[i - 1].t) {
+					for (size_t k = 0; k < coalesced_geometry[i - 1].geometry.size(); k++) {
+						partials[j - 1].geoms[0].push_back(coalesced_geometry[i - 1].geometry[k]);
 					}
 
-					coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					coalesced_geometry.erase(coalesced_geometry.begin() + (ssize_t) i - 1);
 					break;
 				}
 			}
@@ -1757,13 +1617,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		first_time = false;
-		bool merge_successful = true;
 
-		if (additional[A_DETECT_SHARED_BORDERS] || (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction < 1)) {
-			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
+		if (additional[A_DETECT_SHARED_BORDERS]) {
+			find_common_edges(partials, z, line_detail, simplification, maxzoom);
 		}
 
-		int tasks = ceil((double) CPUS / *running);
+		size_t tasks = (size_t) ceil((double) CPUS / *running);
 		if (tasks < 1) {
 			tasks = 1;
 		}
@@ -1771,7 +1630,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		pthread_t pthreads[tasks];
 		std::vector<partial_arg> args;
 		args.resize(tasks);
-		for (int i = 0; i < tasks; i++) {
+		for (size_t i = 0; i < tasks; i++) {
 			args[i].task = i;
 			args[i].tasks = tasks;
 			args[i].partials = &partials;
@@ -1787,7 +1646,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		if (tasks > 1) {
-			for (int i = 0; i < tasks; i++) {
+			for (size_t i = 0; i < tasks; i++) {
 				void *retval;
 
 				if (pthread_join(pthreads[i], &retval) != 0) {
@@ -1799,7 +1658,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> &pgeoms = partials[i].geoms;
 			signed char t = partials[i].t;
-			long long original_seq = partials[i].original_seq;
+			size_t original_seq = partials[i].original_seq;
 
 			// A complex polygon may have been split up into multiple geometries.
 			// Break them out into multiple features if necessary.
@@ -1823,7 +1682,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
 
-					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
+					// printf("segment %d layer %ld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
 
 					std::string layername = (*layer_unmaps)[partials[i].segment][partials[i].layer];
 					if (layers.count(layername) == 0) {
@@ -1833,8 +1692,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					auto l = layers.find(layername);
 					if (l == layers.end()) {
 						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
-						fprintf(stderr, "segment %d\n", partials[i].segment);
-						fprintf(stderr, "layer %lld\n", partials[i].layer);
+						fprintf(stderr, "segment %zu\n", partials[i].segment);
+						fprintf(stderr, "layer %zu\n", partials[i].layer);
 						exit(EXIT_FAILURE);
 					}
 					l->second.push_back(c);
@@ -1844,8 +1703,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		partials.clear();
 
-		int j;
-		for (j = 0; j < child_shards; j++) {
+		for (size_t j = 0; j < child_shards; j++) {
 			if (within[j]) {
 				serialize_byte(geomfile[j], -2, &geompos[j], fname);
 				within[j] = 0;
@@ -1950,7 +1808,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
 					int glow = 255;
 					if (layer_features[x].spacing > 0) {
-						glow = (1 / layer_features[x].spacing);
+						glow = (int) floor(1 / layer_features[x].spacing);
 						if (glow > 255) {
 							glow = 255;
 						}
@@ -1996,14 +1854,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (totalsize > max_tile_features && !prevent[P_FEATURE_LIMIT]) {
 				fprintf(stderr, "tile %d/%u/%u has %zu features, >%zu    \n", z, tx, ty, totalsize, max_tile_features);
 
-				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * max_tile_features / tile.layers.size() * 0.95;
-					if (!quiet) {
-						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
-					}
-					line_detail++;  // to keep it the same when the loop decrements it
-					continue;
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
+				if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
@@ -2024,7 +1875,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = (mingap + 1) * 1.5;
+						mg = (unsigned long) floor((mingap + 1) * 1.5);
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -2038,7 +1889,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					continue;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * max_tile_features / totalsize * 0.90;
-					long long m = choose_minextent(extents, minextent_fraction);
+					long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
 						minextent = m;
 						if (minextent > arg->minextent_out) {
@@ -2079,16 +1930,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
 				if (!quiet) {
-					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
+					fprintf(stderr, "tile %d/%u/%u size is %ld with detail %d, >%zu    \n", z, tx, ty, (long) compressed.size(), line_detail, max_tile_size);
 				}
 
-				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
-					if (!quiet) {
-						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
-					}
-					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
+				if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
 					} else {
@@ -2106,9 +1951,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;  // to keep it the same when the loop decrements it
 				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
-					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					unsigned long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (unsigned long) floor(mingap * 1.5);
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -2121,7 +1966,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					line_detail++;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
-					long long m = choose_minextent(extents, minextent_fraction);
+					long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
 						minextent = m;
 						if (minextent > arg->minextent_out) {
@@ -2179,7 +2024,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 }
 
 struct task {
-	int fileno = 0;
+	size_t fileno = 0;  // index, not fd
 	struct task *next = NULL;
 };
 
@@ -2188,7 +2033,7 @@ void *run_thread(void *vargs) {
 	struct task *task;
 
 	for (task = arg->tasks; task != NULL; task = task->next) {
-		int j = task->fileno;
+		size_t j = task->fileno;
 
 		if (arg->geomfd[j] < 0) {
 			// only one source file for zoom level 0
@@ -2198,7 +2043,7 @@ void *run_thread(void *vargs) {
 			continue;
 		}
 
-		// printf("%lld of geom_size\n", (long long) geom_size[j]);
+		// printf("%ld of geom_size\n", (long) geom_size[j]);
 
 		FILE *geom = fdopen(arg->geomfd[j], "rb");
 		if (geom == NULL) {
@@ -2206,8 +2051,8 @@ void *run_thread(void *vargs) {
 			exit(EXIT_FAILURE);
 		}
 
-		long long geompos = 0;
-		long long prevgeom = 0;
+		size_t geompos = 0;
+		size_t prevgeom = 0;
 
 		while (1) {
 			int z;
@@ -2223,7 +2068,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg);
+			long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2242,8 +2087,8 @@ void *run_thread(void *vargs) {
 					*arg->midy = y;
 					*arg->most = len;
 				} else if (len == *arg->most) {
-					unsigned long long a = (((unsigned long long) x) << 32) | y;
-					unsigned long long b = (((unsigned long long) *arg->midx) << 32) | *arg->midy;
+					unsigned long a = (((unsigned long) x) << 32) | y;
+					unsigned long b = (((unsigned long) *arg->midx) << 32) | *arg->midy;
 
 					if (a < b) {
 						*arg->midx = x;
@@ -2288,7 +2133,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
+int traverse_zooms(int *geomfd, size_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, long buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, size_t *meta_off, size_t *pool_off, long *initial_x, long *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter) {
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.
@@ -2310,9 +2155,8 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 	}
 
-	int i;
-	for (i = 0; i <= maxzoom; i++) {
-		long long most = 0;
+	for (int i = 0; i <= maxzoom; i++) {
+		long most = 0;
 
 		FILE *sub[TEMP_FILES];
 		int subfd[TEMP_FILES];
@@ -2334,7 +2178,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		size_t useful_threads = 0;
-		long long todo = 0;
+		long todo = 0;
 		for (size_t j = 0; j < TEMP_FILES; j++) {
 			todo += geom_size[j];
 			if (geom_size[j] > 0) {
@@ -2354,7 +2198,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		// Round down to a power of 2
-		for (int e = 0; e < 30; e++) {
+		for (size_t e = 0; e < 30; e++) {
 			if (threads >= (1U << e) && threads < (1U << (e + 1))) {
 				threads = 1U << e;
 				break;
@@ -2371,7 +2215,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 		struct dispatch {
 			struct task *tasks = NULL;
-			long long todo = 0;
+			long todo = 0;
 			struct dispatch *next = NULL;
 		};
 		std::vector<struct dispatch> dispatches;
@@ -2420,16 +2264,16 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		}
 
 		double zoom_gamma = gamma;
-		unsigned long long zoom_mingap = ((1LL << (32 - i)) / 256 * cluster_distance) * ((1LL << (32 - i)) / 256 * cluster_distance);
-		long long zoom_minextent = 0;
+		unsigned long zoom_mingap = ((1LU << (32 - i)) / 256 * cluster_distance) * ((1LU << (32 - i)) / 256 * cluster_distance);
+		long zoom_minextent = 0;
 		double zoom_fraction = 1;
 
 		for (size_t pass = start; pass < 2; pass++) {
 			pthread_t pthreads[threads];
 			std::vector<write_tile_args> args;
 			args.resize(threads);
-			int running = threads;
-			long long along = 0;
+			size_t running = threads;
+			size_t along = 0;
 
 			for (size_t thread = 0; thread < threads; thread++) {
 				args[thread].metabase = metabase;
@@ -2540,7 +2384,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			}
 
 			geomfd[j] = subfd[j];
-			geom_size[j] = geomst.st_size;
+			geom_size[j] = (size_t) geomst.st_size;
 		}
 
 		if (err != INT_MAX) {

@@ -120,5 +120,5 @@ std::string truncate16(std::string const &s, size_t runes) {
 		}
 	}
 
-	return std::string(s, 0, lastgood - start);
+	return std::string(s, 0, (size_t)(lastgood - start));
 }

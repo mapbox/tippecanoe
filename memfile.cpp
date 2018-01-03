@@ -47,7 +47,7 @@ int memfile_close(struct memfile *file) {
 	return 0;
 }
 
-int memfile_write(struct memfile *file, void *s, long long len) {
+ssize_t memfile_write(struct memfile *file, void *s, size_t len) {
 	if (file->off + len > file->len) {
 		if (munmap(file->map, file->len) != 0) {
 			return -1;
@@ -55,7 +55,7 @@ int memfile_write(struct memfile *file, void *s, long long len) {
 
 		file->len += (len + INCREMENT + 1) / INCREMENT * INCREMENT;
 
-		if (ftruncate(file->fd, file->len) != 0) {
+		if (ftruncate(file->fd, (off_t) file->len) != 0) {
 			return -1;
 		}
 
@@ -67,5 +67,5 @@ int memfile_write(struct memfile *file, void *s, long long len) {
 
 	memcpy(file->map + file->off, s, len);
 	file->off += len;
-	return len;
+	return (ssize_t) len;
 }

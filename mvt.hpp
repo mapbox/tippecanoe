@@ -13,15 +13,16 @@ struct mvt_layer;
 enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
+	mvt_undef = 3,
 	mvt_closepath = 7
 };
 
 struct mvt_geometry {
-	long long x = 0;
-	long long y = 0;
-	int /* mvt_operation */ op = 0;
+	long x = 0;
+	long y = 0;
+	unsigned /* mvt_operation */ op = 0;
 
-	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(unsigned op, long x, long y);
 
 	bool operator<(mvt_geometry const &s) const {
 		if (y < s.y || (y == s.y && x < s.x)) {
@@ -43,10 +44,10 @@ enum mvt_geometry_type {
 };
 
 struct mvt_feature {
-	std::vector<unsigned> tags{};
+	std::vector<size_t> tags{};
 	std::vector<mvt_geometry> geometry{};
 	int /* mvt_geometry_type */ type = 0;
-	unsigned long long id = 0;
+	unsigned long id = 0;
 	bool has_id = false;
 
 	mvt_feature() {
@@ -72,9 +73,9 @@ struct mvt_value {
 	union {
 		float float_value;
 		double double_value;
-		long long int_value;
-		unsigned long long uint_value;
-		long long sint_value;
+		long int_value;
+		unsigned long uint_value;
+		long sint_value;
 		bool bool_value;
 	} numeric_value;
 
@@ -89,12 +90,12 @@ struct mvt_value {
 };
 
 struct mvt_layer {
-	int version = 0;
+	unsigned version = 0;
 	std::string name = "";
 	std::vector<mvt_feature> features{};
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
-	long long extent = 0;
+	long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
@@ -112,12 +113,12 @@ struct mvt_tile {
 };
 
 bool is_compressed(std::string const &data);
-int decompress(std::string const &input, std::string &output);
-int compress(std::string const &input, std::string &output);
+bool decompress(std::string const &input, std::string &output);
+bool compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);
 
-bool is_integer(const char *s, long long *v);
-bool is_unsigned_integer(const char *s, unsigned long long *v);
+bool is_integer(const char *s, long *v);
+bool is_unsigned_integer(const char *s, unsigned long *v);
 #endif

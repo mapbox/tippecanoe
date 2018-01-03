@@ -9,7 +9,7 @@
 #include "csv.hpp"
 #include "milo/dtoa_milo.h"
 
-void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fname, int layer, std::string layername) {
+void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fname, size_t layer, std::string layername) {
 	FILE *f = fopen(fname.c_str(), "r");
 	if (f == NULL) {
 		perror(fname.c_str());
@@ -18,7 +18,9 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 	std::string s;
 	std::vector<std::string> header;
-	ssize_t latcol = -1, loncol = -1;
+	size_t latcol = 0, loncol = 0;
+	bool found_lat = false;
+	bool found_lon = false;
 
 	if ((s = csv_getline(f)).size() > 0) {
 		std::string err = check_utf8(s);
@@ -37,14 +39,16 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 			if (lower == "y" || lower == "lat" || (lower.find("latitude") != std::string::npos)) {
 				latcol = i;
+				found_lat = true;
 			}
 			if (lower == "x" || lower == "lon" || lower == "lng" || lower == "long" || (lower.find("longitude") != std::string::npos)) {
 				loncol = i;
+				found_lon = true;
 			}
 		}
 	}
 
-	if (latcol < 0 || loncol < 0) {
+	if (!found_lat || !found_lon) {
 		fprintf(stderr, "%s: Can't find \"lat\" and \"lon\" columns\n", fname.c_str());
 		exit(EXIT_FAILURE);
 	}
@@ -68,7 +72,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		double lon = atof(line[loncol].c_str());
 		double lat = atof(line[latcol].c_str());
 
-		long long x, y;
+		long x, y;
 		projection->project(lon, lat, 32, &x, &y);
 		drawvec dv;
 		dv.push_back(draw(VT_MOVETO, x, y));

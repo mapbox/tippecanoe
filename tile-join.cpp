@@ -31,11 +31,13 @@
 #include "jsonpull/jsonpull.h"
 #include "milo/dtoa_milo.h"
 
+// These are int for the sake of getopt_long
 int pk = false;
 int pC = false;
 int pg = false;
+
 size_t CPUS;
-int quiet = false;
+bool quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
 std::map<std::string, std::string> renames;
@@ -47,9 +49,9 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, bool ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
-	int features_added = 0;
+	size_t features_added = 0;
 	bool was_compressed;
 
 	if (!tile.decode(message, was_compressed)) {
@@ -144,7 +146,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			mvt_feature outfeature;
-			int matched = 0;
+			bool matched = 0;
 
 			if (feat.has_id) {
 				outfeature.has_id = true;
@@ -164,7 +166,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					value = val.string_value;
 					type = mvt_string;
 				} else if (val.type == mvt_int) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.int_value);
+					aprintf(&value, "%ld", (long) val.numeric_value.int_value);
 					type = mvt_double;
 				} else if (val.type == mvt_double) {
 					aprintf(&value, "%s", milo::dtoa_milo(val.numeric_value.double_value).c_str());
@@ -176,10 +178,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					aprintf(&value, "%s", val.numeric_value.bool_value ? "true" : "false");
 					type = mvt_bool;
 				} else if (val.type == mvt_sint) {
-					aprintf(&value, "%lld", (long long) val.numeric_value.sint_value);
+					aprintf(&value, "%ld", (long) val.numeric_value.sint_value);
 					type = mvt_double;
 				} else if (val.type == mvt_uint) {
-					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
+					aprintf(&value, "%lu", (long) val.numeric_value.uint_value);
 					type = mvt_double;
 				} else {
 					continue;
@@ -305,28 +307,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 	}
 }
 
-double min(double a, double b) {
-	if (a < b) {
-		return a;
-	} else {
-		return b;
-	}
-}
-
-double max(double a, double b) {
-	if (a > b) {
-		return a;
-	} else {
-		return b;
-	}
-}
-
 struct reader {
-	long long zoom = 0;
-	long long x = 0;
-	long long sorty = 0;
-	long long y = 0;
-	int z_flag = 0;
+	int zoom = 0;
+	unsigned x = 0;
+	unsigned sorty = 0;
+	unsigned y = 0;
+	bool z_flag = 0;
 
 	std::string data = "";
 
@@ -367,6 +353,15 @@ struct reader {
 	}
 };
 
+static unsigned flip(int z, unsigned x, unsigned y) {
+	long yy = (1LL << z) - 1 - y;
+	if (yy < 0 || yy > UINT_MAX) {
+		fprintf(stderr, "Impossible tile coordinate %d/%u/%u\n", z, x, y);
+		exit(EXIT_FAILURE);
+	}
+	return (unsigned) yy;
+}
+
 struct reader *begin_reading(char *fname) {
 	struct reader *r = new reader;
 	struct stat st;
@@ -385,7 +380,7 @@ struct reader *begin_reading(char *fname) {
 			r->zoom = r->dirtiles[0].z;
 			r->x = r->dirtiles[0].x;
 			r->y = r->dirtiles[0].y;
-			r->sorty = (1LL << r->zoom) - 1 - r->y;
+			r->sorty = flip(r->zoom, r->x, r->y);
 			r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 			r->dirtiles.erase(r->dirtiles.begin());
@@ -414,7 +409,7 @@ struct reader *begin_reading(char *fname) {
 			r->zoom = sqlite3_column_int(stmt, 0);
 			r->x = sqlite3_column_int(stmt, 1);
 			r->sorty = sqlite3_column_int(stmt, 2);
-			r->y = (1LL << r->zoom) - 1 - r->sorty;
+			r->y = flip(r->zoom, r->x, r->sorty);
 
 			const char *data = (const char *) sqlite3_column_blob(stmt, 3);
 			size_t len = sqlite3_column_bytes(stmt, 3);
@@ -439,7 +434,7 @@ struct arg {
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *keep_layers = NULL;
 	std::set<std::string> *remove_layers = NULL;
-	int ifmatched = 0;
+	bool ifmatched = 0;
 	json_object *filter = NULL;
 };
 
@@ -475,7 +470,7 @@ void *join_worker(void *v) {
 			}
 
 			if (!pk && compressed.size() > 500000) {
-				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
+				fprintf(stderr, "Tile %d/%u/%u size is %zu, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, compressed.size());
 			} else {
 				a->outputs.insert(std::pair<zxy, std::string>(ai->first, compressed));
 			}
@@ -485,7 +480,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, bool ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -512,7 +507,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 
 		if (ai == tasks.begin()) {
 			if (!quiet) {
-				fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
+				fprintf(stderr, "%d/%u/%u  \r", ai->first.z, ai->first.x, ai->first.y);
 			}
 		}
 	}
@@ -541,7 +536,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
+void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, bool ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -570,10 +565,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		double lat1, lon1, lat2, lon2;
 		tile2lonlat(r->x, r->y, r->zoom, &lon1, &lat1);
 		tile2lonlat(r->x + 1, r->y + 1, r->zoom, &lon2, &lat2);
-		minlat = min(lat2, minlat);
-		minlon = min(lon1, minlon);
-		maxlat = max(lat1, maxlat);
-		maxlon = max(lon2, maxlon);
+		minlat = std::min(lat2, minlat);
+		minlon = std::min(lon1, minlon);
+		maxlat = std::max(lat1, maxlat);
+		maxlon = std::max(lon2, maxlon);
 
 		if (r->zoom >= minzoom && r->zoom <= maxzoom) {
 			zxy tile = zxy(r->zoom, r->x, r->y);
@@ -596,7 +591,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				r->zoom = sqlite3_column_int(r->stmt, 0);
 				r->x = sqlite3_column_int(r->stmt, 1);
 				r->sorty = sqlite3_column_int(r->stmt, 2);
-				r->y = (1LL << r->zoom) - 1 - r->sorty;
+				r->y = flip(r->zoom, r->x, r->sorty);
 				const char *data = (const char *) sqlite3_column_blob(r->stmt, 3);
 				size_t len = sqlite3_column_bytes(r->stmt, 3);
 
@@ -611,7 +606,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				r->zoom = r->dirtiles[0].z;
 				r->x = r->dirtiles[0].x;
 				r->y = r->dirtiles[0].y;
-				r->sorty = (1LL << r->zoom) - 1 - r->y;
+				r->sorty = flip(r->zoom, r->x, r->y);
 				r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 				r->dirtiles.erase(r->dirtiles.begin());
@@ -630,10 +625,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		*rr = r;
 	}
 
-	st->minlon = min(minlon, st->minlon);
-	st->maxlon = max(maxlon, st->maxlon);
-	st->minlat = min(minlat, st->minlat);
-	st->maxlat = max(maxlat, st->maxlat);
+	st->minlon = std::min(minlon, st->minlon);
+	st->maxlon = std::max(maxlon, st->maxlon);
+	st->minlat = std::min(minlat, st->minlat);
+	st->maxlat = std::max(maxlat, st->maxlat);
 
 	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 	layermap = merge_layermaps(layermaps);
@@ -651,15 +646,15 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
-				st->minzoom = min(st->minzoom, minz);
+				int minz = std::max(sqlite3_column_int(r->stmt, 0), minzoom);
+				st->minzoom = std::min(st->minzoom, minz);
 			}
 			sqlite3_finalize(r->stmt);
 		}
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
-				st->maxzoom = max(st->maxzoom, maxz);
+				int maxz = std::min(sqlite3_column_int(r->stmt, 0), maxzoom);
+				st->maxzoom = std::max(st->maxzoom, maxz);
 			}
 			sqlite3_finalize(r->stmt);
 		}
@@ -708,10 +703,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
 				if (s != NULL) {
 					if (sscanf((char *) s, "%lf,%lf,%lf,%lf", &minlon, &minlat, &maxlon, &maxlat) == 4) {
-						st->minlon = min(minlon, st->minlon);
-						st->maxlon = max(maxlon, st->maxlon);
-						st->minlat = min(minlat, st->minlat);
-						st->maxlat = max(maxlat, st->maxlat);
+						st->minlon = std::min(minlon, st->minlon);
+						st->maxlon = std::max(maxlon, st->maxlon);
+						st->minlat = std::min(minlat, st->minlat);
+						st->maxlat = std::max(maxlat, st->maxlat);
 					}
 				}
 			}
@@ -738,8 +733,8 @@ int main(int argc, char **argv) {
 	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
 	char *csv = NULL;
-	int force = 0;
-	int ifmatched = 0;
+	bool force = false;
+	bool ifmatched = false;
 	json_object *filter = NULL;
 
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
@@ -933,8 +928,10 @@ int main(int argc, char **argv) {
 
 	struct stats st;
 	memset(&st, 0, sizeof(st));
-	st.minzoom = st.minlat = st.minlon = INT_MAX;
-	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
+	st.minzoom = INT_MAX;
+	st.minlat = st.minlon = INT_MAX;
+	st.maxzoom = INT_MIN;
+	st.maxlat = st.maxlon = INT_MIN;
 
 	std::map<std::string, layermap_entry> layermap;
 	std::string attribution;

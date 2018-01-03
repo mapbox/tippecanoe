@@ -36,10 +36,10 @@ extern "C" {
 struct writer_arg {
 	int write_to;
 	std::vector<mvt_layer> *layers;
-	unsigned z;
+	int z;
 	unsigned x;
 	unsigned y;
-	int extent;
+	long extent;
 };
 
 void *run_writer(void *a) {
@@ -83,7 +83,7 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 }
 
 // Reads from the postfilter
-std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, long extent) {
 	std::map<std::string, mvt_layer> ret;
 
 	FILE *f = fdopen(fd, "r");
@@ -97,7 +97,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "Filter output:%d: %s\n", jp->line, jp->error);
+				fprintf(stderr, "Filter output:%zu: %s\n", jp->line, jp->error);
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
@@ -118,7 +118,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "Filter output:%d: filtered feature with no geometry\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: filtered feature with no geometry\n", jp->line);
 			json_context(j);
 			json_free(j);
 			exit(EXIT_FAILURE);
@@ -126,7 +126,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "Filter output:%d: feature without properties hash\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: feature without properties hash\n", jp->line);
 			json_context(j);
 			json_free(j);
 			exit(EXIT_FAILURE);
@@ -134,20 +134,20 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
-			fprintf(stderr, "Filter output:%d: null geometry (additional not reported)\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
 
 		if (geometry_type->type != JSON_STRING) {
-			fprintf(stderr, "Filter output:%d: geometry type is not a string\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: geometry type is not a string\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-			fprintf(stderr, "Filter output:%d: feature without coordinates array\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: feature without coordinates array\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -159,7 +159,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			}
 		}
 		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			fprintf(stderr, "Filter output:%zu: Can't handle geometry type %s\n", jp->line, geometry_type->string);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -192,9 +192,9 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
-			long long scale = 1LL << (32 - z);
-			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
-			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
+			long scale = 1L << (32 - z);
+			dv[i].x = (long) std::round((dv[i].x - scale * x) * extent / (double) scale);
+			dv[i].y = (long) std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}
 
 		if (mb_geometry[t] == VT_POLYGON) {
@@ -215,7 +215,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				feature.id = atoll(id->string);
+				feature.id = strtoul(id->string, NULL, 10);
 				feature.has_id = true;
 			}
 
@@ -297,7 +297,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		json_object *j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error != NULL) {
-				fprintf(stderr, "Filter output:%d: %s\n", jp->line, jp->error);
+				fprintf(stderr, "Filter output:%zu: %s\n", jp->line, jp->error);
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
@@ -319,7 +319,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "Filter output:%d: filtered feature with no geometry\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: filtered feature with no geometry\n", jp->line);
 			json_context(j);
 			json_free(j);
 			exit(EXIT_FAILURE);
@@ -327,7 +327,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "Filter output:%d: feature without properties hash\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: feature without properties hash\n", jp->line);
 			json_context(j);
 			json_free(j);
 			exit(EXIT_FAILURE);
@@ -335,20 +335,20 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
-			fprintf(stderr, "Filter output:%d: null geometry (additional not reported)\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
 
 		if (geometry_type->type != JSON_STRING) {
-			fprintf(stderr, "Filter output:%d: geometry type is not a string\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: geometry type is not a string\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
-			fprintf(stderr, "Filter output:%d: feature without coordinates array\n", jp->line);
+			fprintf(stderr, "Filter output:%zu: feature without coordinates array\n", jp->line);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -360,7 +360,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			}
 		}
 		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			fprintf(stderr, "Filter output:%zu: Can't handle geometry type %s\n", jp->line, geometry_type->string);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -372,15 +372,15 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		}
 
 		// Scale and offset geometry from global to tile
-		double scale = 1LL << geometry_scale;
+		double scale = 1L << geometry_scale;
 		for (size_t i = 0; i < dv.size(); i++) {
 			unsigned sx = 0, sy = 0;
 			if (z != 0) {
 				sx = x << (32 - z);
 				sy = y << (32 - z);
 			}
-			dv[i].x = std::round(dv[i].x / scale) * scale - sx;
-			dv[i].y = std::round(dv[i].y / scale) * scale - sy;
+			dv[i].x = (long) std::floor(std::round(dv[i].x / scale) * scale - sx);
+			dv[i].y = (long) std::floor(std::round(dv[i].y / scale) * scale - sy);
 		}
 
 		if (dv.size() > 0) {
@@ -389,8 +389,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.geometry = dv;
 			sf.seq = 0;
 			sf.index = 0;
-			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
-			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
+			sf.bbox[0] = sf.bbox[1] = LONG_MAX;
+			sf.bbox[2] = sf.bbox[3] = LONG_MIN;
 			sf.extent = 0;
 			sf.m = 0;
 			sf.metapos = 0;
@@ -406,17 +406,17 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 				json_object *index = json_hash_get(tippecanoe, "index");
 				if (index != NULL && index->type == JSON_NUMBER) {
-					sf.index = index->number;
+					sf.index = strtoul(index->string, NULL, 10);
 				}
 
 				json_object *sequence = json_hash_get(tippecanoe, "sequence");
 				if (sequence != NULL && sequence->type == JSON_NUMBER) {
-					sf.seq = sequence->number;
+					sf.seq = strtoul(sequence->string, NULL, 10);
 				}
 
 				json_object *extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && sequence->type == JSON_NUMBER) {
-					sf.extent = extent->number;
+					sf.extent = strtol(extent->string, NULL, 10);
 				}
 			}
 
@@ -439,7 +439,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				sf.id = atoll(id->string);
+				sf.id = strtoul(id->string, NULL, 10);
 				sf.has_id = true;
 			}
 
@@ -512,7 +512,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 static pthread_mutex_t pipe_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, unsigned z, unsigned x, unsigned y) {
+void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, int z, unsigned x, unsigned y) {
 	// This will create two pipes, a new thread, and a new process.
 	//
 	// The new process will read from one pipe and write to the other, and execute the filter.
@@ -606,7 +606,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, long extent) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);

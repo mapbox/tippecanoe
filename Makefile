@@ -9,7 +9,7 @@ CXX := $(CXX)
 CFLAGS := $(CFLAGS)
 CXXFLAGS := $(CXXFLAGS) -std=c++11
 LDFLAGS := $(LDFLAGS)
-WARNING_FLAGS := -Wall -Wshadow -Wsign-compare -Wextra -Wunreachable-code -Wuninitialized -Wshadow
+WARNING_FLAGS := -Wall -Wshadow -Wsign-compare -Wextra -Wunreachable-code -Wuninitialized -Wshadow -Wconversion
 RELEASE_FLAGS := -O3 -DNDEBUG
 DEBUG_FLAGS := -O0 -DDEBUG -fno-inline-functions -fno-omit-frame-pointer
 

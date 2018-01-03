@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <protozero/pbf_reader.hpp>
 #include <sys/stat.h>
+#include <limits.h>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
@@ -37,7 +38,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 		}
 		fprintq(stdout, tile.layers[i].name.c_str());
 
-		int points = 0, lines = 0, polygons = 0;
+		size_t points = 0, lines = 0, polygons = 0;
 		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
 			if (tile.layers[i].features[j].type == mvt_point) {
 				points++;
@@ -48,13 +49,13 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 			}
 		}
 
-		printf(": { \"points\": %d, \"lines\": %d, \"polygons\": %d, \"extent\": %lld }", points, lines, polygons, tile.layers[i].extent);
+		printf(": { \"points\": %zu, \"lines\": %zu, \"polygons\": %zu, \"extent\": %ld }", points, lines, polygons, tile.layers[i].extent);
 	}
 
 	printf(" } }\n");
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
+void handle(std::string message, int z, unsigned x, unsigned y, bool describe, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -98,7 +99,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		mvt_layer &layer = tile.layers[l];
 
 		if (layer.extent <= 0) {
-			fprintf(stderr, "Impossible layer extent %lld in mbtiles\n", layer.extent);
+			fprintf(stderr, "Impossible layer extent %ld in mbtiles\n", layer.extent);
 			exit(EXIT_FAILURE);
 		}
 
@@ -115,7 +116,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 				printf("{ \"type\": \"FeatureCollection\"");
 				printf(", \"properties\": { \"layer\": ");
 				fprintq(stdout, layer.name.c_str());
-				printf(", \"version\": %d, \"extent\": %lld", layer.version, layer.extent);
+				printf(", \"version\": %d, \"extent\": %ld", layer.version, layer.extent);
 				printf(" }");
 				printf(", \"features\": [\n");
 
@@ -196,7 +197,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	}
 
 	if (z < 0) {
-		int within = 0;
+		bool within = false;
 
 		if (!pipeline && !stats) {
 			printf("{ \"type\": \"FeatureCollection\", \"properties\": {\n");
@@ -297,17 +298,25 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					within = 1;
 				}
 
-				int len = sqlite3_column_bytes(stmt, 0);
+				size_t len = sqlite3_column_bytes(stmt, 0);
 				int tz = sqlite3_column_int(stmt, 1);
-				int tx = sqlite3_column_int(stmt, 2);
-				int ty = sqlite3_column_int(stmt, 3);
+				unsigned tx = sqlite3_column_int(stmt, 2);
+				unsigned ty = sqlite3_column_int(stmt, 3);
 
 				if (tz < 0 || tz >= 32) {
 					fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
 					exit(EXIT_FAILURE);
 				}
 
-				ty = (1LL << tz) - 1 - ty;
+				long lty = (1L << tz) - 1 - ty;
+
+				if (lty < 0 || lty > UINT_MAX) {
+					fprintf(stderr, "Impossible tile coordinate %d/%u/%ld in mbtiles\n", tz, tx, lty);
+					exit(EXIT_FAILURE);
+				}
+
+				ty = (unsigned) lty;
+
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
 				handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
@@ -323,7 +332,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			printf("]\n");
 		}
 	} else {
-		int handled = 0;
+		bool handled = false;
 		while (z >= 0 && !handled) {
 			const char *sql = "SELECT tile_data from tiles where zoom_level = ? and tile_column = ? and tile_row = ?;";
 			sqlite3_stmt *stmt;
@@ -334,10 +343,16 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 
 			sqlite3_bind_int(stmt, 1, z);
 			sqlite3_bind_int(stmt, 2, x);
-			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
+
+			long yy = (1L << z) - 1 - y;
+			if (yy < 0 || yy > INT_MAX) {
+				fprintf(stderr, "Impossible tile coordinate %d/%u/%u\n", z, x, y);
+				exit(EXIT_FAILURE);
+			}
+			sqlite3_bind_int(stmt, 3, (int) yy);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
-				int len = sqlite3_column_bytes(stmt, 0);
+				size_t len = sqlite3_column_bytes(stmt, 0);
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
 				if (z != oz) {

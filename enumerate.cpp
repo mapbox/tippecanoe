@@ -20,17 +20,17 @@ void enumerate(char *fname) {
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		long long zoom = sqlite3_column_int(stmt, 0);
-		long long x = sqlite3_column_int(stmt, 1);
-		long long y = sqlite3_column_int(stmt, 2);
+		long zoom = sqlite3_column_int(stmt, 0);
+		long x = sqlite3_column_int(stmt, 1);
+		long y = sqlite3_column_int(stmt, 2);
 
 		if (zoom < 0 || zoom > 31) {
-			fprintf(stderr, "Corrupt mbtiles file: impossible zoom level %lld\n", zoom);
+			fprintf(stderr, "Corrupt mbtiles file: impossible zoom level %ld\n", zoom);
 			exit(EXIT_FAILURE);
 		}
 
-		y = (1LL << zoom) - 1 - y;
-		printf("%s %lld %lld %lld\n", fname, zoom, x, y);
+		y = (1L << zoom) - 1 - y;
+		printf("%s %ld %ld %ld\n", fname, zoom, x, y);
 	}
 
 	sqlite3_finalize(stmt);

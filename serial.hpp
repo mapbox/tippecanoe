@@ -11,24 +11,27 @@
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname);
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname);
-void serialize_ulong_long(FILE *out, unsigned long long n, long long *fpos, const char *fname);
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname);
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname);
-void serialize_string(FILE *out, const char *s, long long *fpos, const char *fname);
+void serialize_int(FILE *out, int n, size_t *fpos, const char *fname);
+void serialize_long(FILE *out, long n, size_t *fpos, const char *fname);
+void serialize_ulong(FILE *out, unsigned long n, size_t *fpos, const char *fname);
+void serialize_byte(FILE *out, signed char n, size_t *fpos, const char *fname);
+void serialize_ubyte(FILE *out, unsigned char n, size_t *fpos, const char *fname);
+void serialize_uint(FILE *out, unsigned n, size_t *fpos, const char *fname);
+void serialize_string(FILE *out, const char *s, size_t *fpos, const char *fname);
 
 void deserialize_int(char **f, int *n);
-void deserialize_long_long(char **f, long long *n);
-void deserialize_ulong_long(char **f, unsigned long long *n);
+void deserialize_long(char **f, long *n);
+void deserialize_ulong(char **f, unsigned long *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
+void deserialize_ubyte(char **f, unsigned char *n);
 
-int deserialize_int_io(FILE *f, int *n, long long *geompos);
-int deserialize_long_long_io(FILE *f, long long *n, long long *geompos);
-int deserialize_ulong_long_io(FILE *f, unsigned long long *n, long long *geompos);
-int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos);
-int deserialize_byte_io(FILE *f, signed char *n, long long *geompos);
+bool deserialize_int_io(FILE *f, int *n, size_t *geompos);
+bool deserialize_long_io(FILE *f, long *n, size_t *geompos);
+bool deserialize_ulong_io(FILE *f, unsigned long *n, size_t *geompos);
+bool deserialize_uint_io(FILE *f, unsigned *n, size_t *geompos);
+bool deserialize_byte_io(FILE *f, signed char *n, size_t *geompos);
+bool deserialize_ubyte_io(FILE *f, unsigned char *n, size_t *geompos);
 
 struct serial_val {
 	int type = 0;
@@ -36,15 +39,15 @@ struct serial_val {
 };
 
 struct serial_feature {
-	long long layer = 0;
-	int segment = 0;
-	long long seq = 0;
+	size_t layer = 0;
+	size_t segment = 0;
+	size_t seq = 0;
 
 	signed char t = 0;
 	signed char feature_minzoom = 0;
 
 	bool has_id = false;
-	unsigned long long id = 0;
+	unsigned long id = 0;
 
 	bool has_tippecanoe_minzoom = false;
 	int tippecanoe_minzoom = 0;
@@ -53,23 +56,25 @@ struct serial_feature {
 	int tippecanoe_maxzoom = 0;
 
 	drawvec geometry = drawvec();
-	unsigned long long index = 0;
-	long long extent = 0;
+	unsigned long index = 0;
+	long extent = 0;
 
 	size_t m = 0;
-	std::vector<long long> keys{};
-	std::vector<long long> values{};
-	long long metapos = 0;
+	std::vector<size_t> keys{};
+	std::vector<size_t> values{};
+
+	bool has_metapos = false;
+	size_t metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
-	long long bbox[4] = {0, 0, 0, 0};
+	long bbox[4] = {0, 0, 0, 0};
 	std::vector<std::string> full_keys{};
 	std::vector<serial_val> full_values{};
 	std::string layername = "";
 };
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+void serialize_feature(FILE *geomfile, serial_feature *sf, size_t *geompos, const char *fname, long wx, long wy, bool include_minzoom);
+serial_feature deserialize_feature(FILE *geoms, size_t *geompos_in, char *metabase, size_t *meta_off, int z, unsigned tx, unsigned ty, long *initial_x, long *initial_y);
 
 struct reader {
 	int metafd = -1;
@@ -84,11 +89,11 @@ struct reader {
 	FILE *geomfile = NULL;
 	FILE *indexfile = NULL;
 
-	long long metapos = 0;
-	long long geompos = 0;
-	long long indexpos = 0;
+	size_t metapos = 0;
+	size_t geompos = 0;
+	size_t indexpos = 0;
 
-	long long file_bbox[4] = {0, 0, 0, 0};
+	long file_bbox[4] = {0, 0, 0, 0};
 
 	struct stat geomst {};
 	struct stat metast {};
@@ -98,17 +103,17 @@ struct reader {
 
 struct serialization_state {
 	const char *fname = NULL;  // source file name
-	int line = 0;		   // user-oriented location within source for error reports
+	size_t line = 0;	   // user-oriented location within source for error reports
 
-	volatile long long *layer_seq = NULL;     // sequence within current layer
-	volatile long long *progress_seq = NULL;  // overall sequence for progress indicator
+	volatile size_t *layer_seq = NULL;     // sequence within current layer
+	volatile size_t *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
-	int segment = 0;			     // the current input thread
+	size_t segment = 0;			     // the current input thread
 
-	unsigned *initial_x = NULL;  // relative offset of all geometries
-	unsigned *initial_y = NULL;
-	int *initialized = NULL;
+	long *initial_x = NULL;  // relative offset of all geometries
+	long *initial_y = NULL;
+	bool *initialized = NULL;
 
 	double *dist_sum = NULL;  // running tally for calculation of resolution within features
 	size_t *dist_count = NULL;
@@ -125,11 +130,11 @@ struct serialization_state {
 	std::map<std::string, int> const *attribute_types = NULL;
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
-	int exclude_all = 0;
+	bool exclude_all = false;
 	json_object *filter = NULL;
 };
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf);
+bool serialize_feature(struct serialization_state *sst, serial_feature &sf);
 void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types);
 
 #endif
