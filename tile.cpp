@@ -2363,6 +2363,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		if (threads >= (1U << 30)) {
 			threads = 1U << 30;
 		}
+		if (threads < 1) {
+			threads = 1;
+		}
 
 		// Assign temporary files to threads
 
