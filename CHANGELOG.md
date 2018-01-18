@@ -1,3 +1,7 @@
+## 1.27.6
+
+* Fix opportunities for integer overflow and out-of-bounds references
+
 ## 1.27.5
 
 * Add --cluster-densest-as-needed to cluster features
