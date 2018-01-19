@@ -118,19 +118,11 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			} else if (val.type == mvt_double) {
 				fprintq(fp, key);
 				double v = val.numeric_value.double_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
-				} else {
-					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
-				}
+				fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 			} else if (val.type == mvt_float) {
 				fprintq(fp, key);
 				double v = val.numeric_value.float_value;
-				if (v == (long long) v) {
-					fprintf(fp, ": %lld", (long long) v);
-				} else {
-					fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
-				}
+				fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
 			} else if (val.type == mvt_sint) {
 				fprintq(fp, key);
 				fprintf(fp, ": %lld", val.numeric_value.sint_value);

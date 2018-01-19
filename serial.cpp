@@ -473,7 +473,11 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	sf.extent = (long long) extent;
+	if (extent <= LLONG_MAX) {
+		sf.extent = (long long) extent;
+	} else {
+		sf.extent = LLONG_MAX;
+	}
 
 	if (!prevent[P_INPUT_ORDER]) {
 		sf.seq = 0;

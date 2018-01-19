@@ -1,0 +1,13 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-180.000000,0.800000,180.000000,1.000000",
+"center": "-179.989014,1.000000,14",
+"description": "tests/onefeature/-zg_--drop-densest-as-needed.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "14",
+"minzoom": "0",
+"name": "tests/onefeature/-zg_--drop-densest-as-needed.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+] }
