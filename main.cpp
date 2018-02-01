@@ -70,6 +70,7 @@ double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
+long justx = -1, justy = -1;
 
 int prevent[256];
 int additional[256];
@@ -1718,6 +1719,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	unsigned iz = 0, ix = 0, iy = 0;
 	choose_first_zoom(file_bbox, readers, &iz, &ix, &iy, minzoom, buffer);
 
+	if (justx >= 0) {
+		iz = minzoom;
+		ix = justx;
+		iy = justy;
+	}
+
 	long long geompos = 0;
 
 	/* initial tile is 0/0/0 */
@@ -2253,6 +2260,7 @@ int main(int argc, char **argv) {
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"extend-zooms-if-still-dropping", no_argument, &additional[A_EXTEND_ZOOMS], 1},
+		{"one-tile", required_argument, 0, 'R'},
 
 		{"Tile resolution", 0, 0, 0},
 		{"full-detail", required_argument, 0, 'd'},
@@ -2427,6 +2435,19 @@ int main(int argc, char **argv) {
 		case 'Z':
 			minzoom = atoi(optarg);
 			break;
+
+		case 'R': {
+			unsigned z, x, y;
+			if (sscanf(optarg, "%u/%u/%u", &z, &x, &y) == 3) {
+				minzoom = z;
+				maxzoom = z;
+				justx = x;
+				justy = y;
+			} else {
+				fprintf(stderr, "--one-tile argument must be z/x/y\n");
+				exit(EXIT_FAILURE);
+			}
+		}
 
 		case 'B':
 			if (strcmp(optarg, "g") == 0) {

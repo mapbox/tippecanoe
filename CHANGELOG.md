@@ -1,3 +1,7 @@
+## 1.27.7
+
+* Add an option to produce only a single tile
+
 ## 1.27.6
 
 * Fix opportunities for integer overflow and out-of-bounds references
