@@ -1601,29 +1601,22 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.index - merge_previndex < mingap) {
 					continue;
 				}
-			}
-			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
+				indices.push_back(sf.index);
+				if (sf.index - merge_previndex < mingap) {
+					coalesced_geometry.push_back(sf);
+					continue;
+				}
+			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT) {
 					continue;
 				}
-			}
-			if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent) {
 					coalesced_geometry.push_back(sf);
 					continue;
-				}
-			}
-
-			if (coalesced_geometry.size() != 0) {
-				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
-						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
-							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
-						}
-						coalesced_geometry.erase(coalesced_geometry.begin() + i);
-					}
 				}
 			}
 
@@ -1641,9 +1634,23 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			fraction_accum += fraction;
 			if (fraction_accum < 1) {
+				if (additional[A_COALESCE_FRACTION_AS_NEEDED]) {
+					coalesced_geometry.push_back(sf);
+				}
 				continue;
 			}
 			fraction_accum -= 1;
+
+			if (coalesced_geometry.size() != 0) {
+				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
+					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
+						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
+							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
+						}
+						coalesced_geometry.erase(coalesced_geometry.begin() + i);
+					}
+				}
+			}
 
 			bool reduced = false;
 			if (sf.t == VT_POLYGON) {
@@ -2020,7 +2027,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
@@ -2051,12 +2058,12 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						line_detail++;
 						continue;
 					}
-				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
+				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) {
 					fraction = fraction * max_tile_features / totalsize * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
-					if (additional[A_DROP_FRACTION_AS_NEEDED] && fraction < arg->fraction_out) {
+					if ((additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
 						arg->still_dropping = true;
 					}
@@ -2104,7 +2111,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
@@ -2134,7 +2141,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						line_detail++;
 						continue;
 					}
-				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED]) {
+				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
@@ -2142,7 +2149,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
-					if (additional[A_DROP_FRACTION_AS_NEEDED] && fraction < arg->fraction_out) {
+					if ((additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
 						arg->still_dropping = true;
 					}
@@ -2418,7 +2425,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		int err = INT_MAX;
 
 		size_t start = 1;
-		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+		if (additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 			start = 0;
 		}
 
