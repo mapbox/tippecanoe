@@ -1198,6 +1198,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	double dist_sum = 0;
 	size_t dist_count = 0;
 
+	int files_open_before_reading = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	if (files_open_before_reading < 0) {
+		perror("open /dev/null");
+		exit(EXIT_FAILURE);
+	}
+	if (close(files_open_before_reading) != 0) {
+		perror("close");
+		exit(EXIT_FAILURE);
+	}
+
 	size_t nsources = sources.size();
 	for (size_t source = 0; source < nsources; source++) {
 		std::string reading;
@@ -1383,6 +1393,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				perror("munmap source file");
 				exit(EXIT_FAILURE);
 			}
+
+			if (close(fd) != 0) {
+				perror("close input file");
+				exit(EXIT_FAILURE);
+			}
 		} else {
 			FILE *fp = fdopen(fd, "r");
 			if (fp == NULL) {
@@ -1541,6 +1556,22 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 		}
+	}
+
+	int files_open_after_reading = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	if (files_open_after_reading < 0) {
+		perror("open /dev/null");
+		exit(EXIT_FAILURE);
+	}
+	if (close(files_open_after_reading) != 0) {
+		perror("close");
+		exit(EXIT_FAILURE);
+	}
+
+	if (files_open_after_reading > files_open_before_reading) {
+		fprintf(stderr, "Internal error: Files left open after reading input. (%d vs %d)\n",
+			files_open_before_reading, files_open_after_reading);
+		ret = EXIT_FAILURE;
 	}
 
 	if (!quiet) {
