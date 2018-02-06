@@ -19,12 +19,14 @@ documentation.
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <string>
 #include <utility>
 
 #include <protozero/config.hpp>
+#include <protozero/data_view.hpp>
 #include <protozero/types.hpp>
 #include <protozero/varint.hpp>
 
@@ -53,11 +55,11 @@ class pbf_writer {
     // A pointer to a string buffer holding the data already written to the
     // PBF message. For default constructed writers or writers that have been
     // rolled back, this is a nullptr.
-    std::string* m_data;
+    std::string* m_data = nullptr;
 
     // A pointer to a parent writer object if this is a submessage. If this
     // is a top-level writer, it is a nullptr.
-    pbf_writer* m_parent_writer;
+    pbf_writer* m_parent_writer = nullptr;
 
     // This is usually 0. If there is an open submessage, this is set in the
     // parent to the rollback position, ie. the last position before the
@@ -97,12 +99,12 @@ class pbf_writer {
     }
 
     template <typename T, typename It>
-    void add_packed_fixed(pbf_tag_type tag, It first, It last, std::input_iterator_tag) {
+    void add_packed_fixed(pbf_tag_type tag, It first, It last, std::input_iterator_tag /*unused*/) {
         if (first == last) {
             return;
         }
 
-        pbf_writer sw(*this, tag);
+        pbf_writer sw{*this, tag};
 
         while (first != last) {
             sw.add_fixed<T>(*first++);
@@ -110,7 +112,7 @@ class pbf_writer {
     }
 
     template <typename T, typename It>
-    void add_packed_fixed(pbf_tag_type tag, It first, It last, std::forward_iterator_tag) {
+    void add_packed_fixed(pbf_tag_type tag, It first, It last, std::forward_iterator_tag /*unused*/) {
         if (first == last) {
             return;
         }
@@ -130,7 +132,7 @@ class pbf_writer {
             return;
         }
 
-        pbf_writer sw(*this, tag);
+        pbf_writer sw{*this, tag};
 
         while (first != last) {
             sw.add_varint(uint64_t(*first++));
@@ -143,7 +145,7 @@ class pbf_writer {
             return;
         }
 
-        pbf_writer sw(*this, tag);
+        pbf_writer sw{*this, tag};
 
         while (first != last) {
             sw.add_varint(encode_zigzag64(*first++));
@@ -194,9 +196,9 @@ class pbf_writer {
         const auto length = pbf_length_type(m_data->size() - m_pos);
 
         protozero_assert(m_data->size() >= m_pos - reserve_bytes);
-        const auto n = write_varint(m_data->begin() + long(m_pos) - reserve_bytes, length);
+        const auto n = write_varint(m_data->begin() + int64_t(m_pos) - reserve_bytes, length);
 
-        m_data->erase(m_data->begin() + long(m_pos) - reserve_bytes + n, m_data->begin() + long(m_pos));
+        m_data->erase(m_data->begin() + int64_t(m_pos) - reserve_bytes + n, m_data->begin() + int64_t(m_pos));
         m_pos = 0;
     }
 
@@ -225,18 +227,14 @@ public:
      * doesn't have to be empty. The pbf_writer will just append data.
      */
     explicit pbf_writer(std::string& data) noexcept :
-        m_data(&data),
-        m_parent_writer(nullptr) {
+        m_data(&data) {
     }
 
     /**
      * Create a writer without a data store. In this form the writer can not
      * be used!
      */
-    pbf_writer() noexcept :
-        m_data(nullptr),
-        m_parent_writer(nullptr) {
-    }
+    pbf_writer() noexcept = default;
 
     /**
      * Construct a pbf_writer for a submessage from the pbf_writer of the
@@ -254,22 +252,56 @@ public:
         m_parent_writer->open_submessage(tag, size);
     }
 
-    /// A pbf_writer object can be copied
-    pbf_writer(const pbf_writer&) noexcept = default;
+    /// A pbf_writer object can not be copied
+    pbf_writer(const pbf_writer&) = delete;
 
-    /// A pbf_writer object can be copied
-    pbf_writer& operator=(const pbf_writer&) noexcept = default;
+    /// A pbf_writer object can not be copied
+    pbf_writer& operator=(const pbf_writer&) = delete;
 
-    /// A pbf_writer object can be moved
-    pbf_writer(pbf_writer&&) noexcept = default;
+    /**
+     * A pbf_writer object can be moved. After this the other pbf_writer will
+     * be invalid.
+     */
+    pbf_writer(pbf_writer&& other) noexcept :
+        m_data(other.m_data),
+        m_parent_writer(other.m_parent_writer),
+        m_rollback_pos(other.m_rollback_pos),
+        m_pos(other.m_pos) {
+        other.m_data = nullptr;
+        other.m_parent_writer = nullptr;
+        other.m_rollback_pos = 0;
+        other.m_pos = 0;
+    }
 
-    /// A pbf_writer object can be moved
-    pbf_writer& operator=(pbf_writer&&) noexcept = default;
+    /**
+     * A pbf_writer object can be moved. After this the other pbf_writer will
+     * be invalid.
+     */
+    pbf_writer& operator=(pbf_writer&& other) noexcept {
+        m_data = other.m_data;
+        m_parent_writer = other.m_parent_writer;
+        m_rollback_pos = other.m_rollback_pos;
+        m_pos = other.m_pos;
+        other.m_data = nullptr;
+        other.m_parent_writer = nullptr;
+        other.m_rollback_pos = 0;
+        other.m_pos = 0;
+        return *this;
+    }
 
     ~pbf_writer() {
-        if (m_parent_writer) {
+        if (m_parent_writer != nullptr) {
             m_parent_writer->close_submessage();
         }
+    }
+
+    /**
+     * Check if this writer is valid. A writer is invalid if it was default
+     * constructed, moved from, or if commit() has been called on it.
+     * Otherwise it is valid.
+     */
+    bool valid() const noexcept {
+        return m_data != nullptr;
     }
 
     /**
@@ -299,16 +331,34 @@ public:
     }
 
     /**
+     * Commit this submessage. This does the same as when the pbf_writer
+     * goes out of scope and is destructed.
+     *
+     * @pre Must be a pbf_writer of a submessage, ie one opened with the
+     *      pbf_writer constructor taking a parent message.
+     * @post The pbf_writer is invalid and can't be used any more.
+     */
+    void commit() {
+        protozero_assert(m_parent_writer && "you can't call commit() on a pbf_writer without a parent");
+        protozero_assert(m_pos == 0 && "you can't call commit() on a pbf_writer that has an open nested submessage");
+        m_parent_writer->close_submessage();
+        m_parent_writer = nullptr;
+        m_data = nullptr;
+    }
+
+    /**
      * Cancel writing of this submessage. The complete submessage will be
      * removed as if it was never created and no fields were added.
      *
      * @pre Must be a pbf_writer of a submessage, ie one opened with the
      *      pbf_writer constructor taking a parent message.
+     * @post The pbf_writer is invalid and can't be used any more.
      */
     void rollback() {
         protozero_assert(m_parent_writer && "you can't call rollback() on a pbf_writer without a parent");
         protozero_assert(m_pos == 0 && "you can't call rollback() on a pbf_writer that has an open nested submessage");
         m_parent_writer->rollback_submessage();
+        m_parent_writer = nullptr;
         m_data = nullptr;
     }
 
@@ -327,7 +377,7 @@ public:
         add_field(tag, pbf_wire_type::varint);
         protozero_assert(m_pos == 0 && "you can't add fields to a parent pbf_writer if there is an existing pbf_writer for a submessage");
         protozero_assert(m_data);
-        m_data->append(1, value);
+        m_data->append(1, char(value));
     }
 
     /**
@@ -849,15 +899,17 @@ namespace detail {
 
     protected:
 
-        pbf_writer m_writer;
+        pbf_writer m_writer{};
 
     public:
 
         packed_field(const packed_field&) = delete;
         packed_field& operator=(const packed_field&) = delete;
 
-        packed_field(packed_field&&) = default;
-        packed_field& operator=(packed_field&&) = default;
+        packed_field(packed_field&&) noexcept = default;
+        packed_field& operator=(packed_field&&) noexcept = default;
+
+        packed_field() = default;
 
         packed_field(pbf_writer& parent_writer, pbf_tag_type tag) :
             m_writer(parent_writer, tag) {
@@ -865,6 +917,16 @@ namespace detail {
 
         packed_field(pbf_writer& parent_writer, pbf_tag_type tag, std::size_t size) :
             m_writer(parent_writer, tag, size) {
+        }
+
+        ~packed_field() noexcept = default;
+
+        bool valid() const noexcept {
+            return m_writer.valid();
+        }
+
+        void commit() {
+            m_writer.commit();
         }
 
         void rollback() {
@@ -877,6 +939,10 @@ namespace detail {
     class packed_field_fixed : public packed_field {
 
     public:
+
+        packed_field_fixed() :
+            packed_field() {
+        }
 
         template <typename P>
         packed_field_fixed(pbf_writer& parent_writer, P tag) :
@@ -899,6 +965,10 @@ namespace detail {
 
     public:
 
+        packed_field_varint() :
+            packed_field() {
+        }
+
         template <typename P>
         packed_field_varint(pbf_writer& parent_writer, P tag) :
             packed_field(parent_writer, static_cast<pbf_tag_type>(tag)) {
@@ -914,6 +984,10 @@ namespace detail {
     class packed_field_svarint : public packed_field {
 
     public:
+
+        packed_field_svarint() :
+            packed_field() {
+        }
 
         template <typename P>
         packed_field_svarint(pbf_writer& parent_writer, P tag) :

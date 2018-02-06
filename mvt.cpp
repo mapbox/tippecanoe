@@ -7,11 +7,12 @@
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <vtzero/vector_tile.hpp>
 #include "mvt.hpp"
 #include "geometry.hpp"
-#include "protozero/varint.hpp"
-#include "protozero/pbf_reader.hpp"
-#include "protozero/pbf_writer.hpp"
+#include <protozero/varint.hpp>
+#include <protozero/pbf_reader.hpp>
+#include <protozero/pbf_writer.hpp>
 #include "milo/dtoa_milo.h"
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
@@ -99,6 +100,77 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	}
 
 	protozero::pbf_reader reader(src);
+	vtzero::vector_tile vtz{src};
+
+	while (auto vtz_layer = vtz.next_layer()) {
+		mvt_layer layer;
+
+		layer.name = vtz_layer.name().to_string();
+		layer.extent = vtz_layer.extent();
+		layer.version = vtz_layer.version();
+
+		while (auto vtz_feature = vtz_layer.next_feature()) {
+			mvt_feature feature;
+
+			if (vtz_feature.has_id()) {
+				feature.has_id = true;
+				feature.id = vtz_feature.id();
+			}
+
+			while (auto vtz_property = vtz_feature.next_property()) {
+				std::string pkey = vtz_property.key().to_string();
+				vtzero::property_value pvalue = vtz_property.value();
+				mvt_value value;
+
+				switch (pvalue.type()) {
+				case vtzero::property_value_type::string_value:
+					value.type = mvt_string;
+					value.string_value = pvalue.string_value().to_string();
+					break;
+
+				case vtzero::property_value_type::double_value:
+					value.type = mvt_double;
+					value.numeric_value.double_value = pvalue.double_value();
+					break;
+
+				case vtzero::property_value_type::float_value:
+					value.type = mvt_float;
+					value.numeric_value.float_value = pvalue.float_value();
+					break;
+
+				case vtzero::property_value_type::int_value:
+					value.type = mvt_int;
+					value.numeric_value.int_value = pvalue.int_value();
+					break;
+
+				case vtzero::property_value_type::sint_value:
+					value.type = mvt_sint;
+					value.numeric_value.sint_value = pvalue.sint_value();
+					break;
+
+				case vtzero::property_value_type::uint_value:
+					value.type = mvt_uint;
+					value.numeric_value.uint_value = pvalue.uint_value();
+					break;
+
+				case vtzero::property_value_type::bool_value:
+					value.type = mvt_bool;
+					value.numeric_value.bool_value = pvalue.bool_value();
+					break;
+
+				default:
+					fprintf(stderr, "Unknown attribute type in tile\n");
+					exit(EXIT_FAILURE);
+				}
+
+				layer.tag(feature, pkey, value);
+			}
+
+			layer.features.push_back(feature);
+		}
+
+		layers.push_back(layer);
+	}
 
 	while (reader.next()) {
 		switch (reader.tag()) {

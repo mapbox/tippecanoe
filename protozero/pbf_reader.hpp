@@ -18,10 +18,12 @@ documentation.
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <utility>
 
 #include <protozero/config.hpp>
+#include <protozero/data_view.hpp>
 #include <protozero/exception.hpp>
 #include <protozero/iterators.hpp>
 #include <protozero/types.hpp>
@@ -41,13 +43,13 @@ namespace protozero {
  * @code
  *    std::string buffer;
  *    // fill buffer...
- *    pbf_reader message(buffer.data(), buffer.size());
+ *    pbf_reader message{buffer.data(), buffer.size()};
  * @endcode
  *
  * Sub-messages are created using get_message():
  *
  * @code
- *    pbf_reader message(...);
+ *    pbf_reader message{...};
  *    message.next();
  *    pbf_reader submessage = message.get_message();
  * @endcode
@@ -74,8 +76,9 @@ class pbf_reader {
     template <typename T>
     T get_fixed() {
         T result;
+        const char* data = m_data;
         skip_bytes(sizeof(T));
-        std::memcpy(&result, m_data - sizeof(T), sizeof(T));
+        std::memcpy(&result, data, sizeof(T));
 #if PROTOZERO_BYTE_ORDER != PROTOZERO_LITTLE_ENDIAN
         detail::byteswap_inplace(&result);
 #endif
@@ -86,9 +89,11 @@ class pbf_reader {
     iterator_range<const_fixed_iterator<T>> packed_fixed() {
         protozero_assert(tag() != 0 && "call next() before accessing field value");
         const auto len = get_len_and_skip();
-        protozero_assert(len % sizeof(T) == 0);
-        return iterator_range<const_fixed_iterator<T>>{const_fixed_iterator<T>(m_data - len, m_data),
-                                                       const_fixed_iterator<T>(m_data, m_data)};
+        if (len % sizeof(T) != 0) {
+            throw invalid_length_exception{};
+        }
+        return {const_fixed_iterator<T>(m_data - len),
+                const_fixed_iterator<T>(m_data)};
     }
 
     template <typename T>
@@ -108,7 +113,7 @@ class pbf_reader {
 
     void skip_bytes(pbf_length_type len) {
         if (m_data + len > m_end) {
-            throw end_of_buffer_exception();
+            throw end_of_buffer_exception{};
         }
         m_data += len;
 
@@ -129,8 +134,8 @@ class pbf_reader {
     iterator_range<T> get_packed() {
         protozero_assert(tag() != 0 && "call next() before accessing field value");
         const auto len = get_len_and_skip();
-        return iterator_range<T>{T{m_data - len, m_data},
-                                 T{m_data, m_data}};
+        return {T{m_data - len, m_data},
+                T{m_data, m_data}};
     }
 
 public:
@@ -147,9 +152,7 @@ public:
      */
     explicit pbf_reader(const data_view& view) noexcept
         : m_data(view.data()),
-          m_end(view.data() + view.size()),
-          m_wire_type(pbf_wire_type::unknown),
-          m_tag(0) {
+          m_end(view.data() + view.size()) {
     }
 
     /**
@@ -164,11 +167,10 @@ public:
      */
     pbf_reader(const char* data, std::size_t size) noexcept
         : m_data(data),
-          m_end(data + size),
-          m_wire_type(pbf_wire_type::unknown),
-          m_tag(0) {
+          m_end(data + size) {
     }
 
+#ifndef PROTOZERO_STRICT_API
     /**
      * Construct a pbf_reader message from a data pointer and a length. The
      * pointer will be stored inside the pbf_reader object, no data is copied.
@@ -178,13 +180,13 @@ public:
      * The buffer must contain a complete protobuf message.
      *
      * @post There is no current field.
+     * @deprecated Use one of the other constructors.
      */
     explicit pbf_reader(const std::pair<const char*, std::size_t>& data) noexcept
         : m_data(data.first),
-          m_end(data.first + data.second),
-          m_wire_type(pbf_wire_type::unknown),
-          m_tag(0) {
+          m_end(data.first + data.second) {
     }
+#endif
 
     /**
      * Construct a pbf_reader message from a std::string. A pointer to the
@@ -198,9 +200,7 @@ public:
      */
     explicit pbf_reader(const std::string& data) noexcept
         : m_data(data.data()),
-          m_end(data.data() + data.size()),
-          m_wire_type(pbf_wire_type::unknown),
-          m_tag(0) {
+          m_end(data.data() + data.size()) {
     }
 
     /**
@@ -241,7 +241,7 @@ public:
      * are still fields available and to `false` if the last field has been
      * read.
      */
-    operator bool() const noexcept {
+    operator bool() const noexcept { // NOLINT clang-tidy: google-explicit-constructor
         return m_data < m_end;
     }
 
@@ -282,9 +282,10 @@ public:
         m_tag = pbf_tag_type(value >> 3);
 
         // tags 0 and 19000 to 19999 are not allowed as per
-        // https://developers.google.com/protocol-buffers/docs/proto
-        protozero_assert(((m_tag >     0 && m_tag < 19000) ||
-                          (m_tag > 19999 && m_tag <= ((1 << 29) - 1))) && "tag out of range");
+        // https://developers.google.com/protocol-buffers/docs/proto#assigning-tags
+        if (m_tag == 0 || (m_tag >= 19000 && m_tag <= 19999)) {
+            throw invalid_tag_exception{};
+        }
 
         m_wire_type = pbf_wire_type(value & 0x07);
         switch (m_wire_type) {
@@ -294,7 +295,7 @@ public:
             case pbf_wire_type::fixed32:
                 break;
             default:
-                throw unknown_pbf_wire_type_exception();
+                throw unknown_pbf_wire_type_exception{};
         }
 
         return true;
@@ -306,7 +307,7 @@ public:
      * loop for repeated fields:
      *
      * @code
-     *    pbf_reader message(...);
+     *    pbf_reader message{...};
      *    while (message.next(17)) {
      *        // handle field
      *    }
@@ -315,7 +316,7 @@ public:
      * or you can call it just once to get the one field with this tag:
      *
      * @code
-     *    pbf_reader message(...);
+     *    pbf_reader message{...};
      *    if (message.next(17)) {
      *        // handle field
      *    }
@@ -332,9 +333,8 @@ public:
         while (next()) {
             if (m_tag == next_tag) {
                 return true;
-            } else {
-                skip();
             }
+            skip();
         }
         return false;
     }
@@ -345,7 +345,7 @@ public:
      * called in a while loop for repeated fields:
      *
      * @code
-     *    pbf_reader message(...);
+     *    pbf_reader message{...};
      *    while (message.next(17, pbf_wire_type::varint)) {
      *        // handle field
      *    }
@@ -354,7 +354,7 @@ public:
      * or you can call it just once to get the one field with this tag:
      *
      * @code
-     *    pbf_reader message(...);
+     *    pbf_reader message{...};
      *    if (message.next(17, pbf_wire_type::varint)) {
      *        // handle field
      *    }
@@ -371,9 +371,8 @@ public:
         while (next()) {
             if (m_tag == next_tag && m_wire_type == type) {
                 return true;
-            } else {
-                skip();
             }
+            skip();
         }
         return false;
     }
@@ -417,7 +416,7 @@ public:
      * Use it like this:
      *
      * @code
-     *    pbf_reader message(...);
+     *    pbf_reader message{...};
      *    while (message.next()) {
      *        switch (message.tag_and_type()) {
      *            case tag_and_type(17, pbf_wire_type::length_delimited):
@@ -468,7 +467,7 @@ public:
                 skip_bytes(4);
                 break;
             default:
-                protozero_assert(false && "can not be here because next() should have thrown already");
+                break;
         }
     }
 
@@ -487,9 +486,9 @@ public:
     bool get_bool() {
         protozero_assert(tag() != 0 && "call next() before accessing field value");
         protozero_assert(has_wire_type(pbf_wire_type::varint) && "not a varint");
-        protozero_assert((*m_data & 0x80) == 0 && "not a 1 byte varint");
-        skip_bytes(1);
-        return m_data[-1] != 0; // -1 okay because we incremented m_data the line before
+        const auto data = m_data;
+        skip_varint(&m_data, m_end);
+        return data[0] != 0;
     }
 
     /**
@@ -667,7 +666,7 @@ public:
         protozero_assert(tag() != 0 && "call next() before accessing field value");
         protozero_assert(has_wire_type(pbf_wire_type::length_delimited) && "not of type string, bytes or message");
         const auto len = get_len_and_skip();
-        return data_view{m_data - len, len};
+        return {m_data - len, len};
     }
 
 #ifndef PROTOZERO_STRICT_API
@@ -683,7 +682,7 @@ public:
         protozero_assert(tag() != 0 && "call next() before accessing field value");
         protozero_assert(has_wire_type(pbf_wire_type::length_delimited) && "not of type string, bytes or message");
         const auto len = get_len_and_skip();
-        return std::make_pair(m_data - len, len);
+        return {m_data - len, len};
     }
 #endif
 
@@ -717,7 +716,7 @@ public:
      * @post The current field was consumed and there is no current field now.
      */
     pbf_reader get_message() {
-        return pbf_reader(get_view());
+        return pbf_reader{get_view()};
     }
 
     ///@}
@@ -745,6 +744,24 @@ public:
 
     /// Forward iterator for iterating over uint64 (varint) values.
     using const_uint64_iterator = const_varint_iterator<uint64_t>;
+
+    /// Forward iterator for iterating over fixed32 values.
+    using const_fixed32_iterator = const_fixed_iterator<uint32_t>;
+
+    /// Forward iterator for iterating over sfixed32 values.
+    using const_sfixed32_iterator = const_fixed_iterator<int32_t>;
+
+    /// Forward iterator for iterating over fixed64 values.
+    using const_fixed64_iterator = const_fixed_iterator<uint64_t>;
+
+    /// Forward iterator for iterating over sfixed64 values.
+    using const_sfixed64_iterator = const_fixed_iterator<int64_t>;
+
+    /// Forward iterator for iterating over float values.
+    using const_float_iterator = const_fixed_iterator<float>;
+
+    /// Forward iterator for iterating over double values.
+    using const_double_iterator = const_fixed_iterator<double>;
 
     ///@{
     /**
@@ -864,7 +881,7 @@ public:
      * @pre The current field must be of type "repeated packed fixed32".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_fixed32() -> decltype(packed_fixed<uint32_t>()) {
+    iterator_range<pbf_reader::const_fixed32_iterator> get_packed_fixed32() {
         return packed_fixed<uint32_t>();
     }
 
@@ -877,7 +894,7 @@ public:
      * @pre The current field must be of type "repeated packed sfixed32".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_sfixed32() -> decltype(packed_fixed<int32_t>()) {
+    iterator_range<pbf_reader::const_sfixed32_iterator> get_packed_sfixed32() {
         return packed_fixed<int32_t>();
     }
 
@@ -890,7 +907,7 @@ public:
      * @pre The current field must be of type "repeated packed fixed64".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_fixed64() -> decltype(packed_fixed<uint64_t>()) {
+    iterator_range<pbf_reader::const_fixed64_iterator> get_packed_fixed64() {
         return packed_fixed<uint64_t>();
     }
 
@@ -903,7 +920,7 @@ public:
      * @pre The current field must be of type "repeated packed sfixed64".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_sfixed64() -> decltype(packed_fixed<int64_t>()) {
+    iterator_range<pbf_reader::const_sfixed64_iterator> get_packed_sfixed64() {
         return packed_fixed<int64_t>();
     }
 
@@ -916,7 +933,7 @@ public:
      * @pre The current field must be of type "repeated packed float".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_float() -> decltype(packed_fixed<float>()) {
+    iterator_range<pbf_reader::const_float_iterator> get_packed_float() {
         return packed_fixed<float>();
     }
 
@@ -929,7 +946,7 @@ public:
      * @pre The current field must be of type "repeated packed double".
      * @post The current field was consumed and there is no current field now.
      */
-    auto get_packed_double() -> decltype(packed_fixed<double>()) {
+    iterator_range<pbf_reader::const_double_iterator> get_packed_double() {
         return packed_fixed<double>();
     }
 
