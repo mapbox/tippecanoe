@@ -1848,7 +1848,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			if (!quiet) {
-				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet apart\n", maxzoom, (int) ceil(dist_ft));
+				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet (%d meters) apart\n", maxzoom, (int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
 			}
 		}
 
@@ -1865,7 +1865,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			if (mz > maxzoom || count <= 0) {
 				if (!quiet) {
-					fprintf(stderr, "Choosing a maxzoom of -z%d for resolution of about %d feet within features\n", mz, (int) exp(dist_sum / dist_count));
+					fprintf(stderr, "Choosing a maxzoom of -z%d for resolution of about %d feet (%d meters) within features\n", mz, (int) exp(dist_sum / dist_count), (int) (exp(dist_sum / dist_count) / 3.28084));
 				}
 				maxzoom = mz;
 			}
