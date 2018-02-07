@@ -16,7 +16,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <fcntl.h>
-#include <wctype.h>
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <sqlite3.h>
@@ -31,7 +31,6 @@
 #include <set>
 #include <map>
 #include <cmath>
-#include <locale.h>
 
 #ifdef __APPLE__
 #include <sys/types.h>
@@ -59,6 +58,7 @@
 #include "mvt.hpp"
 #include "dirtiles.hpp"
 #include "evaluator.hpp"
+#include "text.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -1171,31 +1171,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			// Trim out characters that can't be part of selector
-			wchar_t tmp[trunc.size() + 1];
-			size_t n = mbstowcs(tmp, trunc.c_str(), trunc.size() + 1);
-			if (n == (size_t) -1) {
-				perror("charset conversion");
-				exit(EXIT_FAILURE);
-			}
-
-			size_t out = 0;
-			for (size_t p = 0; p < n; p++) {
-				if (tmp[p] == L'_' || !(iswcntrl(tmp[p]) || iswspace(tmp[p]) || iswpunct(tmp[p]))) {
-					tmp[out++] = tmp[p];
+                        std::string out;
+			for (size_t p = 0; p < trunc.size(); p++) {
+				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_' || (trunc[p] & 0x80) != 0) {
+					out.append(trunc, p, 1);
 				}
 			}
-			tmp[out] = L'\0';
 
-			char tmp2[(out + 1) * MB_CUR_MAX];
-			n = wcstombs(tmp2, tmp, (out + 1) * MB_CUR_MAX);
-			if (n == (size_t) -1) {
-				perror("charset conversion");
-				exit(EXIT_FAILURE);
-			}
-
-			sources[l].layer = tmp2;
-			if (sources[l].layer.size() == 0) {
-				sources[l].layer = "unknown";
+			sources[l].layer = out;
+			if (sources[l].layer.size() == 0 || check_utf8(out).size() != 0) {
+				sources[l].layer = "unknown" + std::to_string(l);
 			}
 
 			if (!quiet) {
@@ -2249,9 +2234,6 @@ int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
 #endif
-
-	setlocale(LC_ALL, "C");
-	setlocale(LC_CTYPE, "");
 
 	init_cpus();
 

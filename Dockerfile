@@ -16,4 +16,4 @@ RUN make \
   && make install
 
 # Run the tests
-CMD LC_ALL=en_US.UTF-8 make test
+CMD make test
