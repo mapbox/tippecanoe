@@ -1343,6 +1343,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			parse_geocsv(sst, sources[source].file, layer, sources[layer].layer);
 
+			if (close(fd) != 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
+
 			overall_offset = layer_seq[0];
 			checkdisk(&readers);
 			continue;
