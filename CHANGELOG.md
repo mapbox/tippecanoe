@@ -1,3 +1,11 @@
+## 1.27.7
+
+* Add an option to produce only a single tile
+* Retain non-ASCII characters in layernames generated from filenames
+* Remember to close input files after reading them
+* Add --coalesce-fraction-as-needed and --coalesce-densest-as-needed
+* Report distances in both feet and meters
+
 ## 1.27.6
 
 * Fix opportunities for integer overflow and out-of-bounds references

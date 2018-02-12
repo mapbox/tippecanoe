@@ -162,6 +162,8 @@ Parallel processing will also be automatic if the input file is in Geobuf format
  * `-ae` or `--extend-zooms-if-still-dropping`: Increase the maxzoom if features are still being dropped at that zoom level.
    The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
    specified maximum zoom and to any levels added beyond that.
+ * `-R` _zoom_`/`_x_`/`_y_ or `--one-tile=`_zoom_`/`_x_`/`_y_: Set the minzoom and maxzoom to _zoom_ and produce only
+   the single specified tile at that zoom level.
 
 ### Tile resolution
 
@@ -212,6 +214,8 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-ad` or `--drop-fraction-as-needed`: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
  * `-an` or `--drop-smallest-as-needed`: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
  * `-aN` or `--coalesce-smallest-as-needed`: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are *not* preserved into the combined features, only their geometry.
+ * `-aD` or `--coalesce-densest-as-needed`: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
+ * `-aS` or `--coalesce-fraction-as-needed`: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
  * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster and a `"point_count"` attribute to indicate the number of features that were clustered into it.
 

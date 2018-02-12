@@ -58,6 +58,7 @@
 #include "mvt.hpp"
 #include "dirtiles.hpp"
 #include "evaluator.hpp"
+#include "text.hpp"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -70,6 +71,7 @@ double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
+long justx = -1, justy = -1;
 
 int prevent[256];
 int additional[256];
@@ -1169,16 +1171,20 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			// Trim out characters that can't be part of selector
-			std::string out;
+                        std::string out;
 			for (size_t p = 0; p < trunc.size(); p++) {
-				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_') {
+				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_' || (trunc[p] & 0x80) != 0) {
 					out.append(trunc, p, 1);
 				}
 			}
+
 			sources[l].layer = out;
+			if (sources[l].layer.size() == 0 || check_utf8(out).size() != 0) {
+				sources[l].layer = "unknown" + std::to_string(l);
+			}
 
 			if (!quiet) {
-				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, out.c_str());
+				fprintf(stderr, "For layer %d, using name \"%s\"\n", (int) l, sources[l].layer.c_str());
 			}
 		}
 	}
@@ -1197,6 +1203,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	long overall_offset = 0;
 	double dist_sum = 0;
 	size_t dist_count = 0;
+
+	int files_open_before_reading = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	if (files_open_before_reading < 0) {
+		perror("open /dev/null");
+		exit(EXIT_FAILURE);
+	}
+	if (close(files_open_before_reading) != 0) {
+		perror("close");
+		exit(EXIT_FAILURE);
+	}
 
 	size_t nsources = sources.size();
 	for (size_t source = 0; source < nsources; source++) {
@@ -1333,6 +1349,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			parse_geocsv(sst, sources[source].file, layer, sources[layer].layer);
 
+			if (close(fd) != 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
+
 			overall_offset = layer_seq[0];
 			checkdisk(&readers);
 			continue;
@@ -1381,6 +1402,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			if (munmap(map, st.st_size - off) != 0) {
 				perror("munmap source file");
+				exit(EXIT_FAILURE);
+			}
+
+			if (close(fd) != 0) {
+				perror("close input file");
 				exit(EXIT_FAILURE);
 			}
 		} else {
@@ -1541,6 +1567,22 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 		}
+	}
+
+	int files_open_after_reading = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	if (files_open_after_reading < 0) {
+		perror("open /dev/null");
+		exit(EXIT_FAILURE);
+	}
+	if (close(files_open_after_reading) != 0) {
+		perror("close");
+		exit(EXIT_FAILURE);
+	}
+
+	if (files_open_after_reading > files_open_before_reading) {
+		fprintf(stderr, "Internal error: Files left open after reading input. (%d vs %d)\n",
+			files_open_before_reading, files_open_after_reading);
+		ret = EXIT_FAILURE;
 	}
 
 	if (!quiet) {
@@ -1718,6 +1760,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	unsigned iz = 0, ix = 0, iy = 0;
 	choose_first_zoom(file_bbox, readers, &iz, &ix, &iy, minzoom, buffer);
 
+	if (justx >= 0) {
+		iz = minzoom;
+		ix = justx;
+		iy = justy;
+	}
+
 	long long geompos = 0;
 
 	/* initial tile is 0/0/0 */
@@ -1817,7 +1865,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			if (!quiet) {
-				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet apart\n", maxzoom, (int) ceil(dist_ft));
+				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet (%d meters) apart\n", maxzoom, (int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
 			}
 		}
 
@@ -1834,7 +1882,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			if (mz > maxzoom || count <= 0) {
 				if (!quiet) {
-					fprintf(stderr, "Choosing a maxzoom of -z%d for resolution of about %d feet within features\n", mz, (int) exp(dist_sum / dist_count));
+					fprintf(stderr, "Choosing a maxzoom of -z%d for resolution of about %d feet (%d meters) within features\n", mz, (int) exp(dist_sum / dist_count), (int) (exp(dist_sum / dist_count) / 3.28084));
 				}
 				maxzoom = mz;
 			}
@@ -2253,6 +2301,7 @@ int main(int argc, char **argv) {
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
 		{"extend-zooms-if-still-dropping", no_argument, &additional[A_EXTEND_ZOOMS], 1},
+		{"one-tile", required_argument, 0, 'R'},
 
 		{"Tile resolution", 0, 0, 0},
 		{"full-detail", required_argument, 0, 'd'},
@@ -2274,10 +2323,12 @@ int main(int argc, char **argv) {
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"cluster-distance", required_argument, 0, 'K'},
 
-		{"Dropping a fraction of features to keep under tile size limits", 0, 0, 0},
+		{"Dropping or merging a fraction of features to keep under tile size limits", 0, 0, 0},
 		{"drop-densest-as-needed", no_argument, &additional[A_DROP_DENSEST_AS_NEEDED], 1},
 		{"drop-fraction-as-needed", no_argument, &additional[A_DROP_FRACTION_AS_NEEDED], 1},
 		{"drop-smallest-as-needed", no_argument, &additional[A_DROP_SMALLEST_AS_NEEDED], 1},
+		{"coalesce-densest-as-needed", no_argument, &additional[A_COALESCE_DENSEST_AS_NEEDED], 1},
+		{"coalesce-fraction-as-needed", no_argument, &additional[A_COALESCE_FRACTION_AS_NEEDED], 1},
 		{"coalesce-smallest-as-needed", no_argument, &additional[A_COALESCE_SMALLEST_AS_NEEDED], 1},
 		{"force-feature-limit", no_argument, &prevent[P_DYNAMIC_DROP], 1},
 		{"cluster-densest-as-needed", no_argument, &additional[A_CLUSTER_DENSEST_AS_NEEDED], 1},
@@ -2427,6 +2478,19 @@ int main(int argc, char **argv) {
 		case 'Z':
 			minzoom = atoi(optarg);
 			break;
+
+		case 'R': {
+			unsigned z, x, y;
+			if (sscanf(optarg, "%u/%u/%u", &z, &x, &y) == 3) {
+				minzoom = z;
+				maxzoom = z;
+				justx = x;
+				justy = y;
+			} else {
+				fprintf(stderr, "--one-tile argument must be z/x/y\n");
+				exit(EXIT_FAILURE);
+			}
+		}
 
 		case 'B':
 			if (strcmp(optarg, "g") == 0) {

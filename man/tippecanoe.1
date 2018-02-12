@@ -176,6 +176,9 @@ Parallel processing will also be automatic if the input file is in Geobuf format
 \fB\fC\-ae\fR or \fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: Increase the maxzoom if features are still being dropped at that zoom level.
 The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
 specified maximum zoom and to any levels added beyond that.
+.IP \(bu 2
+\fB\fC\-R\fR \fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP or \fB\fC\-\-one\-tile=\fR\fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP: Set the minzoom and maxzoom to \fIzoom\fP and produce only
+the single specified tile at that zoom level.
 .RE
 .SS Tile resolution
 .RS
@@ -246,6 +249,10 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
 \fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
+.IP \(bu 2
+\fB\fC\-aD\fR or \fB\fC\-\-coalesce\-densest\-as\-needed\fR: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
+.IP \(bu 2
+\fB\fC\-aS\fR or \fB\fC\-\-coalesce\-fraction\-as\-needed\fR: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
 .IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .IP \(bu 2
