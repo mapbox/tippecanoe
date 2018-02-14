@@ -265,7 +265,7 @@ std::string mvt_tile::encode() {
 	vtzero::tile_builder vtz_tile;
 
 	for (size_t i = 0; i < layers.size(); i++) {
-		vtzero::layer_builder vtz_layer{vtz_tile, layers[i].name};
+		vtzero::layer_builder vtz_layer{vtz_tile, layers[i].name, (unsigned) layers[i].version, (unsigned) layers[i].extent};
 		vtzero::key_index<std::unordered_map> vtz_index{vtz_layer};
 
 		// vtz_layer.set_version(layers[i].version);
@@ -295,12 +295,12 @@ std::string mvt_tile::encode() {
 							}
 						}
 
-						k = l - 1;
-
 						vtz_feature.add_linestring(l - k);
 						for (size_t m = k; m < l; m++) {
 							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
 						}
+
+						k = l - 1;
 					}
 				}
 
