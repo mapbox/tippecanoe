@@ -85,6 +85,56 @@ int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
+struct geom_decoder {
+	std::vector<mvt_geometry> geometry;
+	int type;
+	int state;
+
+	void points_begin(const uint32_t) {
+		type = mvt_point;
+	}
+
+	void points_point(const vtzero::point point) {
+		geometry.push_back(mvt_geometry(mvt_moveto, point.x, point.y));
+	}
+
+	void points_end() {
+
+	}
+
+	void linestring_begin(const uint32_t) {
+		type = mvt_linestring;
+		state = mvt_moveto;
+	}
+
+	void linestring_point(const vtzero::point point) {
+		geometry.push_back(mvt_geometry(state, point.x, point.y));
+		state = mvt_lineto;
+	}
+
+	void linestring_end() {
+
+	}
+
+	void ring_begin(const uint32_t) {
+		type = mvt_polygon;
+		state = mvt_moveto;
+	}
+
+	void ring_point(const vtzero::point point) {
+		geometry.push_back(mvt_geometry(state, point.x, point.y));
+		state = mvt_lineto;
+	}
+
+	void ring_end(const vtzero::ring_type) {
+		if (geometry.size() > 0) {
+			geometry.pop_back();
+		}
+
+		geometry.push_back(mvt_geometry(mvt_closepath, 0, 0));
+	}
+};
+
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	layers.clear();
 	std::string src;
@@ -166,174 +216,15 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				layer.tag(feature, pkey, value);
 			}
 
+			geom_decoder gd;
+			vtzero::decode_geometry(vtz_feature.geometry(), gd);
+			feature.geometry = gd.geometry;
+			feature.type = gd.type;
+
 			layer.features.push_back(feature);
 		}
 
 		layers.push_back(layer);
-	}
-
-	while (reader.next()) {
-		switch (reader.tag()) {
-		case 3: /* layer */
-		{
-			protozero::pbf_reader layer_reader(reader.get_message());
-			mvt_layer layer;
-
-			while (layer_reader.next()) {
-				switch (layer_reader.tag()) {
-				case 1: /* name */
-					layer.name = layer_reader.get_string();
-					break;
-
-				case 3: /* key */
-					layer.keys.push_back(layer_reader.get_string());
-					break;
-
-				case 4: /* value */
-				{
-					protozero::pbf_reader value_reader(layer_reader.get_message());
-					mvt_value value;
-
-					while (value_reader.next()) {
-						switch (value_reader.tag()) {
-						case 1: /* string */
-							value.type = mvt_string;
-							value.string_value = value_reader.get_string();
-							break;
-
-						case 2: /* float */
-							value.type = mvt_float;
-							value.numeric_value.float_value = value_reader.get_float();
-							break;
-
-						case 3: /* double */
-							value.type = mvt_double;
-							value.numeric_value.double_value = value_reader.get_double();
-							break;
-
-						case 4: /* int */
-							value.type = mvt_int;
-							value.numeric_value.int_value = value_reader.get_int64();
-							break;
-
-						case 5: /* uint */
-							value.type = mvt_uint;
-							value.numeric_value.uint_value = value_reader.get_uint64();
-							break;
-
-						case 6: /* sint */
-							value.type = mvt_sint;
-							value.numeric_value.sint_value = value_reader.get_sint64();
-							break;
-
-						case 7: /* bool */
-							value.type = mvt_bool;
-							value.numeric_value.bool_value = value_reader.get_bool();
-							break;
-
-						default:
-							value_reader.skip();
-							break;
-						}
-					}
-
-					layer.values.push_back(value);
-					break;
-				}
-
-				case 5: /* extent */
-					layer.extent = layer_reader.get_uint32();
-					break;
-
-				case 15: /* version */
-					layer.version = layer_reader.get_uint32();
-					break;
-
-				case 2: /* feature */
-				{
-					protozero::pbf_reader feature_reader(layer_reader.get_message());
-					mvt_feature feature;
-					std::vector<uint32_t> geoms;
-
-					while (feature_reader.next()) {
-						switch (feature_reader.tag()) {
-						case 1: /* id */
-							feature.id = feature_reader.get_uint64();
-							feature.has_id = true;
-							break;
-
-						case 2: /* tag */
-						{
-							auto pi = feature_reader.get_packed_uint32();
-							for (auto it = pi.first; it != pi.second; ++it) {
-								feature.tags.push_back(*it);
-							}
-							break;
-						}
-
-						case 3: /* feature type */
-							feature.type = feature_reader.get_enum();
-							break;
-
-						case 4: /* geometry */
-						{
-							auto pi = feature_reader.get_packed_uint32();
-							for (auto it = pi.first; it != pi.second; ++it) {
-								geoms.push_back(*it);
-							}
-							break;
-						}
-
-						default:
-							feature_reader.skip();
-							break;
-						}
-					}
-
-					long long px = 0, py = 0;
-					for (size_t g = 0; g < geoms.size(); g++) {
-						uint32_t geom = geoms[g];
-						uint32_t op = geom & 7;
-						uint32_t count = geom >> 3;
-
-						if (op == mvt_moveto || op == mvt_lineto) {
-							for (size_t k = 0; k < count && g + 2 < geoms.size(); k++) {
-								px += protozero::decode_zigzag32(geoms[g + 1]);
-								py += protozero::decode_zigzag32(geoms[g + 2]);
-								g += 2;
-
-								feature.geometry.push_back(mvt_geometry(op, px, py));
-							}
-						} else {
-							feature.geometry.push_back(mvt_geometry(op, 0, 0));
-						}
-					}
-
-					layer.features.push_back(feature);
-					break;
-				}
-
-				default:
-					layer_reader.skip();
-					break;
-				}
-			}
-
-			for (size_t i = 0; i < layer.keys.size(); i++) {
-				layer.key_map.insert(std::pair<std::string, size_t>(layer.keys[i], i));
-			}
-			for (size_t i = 0; i < layer.values.size(); i++) {
-				layer.value_map.insert(std::pair<mvt_value, size_t>(layer.values[i], i));
-			}
-
-			layers.push_back(layer);
-			break;
-		}
-
-		default:
-			reader.skip();
-			break;
-		}
 	}
 
 	return true;
