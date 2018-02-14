@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <ctype.h>
 #include <vtzero/vector_tile.hpp>
+#include <vtzero/builder.hpp>
+#include <vtzero/index.hpp>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include <protozero/varint.hpp>
@@ -230,9 +232,113 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	return true;
 }
 
-std::string mvt_tile::encode() {
-	std::string data;
+void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::unordered_map> &index, vtzero::feature_builder &out) {
+	for (size_t i = 0; i + 1 < feature.tags.size(); i += 2) {
+		std::string key = layer.keys[feature.tags[i]];
+		mvt_value &pbv = layer.values[feature.tags[i + 1]];
 
+		const auto k = index(key);
+
+		if (pbv.type == mvt_string) {
+			out.add_property(k, pbv.string_value);
+		} else if (pbv.type == mvt_float) {
+			out.add_property(k, pbv.numeric_value.float_value);
+		} else if (pbv.type == mvt_double) {
+			out.add_property(k, pbv.numeric_value.double_value);
+		} else if (pbv.type == mvt_int) {
+			out.add_property(k, pbv.numeric_value.int_value);
+		} else if (pbv.type == mvt_uint) {
+			out.add_property(k, pbv.numeric_value.uint_value);
+		} else if (pbv.type == mvt_sint) {
+			out.add_property(k, pbv.numeric_value.sint_value);
+		} else if (pbv.type == mvt_bool) {
+			out.add_property(k, pbv.numeric_value.bool_value);
+		}
+	}
+
+	if (feature.has_id) {
+		out.set_id(feature.id);
+	}
+}
+
+std::string mvt_tile::encode() {
+	vtzero::tile_builder vtz_tile;
+
+	for (size_t i = 0; i < layers.size(); i++) {
+		vtzero::layer_builder vtz_layer{vtz_tile, layers[i].name};
+		vtzero::key_index<std::unordered_map> vtz_index{vtz_layer};
+
+		// vtz_layer.set_version(layers[i].version);
+		// vtz_layer.set_extent(layers[i].extent);
+
+		for (size_t j = 0; j < layers[i].features.size(); j++) {
+			if (layers[i].features[j].type == mvt_point) {
+				vtzero::point_feature_builder vtz_feature{vtz_layer};
+
+				for (size_t k = 0; k < layers[i].features[j].geometry.size(); k++) {
+					vtz_feature.add_point(layers[i].features[j].geometry[k].x,
+					                      layers[i].features[j].geometry[k].y);
+				}
+
+				copy_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
+				vtz_feature.commit();
+			} else if (layers[i].features[j].type == mvt_linestring) {
+				vtzero::linestring_feature_builder vtz_feature{vtz_layer};
+				mvt_feature &f = layers[i].features[j];
+
+				for (size_t k = 0; k < f.geometry.size(); k++) {
+					if (f.geometry[k].op == mvt_moveto) {
+						size_t l;
+						for (l = k + 1; l < f.geometry.size(); l++) {
+							if (f.geometry[l].op != mvt_lineto) {
+								break;
+							}
+						}
+
+						k = l - 1;
+
+						vtz_feature.add_linestring(l - k);
+						for (size_t m = k; m < l; m++) {
+							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
+						}
+					}
+				}
+
+				copy_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
+				vtz_feature.commit();
+			} else if (layers[i].features[j].type == mvt_polygon) {
+				vtzero::polygon_feature_builder vtz_feature{vtz_layer};
+				mvt_feature &f = layers[i].features[j];
+
+				for (size_t k = 0; k < f.geometry.size(); k++) {
+					if (f.geometry[k].op == mvt_moveto) {
+						size_t l;
+						for (l = k + 1; l < f.geometry.size(); l++) {
+							if (f.geometry[l].op != mvt_lineto) {
+								break;
+							}
+						}
+
+						vtz_feature.add_ring(l - k + 1);
+						for (size_t m = k; m < l; m++) {
+							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
+						}
+						vtz_feature.set_point(f.geometry[k].x, f.geometry[k].y);
+						vtz_feature.close_ring();
+
+						k = l - 1;
+					}
+				}
+
+				copy_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
+				vtz_feature.commit();
+			}
+		}
+	}
+
+	std::string data = vtz_tile.serialize();
+
+#if 0
 	protozero::pbf_writer writer(data);
 
 	for (size_t i = 0; i < layers.size(); i++) {
@@ -336,6 +442,7 @@ std::string mvt_tile::encode() {
 
 		writer.add_message(3, layer_string);
 	}
+#endif
 
 	return data;
 }
