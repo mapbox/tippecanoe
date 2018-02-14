@@ -319,12 +319,10 @@ std::string mvt_tile::encode() {
 							}
 						}
 
-						vtz_feature.add_ring(l - k + 1);
+						vtz_feature.add_ring(l - k);
 						for (size_t m = k; m < l; m++) {
 							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
 						}
-						vtz_feature.set_point(f.geometry[k].x, f.geometry[k].y);
-						vtz_feature.close_ring();
 
 						k = l - 1;
 					}
