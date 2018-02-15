@@ -262,6 +262,7 @@ void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::u
 }
 
 std::string mvt_tile::encode() {
+#if 1
 	vtzero::tile_builder vtz_tile;
 
 	for (size_t i = 0; i < layers.size(); i++) {
@@ -323,6 +324,7 @@ std::string mvt_tile::encode() {
 						for (size_t m = k; m < l; m++) {
 							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
 						}
+						vtz_feature.close_ring();
 
 						k = l - 1;
 					}
@@ -335,8 +337,8 @@ std::string mvt_tile::encode() {
 	}
 
 	std::string data = vtz_tile.serialize();
-
-#if 0
+#else
+	std::string data;
 	protozero::pbf_writer writer(data);
 
 	for (size_t i = 0; i < layers.size(); i++) {
