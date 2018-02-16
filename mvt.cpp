@@ -232,6 +232,12 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	return true;
 }
 
+void preset_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::unordered_map> &index, vtzero::feature_builder &out) {
+	if (feature.has_id) {
+		out.set_id(feature.id);
+	}
+}
+
 void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::unordered_map> &index, vtzero::feature_builder &out) {
 	for (size_t i = 0; i + 1 < feature.tags.size(); i += 2) {
 		std::string key = layer.keys[feature.tags[i]];
@@ -256,9 +262,6 @@ void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::u
 		}
 	}
 
-	if (feature.has_id) {
-		out.set_id(feature.id);
-	}
 }
 
 std::string mvt_tile::encode() {
@@ -275,6 +278,7 @@ std::string mvt_tile::encode() {
 		for (size_t j = 0; j < layers[i].features.size(); j++) {
 			if (layers[i].features[j].type == mvt_point) {
 				vtzero::point_feature_builder vtz_feature{vtz_layer};
+				preset_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
 
 				for (size_t k = 0; k < layers[i].features[j].geometry.size(); k++) {
 					vtz_feature.add_point(layers[i].features[j].geometry[k].x,
@@ -286,6 +290,7 @@ std::string mvt_tile::encode() {
 			} else if (layers[i].features[j].type == mvt_linestring) {
 				vtzero::linestring_feature_builder vtz_feature{vtz_layer};
 				mvt_feature &f = layers[i].features[j];
+				preset_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
 
 				for (size_t k = 0; k < f.geometry.size(); k++) {
 					if (f.geometry[k].op == mvt_moveto) {
@@ -310,6 +315,7 @@ std::string mvt_tile::encode() {
 			} else if (layers[i].features[j].type == mvt_polygon) {
 				vtzero::polygon_feature_builder vtz_feature{vtz_layer};
 				mvt_feature &f = layers[i].features[j];
+				preset_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
 
 				for (size_t k = 0; k < f.geometry.size(); k++) {
 					if (f.geometry[k].op == mvt_moveto) {
@@ -320,7 +326,7 @@ std::string mvt_tile::encode() {
 							}
 						}
 
-						vtz_feature.add_ring(l - k);
+						vtz_feature.add_ring(l - k + 1);
 						for (size_t m = k; m < l; m++) {
 							vtz_feature.set_point(f.geometry[m].x, f.geometry[m].y);
 						}
