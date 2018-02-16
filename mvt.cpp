@@ -232,7 +232,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	return true;
 }
 
-void preset_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::unordered_map> &index, vtzero::feature_builder &out) {
+void preset_attrs(mvt_layer &, mvt_feature &feature, vtzero::key_index<std::unordered_map> &, vtzero::feature_builder &out) {
 	if (feature.has_id) {
 		out.set_id(feature.id);
 	}
@@ -259,6 +259,9 @@ void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::u
 			out.add_property(k, pbv.numeric_value.sint_value);
 		} else if (pbv.type == mvt_bool) {
 			out.add_property(k, pbv.numeric_value.bool_value);
+		} else {
+			fprintf(stderr, "Unhandled attribute type %d\n", pbv.type);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -280,8 +283,9 @@ std::string mvt_tile::encode() {
 				vtzero::point_feature_builder vtz_feature{vtz_layer};
 				preset_attrs(layers[i], layers[i].features[j], vtz_index, vtz_feature);
 
+				vtz_feature.add_points(layers[i].features[j].geometry.size());
 				for (size_t k = 0; k < layers[i].features[j].geometry.size(); k++) {
-					vtz_feature.add_point(layers[i].features[j].geometry[k].x,
+					vtz_feature.set_point(layers[i].features[j].geometry[k].x,
 					                      layers[i].features[j].geometry[k].y);
 				}
 
