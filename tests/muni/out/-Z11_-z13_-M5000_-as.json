@@ -850,6 +850,8 @@
 ,
 { "type": "Feature", "properties": { "name": "Sunset Blvd & Quintara St" }, "geometry": { "type": "Point", "coordinates": [ -122.494919, 37.747592 ] } }
 ,
+{ "type": "Feature", "properties": { "name": "Sunset Blvd & Rivera St" }, "geometry": { "type": "Point", "coordinates": [ -122.494812, 37.746082 ] } }
+,
 { "type": "Feature", "properties": { "name": "Quintara St & 33rd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.490971, 37.748051 ] } }
 ,
 { "type": "Feature", "properties": { "name": "30th Ave & Quintara St" }, "geometry": { "type": "Point", "coordinates": [ -122.487817, 37.748000 ] } }
@@ -1044,7 +1046,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Duboce Ave & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.433658, 37.769222 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Castro St & 16th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435460, 37.764286 ] } }
+{ "type": "Feature", "properties": { "name": "Castro St & 15th St" }, "geometry": { "type": "Point", "coordinates": [ -122.435589, 37.765847 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & 16th St" }, "geometry": { "type": "Point", "coordinates": [ -122.433679, 37.763913 ] } }
 ,
@@ -1646,7 +1648,7 @@
 ,
 { "type": "Feature", "properties": { "name": "24th St & South Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.416170, 37.752462 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Valencia St & Duncan St" }, "geometry": { "type": "Point", "coordinates": [ -122.420247, 37.746744 ] } }
+{ "type": "Feature", "properties": { "name": "Cesar Chavez St & Mission St" }, "geometry": { "type": "Point", "coordinates": [ -122.418101, 37.748101 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Folsom St & 24th St" }, "geometry": { "type": "Point", "coordinates": [ -122.414217, 37.752598 ] } }
 ,
@@ -2215,6 +2217,8 @@
 { "type": "Feature", "properties": { "name": "Taraval St & 32nd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.489759, 37.742358 ] } }
 ,
 { "type": "Feature", "properties": { "name": "30th Ave & Santiago St" }, "geometry": { "type": "Point", "coordinates": [ -122.487656, 37.744513 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Taraval St & 30th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.487345, 37.742596 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Taraval St & 30th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.487624, 37.742468 ] } }
 ,
@@ -2974,7 +2978,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Ulloa St & Lenox Way" }, "geometry": { "type": "Point", "coordinates": [ -122.466263, 37.741179 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "West Portal Ave & Ulloa St" }, "geometry": { "type": "Point", "coordinates": [ -122.465855, 37.740899 ] } }
+{ "type": "Feature", "properties": { "name": "West Portal Station" }, "geometry": { "type": "Point", "coordinates": [ -122.465941, 37.740890 ] } }
 ,
 { "type": "Feature", "properties": { "name": "West Portal Ave & 14th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.469063, 37.738107 ] } }
 ,
@@ -4996,7 +5000,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Geary Blvd & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.411685, 37.786988 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "O'Farrell St & Mason St" }, "geometry": { "type": "Point", "coordinates": [ -122.410655, 37.786046 ] } }
+{ "type": "Feature", "properties": { "name": "Mason St & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.409968, 37.787217 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Ellis St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.411460, 37.785097 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Eddy St & Taylor St" }, "geometry": { "type": "Point", "coordinates": [ -122.410794, 37.784105 ] } }
 ,
@@ -5795,6 +5801,8 @@
 { "type": "Feature", "properties": { "name": "Bush St & Battery St" }, "geometry": { "type": "Point", "coordinates": [ -122.399776, 37.791312 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Market St & Sansome St" }, "geometry": { "type": "Point", "coordinates": [ -122.400420, 37.790159 ] } }
+,
+{ "type": "Feature", "properties": { "name": "2nd St & Stevenson St" }, "geometry": { "type": "Point", "coordinates": [ -122.400076, 37.788285 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Broadway & Davis St" }, "geometry": { "type": "Point", "coordinates": [ -122.398585, 37.798976 ] } }
 ,
