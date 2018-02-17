@@ -16,6 +16,7 @@ documentation.
  * @brief Contains the iterators for access to packed repeated fields.
  */
 
+#include <algorithm>
 #include <cstring>
 #include <iterator>
 #include <utility>
@@ -61,8 +62,8 @@ public:
     /**
      * Create iterator range from two iterators.
      *
-     * @param first_iterator Iterator to beginning or range.
-     * @param last_iterator Iterator to end or range.
+     * @param first_iterator Iterator to beginning of range.
+     * @param last_iterator Iterator to end of range.
      */
     constexpr iterator_range(iterator&& first_iterator, iterator&& last_iterator) :
         P(std::forward<iterator>(first_iterator),
@@ -89,9 +90,22 @@ public:
         return this->second;
     }
 
-    /// Return true if this range is empty.
-    constexpr std::size_t empty() const noexcept {
+    /**
+     * Return true if this range is empty.
+     *
+     * Complexity: Constant.
+     */
+    constexpr bool empty() const noexcept {
         return begin() == end();
+    }
+
+    /**
+     * Get the size of the range, ie the number of elements it contains.
+     *
+     * Complexity: Constant or linear depending on the underlaying iterator.
+     */
+    std::size_t size() const noexcept {
+        return static_cast<size_t>(std::distance(begin(), end()));
     }
 
     /**
@@ -146,27 +160,20 @@ template <typename T>
 class const_fixed_iterator {
 
     /// Pointer to current iterator position
-    const char* m_data;
-
-    /// Pointer to end iterator position
-    const char* m_end;
+    const char* m_data = nullptr;
 
 public:
 
-    using iterator_category = std::forward_iterator_tag;
+    using iterator_category = std::random_access_iterator_tag;
     using value_type        = T;
     using difference_type   = std::ptrdiff_t;
     using pointer           = value_type*;
     using reference         = value_type&;
 
-    const_fixed_iterator() noexcept :
-        m_data(nullptr),
-        m_end(nullptr) {
-    }
+    const_fixed_iterator() noexcept = default;
 
-    const_fixed_iterator(const char* data, const char* end) noexcept :
-        m_data(data),
-        m_end(end) {
+    explicit const_fixed_iterator(const char* data) noexcept :
+        m_data(data) {
     }
 
     const_fixed_iterator(const const_fixed_iterator&) noexcept = default;
@@ -186,23 +193,87 @@ public:
         return result;
     }
 
-    const_fixed_iterator& operator++() {
+    const_fixed_iterator& operator++() noexcept {
         m_data += sizeof(value_type);
         return *this;
     }
 
-    const_fixed_iterator operator++(int) {
-        const const_fixed_iterator tmp(*this);
+    const_fixed_iterator operator++(int) noexcept {
+        const const_fixed_iterator tmp{*this};
         ++(*this);
         return tmp;
     }
 
-    bool operator==(const const_fixed_iterator& rhs) const noexcept {
-        return m_data == rhs.m_data && m_end == rhs.m_end;
+    bool operator==(const_fixed_iterator rhs) const noexcept {
+        return m_data == rhs.m_data;
     }
 
-    bool operator!=(const const_fixed_iterator& rhs) const noexcept {
+    bool operator!=(const_fixed_iterator rhs) const noexcept {
         return !(*this == rhs);
+    }
+
+    const_fixed_iterator& operator--() noexcept {
+        m_data -= sizeof(value_type);
+        return *this;
+    }
+
+    const_fixed_iterator operator--(int) noexcept {
+        const const_fixed_iterator tmp{*this};
+        --(*this);
+        return tmp;
+    }
+
+    friend bool operator<(const_fixed_iterator lhs, const_fixed_iterator rhs) noexcept {
+        return lhs.m_data < rhs.m_data;
+    }
+
+    friend bool operator>(const_fixed_iterator lhs, const_fixed_iterator rhs) noexcept {
+        return rhs < lhs;
+    }
+
+    friend bool operator<=(const_fixed_iterator lhs, const_fixed_iterator rhs) noexcept {
+        return !(lhs > rhs);
+    }
+
+    friend bool operator>=(const_fixed_iterator lhs, const_fixed_iterator rhs) noexcept {
+        return !(lhs < rhs);
+
+    }
+
+    const_fixed_iterator& operator+=(difference_type val) noexcept {
+        m_data += (sizeof(value_type) * val);
+        return *this;
+    }
+
+    friend const_fixed_iterator operator+(const_fixed_iterator lhs, difference_type rhs) noexcept {
+        const_fixed_iterator tmp{lhs};
+        tmp.m_data += (sizeof(value_type) * rhs);
+        return tmp;
+    }
+
+    friend const_fixed_iterator operator+(difference_type lhs, const_fixed_iterator rhs) noexcept {
+        const_fixed_iterator tmp{rhs};
+        tmp.m_data += (sizeof(value_type) * lhs);
+        return tmp;
+    }
+
+    const_fixed_iterator& operator-=(difference_type val) noexcept {
+        m_data -= (sizeof(value_type) * val);
+        return *this;
+    }
+
+    friend const_fixed_iterator operator-(const_fixed_iterator lhs, difference_type rhs) noexcept {
+        const_fixed_iterator tmp{lhs};
+        tmp.m_data -= (sizeof(value_type) * rhs);
+        return tmp;
+    }
+
+    friend difference_type operator-(const_fixed_iterator lhs, const_fixed_iterator rhs) noexcept {
+        return static_cast<difference_type>(lhs.m_data - rhs.m_data) / static_cast<difference_type>(sizeof(T));
+    }
+
+    value_type operator[](difference_type n) const noexcept {
+        return *(*this + n);
     }
 
 }; // class const_fixed_iterator
@@ -217,10 +288,10 @@ class const_varint_iterator {
 protected:
 
     /// Pointer to current iterator position
-    const char* m_data;
+    const char* m_data = nullptr;
 
     /// Pointer to end iterator position
-    const char* m_end;
+    const char* m_end = nullptr;
 
 public:
 
@@ -230,10 +301,16 @@ public:
     using pointer           = value_type*;
     using reference         = value_type&;
 
-    const_varint_iterator() noexcept :
-        m_data(nullptr),
-        m_end(nullptr) {
+    static difference_type distance(const_varint_iterator begin, const_varint_iterator end) noexcept {
+        // We know that each varint contains exactly one byte with the most
+        // significant bit not set. We can use this to quickly figure out
+        // how many varints there are without actually decoding the varints.
+        return std::count_if(begin.m_data, end.m_data, [](char c) noexcept {
+            return (static_cast<unsigned char>(c) & 0x80) == 0;
+        });
     }
+
+    const_varint_iterator() noexcept = default;
 
     const_varint_iterator(const char* data, const char* end) noexcept :
         m_data(data),
@@ -259,7 +336,7 @@ public:
     }
 
     const_varint_iterator operator++(int) {
-        const const_varint_iterator tmp(*this);
+        const const_varint_iterator tmp{*this};
         ++(*this);
         return tmp;
     }
@@ -298,10 +375,10 @@ public:
     }
 
     const_svarint_iterator(const const_svarint_iterator&) = default;
-    const_svarint_iterator(const_svarint_iterator&&) = default;
+    const_svarint_iterator(const_svarint_iterator&&) noexcept = default;
 
     const_svarint_iterator& operator=(const const_svarint_iterator&) = default;
-    const_svarint_iterator& operator=(const_svarint_iterator&&) = default;
+    const_svarint_iterator& operator=(const_svarint_iterator&&) noexcept = default;
 
     ~const_svarint_iterator() = default;
 
@@ -316,7 +393,7 @@ public:
     }
 
     const_svarint_iterator operator++(int) {
-        const const_svarint_iterator tmp(*this);
+        const const_svarint_iterator tmp{*this};
         ++(*this);
         return tmp;
     }
@@ -324,5 +401,55 @@ public:
 }; // class const_svarint_iterator
 
 } // end namespace protozero
+
+namespace std {
+
+    // Specialize std::distance for all the protozero iterators. Because
+    // functions can't be partially specialized, we have to do this for
+    // every value_type we are using.
+
+    template <>
+    inline typename protozero::const_varint_iterator<int32_t>::difference_type
+    distance<protozero::const_varint_iterator<int32_t>>(protozero::const_varint_iterator<int32_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                        protozero::const_varint_iterator<int32_t> last) {
+        return protozero::const_varint_iterator<int32_t>::distance(first, last);
+    }
+
+    template <>
+    inline typename protozero::const_varint_iterator<int64_t>::difference_type
+    distance<protozero::const_varint_iterator<int64_t>>(protozero::const_varint_iterator<int64_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                        protozero::const_varint_iterator<int64_t> last) {
+        return protozero::const_varint_iterator<int64_t>::distance(first, last);
+    }
+
+    template <>
+    inline typename protozero::const_varint_iterator<uint32_t>::difference_type
+    distance<protozero::const_varint_iterator<uint32_t>>(protozero::const_varint_iterator<uint32_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                         protozero::const_varint_iterator<uint32_t> last) {
+        return protozero::const_varint_iterator<uint32_t>::distance(first, last);
+    }
+
+    template <>
+    inline typename protozero::const_varint_iterator<uint64_t>::difference_type
+    distance<protozero::const_varint_iterator<uint64_t>>(protozero::const_varint_iterator<uint64_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                         protozero::const_varint_iterator<uint64_t> last) {
+        return protozero::const_varint_iterator<uint64_t>::distance(first, last);
+    }
+
+    template <>
+    inline typename protozero::const_svarint_iterator<int32_t>::difference_type
+    distance<protozero::const_svarint_iterator<int32_t>>(protozero::const_svarint_iterator<int32_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                         protozero::const_svarint_iterator<int32_t> last) {
+        return protozero::const_svarint_iterator<int32_t>::distance(first, last);
+    }
+
+    template <>
+    inline typename protozero::const_svarint_iterator<int64_t>::difference_type
+    distance<protozero::const_svarint_iterator<int64_t>>(protozero::const_svarint_iterator<int64_t> first, // NOLINT clang-tidy: readability-inconsistent-declaration-parameter-name
+                                                         protozero::const_svarint_iterator<int64_t> last) {
+        return protozero::const_svarint_iterator<int64_t>::distance(first, last);
+    }
+
+} // end namespace std
 
 #endif // PROTOZERO_ITERATORS_HPP

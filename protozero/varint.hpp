@@ -31,25 +31,25 @@ namespace detail {
 
     // from https://github.com/facebook/folly/blob/master/folly/Varint.h
     inline uint64_t decode_varint_impl(const char** data, const char* end) {
-        const int8_t* begin = reinterpret_cast<const int8_t*>(*data);
-        const int8_t* iend = reinterpret_cast<const int8_t*>(end);
+        const auto begin = reinterpret_cast<const int8_t*>(*data);
+        const auto iend = reinterpret_cast<const int8_t*>(end);
         const int8_t* p = begin;
         uint64_t val = 0;
 
         if (iend - begin >= max_varint_length) {  // fast path
             do {
                 int64_t b;
-                b = *p++; val  = uint64_t((b & 0x7f)      ); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) <<  7); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 14); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 21); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 28); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 35); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 42); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 49); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 56); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 63); if (b >= 0) break;
-                throw varint_too_long_exception();
+                b = *p++; val  = uint64_t((b & 0x7f)      ); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) <<  7); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 14); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 21); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 28); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 35); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 42); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 49); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x7f) << 56); if (b >= 0) { break; }
+                b = *p++; val |= uint64_t((b & 0x01) << 63); if (b >= 0) { break; }
+                throw varint_too_long_exception{};
             } while (false);
         } else {
             int shift = 0;
@@ -58,7 +58,7 @@ namespace detail {
                 shift += 7;
             }
             if (p == iend) {
-                throw end_of_buffer_exception();
+                throw end_of_buffer_exception{};
             }
             val |= uint64_t(*p++) << shift;
         }
@@ -89,7 +89,7 @@ namespace detail {
 inline uint64_t decode_varint(const char** data, const char* end) {
     // If this is a one-byte varint, decode it here.
     if (end != *data && ((**data & 0x80) == 0)) {
-        uint64_t val = uint64_t(**data);
+        const auto val = static_cast<uint64_t>(**data);
         ++(*data);
         return val;
     }
@@ -110,8 +110,8 @@ inline uint64_t decode_varint(const char** data, const char* end) {
  *         before the end of the varint.
  */
 inline void skip_varint(const char** data, const char* end) {
-    const int8_t* begin = reinterpret_cast<const int8_t*>(*data);
-    const int8_t* iend = reinterpret_cast<const int8_t*>(end);
+    const auto begin = reinterpret_cast<const int8_t*>(*data);
+    const auto iend = reinterpret_cast<const int8_t*>(end);
     const int8_t* p = begin;
 
     while (p != iend && *p < 0) {
@@ -119,11 +119,11 @@ inline void skip_varint(const char** data, const char* end) {
     }
 
     if (p >= begin + max_varint_length) {
-        throw varint_too_long_exception();
+        throw varint_too_long_exception{};
     }
 
     if (p == iend) {
-        throw end_of_buffer_exception();
+        throw end_of_buffer_exception{};
     }
 
     ++p;
@@ -138,6 +138,7 @@ inline void skip_varint(const char** data, const char* end) {
  * @param data Output iterator the varint encoded value will be written to
  *             byte by byte.
  * @param value The integer that will be encoded.
+ * @returns the number of bytes written
  * @throws Any exception thrown by increment or dereference operator on data.
  */
 template <typename T>

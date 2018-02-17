@@ -44,12 +44,27 @@ class pbf_builder : public pbf_writer {
 
 public:
 
+    /// The type of messages this class will build.
     using enum_type = T;
 
+    pbf_builder() = default;
+
+    /**
+     * Create a builder using the given string as a data store. The object
+     * stores a reference to that string and adds all data to it. The string
+     * doesn't have to be empty. The pbf_message object will just append data.
+     */
     explicit pbf_builder(std::string& data) noexcept :
         pbf_writer(data) {
     }
 
+    /**
+     * Construct a pbf_builder for a submessage from the pbf_message or
+     * pbf_writer of the parent message.
+     *
+     * @param parent_writer The parent pbf_message or pbf_writer
+     * @param tag Tag of the field that will be written
+     */
     template <typename P>
     pbf_builder(pbf_writer& parent_writer, P tag) noexcept :
         pbf_writer(parent_writer, pbf_tag_type(tag)) {
@@ -79,51 +94,141 @@ public:
 #undef PROTOZERO_WRITER_WRAP_ADD_SCALAR
 /// @endcond
 
+    /**
+     * Add "bytes" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Pointer to value to be written
+     * @param size Number of bytes to be written
+     */
     void add_bytes(T tag, const char* value, std::size_t size) {
         pbf_writer::add_bytes(pbf_tag_type(tag), value, size);
     }
 
+    /**
+     * Add "bytes" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written
+     */
     void add_bytes(T tag, const data_view& value) {
         pbf_writer::add_bytes(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "bytes" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written
+     */
     void add_bytes(T tag, const std::string& value) {
         pbf_writer::add_bytes(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "bytes" field to data. Bytes from the value are written until
+     * a null byte is encountered. The null byte is not added.
+     *
+     * @param tag Tag of the field
+     * @param value Pointer to zero-delimited value to be written
+     */
     void add_bytes(T tag, const char* value) {
         pbf_writer::add_bytes(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "bytes" field to data using vectored input. All the data in the
+     * 2nd and further arguments is "concatenated" with only a single copy
+     * into the final buffer.
+     *
+     * This will work with objects of any type supporting the data() and
+     * size() methods like std::string or protozero::data_view.
+     *
+     * Example:
+     * @code
+     * std::string data1 = "abc";
+     * std::string data2 = "xyz";
+     * builder.add_bytes_vectored(1, data1, data2);
+     * @endcode
+     *
+     * @tparam Ts List of types supporting data() and size() methods.
+     * @param tag Tag of the field
+     * @param values List of objects of types Ts with data to be appended.
+     */
     template <typename... Ts>
     void add_bytes_vectored(T tag, Ts&&... values) {
         pbf_writer::add_bytes_vectored(pbf_tag_type(tag), std::forward<Ts>(values)...);
     }
 
+    /**
+     * Add "string" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Pointer to value to be written
+     * @param size Number of bytes to be written
+     */
     void add_string(T tag, const char* value, std::size_t size) {
         pbf_writer::add_string(pbf_tag_type(tag), value, size);
     }
 
+    /**
+     * Add "string" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written
+     */
     void add_string(T tag, const data_view& value) {
         pbf_writer::add_string(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "string" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written
+     */
     void add_string(T tag, const std::string& value) {
         pbf_writer::add_string(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "string" field to data. Bytes from the value are written until
+     * a null byte is encountered. The null byte is not added.
+     *
+     * @param tag Tag of the field
+     * @param value Pointer to value to be written
+     */
     void add_string(T tag, const char* value) {
         pbf_writer::add_string(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "message" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Pointer to message to be written
+     * @param size Length of the message
+     */
     void add_message(T tag, const char* value, std::size_t size) {
         pbf_writer::add_message(pbf_tag_type(tag), value, size);
     }
 
+    /**
+     * Add "message" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written. The value must be a complete message.
+     */
     void add_message(T tag, const data_view& value) {
         pbf_writer::add_message(pbf_tag_type(tag), value);
     }
 
+    /**
+     * Add "message" field to data.
+     *
+     * @param tag Tag of the field
+     * @param value Value to be written. The value must be a complete message.
+     */
     void add_message(T tag, const std::string& value) {
         pbf_writer::add_message(pbf_tag_type(tag), value);
     }
