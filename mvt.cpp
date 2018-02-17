@@ -252,11 +252,11 @@ void copy_attrs(mvt_layer &layer, mvt_feature &feature, vtzero::key_index<std::u
 		} else if (pbv.type == mvt_double) {
 			out.add_property(k, pbv.numeric_value.double_value);
 		} else if (pbv.type == mvt_int) {
-			out.add_property(k, pbv.numeric_value.int_value);
+			out.add_property(k, (int64_t) pbv.numeric_value.int_value);
 		} else if (pbv.type == mvt_uint) {
-			out.add_property(k, pbv.numeric_value.uint_value);
+			out.add_property(k, (uint64_t) pbv.numeric_value.uint_value);
 		} else if (pbv.type == mvt_sint) {
-			out.add_property(k, pbv.numeric_value.sint_value);
+			out.add_property(k, (int64_t) pbv.numeric_value.sint_value);
 		} else if (pbv.type == mvt_bool) {
 			out.add_property(k, pbv.numeric_value.bool_value);
 		} else {
