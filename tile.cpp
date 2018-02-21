@@ -1414,6 +1414,28 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
+void preserve_attributes(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool) {
+	for (size_t i = 0; i < sf.m; i++) {
+		std::string key = stringpool + sf.keys[i] + 1;
+
+		serial_val sv;
+		sv.type = stringpool[sf.values[i]];
+		sv.s = stringpool + sf.values[i] + 1;
+
+		if (attribute_accum->count(key) != 0) {
+			printf("%s %s\n", key.c_str(), sv.s.c_str());
+		}
+	}
+	for (size_t i = 0; i < sf.full_keys.size(); i++) {
+		std::string key = sf.full_keys[i];
+		serial_val sv = sf.full_values[i];
+
+		if (attribute_accum->count(key) != 0) {
+			printf("%s %s\n", key.c_str(), sv.s.c_str());
+		}
+	}
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1468,6 +1490,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
 		std::vector<serial_feature> coalesced_geometry;
+		std::map<std::string, serial_val> attribute_accum_state;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1559,6 +1582,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (gamma > 0) {
 				if (manage_gap(sf.index, &previndex, scale, gamma, &gap)) {
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			}
@@ -1574,6 +1598,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
 					clustered++;
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				} else {
 					if (clustered > 0) {
@@ -1600,23 +1625,27 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap) {
 					coalesced_geometry.push_back(sf);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT) {
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent) {
 					coalesced_geometry.push_back(sf);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			}
@@ -1638,6 +1667,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (additional[A_COALESCE_FRACTION_AS_NEEDED]) {
 					coalesced_geometry.push_back(sf);
 				}
+				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 				continue;
 			}
 			fraction_accum -= 1;
