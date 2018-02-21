@@ -1016,7 +1016,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, int> const *attribute_accum) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2121,7 +2121,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 
 	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -2230,6 +2230,37 @@ void set_attribute_type(std::map<std::string, int> &attribute_types, const char 
 	attribute_types.insert(std::pair<std::string, int>(name, t));
 }
 
+void set_attribute_accum(std::map<std::string, int> &attribute_accum, const char *arg) {
+	const char *s = strchr(arg, ':');
+	if (s == NULL) {
+		fprintf(stderr, "-E%s option must be in the form -Tname:method\n", arg);
+		exit(EXIT_FAILURE);
+	}
+
+	std::string name = std::string(arg, s - arg);
+	std::string type = std::string(s + 1);
+	int t = -1;
+
+	if (type == "sum") {
+		t = 1;
+	} else if (type == "product") {
+		t = 2;
+	} else if (type == "mean") {
+		t = 3;
+	} else if (type == "geom_mean") {
+		t = 4;
+	} else if (type == "stddev") {
+		t = 5;
+	} else if (type == "concat") {
+		t = mvt_bool;
+	} else {
+		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, geom_mean, stddev, or concat\n", type.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	attribute_accum.insert(std::pair<std::string, int>(name, t));
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -2265,6 +2296,7 @@ int main(int argc, char **argv) {
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
+	std::map<std::string, int> attribute_accum;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -2313,6 +2345,7 @@ int main(int argc, char **argv) {
 		{"include", required_argument, 0, 'y'},
 		{"exclude-all", no_argument, 0, 'X'},
 		{"attribute-type", required_argument, 0, 'T'},
+		{"accumulate-attribute", required_argument, 0, 'E'},
 		{"feature-filter-file", required_argument, 0, 'J'},
 		{"feature-filter", required_argument, 0, 'j'},
 
@@ -2694,6 +2727,10 @@ int main(int argc, char **argv) {
 			set_attribute_type(attribute_types, optarg);
 			break;
 
+		case 'E':
+			set_attribute_accum(attribute_accum, optarg);
+			break;
+
 		default: {
 			int width = 7 + strlen(argv[0]);
 			fprintf(stderr, "Unknown option -%c\n", i);
@@ -2833,7 +2870,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0]);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
