@@ -12,7 +12,7 @@
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 326, "y": 791 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "FIELD RD/Nike Site" }, "geometry": { "type": "Point", "coordinates": [ -122.527685, 37.829074 ] } }
+{ "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Field Rd & Bunker Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.523265, 37.831345 ] } }
 ] }
@@ -20,7 +20,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 792 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Arballo Dr & Acevedo Ave ." }, "geometry": { "type": "Point", "coordinates": [ -122.483139, 37.719914 ] } }
+{ "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Avenue & Holloway St" }, "geometry": { "type": "Point", "coordinates": [ -122.475114, 37.721204 ] } }
 ,
@@ -162,7 +162,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": " Conzelman Rd & Mccullough Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.493825, 37.833717 ] } }
+{ "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515411, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Conzelman Rd/GGNRA entrance sign" }, "geometry": { "type": "Point", "coordinates": [ -122.483568, 37.833107 ] } }
 ,
@@ -1364,7 +1364,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 653, "y": 1582 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Mitchell Rd & Bunker Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.532384, 37.831836 ] } }
+{ "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Miwok Trail" }, "geometry": { "type": "Point", "coordinates": [ -122.527256, 37.832599 ] } }
 ,
@@ -1378,7 +1378,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1584 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Arballo Dr & Acevedo Ave ." }, "geometry": { "type": "Point", "coordinates": [ -122.483139, 37.719897 ] } }
+{ "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Font Blvd & Serrano Dr NS/W-SB" }, "geometry": { "type": "Point", "coordinates": [ -122.479920, 37.719609 ] } }
 ,
@@ -1548,7 +1548,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1583 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Divisadero St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.440395, 37.788200 ] } }
+{ "type": "Feature", "properties": { "name": "Presidio Ave & Clay St" }, "geometry": { "type": "Point", "coordinates": [ -122.447262, 37.789184 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Steiner St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.435589, 37.788844 ] } }
 ,
@@ -2884,7 +2884,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1582 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "BUNKER RD/Rifle Range" }, "geometry": { "type": "Point", "coordinates": [ -122.508824, 37.833022 ] } }
+{ "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515390, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mccullough Rd & Bunker Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.502429, 37.836124 ] } }
 ,
@@ -3064,7 +3064,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1584 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Prague St & Persia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.427199, 37.719032 ] } }
+{ "type": "Feature", "properties": { "name": "Naples St & Russia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.432413, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Persia Ave & Prague St" }, "geometry": { "type": "Point", "coordinates": [ -122.427070, 37.718964 ] } }
 ,
@@ -3218,7 +3218,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1583 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Fillmore St & Sutter St" }, "geometry": { "type": "Point", "coordinates": [ -122.433271, 37.785826 ] } }
+{ "type": "Feature", "properties": { "name": "Sutter St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.433164, 37.786165 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fillmore St & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.432928, 37.784741 ] } }
 ,
@@ -4382,7 +4382,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1582 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Chestnut St & Buchanan St" }, "geometry": { "type": "Point", "coordinates": [ -122.433078, 37.801172 ] } }
+{ "type": "Feature", "properties": { "name": "Marina Blvd & Laguna St" }, "geometry": { "type": "Point", "coordinates": [ -122.432220, 37.805139 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Union St & Buchanan St" }, "geometry": { "type": "Point", "coordinates": [ -122.432113, 37.797594 ] } }
 ,

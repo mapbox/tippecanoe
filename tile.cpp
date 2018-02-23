@@ -342,6 +342,7 @@ struct partial {
 	unsigned long long id = 0;
 	bool has_id = 0;
 	ssize_t renamed = 0;
+	long long extent = 0;
 };
 
 struct partial_arg {
@@ -396,7 +397,14 @@ void *partial_feature_worker(void *v) {
 	std::vector<struct partial> *partials = a->partials;
 
 	for (size_t i = a->task; i < (*partials).size(); i += a->tasks) {
-		drawvec geom = (*partials)[i].geoms[0];  // XXX assumption of a single geometry at the beginning
+		drawvec geom;
+
+		for (size_t j = 0; j < (*partials)[i].geoms.size(); j++) {
+			for (size_t k = 0; k < (*partials)[i].geoms[j].size(); k++) {
+				geom.push_back((*partials)[i].geoms[j][k]);
+			}
+		}
+
 		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
@@ -1414,6 +1422,10 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
+void preserve_attribute(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val) {
+
+}
+
 void preserve_attributes(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool) {
 	for (size_t i = 0; i < sf.m; i++) {
 		std::string key = stringpool + sf.keys[i] + 1;
@@ -1423,7 +1435,7 @@ void preserve_attributes(std::map<std::string, int> const *attribute_accum, std:
 		sv.s = stringpool + sf.values[i] + 1;
 
 		if (attribute_accum->count(key) != 0) {
-			printf("%s %s\n", key.c_str(), sv.s.c_str());
+			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -1431,9 +1443,20 @@ void preserve_attributes(std::map<std::string, int> const *attribute_accum, std:
 		serial_val sv = sf.full_values[i];
 
 		if (attribute_accum->count(key) != 0) {
-			printf("%s %s\n", key.c_str(), sv.s.c_str());
+			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv);
 		}
 	}
+}
+
+bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &out) {
+	for (ssize_t i = partials.size() - 1; i >= 0; i--) {
+		if (partials[i].t == sf.t) {
+			out = i;
+			return true;
+		}
+	}
+
+	return false;
 }
 
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, volatile long long *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, volatile int *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
@@ -1489,8 +1512,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
-		std::vector<serial_feature> coalesced_geometry;
 		std::map<std::string, serial_val> attribute_accum_state;
+		double coalesced_area = 0;
 
 		int within[child_shards];
 		long long geompos[child_shards];
@@ -1569,6 +1592,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		while (1) {
 			serial_feature sf;
+			ssize_t which_partial = -1;
 
 			if (prefilter == NULL) {
 				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards);
@@ -1581,22 +1605,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (gamma > 0) {
-				if (manage_gap(sf.index, &previndex, scale, gamma, &gap)) {
+				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			}
 
-			double coalesced_area = 0;
-			for (size_t i = 0; i < coalesced_geometry.size(); i++) {
-				if (coalesced_geometry[i].t == sf.t) {
-					coalesced_area += coalesced_geometry[i].extent;
-				}
-			}
-
 			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
 				indices.push_back(sf.index);
-				if (sf.index - merge_previndex < mingap) {
+				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial)) {
 					clustered++;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
@@ -1624,27 +1641,29 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
-				if (sf.index - merge_previndex < mingap) {
+				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
-				if (sf.index - merge_previndex < mingap) {
-					coalesced_geometry.push_back(sf);
+				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
+					partials[which_partial].geoms.push_back(sf.geometry);
+					coalesced_area += sf.extent;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT) {
+				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent + coalesced_area <= minextent) {
-					coalesced_geometry.push_back(sf);
+				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial)) {
+					partials[which_partial].geoms.push_back(sf.geometry);
+					coalesced_area += sf.extent;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
 				}
@@ -1663,25 +1682,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			fraction_accum += fraction;
-			if (fraction_accum < 1) {
+			if (fraction_accum < 1 && find_partial(partials, sf, which_partial)) {
 				if (additional[A_COALESCE_FRACTION_AS_NEEDED]) {
-					coalesced_geometry.push_back(sf);
+					partials[which_partial].geoms.push_back(sf.geometry);
+					coalesced_area += sf.extent;
 				}
 				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 				continue;
 			}
 			fraction_accum -= 1;
-
-			if (coalesced_geometry.size() != 0) {
-				for (ssize_t i = coalesced_geometry.size() - 1; i >= 0; i--) {
-					if (coalesced_geometry[i].t == sf.t && coalesced_geometry[i].layer == sf.layer) {
-						for (size_t j = 0; j < coalesced_geometry[i].geometry.size(); j++) {
-							sf.geometry.push_back(coalesced_geometry[i].geometry[j]);
-						}
-						coalesced_geometry.erase(coalesced_geometry.begin() + i);
-					}
-				}
-			}
 
 			bool reduced = false;
 			if (sf.t == VT_POLYGON) {
@@ -1713,27 +1722,16 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.has_id = sf.has_id;
 				p.index = sf.index;
 				p.renamed = -1;
+				p.extent = sf.extent;
 				partials.push_back(p);
 			}
 
 			merge_previndex = sf.index;
-		}
-
-		// Attach any pieces that were waiting to be coalesced onto some features that did make it.
-		for (ssize_t i = (ssize_t) coalesced_geometry.size() - 1; i >= 0; i--) {
-			for (ssize_t j = partials.size() - 1; j >= 0; j--) {
-				if (partials[j].layer == coalesced_geometry[i].layer && partials[j].t == coalesced_geometry[i].t) {
-					for (size_t k = 0; k < coalesced_geometry[i].geometry.size(); k++) {
-						partials[j].geoms[0].push_back(coalesced_geometry[i].geometry[k]);
-					}
-
-					coalesced_geometry.erase(coalesced_geometry.begin() + i);
-					break;
-				}
-			}
+			coalesced_area = 0;
 		}
 
 		// Attach the leftover cluster count to the last feature that did make it
+		// XXX Cluster onto the previous feature instead
 		if (clustered > 0) {
 			if (partials.size() > 0) {
 				size_t n = partials.size() - 1;
@@ -2058,11 +2056,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+				} else if (mingap < ULONG_MAX && (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED])) {
 					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
 						mg = (mingap + 1) * 1.5;
+
+						if (mg <= mingap) {
+							mg = ULONG_MAX;
+						}
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -2089,7 +2091,10 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						line_detail++;
 						continue;
 					}
-				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) {
+				} else if (totalsize > layers.size() && (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED])) {
+					// The 95% is a guess to avoid too many retries
+					// and probably actually varies based on how much duplicated metadata there is
+
 					fraction = fraction * max_tile_features / totalsize * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
@@ -2142,11 +2147,15 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
-				} else if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED]) {
+				} else if (mingap < ULONG_MAX && (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED])) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = mingap * 1.5;
+						mg = (mingap + 1) * 1.5;
+
+						if (mg <= mingap) {
+							mg = ULONG_MAX;
+						}
 					}
 					mingap = mg;
 					if (mingap > arg->mingap_out) {
@@ -2172,7 +2181,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 						line_detail++;
 						continue;
 					}
-				} else if (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) {
+				} else if (totalsize > layers.size() && (prevent[P_DYNAMIC_DROP] || additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED])) {
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 

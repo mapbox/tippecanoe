@@ -186,7 +186,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": " Conzelman Rd & Mccullough Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.493825, 37.833717 ] } }
+{ "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515411, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Conzelman Rd/GGNRA entrance sign" }, "geometry": { "type": "Point", "coordinates": [ -122.483568, 37.833107 ] } }
 ,
@@ -1600,7 +1600,7 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1583 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "name": "Divisadero St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.440395, 37.788200 ] } }
+{ "type": "Feature", "properties": { "name": "Presidio Ave & Clay St" }, "geometry": { "type": "Point", "coordinates": [ -122.447262, 37.789184 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Steiner St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.435589, 37.788844 ] } }
 ,
