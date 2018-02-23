@@ -343,6 +343,7 @@ struct partial {
 	bool has_id = 0;
 	ssize_t renamed = 0;
 	long long extent = 0;
+	long long clustered = 0;
 };
 
 struct partial_arg {
@@ -1503,7 +1504,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		double scale = (double) (1LL << (64 - 2 * (z + 8)));
 		double gap = 0, density_gap = 0;
 		double spacing = 0;
-		size_t clustered = 0;
 
 		long long original_features = 0;
 		long long unclipped_features = 0;
@@ -1614,30 +1614,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
 				indices.push_back(sf.index);
 				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial)) {
-					clustered++;
+					partials[which_partial].clustered++;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
 					continue;
-				} else {
-					if (clustered > 0) {
-						std::string layername = (*layer_unmaps)[sf.segment][sf.layer];
-						serial_val sv, sv2;
-
-						sf.full_keys.push_back("clustered");
-						sv.type = mvt_bool;
-						sv.s = "true";
-						sf.full_values.push_back(sv);
-
-						add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
-
-						sf.full_keys.push_back("point_count");
-						sv2.type = mvt_double;
-						sv2.s = std::to_string(clustered + 1);
-						sf.full_values.push_back(sv2);
-
-						add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
-					}
-
-					clustered = 0;
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
@@ -1723,6 +1702,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.index = sf.index;
 				p.renamed = -1;
 				p.extent = sf.extent;
+				p.clustered = 0;
 				partials.push_back(p);
 			}
 
@@ -1730,42 +1710,26 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			coalesced_area = 0;
 		}
 
-		// Attach the leftover cluster count to the last feature that did make it
-		// XXX Cluster onto the previous feature instead
-		if (clustered > 0) {
-			if (partials.size() > 0) {
-				size_t n = partials.size() - 1;
+		for (size_t i = 0; i < partials.size(); i++) {
+			if (partials[i].clustered > 0) {
+				partial &p = partials[i];
 
-				size_t i;
-				for (i = 0; i < partials[n].full_keys.size(); i++) {
-					if (partials[n].full_keys[i] == std::string("point_count")) {
-						break;
-					}
-				}
+				std::string layername = (*layer_unmaps)[p.segment][p.layer];
+				serial_val sv, sv2;
 
-				std::string layername = (*layer_unmaps)[partials[n].segment][partials[n].layer];
-				if (i < partials[n].full_keys.size()) {
-					size_t sum = strtoul(partials[n].full_values[i].s.c_str(), NULL, 10) + clustered;
-					partials[n].full_values[i].s = std::to_string(sum);
+				p.full_keys.push_back("clustered");
+				sv.type = mvt_bool;
+				sv.s = "true";
+				p.full_values.push_back(sv);
 
-					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", partials[n].full_values[i]);
-				} else {
-					serial_val sv, sv2;
+				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
 
-					partials[n].full_keys.push_back("clustered");
-					sv.type = mvt_bool;
-					sv.s = "true";
-					partials[n].full_values.push_back(sv);
+				p.full_keys.push_back("point_count");
+				sv2.type = mvt_double;
+				sv2.s = std::to_string(p.clustered + 1);
+				p.full_values.push_back(sv2);
 
-					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "clustered", sv);
-
-					partials[n].full_keys.push_back("point_count");
-					sv2.type = mvt_double;
-					sv2.s = std::to_string(clustered + 1);
-					partials[n].full_values.push_back(sv2);
-
-					add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
-				}
+				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
 			}
 		}
 
