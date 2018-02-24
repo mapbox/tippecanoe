@@ -344,6 +344,7 @@ struct partial {
 	ssize_t renamed = 0;
 	long long extent = 0;
 	long long clustered = 0;
+	std::set<std::string> need_tilestats;
 };
 
 struct partial_arg {
@@ -1423,11 +1424,40 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
-void preserve_attribute(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val) {
+void preserve_attribute(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val, partial &p) {
+	if (p.need_tilestats.count(key) == 0) {
+		p.need_tilestats.insert(key);
+	}
 
+	// If the feature being merged into has this key as a metadata reference,
+	// promote it to a full_key so it can be modified
+
+	for (int i = 0; i < p.m; i++) {
+		if (strcmp(key.c_str(), stringpool + p.keys[i] + 1) == 0) {
+			serial_val sv;
+			sv.s = stringpool + p.values[i] + 1;
+			sv.type = stringpool[p.values[i]];
+
+			p.full_keys.push_back(key);
+			p.full_values.push_back(sv);
+
+			p.keys.erase(p.keys.begin() + i);
+			p.values.erase(p.values.begin() + i);
+			p.m--;
+
+			break;
+		}
+	}
+
+	for (size_t i = 0; i < p.full_keys.size(); i++) {
+		if (key == p.full_keys[i]) {
+			p.full_values[i].s += val.s;
+			break;
+		}
+	}
 }
 
-void preserve_attributes(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool) {
+void preserve_attributes(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, partial &p) {
 	for (size_t i = 0; i < sf.m; i++) {
 		std::string key = stringpool + sf.keys[i] + 1;
 
@@ -1436,7 +1466,7 @@ void preserve_attributes(std::map<std::string, int> const *attribute_accum, std:
 		sv.s = stringpool + sf.values[i] + 1;
 
 		if (attribute_accum->count(key) != 0) {
-			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv);
+			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv, p);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -1444,7 +1474,7 @@ void preserve_attributes(std::map<std::string, int> const *attribute_accum, std:
 		serial_val sv = sf.full_values[i];
 
 		if (attribute_accum->count(key) != 0) {
-			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv);
+			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv, p);
 		}
 	}
 }
@@ -1606,7 +1636,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (gamma > 0) {
 				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1615,13 +1645,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				indices.push_back(sf.index);
 				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial)) {
 					partials[which_partial].clustered++;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
@@ -1629,13 +1659,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
@@ -1643,7 +1673,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1666,7 +1696,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
 				}
-				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool);
+				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 				continue;
 			}
 			fraction_accum -= 1;
@@ -1711,9 +1741,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
-			if (partials[i].clustered > 0) {
-				partial &p = partials[i];
+			partial &p = partials[i];
 
+			if (p.clustered > 0) {
 				std::string layername = (*layer_unmaps)[p.segment][p.layer];
 				serial_val sv, sv2;
 
@@ -1730,6 +1760,16 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.full_values.push_back(sv2);
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
+			}
+
+			if (p.need_tilestats.size() > 0) {
+				std::string layername = (*layer_unmaps)[p.segment][p.layer];
+
+				for (size_t j = 0; j < p.full_keys.size(); j++) {
+					if (p.need_tilestats.count(p.full_keys[j]) > 0) {
+						add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, p.full_keys[j], p.full_values[j]);
+					}
+				}
 			}
 		}
 
