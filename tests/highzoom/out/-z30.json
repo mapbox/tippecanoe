@@ -19,8 +19,6 @@
 { "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Santa Cruz" }, "geometry": { "type": "Point", "coordinates": [ -122.036133, 37.020098 ] } }
-,
-{ "type": "Feature", "properties": { "name": "London" }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 51.508742 ] } }
 ] }
 ] }
 ,

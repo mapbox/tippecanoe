@@ -223,25 +223,6 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
 			   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
 		for (ssize_t i = maxzoom; i >= 0; i--) {
-			// XXX This resets the feature counter at the start of each tile,
-			// which makes the feature count come out close to what it is if
-			// feature dropping happens during tiling. It means that the low
-			// zooms are heavier than they legitimately should be though.
-			{
-				unsigned xxx = 0, yyy = 0;
-				if (i != 0) {
-					xxx = xx >> (32 - i);
-					yyy = yy >> (32 - i);
-				}
-				if (ds[i].x != xxx || ds[i].y != yyy) {
-					ds[i].seq = 0;
-					ds[i].gap = 0;
-					ds[i].previndex = 0;
-				}
-				ds[i].x = xxx;
-				ds[i].y = yyy;
-			}
-
 			ds[i].seq++;
 		}
 		for (ssize_t i = maxzoom; i >= 0; i--) {

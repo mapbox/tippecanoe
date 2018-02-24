@@ -52,7 +52,7 @@ void *run_writer(void *a) {
 	}
 
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, 0, 0, 0, true);
+		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true);
 	}
 
 	if (fclose(fp) != 0) {
@@ -417,6 +417,11 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				json_object *extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && sequence->type == JSON_NUMBER) {
 					sf.extent = extent->number;
+				}
+
+				json_object *dropped = json_hash_get(tippecanoe, "dropped");
+				if (dropped != NULL && dropped->type == JSON_TRUE) {
+					sf.dropped = true;
 				}
 			}
 

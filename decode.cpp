@@ -129,7 +129,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 			exit(EXIT_FAILURE);
 		}
 
-		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, 0, 0, 0, !force);
+		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force);
 
 		if (!pipeline) {
 			if (describe) {

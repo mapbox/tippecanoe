@@ -1298,8 +1298,9 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 		if (sf.tippecanoe_maxzoom != -1 && z > sf.tippecanoe_maxzoom) {
 			continue;
 		}
+
 		if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
-			continue;
+			sf.dropped = true;
 		}
 
 		return sf;
@@ -1363,6 +1364,7 @@ void *run_prefilter(void *v) {
 		tmp_feature.geometry = to_feature(sf.geometry);
 		tmp_feature.id = sf.id;
 		tmp_feature.has_id = sf.has_id;
+		tmp_feature.dropped = sf.dropped;
 
 		// Offset from tile coordinates back to world coordinates
 		unsigned sx = 0, sy = 0;
@@ -1378,7 +1380,7 @@ void *run_prefilter(void *v) {
 		decode_meta(sf.m, sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
-		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, sf.index, sf.seq, sf.extent, true);
+		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true);
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {
@@ -1632,6 +1634,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (sf.t < 0) {
 				break;
+			}
+
+			if (sf.dropped) {
+				if (find_partial(partials, sf, which_partial)) {
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					continue;
+				}
 			}
 
 			if (gamma > 0) {
