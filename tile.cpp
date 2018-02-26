@@ -1754,7 +1754,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (p.clustered > 0) {
 				std::string layername = (*layer_unmaps)[p.segment][p.layer];
-				serial_val sv, sv2;
+				serial_val sv, sv2, sv3;
 
 				p.full_keys.push_back("clustered");
 				sv.type = mvt_bool;
@@ -1769,6 +1769,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.full_values.push_back(sv2);
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
+
+				p.full_keys.push_back("sqrt_point_count");
+				sv3.type = mvt_double;
+				sv3.s = std::to_string(round(100 * sqrt(p.clustered + 1)) / 100.0);
+				p.full_values.push_back(sv3);
+
+				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "sqrt_point_count", sv3);
 			}
 
 			if (p.need_tilestats.size() > 0) {
