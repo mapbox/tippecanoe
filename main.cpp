@@ -85,6 +85,7 @@ size_t CPUS;
 size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
+char **av;
 
 void checkdisk(std::vector<struct reader> *r) {
 	long long used = 0;
@@ -101,11 +102,53 @@ void checkdisk(std::vector<struct reader> *r) {
 	}
 };
 
+int atoi_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	int ret = strtol(s, &err, 10);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
+double atof_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	double ret = strtod(s, &err);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
+long long atoll_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	long long ret = strtoll(s, &err, 10);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
 void init_cpus() {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
 	if (TIPPECANOE_MAX_THREADS != NULL) {
-		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+		CPUS = atoi_require(TIPPECANOE_MAX_THREADS, "TIPPECANOE_MAX_THREADS");
 	} else {
 		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 	}
@@ -2245,6 +2288,7 @@ int main(int argc, char **argv) {
 	mtrace();
 #endif
 
+	av = argv;
 	init_cpus();
 
 	extern int optind;
@@ -2483,12 +2527,12 @@ int main(int argc, char **argv) {
 				maxzoom = MAX_ZOOM;
 				guess_maxzoom = true;
 			} else {
-				maxzoom = atoi(optarg);
+				maxzoom = atoi_require(optarg, "Maxzoom");
 			}
 			break;
 
 		case 'Z':
-			minzoom = atoi(optarg);
+			minzoom = atoi_require(optarg, "Minzoom");
 			break;
 
 		case 'R': {
@@ -2502,6 +2546,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "--one-tile argument must be z/x/y\n");
 				exit(EXIT_FAILURE);
 			}
+			break;
 		}
 
 		case 'B':
@@ -2510,16 +2555,16 @@ int main(int argc, char **argv) {
 			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				basezoom = -2;
 				if (optarg[0] == 'g') {
-					basezoom_marker_width = atof(optarg + 1);
+					basezoom_marker_width = atof_require(optarg + 1, "Marker width");
 				} else {
-					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+					basezoom_marker_width = sqrt(50000 / atof_require(optarg + 1, "Marker width"));
 				}
-				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+				if (basezoom_marker_width == 0 || atof_require(optarg + 1, "Marker width") == 0) {
 					fprintf(stderr, "%s: Must specify value >0 with -B%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				basezoom = atoi(optarg);
+				basezoom = atoi_require(optarg, "Basezoom");
 				if (basezoom == 0 && strcmp(optarg, "0") != 0) {
 					fprintf(stderr, "%s: Couldn't understand -B%s\n", argv[0], optarg);
 					exit(EXIT_FAILURE);
@@ -2528,7 +2573,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'K':
-			cluster_distance = atoi(optarg);
+			cluster_distance = atoi_require(optarg, "Cluster distance");
 			if (cluster_distance > 255) {
 				fprintf(stderr, "%s: --cluster-distance %d is too big; limit is 255\n", argv[0], cluster_distance);
 				exit(EXIT_FAILURE);
@@ -2536,15 +2581,15 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'd':
-			full_detail = atoi(optarg);
+			full_detail = atoi_require(optarg, "Full detail");
 			break;
 
 		case 'D':
-			low_detail = atoi(optarg);
+			low_detail = atoi_require(optarg, "Low detail");
 			break;
 
 		case 'm':
-			min_detail = atoi(optarg);
+			min_detail = atoi_require(optarg, "Min detail");
 			break;
 
 		case 'o':
@@ -2598,21 +2643,21 @@ int main(int argc, char **argv) {
 			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				droprate = -2;
 				if (optarg[0] == 'g') {
-					basezoom_marker_width = atof(optarg + 1);
+					basezoom_marker_width = atof_require(optarg + 1, "Marker width");
 				} else {
-					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+					basezoom_marker_width = sqrt(50000 / atof_require(optarg + 1, "Marker width"));
 				}
-				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+				if (basezoom_marker_width == 0 || atof_require(optarg + 1, "Marker width") == 0) {
 					fprintf(stderr, "%s: Must specify value >0 with -r%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				droprate = atof(optarg);
+				droprate = atof_require(optarg, "Drop rate");
 			}
 			break;
 
 		case 'b':
-			buffer = atoi(optarg);
+			buffer = atoi_require(optarg, "Buffer");
 			break;
 
 		case 'f':
@@ -2631,7 +2676,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'g':
-			gamma = atof(optarg);
+			gamma = atof_require(optarg, "Gamma");
 			break;
 
 		case 'q':
@@ -2679,7 +2724,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'S':
-			simplification = atof(optarg);
+			simplification = atof_require(optarg, "Simplification");
 			if (simplification <= 0) {
 				fprintf(stderr, "%s: --simplification must be > 0\n", argv[0]);
 				exit(EXIT_FAILURE);
@@ -2687,11 +2732,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'M':
-			max_tile_size = atoll(optarg);
+			max_tile_size = atoll_require(optarg, "Max tile size");
 			break;
 
 		case 'O':
-			max_tile_features = atoll(optarg);
+			max_tile_features = atoll_require(optarg, "Max tile features");
 			break;
 
 		case 'c':
