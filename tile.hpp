@@ -13,6 +13,8 @@ enum attribute_op {
 	op_mean,
 	op_concat,
 	op_comma,
+	op_max,
+	op_min,
 };
 
 long long write_tile(char **geom, char *metabase, char *stringpool, unsigned *file_bbox, int z, unsigned x, unsigned y, int detail, int min_detail, int basezoom, sqlite3 *outdb, const char *outdir, double droprate, int buffer, const char *fname, FILE **geomfile, int file_minzoom, int file_maxzoom, double todo, char *geomstart, long long along, double gamma, int nlayers);

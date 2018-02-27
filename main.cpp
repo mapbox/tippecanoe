@@ -2271,12 +2271,16 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 		t = op_product;
 	} else if (type == "mean") {
 		t = op_mean;
+	} else if (type == "max") {
+		t = op_max;
+	} else if (type == "min") {
+		t = op_min;
 	} else if (type == "concat") {
 		t = op_concat;
 	} else if (type == "comma") {
 		t = op_comma;
 	} else {
-		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, concat, or comma\n", type.c_str());
+		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, max, min, concat, or comma\n", type.c_str());
 		exit(EXIT_FAILURE);
 	}
 
@@ -2367,8 +2371,12 @@ int main(int argc, char **argv) {
 		{"exclude", required_argument, 0, 'x'},
 		{"include", required_argument, 0, 'y'},
 		{"exclude-all", no_argument, 0, 'X'},
+
+		{"Modifying feature attributes", 0, 0, 0},
 		{"attribute-type", required_argument, 0, 'T'},
 		{"accumulate-attribute", required_argument, 0, 'E'},
+
+		{"Filtering features by attributes", 0, 0, 0},
 		{"feature-filter-file", required_argument, 0, 'J'},
 		{"feature-filter", required_argument, 0, 'j'},
 
