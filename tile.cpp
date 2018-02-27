@@ -1501,6 +1501,28 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 				p.full_values[i].type = mvt_double;
 				break;
 
+			case op_max:
+				{
+					double existing = atof(p.full_values[i].s.c_str());
+					double maybe = atof(val.s.c_str());
+					if (maybe > existing) {
+						p.full_values[i].s = val.s.c_str();
+						p.full_values[i].type = mvt_double;
+					}
+				}
+				break;
+
+			case op_min:
+				{
+					double existing = atof(p.full_values[i].s.c_str());
+					double maybe = atof(val.s.c_str());
+					if (maybe < existing) {
+						p.full_values[i].s = val.s.c_str();
+						p.full_values[i].type = mvt_double;
+					}
+				}
+				break;
+
 			case op_concat:
 				p.full_values[i].s += val.s;
 				p.full_values[i].type = mvt_string;
@@ -1539,11 +1561,16 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 	}
 }
 
-bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &out) {
+bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &out, std::vector<std::vector<std::string>> *layer_unmaps) {
 	for (ssize_t i = partials.size() - 1; i >= 0; i--) {
 		if (partials[i].t == sf.t) {
-			out = i;
-			return true;
+			std::string &layername1 = (*layer_unmaps)[partials[i].segment][partials[i].layer];
+			std::string &layername2 = (*layer_unmaps)[sf.segment][sf.layer];
+
+			if (layername1 == layername2) {
+				out = i;
+				return true;
+			}
 		}
 	}
 
@@ -1695,14 +1722,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			if (sf.dropped) {
-				if (find_partial(partials, sf, which_partial)) {
+				if (find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			}
 
 			if (gamma > 0) {
-				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial)) {
+				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
@@ -1710,20 +1737,20 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
 				indices.push_back(sf.index);
-				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial)) {
+				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].clustered++;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
-				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
+				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
-				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial)) {
+				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
@@ -1731,13 +1758,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial)) {
+				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
-				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial)) {
+				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
@@ -1758,7 +1785,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			}
 
 			fraction_accum += fraction;
-			if (fraction_accum < 1 && find_partial(partials, sf, which_partial)) {
+			if (fraction_accum < 1 && find_partial(partials, sf, which_partial, layer_unmaps)) {
 				if (additional[A_COALESCE_FRACTION_AS_NEEDED]) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
