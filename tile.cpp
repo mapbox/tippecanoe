@@ -37,6 +37,7 @@
 #include "options.hpp"
 #include "main.hpp"
 #include "write_json.hpp"
+#include "milo/dtoa_milo.h"
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
@@ -1175,7 +1176,7 @@ struct write_tile_args {
 	double fraction_out = 0;
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
-	std::map<std::string, int> const *attribute_accum = NULL;
+	std::map<std::string, attribute_op> const *attribute_accum = NULL;
 	bool still_dropping = false;
 	int wrote_zoom = 0;
 	size_t tiling_seg = 0;
@@ -1426,7 +1427,12 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
-void preserve_attribute(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val, partial &p) {
+struct accum_state {
+	double sum = 0;
+	double count = 0;
+};
+
+void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val, partial &p) {
 	if (p.need_tilestats.count(key) == 0) {
 		p.need_tilestats.insert(key);
 	}
@@ -1453,13 +1459,32 @@ void preserve_attribute(std::map<std::string, int> const *attribute_accum, std::
 
 	for (size_t i = 0; i < p.full_keys.size(); i++) {
 		if (key == p.full_keys[i]) {
-			p.full_values[i].s += val.s;
-			break;
+			switch (op) {
+			case op_sum:
+				p.full_values[i].s = milo::dtoa_milo(atof(p.full_values[i].s.c_str()) + atof(val.s.c_str()));
+				p.full_values[i].type = mvt_double;
+				break;
+
+			case op_product:
+				p.full_values[i].s = milo::dtoa_milo(atof(p.full_values[i].s.c_str()) * atof(val.s.c_str()));
+				p.full_values[i].type = mvt_double;
+				break;
+
+			case op_concat:
+				p.full_values[i].s += val.s;
+				p.full_values[i].type = mvt_string;
+				break;
+
+			case op_comma:
+				p.full_values[i].s += std::string(",") + val.s;
+				p.full_values[i].type = mvt_string;
+				break;
+			}
 		}
 	}
 }
 
-void preserve_attributes(std::map<std::string, int> const *attribute_accum, std::map<std::string, serial_val> &attribute_accum_state, serial_feature &sf, char *stringpool, partial &p) {
+void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, partial &p) {
 	for (size_t i = 0; i < sf.m; i++) {
 		std::string key = stringpool + sf.keys[i] + 1;
 
@@ -1467,16 +1492,18 @@ void preserve_attributes(std::map<std::string, int> const *attribute_accum, std:
 		sv.type = stringpool[sf.values[i]];
 		sv.s = stringpool + sf.values[i] + 1;
 
-		if (attribute_accum->count(key) != 0) {
-			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv, p);
+		auto f = attribute_accum->find(key);
+		if (f != attribute_accum->end()) {
+			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, key, sv, p);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
 		std::string key = sf.full_keys[i];
 		serial_val sv = sf.full_values[i];
 
-		if (attribute_accum->count(key) != 0) {
-			preserve_attribute(attribute_accum, attribute_accum_state, sf, stringpool, key, sv, p);
+		auto f = attribute_accum->find(key);
+		if (f != attribute_accum->end()) {
+			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, key, sv, p);
 		}
 	}
 }
@@ -1544,7 +1571,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
-		std::map<std::string, serial_val> attribute_accum_state;
+		std::map<std::string, accum_state> attribute_accum_state;
 		double coalesced_area = 0;
 
 		int within[child_shards];
@@ -2355,7 +2382,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, int> const *attribute_accum) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum) {
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.

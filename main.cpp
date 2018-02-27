@@ -997,7 +997,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, int> const *attribute_accum) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2211,35 +2211,33 @@ void set_attribute_type(std::map<std::string, int> &attribute_types, const char 
 	attribute_types.insert(std::pair<std::string, int>(name, t));
 }
 
-void set_attribute_accum(std::map<std::string, int> &attribute_accum, const char *arg) {
+void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, const char *arg) {
 	const char *s = strchr(arg, ':');
 	if (s == NULL) {
-		fprintf(stderr, "-E%s option must be in the form -Tname:method\n", arg);
+		fprintf(stderr, "-E%s option must be in the form -Ename:method\n", arg);
 		exit(EXIT_FAILURE);
 	}
 
 	std::string name = std::string(arg, s - arg);
 	std::string type = std::string(s + 1);
-	int t = -1;
+	attribute_op t;
 
 	if (type == "sum") {
-		t = 1;
+		t = op_sum;
 	} else if (type == "product") {
-		t = 2;
+		t = op_product;
 	} else if (type == "mean") {
-		t = 3;
-	} else if (type == "geom_mean") {
-		t = 4;
-	} else if (type == "stddev") {
-		t = 5;
+		t = op_mean;
 	} else if (type == "concat") {
-		t = mvt_bool;
+		t = op_concat;
+	} else if (type == "comma") {
+		t = op_comma;
 	} else {
-		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, geom_mean, stddev, or concat\n", type.c_str());
+		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, concat, or comma\n", type.c_str());
 		exit(EXIT_FAILURE);
 	}
 
-	attribute_accum.insert(std::pair<std::string, int>(name, t));
+	attribute_accum.insert(std::pair<std::string, attribute_op>(name, t));
 }
 
 int main(int argc, char **argv) {
@@ -2277,7 +2275,7 @@ int main(int argc, char **argv) {
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
-	std::map<std::string, int> attribute_accum;
+	std::map<std::string, attribute_op> attribute_accum;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
