@@ -73,7 +73,7 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
+static int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
@@ -130,7 +130,38 @@ int coalcmp(const void *v1, const void *v2) {
 		}
 	}
 
-	return metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
+	cmp = metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
+	if (cmp != 0) {
+		return cmp;
+	}
+
+	if (c1->full_keys.size() < c2->full_keys.size()) {
+		return -1;
+	} else if (c1->full_keys.size() > c2->full_keys.size()) {
+		return 1;
+	}
+
+	for (size_t i = 0; i < c1->full_keys.size(); i++) {
+		if (c1->full_keys[i] < c1->full_keys[i]) {
+			return -1;
+		} else if (c1->full_keys[i] > c1->full_keys[i]) {
+			return 1;
+		}
+
+		if (c1->full_values[i].type < c1->full_values[i].type) {
+			return -1;
+		} else if (c1->full_values[i].type > c1->full_values[i].type) {
+			return 1;
+		}
+
+		if (c1->full_values[i].s < c1->full_values[i].s) {
+			return -1;
+		} else if (c1->full_values[i].s > c1->full_values[i].s) {
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
@@ -175,7 +206,7 @@ void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long
 	}
 }
 
-int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
+static int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
 	int i;
 	for (i = 0; i < m1 && i < m2; i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
