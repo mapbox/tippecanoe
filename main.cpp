@@ -2200,16 +2200,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
-
-		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-			for (size_t i = 0; i < 256; i++) {
-				type_and_string tas;
-				tas.type = mvt_double;
-				tas.string = std::to_string(i);
-
-				add_to_file_keys(ai->second.file_keys, "tippecanoe_feature_density", tas);
-			}
-		}
 	}
 
 	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS]);

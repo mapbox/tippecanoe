@@ -2115,10 +2115,17 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 							glow = 255;
 						}
 					}
+
 					mvt_value v;
 					v.type = mvt_sint;
 					v.numeric_value.sint_value = glow;
 					layer.tag(feature, "tippecanoe_feature_density", v);
+
+					serial_val sv;
+					sv.type = mvt_double;
+					sv.s = std::to_string(glow);
+
+					add_tilestats(layer.name, z, layermaps, tiling_seg, layer_unmaps, "tippecanoe_feature_density", sv);
 				}
 
 				layer.features.push_back(feature);
