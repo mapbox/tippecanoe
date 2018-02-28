@@ -1463,7 +1463,7 @@ struct accum_state {
 	double count = 0;
 };
 
-void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, char *stringpool, std::string &key, serial_val &val, partial &p) {
+void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &, char *stringpool, long long *pool_off, std::string &key, serial_val &val, partial &p) {
 	if (p.need_tilestats.count(key) == 0) {
 		p.need_tilestats.insert(key);
 	}
@@ -1472,10 +1472,10 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 	// promote it to a full_key so it can be modified
 
 	for (int i = 0; i < p.m; i++) {
-		if (strcmp(key.c_str(), stringpool + p.keys[i] + 1) == 0) {
+		if (strcmp(key.c_str(), stringpool + pool_off[p.segment] + p.keys[i] + 1) == 0) {
 			serial_val sv;
-			sv.s = stringpool + p.values[i] + 1;
-			sv.type = stringpool[p.values[i]];
+			sv.s = stringpool + pool_off[p.segment] + p.values[i] + 1;
+			sv.type = (stringpool + pool_off[p.segment])[p.values[i]];
 
 			p.full_keys.push_back(key);
 			p.full_values.push_back(sv);
@@ -1556,17 +1556,17 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 	}
 }
 
-void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, partial &p) {
+void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, long long *pool_off, partial &p) {
 	for (size_t i = 0; i < sf.m; i++) {
-		std::string key = stringpool + sf.keys[i] + 1;
+		std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
 
 		serial_val sv;
-		sv.type = stringpool[sf.values[i]];
-		sv.s = stringpool + sf.values[i] + 1;
+		sv.type = (stringpool + pool_off[sf.segment])[sf.values[i]];
+		sv.s = stringpool + pool_off[sf.segment] + sf.values[i] + 1;
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, stringpool, key, sv, p);
+			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, pool_off, key, sv, p);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -1575,19 +1575,19 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, stringpool, key, sv, p);
+			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, pool_off, key, sv, p);
 		}
 	}
 }
 
 bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &out, std::vector<std::vector<std::string>> *layer_unmaps) {
-	for (ssize_t i = partials.size() - 1; i >= 0; i--) {
-		if (partials[i].t == sf.t) {
-			std::string &layername1 = (*layer_unmaps)[partials[i].segment][partials[i].layer];
+	for (size_t i = partials.size(); i > 0; i--) {
+		if (partials[i - 1].t == sf.t) {
+			std::string &layername1 = (*layer_unmaps)[partials[i - 1].segment][partials[i - 1].layer];
 			std::string &layername2 = (*layer_unmaps)[sf.segment][sf.layer];
 
 			if (layername1 == layername2) {
-				out = i;
+				out = i - 1;
 				return true;
 			}
 		}
@@ -1742,14 +1742,14 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 			if (sf.dropped) {
 				if (find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
 
 			if (gamma > 0) {
 				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1758,13 +1758,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				indices.push_back(sf.index);
 				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].clustered++;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
@@ -1772,13 +1772,13 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
@@ -1786,7 +1786,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1809,7 +1809,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
 				}
-				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, partials[which_partial]);
+				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 				continue;
 			}
 			fraction_accum -= 1;
