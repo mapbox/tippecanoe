@@ -1463,7 +1463,7 @@ struct accum_state {
 	double count = 0;
 };
 
-void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, std::string &key, serial_val &val, partial &p) {
+void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, char *stringpool, std::string &key, serial_val &val, partial &p) {
 	if (p.need_tilestats.count(key) == 0) {
 		p.need_tilestats.insert(key);
 	}
@@ -1523,6 +1523,25 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 				}
 				break;
 
+			case op_mean:
+				{
+					auto state = attribute_accum_state.find(key);
+					if (state == attribute_accum_state.end()) {
+						accum_state s;
+						s.sum = atof(p.full_values[i].s.c_str()) + atof(val.s.c_str());
+						s.count = 2;
+						attribute_accum_state.insert(std::pair<std::string, accum_state>(key, s));
+
+						p.full_values[i].s = milo::dtoa_milo(s.sum / s.count);
+					} else {
+						state->second.sum += atof(val.s.c_str());
+						state->second.count += 1;
+
+						p.full_values[i].s = milo::dtoa_milo(state->second.sum / state->second.count);
+					}
+				}
+				break;
+
 			case op_concat:
 				p.full_values[i].s += val.s;
 				p.full_values[i].type = mvt_string;
@@ -1547,7 +1566,7 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, key, sv, p);
+			preserve_attribute(f->second, attribute_accum_state, stringpool, key, sv, p);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -1556,7 +1575,7 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, key, sv, p);
+			preserve_attribute(f->second, attribute_accum_state, stringpool, key, sv, p);
 		}
 	}
 }
