@@ -1,3 +1,10 @@
+## 1.27.8
+
+* Add --accumulate-attribute to keep attributes of dropped, coalesced,
+  or clustered features
+* Make sure numeric command line arguments are actually numbers
+* Don't coalesce features whose non-string-pool attributes don't match
+
 ## 1.27.7
 
 * Add an option to produce only a single tile

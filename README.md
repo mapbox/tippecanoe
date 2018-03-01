@@ -182,11 +182,21 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
  * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
  * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
+
+### Modifying feature attributes
+
  * `-T`_attribute_`:`_type_ or `--attribute-type=`_attribute_`:`_type_: Coerce the named feature _attribute_ to be of the specified _type_.
    The _type_ may be `string`, `float`, `int`, or `bool`.
    If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
+ * `-E`_attribute_`:`_operation_ or `--accumulate-attribute=`_attribute_`:`_operation_: Preserve the named _attribute_ from features
+   that are dropped, coalesced-as-needed, or clustered. The _operation_ may be
+   `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`
+   to specify how the named _attribute_ is accumulated onto the attribute of the same name in a feature that does survive.
+
+### Filtering features by attributes
+
  * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
 
@@ -219,7 +229,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-aD` or `--coalesce-densest-as-needed`: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-aS` or `--coalesce-fraction-as-needed`: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
- * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster and a `"point_count"` attribute to indicate the number of features that were clustered into it.
+ * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster, a `"point_count"` attribute to indicate the number of features that were clustered into it, and a `"sqrt_point_count"` attribute to indicate the relative width of a feature to represent the cluster.
 
 ### Dropping tightly overlapping features
 

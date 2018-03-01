@@ -201,12 +201,22 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 \fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named properties in all features, excluding all those not explicitly named
 .IP \(bu 2
 \fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Exclude all properties and encode only geometries
+.RE
+.SS Modifying feature attributes
+.RS
 .IP \(bu 2
 \fB\fC\-T\fR\fIattribute\fP\fB\fC:\fR\fItype\fP or \fB\fC\-\-attribute\-type=\fR\fIattribute\fP\fB\fC:\fR\fItype\fP: Coerce the named feature \fIattribute\fP to be of the specified \fItype\fP\&.
 The \fItype\fP may be \fB\fCstring\fR, \fB\fCfloat\fR, \fB\fCint\fR, or \fB\fCbool\fR\&.
 If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR (or, if numeric, \fB\fC0.0\fR, etc.), \fB\fCfalse\fR, \fB\fCnull\fR, or the empty string become \fB\fCfalse\fR, and otherwise become \fB\fCtrue\fR\&.
 If the type is \fB\fCfloat\fR or \fB\fCint\fR and the original attribute was non\-numeric, it becomes \fB\fC0\fR\&.
 If the type is \fB\fCint\fR and the original attribute was floating\-point, it is rounded to the nearest integer.
+.IP \(bu 2
+\fB\fC\-E\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP or \fB\fC\-\-accumulate\-attribute=\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP: Preserve the named \fIattribute\fP from features
+that are dropped, coalesced\-as\-needed, or clustered. The \fIoperation\fP may be \fB\fCsum\fR, \fB\fCproduct\fR, \fB\fCmean\fR, \fB\fCconcat\fR, or \fB\fCcomma\fR
+to specify how the named \fIattribute\fP is accumulated onto the attribute of the same name in a feature that does survive.
+.RE
+.SS Filtering features by attributes
+.RS
 .IP \(bu 2
 \fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
@@ -256,7 +266,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .IP \(bu 2
-\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster and a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it.
+\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster, a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it, and a \fB\fC"sqrt_point_count"\fR attribute to indicate the relative width of a feature to represent the cluster.
 .RE
 .SS Dropping tightly overlapping features
 .RS
