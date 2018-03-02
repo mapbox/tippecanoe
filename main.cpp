@@ -1195,7 +1195,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			// Trim out characters that can't be part of selector
-                        std::string out;
+			std::string out;
 			for (size_t p = 0; p < trunc.size(); p++) {
 				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_' || (trunc[p] & 0x80) != 0) {
 					out.append(trunc, p, 1);
@@ -2518,7 +2518,8 @@ int main(int argc, char **argv) {
 			src.layer = std::string(optarg).substr(0, cp - optarg);
 			src.file = std::string(cp + 1);
 			sources.push_back(src);
-		} break;
+			break;
+		}
 
 		case 'z':
 			if (strcmp(optarg, "g") == 0) {
@@ -2695,7 +2696,8 @@ int main(int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 			}
-		} break;
+			break;
+		}
 
 		case 'a': {
 			char *cp;
@@ -2707,7 +2709,8 @@ int main(int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 			}
-		} break;
+			break;
+		}
 
 		case 'v':
 			fprintf(stderr, VERSION);

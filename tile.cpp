@@ -439,7 +439,7 @@ void *partial_feature_worker(void *v) {
 			}
 		}
 
-		(*partials)[i].geoms.clear();		 // avoid keeping two copies in memory
+		(*partials)[i].geoms.clear();  // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
@@ -1501,46 +1501,43 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 				p.full_values[i].type = mvt_double;
 				break;
 
-			case op_max:
-				{
-					double existing = atof(p.full_values[i].s.c_str());
-					double maybe = atof(val.s.c_str());
-					if (maybe > existing) {
-						p.full_values[i].s = val.s.c_str();
-						p.full_values[i].type = mvt_double;
-					}
+			case op_max: {
+				double existing = atof(p.full_values[i].s.c_str());
+				double maybe = atof(val.s.c_str());
+				if (maybe > existing) {
+					p.full_values[i].s = val.s.c_str();
+					p.full_values[i].type = mvt_double;
 				}
 				break;
+			}
 
-			case op_min:
-				{
-					double existing = atof(p.full_values[i].s.c_str());
-					double maybe = atof(val.s.c_str());
-					if (maybe < existing) {
-						p.full_values[i].s = val.s.c_str();
-						p.full_values[i].type = mvt_double;
-					}
+			case op_min: {
+				double existing = atof(p.full_values[i].s.c_str());
+				double maybe = atof(val.s.c_str());
+				if (maybe < existing) {
+					p.full_values[i].s = val.s.c_str();
+					p.full_values[i].type = mvt_double;
 				}
 				break;
+			}
 
-			case op_mean:
-				{
-					auto state = attribute_accum_state.find(key);
-					if (state == attribute_accum_state.end()) {
-						accum_state s;
-						s.sum = atof(p.full_values[i].s.c_str()) + atof(val.s.c_str());
-						s.count = 2;
-						attribute_accum_state.insert(std::pair<std::string, accum_state>(key, s));
+			case op_mean: {
+				auto state = attribute_accum_state.find(key);
+				if (state == attribute_accum_state.end()) {
+					accum_state s;
+					s.sum = atof(p.full_values[i].s.c_str()) + atof(val.s.c_str());
+					s.count = 2;
+					attribute_accum_state.insert(std::pair<std::string, accum_state>(key, s));
 
-						p.full_values[i].s = milo::dtoa_milo(s.sum / s.count);
-					} else {
-						state->second.sum += atof(val.s.c_str());
-						state->second.count += 1;
+					p.full_values[i].s = milo::dtoa_milo(s.sum / s.count);
+				} else {
+					state->second.sum += atof(val.s.c_str());
+					state->second.count += 1;
 
-						p.full_values[i].s = milo::dtoa_milo(state->second.sum / state->second.count);
-					}
+					p.full_values[i].s = milo::dtoa_milo(state->second.sum / state->second.count);
 				}
 				break;
+			}
 
 			case op_concat:
 				p.full_values[i].s += val.s;
