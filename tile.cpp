@@ -1758,6 +1758,19 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				indices.push_back(sf.index);
 				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].clustered++;
+
+					if (partials[which_partial].t == VT_POINT &&
+					    partials[which_partial].geoms.size() == 1 &&
+					    partials[which_partial].geoms[0].size() == 1 &&
+					    sf.geometry.size() == 1) {
+						double x = (double) partials[which_partial].geoms[0][0].x * partials[which_partial].clustered;
+						double y = (double) partials[which_partial].geoms[0][0].y * partials[which_partial].clustered;
+						x += sf.geometry[0].x;
+						y += sf.geometry[0].y;
+						partials[which_partial].geoms[0][0].x = x / (partials[which_partial].clustered + 1);
+						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
+					}
+
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
