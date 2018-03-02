@@ -1,3 +1,7 @@
+## 1.27.9
+
+* Make clusters look better by averaging locations of clustered points
+
 ## 1.27.8
 
 * Add --accumulate-attribute to keep attributes of dropped, coalesced,

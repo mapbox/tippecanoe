@@ -896,7 +896,8 @@ int main(int argc, char **argv) {
 			std::string before = std::string(optarg).substr(0, cp - optarg);
 			std::string after = std::string(cp + 1);
 			renames.insert(std::pair<std::string, std::string>(before, after));
-		} break;
+			break;
+		}
 
 		case 'q':
 			quiet = true;
