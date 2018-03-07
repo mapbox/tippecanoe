@@ -50,6 +50,7 @@ struct mvt_feature {
 	unsigned long long id = 0;
 	bool has_id = false;
 	bool dropped = false;
+	long long clipid = 0;
 
 	mvt_feature() {
 		has_id = false;
