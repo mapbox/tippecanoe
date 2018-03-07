@@ -46,9 +46,11 @@ drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsi
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
 			long long dx, dy;
+			long long id;
 
 			deserialize_long_long_io(meta, &dx, geompos);
 			deserialize_long_long_io(meta, &dy, geompos);
+			deserialize_long_long_io(meta, &id, geompos);
 
 			wx += dx * (1 << geometry_scale);
 			wy += dy * (1 << geometry_scale);
@@ -76,6 +78,7 @@ drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsi
 
 			d.x = wwx;
 			d.y = wwy;
+			d.id = id;
 		}
 
 		out.push_back(d);

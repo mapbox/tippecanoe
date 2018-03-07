@@ -174,6 +174,7 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 			serialize_byte(out, dv[i].op, fpos, fname);
 			serialize_long_long(out, dv[i].x - wx, fpos, fname);
 			serialize_long_long(out, dv[i].y - wy, fpos, fname);
+			serialize_long_long(out, dv[i].id, fpos, fname);
 			wx = dv[i].x;
 			wy = dv[i].y;
 		} else {

@@ -21,12 +21,14 @@ struct draw {
 	signed char op;
 	long long y : 40;
 	signed char necessary;
+	long id;
 
 	draw(int nop, long long nx, long long ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),
-	      necessary(0) {
+	      necessary(0),
+	      id(0) {
 	}
 
 	draw()
