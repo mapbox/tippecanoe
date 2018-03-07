@@ -187,7 +187,8 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
 	long long layer = 0;
-	layer |= sf->layer << 6;
+	layer |= sf->layer << 7;
+	layer |= (sf->clipid != 0) << 6;
 	layer |= (sf->seq != 0) << 5;
 	layer |= (sf->index != 0) << 4;
 	layer |= (sf->extent != 0) << 3;
@@ -207,6 +208,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 	if (sf->has_id) {
 		serialize_ulong_long(geomfile, sf->id, geompos, fname);
+	}
+	if (sf->clipid != 0) {
+		serialize_long_long(geomfile, sf->clipid, geompos, fname);
 	}
 
 	serialize_int(geomfile, sf->segment, geompos, fname);
@@ -269,6 +273,9 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 		sf.has_id = true;
 		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
 	}
+	if (sf.layer & (1 << 6)) {
+		deserialize_long_long_io(geoms, &sf.clipid, geompos_in);
+	}
 
 	deserialize_int_io(geoms, &sf.segment, geompos_in);
 
@@ -283,7 +290,7 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
 	}
 
-	sf.layer >>= 6;
+	sf.layer >>= 7;
 
 	sf.metapos = 0;
 	{
