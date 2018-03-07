@@ -185,6 +185,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
+					std::vector<uint64_t> geom_ids;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -215,6 +216,19 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 5: /* geometry ids */
+						{
+							auto pi = feature_reader.get_packed_uint64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								geom_ids.push_back(*it);
+							}
+							break;
+						}
+
+						case 6: /* clipping id */
+							feature.clipid = feature_reader.get_uint64();
+							break;
+
 						default:
 							feature_reader.skip();
 							break;
@@ -237,6 +251,17 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							}
 						} else {
 							feature.geometry.push_back(mvt_geometry(op, 0, 0));
+						}
+					}
+
+					size_t off = 0;
+					for (size_t g = 0; g + 1 < geom_ids.size(); g += 2) {
+						off += geom_ids[g];
+						if (off < feature.geometry.size()) {
+							feature.geometry[off].id = geom_ids[g + 1];
+						} else {
+							fprintf(stderr, "Bad offset in feature node IDs\n");
+							exit(EXIT_FAILURE);
 						}
 					}
 
@@ -328,7 +353,12 @@ std::string mvt_tile::encode() {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
 			}
 
+			if (layers[i].features[f].clipid != 0) {
+				feature_writer.add_uint64(6, layers[i].features[f].id);
+			}
+
 			std::vector<uint32_t> geometry;
+			std::vector<uint64_t> geometry_ids;
 
 			int px = 0, py = 0;
 			int cmd_idx = -1;
@@ -376,7 +406,21 @@ std::string mvt_tile::encode() {
 				geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
 			}
 
+			size_t off = 0;
+			for (size_t g = 0; g < geom.size(); g++) {
+				if (geom[g].id != 0) {
+					geometry_ids.push_back(g - off);
+					off = g;
+					geometry_ids.push_back(geom[g].id);
+				}
+			}
+
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
+
+			if (geometry_ids.size() > 0) {
+				feature_writer.add_packed_uint64(5, std::begin(geometry_ids), std::end(geometry_ids));
+			}
+
 			layer_writer.add_message(2, feature_string);
 		}
 
