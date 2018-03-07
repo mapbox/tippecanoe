@@ -20,6 +20,13 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->y = ny;
 }
 
+mvt_geometry::mvt_geometry(int nop, long long nx, long long ny, long long nid) {
+	this->op = nop;
+	this->x = nx;
+	this->y = ny;
+	this->id = nid;
+}
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
 	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));

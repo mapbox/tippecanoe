@@ -57,7 +57,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
+		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y, geom[i].id));
 	}
 
 	return out;
@@ -91,6 +91,7 @@ struct coalesce {
 	double spacing = 0;
 	bool has_id = false;
 	unsigned long long id = 0;
+	long long clipid = 0;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -377,6 +378,7 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	long clipid = 0;
 };
 
 struct partial_arg {
@@ -1856,6 +1858,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.clipid = sf.clipid;
 				partials.push_back(p);
 			}
 
@@ -1992,6 +1995,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					c.spacing = partials[i].spacing;
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
+					c.clipid = partials[i].clipid;
 
 					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
 
@@ -2109,6 +2113,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 				feature.id = layer_features[x].id;
 				feature.has_id = layer_features[x].has_id;
+				feature.clipid = layer_features[x].clipid;
 
 				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {

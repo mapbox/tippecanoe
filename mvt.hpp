@@ -23,6 +23,7 @@ struct mvt_geometry {
 	long id = 0;
 
 	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(int op, long long x, long long y, long long id);
 
 	bool operator<(mvt_geometry const &s) const {
 		if (y < s.y || (y == s.y && x < s.x)) {
