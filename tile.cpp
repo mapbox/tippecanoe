@@ -131,6 +131,13 @@ int coalcmp(const void *v1, const void *v2) {
 		}
 	}
 
+	if (c1->clipid < c2->clipid) {
+		return -1;
+	}
+	if (c1->clipid > c2->clipid) {
+		return 1;
+	}
+
 	cmp = metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
 	if (cmp != 0) {
 		return cmp;
@@ -1581,7 +1588,7 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &out, std::vector<std::vector<std::string>> *layer_unmaps) {
 	for (size_t i = partials.size(); i > 0; i--) {
-		if (partials[i - 1].t == sf.t) {
+		if (partials[i - 1].t == sf.t && partials[i - 1].clipid == sf.clipid) {
 			std::string &layername1 = (*layer_unmaps)[partials[i - 1].segment][partials[i - 1].layer];
 			std::string &layername2 = (*layer_unmaps)[sf.segment][sf.layer];
 
