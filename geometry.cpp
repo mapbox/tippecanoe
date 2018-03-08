@@ -463,12 +463,102 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
+static bool inside(draw d, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	switch (edge) {
+	case 0:  // top
+		return d.y > miny;
+
+	case 1:  // right
+		return d.x < maxx;
+
+	case 2:  // bottom
+		return d.y < maxy;
+
+	case 3:  // left
+		return d.x > minx;
+	}
+
+	fprintf(stderr, "internal error inside\n");
+	exit(EXIT_FAILURE);
+}
+
+static draw intersect(draw a, draw b, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	// The casts to double are because the product of coordinates
+	// can overflow a long long if the tile buffer is large.
+
+	switch (edge) {
+	case 0:  // top
+		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (miny - a.y) / (b.y - a.y), miny);
+
+	case 1:  // right
+		return draw(VT_LINETO, maxx, a.y + (double) (b.y - a.y) * (maxx - a.x) / (b.x - a.x));
+
+	case 2:  // bottom
+		return draw(VT_LINETO, a.x + (double) (b.x - a.x) * (maxy - a.y) / (b.y - a.y), maxy);
+
+	case 3:  // left
+		return draw(VT_LINETO, minx, a.y + (double) (b.y - a.y) * (minx - a.x) / (b.x - a.x));
+	}
+
+	fprintf(stderr, "internal error intersecting\n");
+	exit(EXIT_FAILURE);
+}
+
+// http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
+static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+	drawvec out = geom;
+
+	for (int edge = 0; edge < 4; edge++) {
+		if (out.size() > 0) {
+			drawvec in = out;
+			out.resize(0);
+
+			draw S = in[in.size() - 1];
+
+			for (size_t e = 0; e < in.size(); e++) {
+				draw E = in[e];
+
+				if (inside(E, edge, minx, miny, maxx, maxy)) {
+					if (!inside(S, edge, minx, miny, maxx, maxy)) {
+						out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
+					}
+					out.push_back(E);
+				} else if (inside(S, edge, minx, miny, maxx, maxy)) {
+					out.push_back(intersect(S, E, edge, minx, miny, maxx, maxy));
+				}
+
+				S = E;
+			}
+		}
+	}
+
+	if (out.size() > 0) {
+		// If the polygon begins and ends outside the edge,
+		// the starting and ending points will be left as the
+		// places where it intersects the edge. Need to add
+		// another point to close the loop.
+
+		if (out[0].x != out[out.size() - 1].x || out[0].y != out[out.size() - 1].y) {
+			out.push_back(out[0]);
+		}
+
+		if (out.size() < 3) {
+			// fprintf(stderr, "Polygon degenerated to a line segment\n");
+			out.clear();
+			return out;
+		}
+
+		out[0].op = VT_MOVETO;
+		for (size_t i = 1; i < out.size(); i++) {
+			out[i].op = VT_LINETO;
+		}
+	}
+
+	return out;
+}
+
 drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out;
-
-	mapbox::geometry::point<long long> min(minx, miny);
-	mapbox::geometry::point<long long> max(maxx, maxy);
-	mapbox::geometry::box<long long> bbox(min, max);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -479,25 +569,19 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 				}
 			}
 
-			mapbox::geometry::linear_ring<long long> ring;
+			drawvec tmp;
 			for (size_t k = i; k < j; k++) {
-				ring.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+				tmp.push_back(geom[k]);
 			}
-
-			mapbox::geometry::linear_ring<long long> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
-
-			if (lr.size() > 0) {
-				for (size_t k = 0; k < lr.size(); k++) {
-					if (k == 0) {
-						out.push_back(draw(VT_MOVETO, lr[k].x, lr[k].y));
-					} else {
-						out.push_back(draw(VT_LINETO, lr[k].x, lr[k].y));
-					}
+			tmp = clip_poly1(tmp, minx, miny, maxx, maxy);
+			if (tmp.size() > 0) {
+				if (tmp[0].x != tmp[tmp.size() - 1].x || tmp[0].y != tmp[tmp.size() - 1].y) {
+					fprintf(stderr, "Internal error: Polygon ring not closed\n");
+					exit(EXIT_FAILURE);
 				}
-
-				if (lr.size() > 0 && lr[0] != lr[lr.size() - 1]) {
-					out.push_back(draw(VT_LINETO, lr[0].x, lr[0].y));
-				}
+			}
+			for (size_t k = 0; k < tmp.size(); k++) {
+				out.push_back(tmp[k]);
 			}
 
 			i = j - 1;
