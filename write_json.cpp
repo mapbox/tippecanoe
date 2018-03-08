@@ -15,13 +15,19 @@ struct lonlat {
 	double lat;
 	long long x;
 	long long y;
+	long long id;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny, long long nid)
 	    : op(nop),
 	      lon(nlon),
 	      lat(nlat),
 	      x(nx),
-	      y(ny) {
+	      y(ny),
+	      id(nid) {
+	}
+
+	void print(FILE *f) {
+		fprintf(f, "[ %f, %f ]", lon, lat);
 	}
 };
 
@@ -160,22 +166,23 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
-				ops.push_back(lonlat(op, lon, lat, px, py));
+				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].id));
 			} else {
-				ops.push_back(lonlat(op, 0, 0, 0, 0));
+				ops.push_back(lonlat(op, 0, 0, 0, 0, feat.geometry[g].id));
 			}
 		}
 
 		if (feat.type == VT_POINT) {
 			if (ops.size() == 1) {
-				fprintf(fp, "\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
+				fprintf(fp, "\"type\": \"Point\", \"coordinates\": ");
+				ops[0].print(fp);
 			} else {
 				fprintf(fp, "\"type\": \"MultiPoint\", \"coordinates\": [ ");
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (i != 0) {
 						fprintf(fp, ", ");
 					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+					ops[i].print(fp);
 				}
 				fprintf(fp, " ]");
 			}
@@ -193,7 +200,7 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 					if (i != 0) {
 						fprintf(fp, ", ");
 					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+					ops[i].print(fp);
 				}
 				fprintf(fp, " ]");
 			} else {
@@ -202,15 +209,16 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
 						if (state == 0) {
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+							ops[i].print(fp);
 							state = 1;
 						} else {
 							fprintf(fp, " ], [ ");
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+							ops[i].print(fp);
 							state = 1;
 						}
 					} else {
-						fprintf(fp, ", [ %f, %f ]", ops[i].lon, ops[i].lat);
+						fprintf(fp, ", ");
+						ops[i].print(fp);
 					}
 				}
 				fprintf(fp, " ] ]");
@@ -310,13 +318,13 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 							fprintf(fp, ", ");
 						}
 
-						fprintf(fp, "[ %f, %f ]", rings[i][j].lon, rings[i][j].lat);
+						rings[i][j].print(fp);
 					} else {
 						if (j != 0) {
 							fprintf(fp, ", ");
 						}
 
-						fprintf(fp, "[ %f, %f ]", rings[i][0].lon, rings[i][0].lat);
+						rings[i][0].print(fp);
 					}
 				}
 
