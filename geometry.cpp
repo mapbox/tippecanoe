@@ -1277,3 +1277,15 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 
 	return out;
 }
+
+void checkgeom(drawvec const &dv, std::string s) {
+#if 0
+	for (size_t i = 0; i < dv.size(); i++) {
+		if (dv[i].id == 0) {
+			fprintf(stderr, "id lost: %s\n", s.c_str());
+			abort();
+			exit(EXIT_FAILURE);
+		}
+	}
+#endif
+}

@@ -292,7 +292,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 		drawvec geom2;
 		for (size_t i = 0; i < geom.size(); i++) {
-			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
+			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale, geom[i].id));
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -1254,6 +1254,8 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 		}
 	}
 
+	checkgeom(sf.geometry, "clip_to_tile1");
+
 	// Can't accept the quick check if guaranteeing no duplication, since the
 	// overlap might have been in the buffer.
 	if (quick != 1 || prevent[P_DUPLICATION]) {
@@ -1273,7 +1275,11 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 			clipped = clip_point(sf.geometry, z, buffer);
 		}
 
+		checkgeom(sf.geometry, "clip_to_tile2");
+
 		clipped = remove_noop(clipped, sf.t, 0);
+
+		checkgeom(clipped, "clip_to_tile3");
 
 		// Must clip at z0 even if we don't want clipping, to handle features
 		// that are duplicated across the date line
@@ -1304,6 +1310,7 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 		if (sf.t < 0) {
 			return sf;
 		}
+		checkgeom(sf.geometry, "next_feature");
 
 		double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
 		if (progress >= *oprogress + 0.1) {
@@ -1745,6 +1752,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			if (sf.t < 0) {
 				break;
 			}
+
+			checkgeom(sf.geometry, "write_tile");
 
 			if (sf.dropped) {
 				if (find_partial(partials, sf, which_partial, layer_unmaps)) {

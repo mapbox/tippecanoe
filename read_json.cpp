@@ -81,7 +81,8 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			}
 
 			draw d(op, x, y);
-			out.push_back(draw(op, x, y));
+			d.id = 12345;
+			out.push_back(d);
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 			json_context(j);
@@ -101,6 +102,8 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 
 		out.push_back(draw(VT_CLOSEPATH, 0, 0));
 	}
+
+	checkgeom(out, "parse_geometry");
 }
 
 void canonicalize(json_object *o) {

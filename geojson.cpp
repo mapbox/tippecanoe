@@ -197,6 +197,8 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	sf.feature_minzoom = 0;  // Will be filled in during index merging
 	sf.seq = *(sst->layer_seq);
 
+	checkgeom(sf.geometry, "serialize_geojson_feature");
+
 	if (tippecanoe_layername.size() != 0) {
 		sf.layername = tippecanoe_layername;
 	} else {

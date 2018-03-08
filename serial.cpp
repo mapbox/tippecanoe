@@ -169,6 +169,8 @@ int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
 }
 
 static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
+	checkgeom(dv, "write_geometry");
+
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			serialize_byte(out, dv[i].op, fpos, fname);

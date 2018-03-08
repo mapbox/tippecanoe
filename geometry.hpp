@@ -31,6 +31,14 @@ struct draw {
 	      id(0) {
 	}
 
+	draw(int nop, long long nx, long long ny, long long nid)
+	    : x(nx),
+	      op(nop),
+	      y(ny),
+	      necessary(0),
+	      id(nid) {
+	}
+
 	draw()
 	    : x(0),
 	      op(0),
@@ -77,4 +85,7 @@ void check_polygon(drawvec &geom);
 double get_area(drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
 
+void checkgeom(drawvec const &dv, std::string s);
+
 #endif
+
