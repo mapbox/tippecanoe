@@ -134,6 +134,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
+ * `-I` _file.json_` or `--input-file=`_file.json_`: Specify an input file as if it were named as a separate command line argument
 
 CSV input files currently support only Point geometries, from columns named `latitude`, `longitude`, `lat`, `lon`, `long`, `lng`, `x`, or `y`.
 
@@ -289,6 +290,12 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
  * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
  * `-v` or `--version`: Report Tippecanoe's version number
+
+### Meta-options
+
+ * `-H` _config.json_ or `--options-from-file=`_config.json_: Read additional options from the specified _config.json_ file.
+   The file should contain one JSON object. Its keys must be long or short option names. The value corresponding
+   to each key should be a string or number, for options with arguments, or `null` for options that do not take arguments.
 
 ### Filters
 
