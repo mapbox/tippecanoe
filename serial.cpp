@@ -185,18 +185,31 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 	}
 }
 
+enum {
+	SHIFT_HAS_MAXZOOM = 0,
+	SHIFT_HAS_MINZOOM,
+	SHIFT_HAS_ID,
+	SHIFT_HAS_EXTENT,
+	SHIFT_HAS_INDEX,
+	SHIFT_HAS_SEQ,
+	SHIFT_HAS_CLIPID,
+	SHIFT_HAS_POINTID,
+	SHIFT_LAYER
+};
+
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
 	long long layer = 0;
-	layer |= sf->layer << 7;
-	layer |= (sf->clipid != 0) << 6;
-	layer |= (sf->seq != 0) << 5;
-	layer |= (sf->index != 0) << 4;
-	layer |= (sf->extent != 0) << 3;
-	layer |= sf->has_id << 2;
-	layer |= sf->has_tippecanoe_minzoom << 1;
-	layer |= sf->has_tippecanoe_maxzoom << 0;
+	layer |= sf->layer << SHIFT_LAYER;
+	layer |= (sf->pointid != 0) << SHIFT_HAS_POINTID;
+	layer |= (sf->clipid != 0) << SHIFT_HAS_CLIPID;
+	layer |= (sf->seq != 0) << SHIFT_HAS_SEQ;
+	layer |= (sf->index != 0) << SHIFT_HAS_INDEX;
+	layer |= (sf->extent != 0) << SHIFT_HAS_EXTENT;
+	layer |= sf->has_id << SHIFT_HAS_ID;
+	layer |= sf->has_tippecanoe_minzoom << SHIFT_HAS_MINZOOM;
+	layer |= sf->has_tippecanoe_maxzoom << SHIFT_HAS_MAXZOOM;
 
 	serialize_long_long(geomfile, layer, geompos, fname);
 	if (sf->seq != 0) {
@@ -213,6 +226,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 	if (sf->clipid != 0) {
 		serialize_long_long(geomfile, sf->clipid, geompos, fname);
+	}
+	if (sf->pointid != 0) {
+		serialize_long_long(geomfile, sf->pointid, geompos, fname);
 	}
 
 	serialize_int(geomfile, sf->segment, geompos, fname);
@@ -257,7 +273,7 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	deserialize_long_long_io(geoms, &sf.layer, geompos_in);
 
 	sf.seq = 0;
-	if (sf.layer & (1 << 5)) {
+	if (sf.layer & (1 << SHIFT_HAS_SEQ)) {
 		deserialize_long_long_io(geoms, &sf.seq, geompos_in);
 	}
 
@@ -265,18 +281,21 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	sf.tippecanoe_maxzoom = -1;
 	sf.id = 0;
 	sf.has_id = false;
-	if (sf.layer & (1 << 1)) {
+	if (sf.layer & (1 << SHIFT_HAS_MINZOOM)) {
 		deserialize_int_io(geoms, &sf.tippecanoe_minzoom, geompos_in);
 	}
-	if (sf.layer & (1 << 0)) {
+	if (sf.layer & (1 << SHIFT_HAS_MAXZOOM)) {
 		deserialize_int_io(geoms, &sf.tippecanoe_maxzoom, geompos_in);
 	}
-	if (sf.layer & (1 << 2)) {
+	if (sf.layer & (1 << SHIFT_HAS_ID)) {
 		sf.has_id = true;
 		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
 	}
-	if (sf.layer & (1 << 6)) {
+	if (sf.layer & (1 << SHIFT_HAS_CLIPID)) {
 		deserialize_long_long_io(geoms, &sf.clipid, geompos_in);
+	}
+	if (sf.layer & (1 << SHIFT_HAS_POINTID)) {
+		deserialize_long_long_io(geoms, &sf.pointid, geompos_in);
 	}
 
 	deserialize_int_io(geoms, &sf.segment, geompos_in);
@@ -285,14 +304,14 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	sf.extent = 0;
 
 	sf.geometry = decode_geometry(geoms, geompos_in, z, tx, ty, sf.bbox, initial_x[sf.segment], initial_y[sf.segment]);
-	if (sf.layer & (1 << 4)) {
+	if (sf.layer & (1 << SHIFT_HAS_INDEX)) {
 		deserialize_ulong_long_io(geoms, &sf.index, geompos_in);
 	}
-	if (sf.layer & (1 << 3)) {
+	if (sf.layer & (1 << SHIFT_HAS_EXTENT)) {
 		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
 	}
 
-	sf.layer >>= 7;
+	sf.layer >>= SHIFT_LAYER;
 
 	sf.metapos = 0;
 	{

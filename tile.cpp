@@ -302,7 +302,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			// where it crosses a tile boundary.
 
 			if (clipid == 0) {
-				clipid = (*clipids)[tiling_seg]++ * CPUS + tiling_seg;
+				clipid = (*clipids)[tiling_seg]++ * CPUS + tiling_seg + 1;
 			}
 		}
 
