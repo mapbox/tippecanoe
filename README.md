@@ -295,7 +295,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
  * `-H` _config.json_ or `--options-from-file=`_config.json_: Read additional options from the specified _config.json_ file.
    The file should contain one JSON object. Its keys must be long or short option names. The value corresponding
-   to each key should be a string or number, for options with arguments, or `null` for options that do not take arguments.
+   to each key should be a string or number, for options with arguments, or `null` or `true` for options that do not take arguments.
 
 ### Filters
 

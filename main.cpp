@@ -2311,7 +2311,7 @@ void read_flags(std::vector<flag> &flags, const char *fname) {
 			exit(EXIT_FAILURE);
 		}
 
-		if (obj->values[i]->type != JSON_STRING && obj->values[i]->type != JSON_NUMBER && obj->values[i]->type != JSON_NULL) {
+		if (obj->values[i]->type != JSON_STRING && obj->values[i]->type != JSON_NUMBER && obj->values[i]->type != JSON_NULL && obj->values[i]->type != JSON_TRUE) {
 			fprintf(stderr, "%s: %s: %s: option argument is not a string, number, or null\n", *av, fname, json_stringify(obj->values[i]));
 			exit(EXIT_FAILURE);
 		}
