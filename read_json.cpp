@@ -81,7 +81,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			}
 
 			draw d(op, x, y);
-			d.id = 12345;
+			d.id = 0;
 			out.push_back(d);
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);

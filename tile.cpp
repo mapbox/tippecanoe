@@ -295,14 +295,16 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale, geom[i].id));
 		}
 
-		if (bbox2[0] != bbox2[2] || bbox2[1] != bbox2[3]) {
-			// Feature is being split across multiple child tiles,
-			// so we must give the feature an ID if it doesn't
-			// already have one, and must give IDs to all the nodes
-			// where it crosses a tile boundary.
+		if (additional[A_JOIN_FEATURES_ACROSS_TILES]) {
+			if (bbox2[0] != bbox2[2] || bbox2[1] != bbox2[3]) {
+				// Feature is being split across multiple child tiles,
+				// so we must give the feature an ID if it doesn't
+				// already have one, and must give IDs to all the nodes
+				// where it crosses a tile boundary.
 
-			if (clipid == 0) {
-				clipid = (*clipids)[tiling_seg]++ * CPUS + tiling_seg + 1;
+				if (clipid == 0) {
+					clipid = (*clipids)[tiling_seg]++ * CPUS + tiling_seg + 1;
+				}
 			}
 		}
 
