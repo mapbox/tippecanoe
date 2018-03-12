@@ -87,5 +87,7 @@ double get_mp_area(drawvec &geom);
 
 void checkgeom(drawvec const &dv, std::string s);
 
+drawvec tag_line_transitions(drawvec dv, int nextzoom, long long *pointid, long long tx1, long long ty1, long long tx2, long long ty2);
+
 #endif
 

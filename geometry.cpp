@@ -1289,3 +1289,55 @@ void checkgeom(drawvec const &dv, std::string s) {
 	}
 #endif
 }
+
+drawvec tag_line_transitions(drawvec dv, int nextzoom, long long *pointid, long long tx1, long long ty1, long long tx2, long long ty2) {
+	// Crossings of vertical lines
+	for (long long tx = tx1; tx < tx2; tx++) {
+		long long x = (1LL << (32 - nextzoom)) * (tx + 1);
+		drawvec out;
+
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (i > 0 && dv[i].op == VT_LINETO) {
+				if ((dv[i - 1].x < x && dv[i].x > x) ||
+				    (dv[i - 1].x > x && dv[i].x < x)) {
+					long long ny = dv[i - 1].y + (dv[i].y - dv[i - 1].y) * (x - dv[i - 1].x) / (dv[i].x - dv[i - 1].x);
+					long long nx = x;
+
+					draw d(VT_LINETO, nx, ny);
+					d.id = ++*pointid;
+					// out.push_back(d);
+				}
+			}
+
+			out.push_back(dv[i]);
+		}
+
+		dv = out;
+	}
+
+	// Crossings of horizontal lines
+	for (long long ty = ty1; ty < ty2; ty++) {
+		long long y = (1LL << (32 - nextzoom)) * (ty + 1);
+		drawvec out;
+
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (i > 0 && dv[i].op == VT_LINETO) {
+				if ((dv[i - 1].y < y && dv[i].y > y) ||
+				    (dv[i - 1].y > y && dv[i].y < y)) {
+					long long nx = dv[i - 1].x + (dv[i].x - dv[i - 1].x) * (y - dv[i - 1].y) / (dv[i].y - dv[i - 1].y);
+					long long ny = y;
+
+					draw d(VT_LINETO, nx, ny);
+					d.id = ++*pointid;
+					out.push_back(d);
+				}
+			}
+
+			out.push_back(dv[i]);
+		}
+
+		dv = out;
+	}
+
+	return dv;
+}

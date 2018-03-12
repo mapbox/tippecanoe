@@ -252,7 +252,7 @@ static int metacmp(int m1, const std::vector<long long> &keys1, const std::vecto
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent, long long clipid, long long pointid, size_t tiling_seg, std::vector<long long> *clipids) {
+void rewrite(drawvec geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent, long long clipid, long long pointid, size_t tiling_seg, std::vector<long long> *clipids) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -280,6 +280,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 				bbox2[k] = 256 * (span - 1);
 			}
 
+			// Shift bounding box from pixels to tiles
 			bbox2[k] /= 256;
 		}
 
@@ -290,9 +291,9 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 			sy = ty << (32 - z);
 		}
 
-		drawvec geom2;
 		for (size_t i = 0; i < geom.size(); i++) {
-			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale, geom[i].id));
+			geom[i].x += sx;
+			geom[i].y += sy;
 		}
 
 		if (additional[A_JOIN_FEATURES_ACROSS_TILES]) {
@@ -305,7 +306,20 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 				if (clipid == 0) {
 					clipid = (*clipids)[tiling_seg]++ * CPUS + tiling_seg + 1;
 				}
+
+				// If this is a LineString, tag the transition points
+				// between tiles with IDs now.
+
+				if (t == VT_LINE) {
+					geom = tag_line_transitions(geom, nextzoom, &pointid, tx * span + bbox2[0], ty * span + bbox2[1], tx * span + bbox2[2], ty * span + bbox2[3]);
+				}
 			}
+		}
+
+		// Scale down to maxzoom resolution
+		for (size_t i = 0; i < geom.size(); i++) {
+			geom[i].x >>= geometry_scale;
+			geom[i].y >>= geometry_scale;
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -353,7 +367,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
 					sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 					sf.metapos = metastart;
-					sf.geometry = geom2;
+					sf.geometry = geom;
 					sf.index = index;
 					sf.extent = extent;
 					sf.m = m;
