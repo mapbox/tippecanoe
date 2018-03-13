@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <signal.h>
+#include <sys/time.h>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -66,6 +67,8 @@ static int min_detail = 7;
 
 int quiet = 0;
 int quiet_progress = 0;
+double progress_interval = 0;
+volatile double last_progress = 0;
 int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
@@ -293,6 +296,8 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 		}
 	}
 
+	last_progress = 0;
+
 	while (head != NULL) {
 		struct index ix = *((struct index *) (map + head->start));
 		long long pos = *geompos;
@@ -303,7 +308,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
 		*progress += (ix.end - ix.start) * 3 / 4;
-		if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+		if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
 		}
@@ -673,7 +678,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				// Count this as a 25%-accomplishment, since we will copy again
 				*progress += (ix.end - ix.start) / 4;
-				if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+				if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 					fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 					*progress_reported = 100 * *progress / *progress_max;
 				}
@@ -845,7 +850,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
 					*progress += (ix.end - ix.start) * 3 / 4;
-					if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+					if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 						fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 						*progress_reported = 100 * *progress / *progress_max;
 					}
@@ -1819,6 +1824,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	long long indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
 
+	last_progress = 0;
 	if (!quiet) {
 		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
 	}
@@ -1856,7 +1862,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
-				if (!quiet && !quiet_progress) {
+				if (!quiet && !quiet_progress && progress_time()) {
 					fprintf(stderr, "Maxzoom: %lld%% \r", progress);
 				}
 			}
@@ -1952,7 +1958,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
-				if (!quiet && !quiet_progress) {
+				if (!quiet && !quiet_progress && progress_time()) {
 					fprintf(stderr, "Base zoom/drop rate: %lld%% \r", progress);
 				}
 			}
@@ -2436,6 +2442,7 @@ int main(int argc, char **argv) {
 		{"Progress indicator", 0, 0, 0},
 		{"quiet", no_argument, 0, 'q'},
 		{"no-progress-indicator", no_argument, 0, 'Q'},
+		{"progress-interval", required_argument, 0, 'U'},
 		{"version", no_argument, 0, 'v'},
 
 		{"", 0, 0, 0},
@@ -2684,6 +2691,10 @@ int main(int argc, char **argv) {
 
 		case 'Q':
 			quiet_progress = 1;
+			break;
+
+		case 'U':
+			progress_interval = atof_require(optarg, "Progress interval");
 			break;
 
 		case 'p': {
@@ -2936,4 +2947,26 @@ FILE *fopen_oflag(const char *name, const char *mode, int oflag) {
 		return NULL;
 	}
 	return fdopen(fd, mode);
+}
+
+bool progress_time() {
+	if (progress_interval == 0.0) {
+		return true;
+	}
+
+	struct timeval tv;
+	double now;
+	if (gettimeofday(&tv, NULL) != 0) {
+		fprintf(stderr, "%s: Can't get the time of day: %s\n", *av, strerror(errno));
+		now = 0;
+	} else {
+		now = tv.tv_sec + tv.tv_usec / 1000000.0;
+	}
+
+	if (now - last_progress >= progress_interval) {
+		last_progress = now;
+		return true;
+	} else {
+		return false;
+	}
 }

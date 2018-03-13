@@ -1298,7 +1298,7 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 
 		double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
 		if (progress >= *oprogress + 0.1) {
-			if (!quiet && !quiet_progress) {
+			if (!quiet && !quiet_progress && progress_time()) {
 				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
 			}
 			*oprogress = progress;
@@ -2163,7 +2163,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 		double progress = floor(((((*geompos_in + *along - alongminus) / (double) todo) + (pass - (2 - passes))) / passes + z) / (maxzoom + 1) * 1000) / 10;
 		if (progress >= oprogress + 0.1) {
-			if (!quiet && !quiet_progress) {
+			if (!quiet && !quiet_progress && progress_time()) {
 				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
 			}
 			oprogress = progress;
@@ -2477,6 +2477,8 @@ void *run_thread(void *vargs) {
 }
 
 int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, unsigned *midx, unsigned *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum) {
+	last_progress = 0;
+
 	// The existing layermaps are one table per input thread.
 	// We need to add another one per *tiling* thread so that it can be
 	// safely changed during tiling.

@@ -22,6 +22,8 @@ void checkdisk(std::vector<struct reader> *r);
 extern int geometry_scale;
 extern int quiet;
 extern int quiet_progress;
+extern double progress_interval;
+extern volatile double last_progress;
 
 extern size_t CPUS;
 extern size_t TEMP_FILES;
@@ -32,6 +34,7 @@ extern int cluster_distance;
 
 int mkstemp_cloexec(char *name);
 FILE *fopen_oflag(const char *name, const char *mode, int oflag);
+bool progress_time();
 
 #define MAX_ZOOM 24
 
