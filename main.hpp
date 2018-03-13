@@ -2,6 +2,7 @@
 #define MAIN_HPP
 
 #include <stddef.h>
+#include <atomic>
 
 struct index {
 	long long start = 0;
@@ -23,7 +24,7 @@ extern int geometry_scale;
 extern int quiet;
 extern int quiet_progress;
 extern double progress_interval;
-extern volatile double last_progress;
+extern std::atomic<double> last_progress;
 
 extern size_t CPUS;
 extern size_t TEMP_FILES;

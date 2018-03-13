@@ -68,7 +68,7 @@ static int min_detail = 7;
 int quiet = 0;
 int quiet_progress = 0;
 double progress_interval = 0;
-volatile double last_progress = 0;
+std::atomic<double> last_progress(0);
 int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
