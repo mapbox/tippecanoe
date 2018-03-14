@@ -54,7 +54,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	printf(" } }\n");
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, int describe, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -76,7 +76,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 	if (!pipeline) {
 		printf("{ \"type\": \"FeatureCollection\"");
 
-		if (describe) {
+		if (true) {
 			printf(", \"properties\": { \"zoom\": %d, \"x\": %d, \"y\": %d", z, x, y);
 			if (!was_compressed) {
 				printf(", \"compressed\": false");
@@ -107,7 +107,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		}
 
 		if (!pipeline) {
-			if (describe) {
+			if (true) {
 				if (!first_layer) {
 					printf(",\n");
 				}
@@ -132,7 +132,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, int describe, st
 		layer_to_geojson(stdout, layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force);
 
 		if (!pipeline) {
-			if (describe) {
+			if (true) {
 				printf("] }\n");
 			}
 		}
@@ -159,7 +159,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, 1, to_decode, pipeline, stats);
+							handle(s, z, x, y, to_decode, pipeline, stats);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -269,7 +269,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				}
 				fclose(f);
 
-				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, 1, to_decode, pipeline, stats);
+				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats);
 			}
 		} else {
 			const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
@@ -310,7 +310,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				ty = (1LL << tz) - 1 - ty;
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-				handle(std::string(s, len), tz, tx, ty, 1, to_decode, pipeline, stats);
+				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats);
 			}
 
 			sqlite3_finalize(stmt);
@@ -344,7 +344,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, 0, to_decode, pipeline, stats);
+				handle(std::string(s, len), z, x, y, to_decode, pipeline, stats);
 				handled = 1;
 			}
 

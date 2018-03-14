@@ -604,7 +604,7 @@ or on an individual tile:
     tippecanoe-decode file.mbtiles zoom x y
     tippecanoe-decode file.vector.pbf zoom x y
 
-If you decode an entire file, you get a nested `FeatureCollection` identifying each
+Unless you use `-c`, the output is a set of nested FeatureCollections identifying each
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.

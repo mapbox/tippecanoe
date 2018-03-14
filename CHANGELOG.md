@@ -1,3 +1,7 @@
+## 1.27.11
+
+* Always include tile and layer in tippecanoe-decode, fixing corrupt JSON.
+
 ## 1.27.10
 
 * Add --progress-interval setting to reduce progress indicator frequency
