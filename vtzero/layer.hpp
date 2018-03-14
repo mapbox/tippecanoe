@@ -128,10 +128,10 @@ namespace vtzero {
                         break;
                     default:
                         throw format_exception{"unknown field in layer (tag=" +
-                                                std::to_string(static_cast<uint32_t>(reader.tag())) +
-                                                ", type=" +
-                                                std::to_string(static_cast<uint32_t>(reader.wire_type())) +
-                                                ")"};
+                                               std::to_string(static_cast<uint32_t>(reader.tag())) +
+                                               ", type=" +
+                                               std::to_string(static_cast<uint32_t>(reader.wire_type())) +
+                                               ")"};
                 }
             }
 

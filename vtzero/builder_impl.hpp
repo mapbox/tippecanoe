@@ -230,18 +230,17 @@ namespace vtzero {
             std::size_t estimated_size() const override {
                 constexpr const std::size_t estimated_overhead_for_pbf_encoding = 8;
                 return data().size() +
-                    keys_data().size() +
-                    values_data().size() +
-                    estimated_overhead_for_pbf_encoding;
+                       keys_data().size() +
+                       values_data().size() +
+                       estimated_overhead_for_pbf_encoding;
             }
 
             void build(protozero::pbf_builder<detail::pbf_tile>& pbf_tile_builder) const override {
                 if (m_num_features > 0) {
                     pbf_tile_builder.add_bytes_vectored(detail::pbf_tile::layers,
-                        data(),
-                        keys_data(),
-                        values_data()
-                    );
+                                                        data(),
+                                                        keys_data(),
+                                                        values_data());
                 }
             }
 

@@ -31,7 +31,7 @@ namespace vtzero {
      * @tparam TMap The map class to use (std::map, std::unordered_map or
      *         something compatible).
      */
-    template <template<typename...> class TMap>
+    template <template <typename...> class TMap>
     class key_index {
 
         layer_builder& m_builder;
@@ -83,7 +83,7 @@ namespace vtzero {
      * @tparam TMap The map class to use (std::map, std::unordered_map or
      *         something compatible).
      */
-    template <typename TInternal, typename TExternal, template<typename...> class TMap>
+    template <typename TInternal, typename TExternal, template <typename...> class TMap>
     class value_index {
 
         layer_builder& m_builder;
@@ -154,7 +154,7 @@ namespace vtzero {
          * @returns The index value of they value.
          */
         index_value operator()(const bool value) {
-            auto& idx = m_index[static_cast<std::size_t>(value)]; // NOLINT clang-tidy: cppcoreguidelines-pro-bounds-constant-array-index
+            auto& idx = m_index[static_cast<std::size_t>(value)]; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
             if (!idx.valid()) {
                 idx = m_builder.add_value_without_dup_check(encoded_property_value{value});
             }
@@ -220,7 +220,7 @@ namespace vtzero {
      * @tparam TMap The map class to use (std::map, std::unordered_map or
      *         something compatible).
      */
-    template <template<typename...> class TMap>
+    template <template <typename...> class TMap>
     class value_index_internal {
 
         layer_builder& m_builder;

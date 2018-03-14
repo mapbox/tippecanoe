@@ -212,7 +212,7 @@ namespace vtzero {
          * @param extent The extent of the new layer.
          */
         template <typename TString, typename std::enable_if<!is_layer<TString>::value, int>::type = 0>
-        layer_builder(vtzero::tile_builder& tile, TString&& name, uint32_t version = 2, uint32_t extent = 4096):
+        layer_builder(vtzero::tile_builder& tile, TString&& name, uint32_t version = 2, uint32_t extent = 4096) :
             m_layer(tile.add_layer(std::forward<TString>(name), version, extent)) {
         }
 
@@ -373,7 +373,7 @@ namespace vtzero {
         /// Helper function to check size isn't too large
         template <typename T>
         uint32_t check_num_points(T size) {
-            if (size >= (1l << 29)) {
+            if (size >= (1ul << 29u)) {
                 throw geometry_exception{"Maximum of 2^29 - 1 points allowed in geometry"};
             }
             return static_cast<uint32_t>(size);
@@ -393,12 +393,12 @@ namespace vtzero {
     public:
 
         /**
-         * The destructor will commit all the details added to the feature
-         * to the layer builder.
+         * If the feature was not committed, the destructor will roll back all
+         * the changes.
          */
         ~feature_builder() {
             try {
-                commit();
+                rollback();
             } catch (...) {
                 // ignore exceptions
             }
@@ -425,6 +425,8 @@ namespace vtzero {
          * @param id The ID.
          */
         void set_id(uint64_t id) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call set_id() after commit() or rollback()");
             vtzero_assert(!m_pbf_geometry.valid() &&
                           !m_pbf_tags.valid() &&
                           "Call set_id() before setting the geometry or adding properties");
@@ -440,6 +442,8 @@ namespace vtzero {
          */
         template <typename TProp>
         void add_property(TProp&& prop) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call add_property() after commit() or rollback()");
             prepare_to_add_property();
             add_property_impl(std::forward<TProp>(prop));
         }
@@ -457,20 +461,25 @@ namespace vtzero {
          */
         template <typename TKey, typename TValue>
         void add_property(TKey&& key, TValue&& value) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call add_property() after commit() or rollback()");
             prepare_to_add_property();
             add_property_impl(std::forward<TKey>(key), std::forward<TValue>(value));
         }
 
         /**
-         * Commit this feature. Optionally call this after all the details of
-         * this feature have been added. If this is not called, the feature
-         * will be committed when the destructor of the feature_builder is
+         * Commit this feature. Call this after all the details of this
+         * feature have been added. If this is not called, the feature
+         * will be rolled back when the destructor of the feature_builder is
          * called.
+         *
+         * Once a feature has been committed or rolled back, further calls
+         * to commit() or rollback() don't do anything.
          */
         void commit() {
             if (m_feature_writer.valid()) {
-                vtzero_assert_in_noexcept_function((m_pbf_geometry.valid() || m_pbf_tags.valid()) &&
-                                                   "Can not call commit before geometry was added");
+                vtzero_assert((m_pbf_geometry.valid() || m_pbf_tags.valid()) &&
+                              "Can not call commit before geometry was added");
                 if (m_pbf_geometry.valid()) {
                     m_pbf_geometry.commit();
                 }
@@ -481,16 +490,20 @@ namespace vtzero {
         /**
          * Rollback this feature. Removed all traces of this feature from
          * the layer_builder. Useful when you started creating a feature
-         * but then found out that its geometry is invalid or something like
-         * it.
+         * but then find out that its geometry is invalid or something like
+         * it. This will also happen automatically when the feature_builder
+         * is destructed and commit() hasn't been called on it.
+         *
+         * Once a feature has been committed or rolled back, further calls
+         * to commit() or rollback() don't do anything.
          */
         void rollback() {
-            vtzero_assert(m_feature_writer.valid() &&
-                          "Can not call rollback() after commit()");
-            if (m_pbf_geometry.valid()) {
-                m_pbf_geometry.commit();
+            if (m_feature_writer.valid()) {
+                if (m_pbf_geometry.valid()) {
+                    m_pbf_geometry.rollback();
+                }
+                do_rollback();
             }
-            do_rollback();
         }
 
     }; // class feature_builder
@@ -500,9 +513,9 @@ namespace vtzero {
      * creating an object of this class you can add data to the feature in a
      * specific order:
      *
-     * * Optionally add the ID using setid().
-     * * Add the (multi)point geometry using add_point(), add_points(), and
-     *   set_point().
+     * * Optionally add the ID using set_id().
+     * * Add the (multi)point geometry using add_point(), add_points() and
+     *   set_point(), or add_points_from_container().
      * * Optionally add any number of properties using add_property().
      *
      * @code
@@ -537,6 +550,8 @@ namespace vtzero {
          *      this method.
          */
         void add_point(const point p) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(!m_pbf_geometry.valid() &&
                           !m_pbf_tags.valid() &&
                           "add_point() can only be called once");
@@ -586,11 +601,13 @@ namespace vtzero {
          *      this method.
          */
         void add_points(uint32_t count) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(!m_pbf_geometry.valid() &&
                           "can not call add_points() twice or mix with add_point()");
             vtzero_assert(!m_pbf_tags.valid() &&
                           "add_points() has to be called before properties are added");
-            vtzero_assert(count > 0 && count < (1ul << 29) && "add_points() must be called with 0 < count < 2^29");
+            vtzero_assert(count > 0 && count < (1ul << 29u) && "add_points() must be called with 0 < count < 2^29");
             m_num_points.set(count);
             m_pbf_geometry = {m_feature_writer, detail::pbf_feature::geometry};
             m_pbf_geometry.add_element(detail::command_move_to(count));
@@ -608,6 +625,8 @@ namespace vtzero {
          *      this method.
          */
         void set_point(const point p) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(m_pbf_geometry.valid() &&
                           "call add_points() before set_point()");
             vtzero_assert(!m_pbf_tags.valid() &&
@@ -653,52 +672,6 @@ namespace vtzero {
         }
 
         /**
-         * Add the points from an iterator range as multipoint geometry
-         * to this feature. This method will determine the number of points in
-         * the range using std::distance(), so it will not work on an input
-         * iterator and might be more expensive than calling the overload of
-         * this function taking a third parameter with the count.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_points(TIter begin, TIter end) {
-            add_points(check_num_points(std::distance(begin, end)));
-            for (; begin != end; ++begin) {
-                set_point(*begin);
-            }
-        }
-
-        /**
-         * Add the points from an iterator range as multipoint geometry
-         * to this feature. Use this function if you know the number of
-         * points in the range.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         * @param count The number of points in the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_points(TIter begin, TIter end, uint32_t count) {
-            add_points(count);
-            for (; begin != end; ++begin) {
-                set_point(*begin);
-            }
-            vtzero_assert(m_num_points.value() == 0 && "Iterator must yield exactly count points");
-        }
-
-        /**
          * Add the points from the specified container as multipoint geometry
          * to this feature.
          *
@@ -729,7 +702,7 @@ namespace vtzero {
      * After creating an object of this class you can add data to the
      * feature in a specific order:
      *
-     * * Optionally add the ID using setid().
+     * * Optionally add the ID using set_id().
      * * Add the (multi)linestring geometry using add_linestring() or
      *   add_linestring_from_container().
      * * Optionally add any number of properties using add_property().
@@ -773,9 +746,11 @@ namespace vtzero {
          *      this method.
          */
         void add_linestring(const uint32_t count) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(!m_pbf_tags.valid() &&
                           "add_linestring() has to be called before properties are added");
-            vtzero_assert(count > 1 && count < (1ul << 29) && "add_linestring() must be called with 1 < count < 2^29");
+            vtzero_assert(count > 1 && count < (1ul << 29u) && "add_linestring() must be called with 1 < count < 2^29");
             m_num_points.assert_is_zero();
             if (!m_pbf_geometry.valid()) {
                 m_pbf_geometry = {m_feature_writer, detail::pbf_feature::geometry};
@@ -790,6 +765,10 @@ namespace vtzero {
          *
          * @param p The point.
          *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
+         *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_linestring(count).
          *
@@ -797,6 +776,8 @@ namespace vtzero {
          *      this method.
          */
         void set_point(const point p) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(m_pbf_geometry.valid() &&
                           "call add_linestring() before set_point()");
             vtzero_assert(!m_pbf_tags.valid() &&
@@ -809,7 +790,9 @@ namespace vtzero {
                 m_pbf_geometry.add_element(detail::command_line_to(m_num_points.value()));
                 m_start_line = false;
             } else {
-                vtzero_assert(p != m_cursor); // no zero-length segments
+                if (p == m_cursor) {
+                    throw geometry_exception{"Zero-length segments in linestrings are not allowed."};
+                }
                 m_pbf_geometry.add_element(protozero::encode_zigzag32(p.x - m_cursor.x));
                 m_pbf_geometry.add_element(protozero::encode_zigzag32(p.y - m_cursor.y));
             }
@@ -822,6 +805,10 @@ namespace vtzero {
          *
          * @param x X coordinate of the point to set.
          * @param y Y coordinate of the point to set.
+         *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
          *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_linestring(count).
@@ -841,6 +828,10 @@ namespace vtzero {
          *         the create_vtzero_point function.
          * @param p The point to add.
          *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
+         *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_linestring(count).
          *
@@ -850,52 +841,6 @@ namespace vtzero {
         template <typename TPoint>
         void set_point(TPoint&& p) {
             set_point(create_vtzero_point(std::forward<TPoint>(p)));
-        }
-
-        /**
-         * Add the points from an iterator range as a linestring geometry
-         * to this feature. This method will determine the number of points in
-         * the range using std::distance(), so it will not work on an input
-         * iterator and might be more expensive than calling the overload of
-         * this function taking a third parameter with the count.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_linestring(TIter begin, TIter end) {
-            add_linestring(check_num_points(std::distance(begin, end)));
-            for (; begin != end; ++begin) {
-                set_point(*begin);
-            }
-        }
-
-        /**
-         * Add the points from an iterator range as a linestring geometry
-         * to this feature. Use this function if you know the number of
-         * points in the range.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         * @param count The number of points in the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_linestring(TIter begin, TIter end, uint32_t count) {
-            add_linestring(count);
-            for (; begin != end; ++begin) {
-                set_point(*begin);
-            }
-            vtzero_assert(m_num_points.value() == 0 && "Iterator must yield exactly count points");
         }
 
         /**
@@ -909,7 +854,8 @@ namespace vtzero {
          * @param container The container to read the points from.
          *
          * @throws geometry_exception If there are more than 2^32-1 members in
-         *         the container.
+         *         the container or if two consecutive points in the container
+         *         are identical.
          *
          * @pre You must not have any calls to add_property() before calling
          *      this method.
@@ -929,7 +875,7 @@ namespace vtzero {
      * After creating an object of this class you can add data to the
      * feature in a specific order:
      *
-     * * Optionally add the ID using setid().
+     * * Optionally add the ID using set_id().
      * * Add the (multi)polygon geometry using add_ring() or
      *   add_ring_from_container().
      * * Optionally add any number of properties using add_property().
@@ -974,9 +920,11 @@ namespace vtzero {
          *      this method.
          */
         void add_ring(const uint32_t count) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(!m_pbf_tags.valid() &&
                           "add_ring() has to be called before properties are added");
-            vtzero_assert(count > 3 && count < (1ul << 29) && "add_ring() must be called with 3 < count < 2^29");
+            vtzero_assert(count > 3 && count < (1ul << 29u) && "add_ring() must be called with 3 < count < 2^29");
             m_num_points.assert_is_zero();
             if (!m_pbf_geometry.valid()) {
                 m_pbf_geometry = {m_feature_writer, detail::pbf_feature::geometry};
@@ -990,6 +938,13 @@ namespace vtzero {
          *
          * @param p The point.
          *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
+         *         This exception is also thrown when the last point in the
+         *         ring is not equal to the first point, because this would
+         *         not create a closed ring.
+         *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_ring(count).
          *
@@ -997,6 +952,8 @@ namespace vtzero {
          *      this method.
          */
         void set_point(const point p) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(m_pbf_geometry.valid() &&
                           "call add_ring() before set_point()");
             vtzero_assert(!m_pbf_tags.valid() &&
@@ -1009,13 +966,17 @@ namespace vtzero {
                 m_pbf_geometry.add_element(protozero::encode_zigzag32(p.y - m_cursor.y));
                 m_pbf_geometry.add_element(detail::command_line_to(m_num_points.value() - 1));
                 m_start_ring = false;
-                m_cursor = m_first_point;
+                m_cursor = p;
             } else if (m_num_points.value() == 0) {
-                vtzero_assert(m_first_point == p); // XXX
+                if (p != m_first_point) {
+                    throw geometry_exception{"Last point in a ring must be the same as the first point."};
+                }
                 // spec 4.3.3.3 "A ClosePath command MUST have a command count of 1"
-                m_pbf_geometry.add_element(detail::command_close_path(1));
+                m_pbf_geometry.add_element(detail::command_close_path());
             } else {
-                vtzero_assert(m_cursor != p); // XXX
+                if (p == m_cursor) {
+                    throw geometry_exception{"Zero-length segments in linestrings are not allowed."};
+                }
                 m_pbf_geometry.add_element(protozero::encode_zigzag32(p.x - m_cursor.x));
                 m_pbf_geometry.add_element(protozero::encode_zigzag32(p.y - m_cursor.y));
                 m_cursor = p;
@@ -1027,6 +988,13 @@ namespace vtzero {
          *
          * @param x X coordinate of the point to set.
          * @param y Y coordinate of the point to set.
+         *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
+         *         This exception is also thrown when the last point in the
+         *         ring is not equal to the first point, because this would
+         *         not create a closed ring.
          *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_ring(count).
@@ -1044,6 +1012,13 @@ namespace vtzero {
          * @tparam TPoint A type that can be converted to vtzero::point using
          *         the create_vtzero_point function.
          * @param p The point to add.
+         *
+         * @throws geometry_exception if the point set is the same as the
+         *         previous point. This would create zero-length segments
+         *         which are not allowed according to the vector tile spec.
+         *         This exception is also thrown when the last point in the
+         *         ring is not equal to the first point, because this would
+         *         not create a closed ring.
          *
          * @pre There must have been less than *count* calls to set_point()
          *      already after a call to add_ring(count).
@@ -1068,59 +1043,16 @@ namespace vtzero {
          *      this method.
          */
         void close_ring() {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(m_pbf_geometry.valid() &&
                           "Call add_ring() before you can call close_ring()");
             vtzero_assert(!m_pbf_tags.valid() &&
                           "close_ring() has to be called before properties are added");
             vtzero_assert(m_num_points.value() == 1 &&
                           "wrong number of points in ring");
-            m_pbf_geometry.add_element(detail::command_close_path(1));
+            m_pbf_geometry.add_element(detail::command_close_path());
             m_num_points.decrement();
-        }
-
-        /**
-         * Add the points from an iterator range as a ring to this feature.
-         * This method will determine the number of points in the range using
-         * std::distance(), so it will not work on an input iterator and might
-         * be more expensive than calling the overload of this function taking
-         * a third parameter with the count.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_ring(TIter begin, TIter end) {
-            add_ring(check_num_points(std::distance(begin, end)));
-            for (; begin != end; ++begin) {
-                set_point(create_vtzero_point(*begin));
-            }
-        }
-
-        /**
-         * Add the points from an iterator range as a ring to this feature. Use
-         * this function if you know the number of points in the range.
-         *
-         * @tparam TIter Forward iterator type. Dereferencing must yield
-         *         a vtzero::point or something convertible to it.
-         * @param begin Iterator to the beginning of the range.
-         * @param end Iterator one past the end of the range.
-         * @param count The number of points in the range.
-         *
-         * @pre You must not have any calls to add_property() before calling
-         *      this method.
-         */
-        template <typename TIter>
-        void add_ring(TIter begin, TIter end, uint32_t count) {
-            add_ring(count);
-            for (; begin != end; ++begin) {
-                set_point(*begin);
-            }
-            vtzero_assert(m_num_points.value() == 0 && "Iterator must yield exactly count points");
         }
 
         /**
@@ -1134,7 +1066,9 @@ namespace vtzero {
          * @param container The container to read the points from.
          *
          * @throws geometry_exception If there are more than 2^32-1 members in
-         *         the container.
+         *         the container or if two consecutive points in the container
+         *         are identical or if the last point is not the same as the
+         *         first point.
          *
          * @pre You must not have any calls to add_property() before calling
          *      this method.
@@ -1154,7 +1088,7 @@ namespace vtzero {
      * creating an object of this class you can add data to the feature in a
      * specific order:
      *
-     * * Optionally add the ID using setid().
+     * * Optionally add the ID using set_id().
      * * Add the geometry using set_geometry().
      * * Optionally add any number of properties using add_property().
      *
@@ -1165,7 +1099,7 @@ namespace vtzero {
      * vtzero::layer_builder lb{tb};
      * vtzero::geometry_feature_builder fb{lb};
      * fb.set_id(123); // optionally set ID
-     * fb.add_geometry(geom) // add geometry
+     * fb.set_geometry(geom) // add geometry
      * fb.add_property("foo", "bar"); // add property
      * @endcode
      */
@@ -1183,12 +1117,12 @@ namespace vtzero {
         }
 
         /**
-         * The destructor will commit all the details added to the feature
-         * to the layer builder.
+         * If the feature was not committed, the destructor will roll back all
+         * the changes.
          */
         ~geometry_feature_builder() noexcept {
             try {
-                do_commit();
+                rollback();
             } catch (...) {
                 // ignore exceptions
             }
@@ -1215,6 +1149,8 @@ namespace vtzero {
          * @param id The ID.
          */
         void set_id(uint64_t id) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call set_id() after commit() or rollback()");
             vtzero_assert(!m_pbf_tags.valid());
             m_feature_writer.add_uint64(detail::pbf_feature::id, id);
         }
@@ -1228,6 +1164,8 @@ namespace vtzero {
          * @param geometry The geometry.
          */
         void set_geometry(const geometry& geometry) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not add geometry after commit() or rollback()");
             vtzero_assert(!m_pbf_tags.valid());
             m_feature_writer.add_enum(detail::pbf_feature::type, static_cast<int32_t>(geometry.type()));
             m_feature_writer.add_string(detail::pbf_feature::geometry, geometry.data());
@@ -1243,6 +1181,8 @@ namespace vtzero {
          */
         template <typename TProp>
         void add_property(TProp&& prop) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call add_property() after commit() or rollback()");
             add_property_impl(std::forward<TProp>(prop));
         }
 
@@ -1259,7 +1199,42 @@ namespace vtzero {
          */
         template <typename TKey, typename TValue>
         void add_property(TKey&& key, TValue&& value) {
+            vtzero_assert(m_feature_writer.valid() &&
+                          "Can not call add_property() after commit() or rollback()");
             add_property_impl(std::forward<TKey>(key), std::forward<TValue>(value));
+        }
+
+        /**
+         * Commit this feature. Call this after all the details of this
+         * feature have been added. If this is not called, the feature
+         * will be rolled back when the destructor of the feature_builder is
+         * called.
+         *
+         * Once a feature has been committed or rolled back, further calls
+         * to commit() or rollback() don't do anything.
+         */
+        void commit() {
+            if (m_feature_writer.valid()) {
+                vtzero_assert(m_pbf_tags.valid() &&
+                              "Can not call commit before geometry was added");
+                do_commit();
+            }
+        }
+
+        /**
+         * Rollback this feature. Removed all traces of this feature from
+         * the layer_builder. Useful when you started creating a feature
+         * but then find out that its geometry is invalid or something like
+         * it. This will also happen automatically when the feature_builder
+         * is destructed and commit() hasn't been called on it.
+         *
+         * Once a feature has been committed or rolled back, further calls
+         * to commit() or rollback() don't do anything.
+         */
+        void rollback() {
+            if (m_feature_writer.valid()) {
+                do_rollback();
+            }
         }
 
     }; // class geometry_feature_builder

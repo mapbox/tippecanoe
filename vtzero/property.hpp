@@ -74,6 +74,16 @@ namespace vtzero {
 
     }; // class property
 
+    /// properties are equal if they contain the same key & value data.
+    inline constexpr bool operator==(const property& lhs, const property& rhs) noexcept {
+        return lhs.key() == rhs.key() && lhs.value() == rhs.value();
+    }
+
+    /// properties are unequal if they do not contain them same key and value data.
+    inline constexpr bool operator!=(const property& lhs, const property& rhs) noexcept {
+        return !(lhs == rhs);
+    }
+
 } // namespace vtzero
 
 #endif // VTZERO_PROPERTY_HPP

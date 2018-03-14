@@ -52,7 +52,7 @@ namespace vtzero {
                 return false;
             }
 
-            return types[tag - 1] == type; // NOLINT clang-tidy: cppcoreguidelines-pro-bounds-constant-array-index
+            return types[tag - 1] == type; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
         }
 
         static data_view get_value_impl(protozero::pbf_message<detail::pbf_value>& value_message, string_value_type /* dummy */) {
