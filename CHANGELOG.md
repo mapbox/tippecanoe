@@ -1,3 +1,7 @@
+## 1.27.10
+
+* Add --progress-interval setting to reduce progress indicator frequency
+
 ## 1.27.9
 
 * Make clusters look better by averaging locations of clustered points
