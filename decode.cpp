@@ -28,16 +28,32 @@ int maxzoom = 32;
 bool force = false;
 
 void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y) {
-	printf("{ \"zoom\": %d, \"x\": %u, \"y\": %u, \"bytes\": %zu, \"compressed\": %s", z, x, y, size, compressed ? "true" : "false");
+	json_write_state state;
 
-	printf(", \"layers\": { ");
+	json_write_hash(stdout, state);
+
+	json_write_string(stdout, "zoom", state);
+	json_write_signed(stdout, z, state);
+
+	json_write_string(stdout, "x", state);
+	json_write_unsigned(stdout, x, state);
+
+	json_write_string(stdout, "y", state);
+	json_write_unsigned(stdout, y, state);
+
+	json_write_string(stdout, "bytes", state);
+	json_write_unsigned(stdout, size, state);
+
+	json_write_string(stdout, "compressed", state);
+	json_write_bool(stdout, compressed, state);
+
+	json_write_string(stdout, "layers", state);
+	json_write_hash(stdout, state);
+
 	for (size_t i = 0; i < tile.layers.size(); i++) {
-		if (i != 0) {
-			printf(", ");
-		}
-		fprintq(stdout, tile.layers[i].name.c_str());
+		json_write_string(stdout, tile.layers[i].name, state);
 
-		int points = 0, lines = 0, polygons = 0;
+		size_t points = 0, lines = 0, polygons = 0;
 		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
 			if (tile.layers[i].features[j].type == mvt_point) {
 				points++;
@@ -48,10 +64,27 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 			}
 		}
 
-		printf(": { \"points\": %d, \"lines\": %d, \"polygons\": %d, \"extent\": %lld }", points, lines, polygons, tile.layers[i].extent);
+		json_write_hash(stdout, state);
+
+		json_write_string(stdout, "points", state);
+		json_write_unsigned(stdout, points, state);
+
+		json_write_string(stdout, "lines", state);
+		json_write_unsigned(stdout, lines, state);
+
+		json_write_string(stdout, "polygons", state);
+		json_write_unsigned(stdout, polygons, state);
+
+		json_write_string(stdout, "extent", state);
+		json_write_signed(stdout, tile.layers[i].extent, state);
+
+		json_end_hash(stdout, state);
 	}
 
-	printf(" } }\n");
+	json_end_hash(stdout, state);
+	json_end_hash(stdout, state);
+
+	printf("\n");
 }
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {

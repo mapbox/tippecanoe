@@ -9,28 +9,6 @@
 #include "write_json.hpp"
 #include "milo/dtoa_milo.h"
 
-enum json_write_tok {
-	JSON_WRITE_HASH,
-	JSON_WRITE_HASH_KEY,
-	JSON_WRITE_HASH_VALUE,
-	JSON_WRITE_ARRAY,
-	JSON_WRITE_ARRAY_ELEMENT,
-	JSON_WRITE_TOP,
-};
-
-struct json_write_state {
-	std::vector<json_write_tok> state;
-
-	~json_write_state() {
-		if (state.size() > 0) {
-			if (state.size() != 1 || state[0] != JSON_WRITE_TOP) {
-				fprintf(stderr, "JSON not closed at end\n");
-				exit(EXIT_FAILURE);
-			}
-		}
-	}
-};
-
 static void json_adjust(FILE *f, json_write_state &state) {
 	if (state.state.size() == 0) {
 		state.state.push_back(JSON_WRITE_TOP);
