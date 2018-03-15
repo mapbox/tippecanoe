@@ -16,6 +16,8 @@ enum json_write_tok {
 
 struct json_write_state {
 	std::vector<json_write_tok> state;
+	bool nospace = false;
+	bool wantnl = false;
 
 	~json_write_state() {
 		if (state.size() > 0) {
@@ -27,7 +29,7 @@ struct json_write_state {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain);
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_write_state &state);
 void fprintq(FILE *f, const char *s);
 
 void json_write_array(FILE *f, json_write_state &state);
@@ -42,5 +44,7 @@ void json_write_signed(FILE *f, long long v, json_write_state &state);
 void json_write_stringified(FILE *f, std::string const &s, json_write_state &state);
 void json_write_bool(FILE *f, bool b, json_write_state &state);
 void json_write_null(FILE *f, json_write_state &state);
+void json_write_newline(FILE *f, json_write_state &state);
+void json_comma_newline(FILE *f, json_write_state &state);
 
 #endif

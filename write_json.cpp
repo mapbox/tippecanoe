@@ -16,19 +16,37 @@ static void json_adjust(FILE *f, json_write_state &state) {
 		fprintf(f, "\n");
 		state.state[state.state.size() - 1] = JSON_WRITE_TOP;
 	} else if (state.state[state.state.size() - 1] == JSON_WRITE_HASH) {
-		fprintf(f, " ");
+		if (!state.nospace) {
+			fprintf(f, " ");
+		}
+		state.nospace = false;
 		state.state[state.state.size() - 1] = JSON_WRITE_HASH_KEY;
 	} else if (state.state[state.state.size() - 1] == JSON_WRITE_HASH_KEY) {
 		fprintf(f, ": ");
 		state.state[state.state.size() - 1] = JSON_WRITE_HASH_VALUE;
 	} else if (state.state[state.state.size() - 1] == JSON_WRITE_HASH_VALUE) {
-		fprintf(f, ", ");
+		if (state.wantnl) {
+			fprintf(f, ",\n");
+			state.nospace = false;
+		} else {
+			fprintf(f, ", ");
+		}
+		state.wantnl = false;
 		state.state[state.state.size() - 1] = JSON_WRITE_HASH_KEY;
 	} else if (state.state[state.state.size() - 1] == JSON_WRITE_ARRAY) {
-		fprintf(f, " ");
+		if (!state.nospace) {
+			fprintf(f, " ");
+		}
+		state.nospace = false;
 		state.state[state.state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
 	} else if (state.state[state.state.size() - 1] == JSON_WRITE_ARRAY_ELEMENT) {
-		fprintf(f, ", ");
+		if (state.wantnl) {
+			fprintf(f, ",\n");
+			state.nospace = false;
+		} else {
+			fprintf(f, ", ");
+		}
+		state.wantnl = false;
 		state.state[state.state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
 	} else {
 		fprintf(stderr, "Impossible JSON state\n");
@@ -53,7 +71,11 @@ void json_end_array(FILE *f, json_write_state &state) {
 	state.state.pop_back();
 
 	if (tok == JSON_WRITE_ARRAY || tok == JSON_WRITE_ARRAY_ELEMENT) {
-		fprintf(f, " ]");
+		if (!state.nospace) {
+			fprintf(f, " ");
+		}
+		state.nospace = false;
+		fprintf(f, "]");
 	} else {
 		fprintf(stderr, "End JSON array with unexpected state\n");
 		exit(EXIT_FAILURE);
@@ -77,9 +99,17 @@ void json_end_hash(FILE *f, json_write_state &state) {
 	state.state.pop_back();
 
 	if (tok == JSON_WRITE_HASH) {
-		fprintf(f, "  }");  // Preserve accidental extra space from before
+		if (!state.nospace) {
+			fprintf(f, "  ");  // Preserve accidental extra space from before
+		}
+		state.nospace = false;
+		fprintf(f, "}");
 	} else if (tok == JSON_WRITE_HASH_VALUE) {
-		fprintf(f, " }");
+		if (!state.nospace) {
+			fprintf(f, " ");
+		}
+		state.nospace = false;
+		fprintf(f, "}");
 	} else {
 		fprintf(stderr, "End JSON hash with unexpected state\n");
 		exit(EXIT_FAILURE);
@@ -149,6 +179,15 @@ void json_write_null(FILE *f, json_write_state &state) {
 	fputs("null", f);
 }
 
+void json_write_newline(FILE *f, json_write_state &state) {
+	putc('\n', f);
+	state.nospace = true;
+}
+
+void json_comma_newline(FILE *, json_write_state &state) {
+	state.wantnl = true;
+}
+
 struct lonlat {
 	int op;
 	double lon;
@@ -165,15 +204,9 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain) {
-	json_write_state state;
-
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_write_state &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
-
-		if (comma && f != 0) {
-			fprintf(fp, ",");
-		}
 
 		json_write_hash(fp, state);
 		json_write_string(fp, "type", state);
@@ -516,13 +549,9 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 		json_end_hash(fp, state);
 
 		if (comma) {
-			fprintf(fp, "\n");
+			json_write_newline(fp, state);
+			json_comma_newline(fp, state);
 		}
-	}
-
-	// XXX clean up newlines
-	if (!comma) {
-		fprintf(fp, "\n");
 	}
 }
 

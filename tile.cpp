@@ -1376,6 +1376,7 @@ struct run_prefilter_args {
 
 void *run_prefilter(void *v) {
 	run_prefilter_args *rpa = (run_prefilter_args *) v;
+	json_write_state state;
 
 	while (1) {
 		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards);
@@ -1412,7 +1413,7 @@ void *run_prefilter(void *v) {
 		decode_meta(sf.m, sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
-		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true);
+		layer_to_geojson(rpa->prefilter_fp, tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {

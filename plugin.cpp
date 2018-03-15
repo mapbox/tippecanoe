@@ -51,8 +51,9 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
+	json_write_state state;
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true);
+		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state);
 	}
 
 	if (fclose(fp) != 0) {
