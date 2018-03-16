@@ -53,7 +53,7 @@ struct json_writer {
 	void json_write_newline();
 	void json_comma_newline();
 
-private:
+       private:
 	void json_adjust();
 	void aprintf(const char *format, ...);
 	void addc(char c);

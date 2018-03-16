@@ -88,38 +88,6 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-static void quote(std::string &buf, std::string const &s) {
-	for (size_t i = 0; i < s.size(); i++) {
-		unsigned char ch = s[i];
-
-		if (ch == '\\' || ch == '\"') {
-			buf.push_back('\\');
-			buf.push_back(ch);
-		} else if (ch < ' ') {
-			char tmp[7];
-			sprintf(tmp, "\\u%04x", ch);
-			buf.append(std::string(tmp));
-		} else {
-			buf.push_back(ch);
-		}
-	}
-}
-
-void aprintf(std::string *buf, const char *format, ...) {
-	va_list ap;
-	char *tmp;
-
-	va_start(ap, format);
-	if (vasprintf(&tmp, format, ap) < 0) {
-		fprintf(stderr, "memory allocation failure\n");
-		exit(EXIT_FAILURE);
-	}
-	va_end(ap);
-
-	buf->append(tmp, strlen(tmp));
-	free(tmp);
-}
-
 bool type_and_string::operator<(const type_and_string &o) const {
 	if (string < o.string) {
 		return true;
@@ -505,7 +473,10 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				exit(EXIT_FAILURE);
 			}
 
-			fprintf(fp, "{\n");
+			json_writer state(fp);
+
+			state.json_write_hash();
+			state.json_write_newline();
 
 			sqlite3_stmt *stmt;
 			bool first = true;
@@ -520,19 +491,17 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 						exit(EXIT_FAILURE);
 					}
 
-					quote(key, k);
-					quote(value, v);
-
-					if (!first) {
-						fprintf(fp, ",\n");
-					}
-					fprintf(fp, "    \"%s\": \"%s\"", key.c_str(), value.c_str());
+					state.json_comma_newline();
+					state.json_write_string(k);
+					state.json_write_string(v);
 					first = false;
 				}
 				sqlite3_finalize(stmt);
 			}
 
-			fprintf(fp, "\n}\n");
+			state.json_write_newline();
+			state.json_end_hash();
+			state.json_write_newline();
 			fclose(fp);
 		}
 	}

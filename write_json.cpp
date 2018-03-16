@@ -195,18 +195,18 @@ void json_writer::json_comma_newline() {
 }
 
 void json_writer::aprintf(const char *format, ...) {
-        va_list ap;
-        char *tmp;
+	va_list ap;
+	char *tmp;
 
-        va_start(ap, format);
-        if (vasprintf(&tmp, format, ap) < 0) {
-                fprintf(stderr, "memory allocation failure\n");
-                exit(EXIT_FAILURE);
-        }
-        va_end(ap);
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
 
-        adds(std::string(tmp, strlen(tmp)));
-        free(tmp);
+	adds(std::string(tmp, strlen(tmp)));
+	free(tmp);
 }
 
 void json_writer::addc(char c) {
