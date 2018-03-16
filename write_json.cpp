@@ -13,38 +13,38 @@ void json_writer::json_adjust() {
 	if (state.size() == 0) {
 		state.push_back(JSON_WRITE_TOP);
 	} else if (state[state.size() - 1] == JSON_WRITE_TOP) {
-		fprintf(f, "\n");
+		addc('\n');
 		state[state.size() - 1] = JSON_WRITE_TOP;
 	} else if (state[state.size() - 1] == JSON_WRITE_HASH) {
 		if (!nospace) {
-			fprintf(f, " ");
+			addc(' ');
 		}
 		nospace = false;
 		state[state.size() - 1] = JSON_WRITE_HASH_KEY;
 	} else if (state[state.size() - 1] == JSON_WRITE_HASH_KEY) {
-		fprintf(f, ": ");
+		adds(": ");
 		state[state.size() - 1] = JSON_WRITE_HASH_VALUE;
 	} else if (state[state.size() - 1] == JSON_WRITE_HASH_VALUE) {
 		if (wantnl) {
-			fprintf(f, ",\n");
+			adds(",\n");
 			nospace = false;
 		} else {
-			fprintf(f, ", ");
+			adds(", ");
 		}
 		wantnl = false;
 		state[state.size() - 1] = JSON_WRITE_HASH_KEY;
 	} else if (state[state.size() - 1] == JSON_WRITE_ARRAY) {
 		if (!nospace) {
-			fprintf(f, " ");
+			addc(' ');
 		}
 		nospace = false;
 		state[state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
 	} else if (state[state.size() - 1] == JSON_WRITE_ARRAY_ELEMENT) {
 		if (wantnl) {
-			fprintf(f, ",\n");
+			adds(",\n");
 			nospace = false;
 		} else {
-			fprintf(f, ", ");
+			adds(", ");
 		}
 		wantnl = false;
 		state[state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
@@ -56,7 +56,7 @@ void json_writer::json_adjust() {
 
 void json_writer::json_write_array() {
 	json_adjust();
-	fprintf(f, "[");
+	addc('[');
 
 	state.push_back(JSON_WRITE_ARRAY);
 }
@@ -72,10 +72,10 @@ void json_writer::json_end_array() {
 
 	if (tok == JSON_WRITE_ARRAY || tok == JSON_WRITE_ARRAY_ELEMENT) {
 		if (!nospace) {
-			fprintf(f, " ");
+			addc(' ');
 		}
 		nospace = false;
-		fprintf(f, "]");
+		addc(']');
 	} else {
 		fprintf(stderr, "End JSON array with unexpected state\n");
 		exit(EXIT_FAILURE);
@@ -84,7 +84,7 @@ void json_writer::json_end_array() {
 
 void json_writer::json_write_hash() {
 	json_adjust();
-	fprintf(f, "{");
+	addc('{');
 
 	state.push_back(JSON_WRITE_HASH);
 }
@@ -100,16 +100,16 @@ void json_writer::json_end_hash() {
 
 	if (tok == JSON_WRITE_HASH) {
 		if (!nospace) {
-			fprintf(f, "  ");  // Preserve accidental extra space from before
+			adds("  ");  // Preserve accidental extra space from before
 		}
 		nospace = false;
-		fprintf(f, "}");
+		addc('}');
 	} else if (tok == JSON_WRITE_HASH_VALUE) {
 		if (!nospace) {
-			fprintf(f, " ");
+			addc(' ');
 		}
 		nospace = false;
-		fprintf(f, "}");
+		addc('}');
 	} else {
 		fprintf(stderr, "End JSON hash with unexpected state\n");
 		exit(EXIT_FAILURE);
@@ -119,73 +119,104 @@ void json_writer::json_end_hash() {
 void json_writer::json_write_string(std::string const &s) {
 	json_adjust();
 
-	putc('"', f);
+	addc('"');
 	for (size_t i = 0; i < s.size(); i++) {
 		if (s[i] == '\\' || s[i] == '"') {
-			fprintf(f, "\\%c", s[i]);
+			aprintf("\\%c", s[i]);
 		} else if ((unsigned char) s[i] < ' ') {
-			fprintf(f, "\\u%04x", s[i]);
+			aprintf("\\u%04x", s[i]);
 		} else {
-			putc(s[i], f);
+			addc(s[i]);
 		}
 	}
-	putc('"', f);
+	addc('"');
 }
 
 void json_writer::json_write_number(double d) {
 	json_adjust();
 
-	fputs(milo::dtoa_milo(d).c_str(), f);
+	adds(milo::dtoa_milo(d).c_str());
 }
 
 // Just to avoid json_writer:: changing expected output format
 void json_writer::json_write_float(double d) {
 	json_adjust();
 
-	fprintf(f, "%f", d);
+	aprintf("%f", d);
 }
 
 void json_writer::json_write_unsigned(unsigned long long v) {
 	json_adjust();
 
-	fprintf(f, "%llu", v);
+	aprintf("%llu", v);
 }
 
 void json_writer::json_write_signed(long long v) {
 	json_adjust();
 
-	fprintf(f, "%lld", v);
+	aprintf("%lld", v);
 }
 
 void json_writer::json_write_stringified(std::string const &s) {
 	json_adjust();
 
-	fputs(s.c_str(), f);
+	adds(s);
 }
 
 void json_writer::json_write_bool(bool b) {
 	json_adjust();
 
 	if (b) {
-		fputs("true", f);
+		adds("true");
 	} else {
-		fputs("false", f);
+		adds("false");
 	}
 }
 
 void json_writer::json_write_null() {
 	json_adjust();
 
-	fputs("null", f);
+	adds("null");
 }
 
 void json_writer::json_write_newline() {
-	putc('\n', f);
+	addc('\n');
 	nospace = true;
 }
 
 void json_writer::json_comma_newline() {
 	wantnl = true;
+}
+
+void json_writer::aprintf(const char *format, ...) {
+        va_list ap;
+        char *tmp;
+
+        va_start(ap, format);
+        if (vasprintf(&tmp, format, ap) < 0) {
+                fprintf(stderr, "memory allocation failure\n");
+                exit(EXIT_FAILURE);
+        }
+        va_end(ap);
+
+        adds(std::string(tmp, strlen(tmp)));
+        free(tmp);
+}
+
+void json_writer::addc(char c) {
+	if (f != NULL) {
+		putc(c, f);
+	} else if (s != NULL) {
+		s->push_back(c);
+	}
+}
+
+void json_writer::adds(std::string const &str) {
+	if (f != NULL) {
+		fputs(str.c_str(), f);
+	} else if (s != NULL) {
+		s->append(str);
+	}
 }
 
 struct lonlat {

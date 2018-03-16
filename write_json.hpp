@@ -18,7 +18,8 @@ struct json_writer {
 	std::vector<json_write_tok> state;
 	bool nospace = false;
 	bool wantnl = false;
-	FILE *f;
+	FILE *f = NULL;
+	std::string *s = NULL;
 
 	~json_writer() {
 		if (state.size() > 0) {
@@ -31,6 +32,10 @@ struct json_writer {
 
 	json_writer(FILE *fp) {
 		f = fp;
+	}
+
+	json_writer(std::string *out) {
+		s = out;
 	}
 
 	void json_write_array();
@@ -47,7 +52,12 @@ struct json_writer {
 	void json_write_null();
 	void json_write_newline();
 	void json_comma_newline();
+
+private:
 	void json_adjust();
+	void aprintf(const char *format, ...);
+	void addc(char c);
+	void adds(std::string const &s);
 };
 
 void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state);
