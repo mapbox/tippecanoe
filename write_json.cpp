@@ -28,6 +28,9 @@ void json_writer::json_adjust() {
 		if (wantnl) {
 			adds(",\n");
 			nospace = false;
+		} else if (nospace) {
+			addc(',');
+			nospace = false;
 		} else {
 			adds(", ");
 		}
@@ -42,6 +45,9 @@ void json_writer::json_adjust() {
 	} else if (state[state.size() - 1] == JSON_WRITE_ARRAY_ELEMENT) {
 		if (wantnl) {
 			adds(",\n");
+			nospace = false;
+		} else if (nospace) {
+			addc(',');
 			nospace = false;
 		} else {
 			adds(", ");
@@ -116,17 +122,17 @@ void json_writer::json_end_hash() {
 	}
 }
 
-void json_writer::json_write_string(std::string const &s) {
+void json_writer::json_write_string(std::string const &str) {
 	json_adjust();
 
 	addc('"');
-	for (size_t i = 0; i < s.size(); i++) {
-		if (s[i] == '\\' || s[i] == '"') {
-			aprintf("\\%c", s[i]);
-		} else if ((unsigned char) s[i] < ' ') {
-			aprintf("\\u%04x", s[i]);
+	for (size_t i = 0; i < str.size(); i++) {
+		if (str[i] == '\\' || str[i] == '"') {
+			aprintf("\\%c", str[i]);
+		} else if ((unsigned char) str[i] < ' ') {
+			aprintf("\\u%04x", str[i]);
 		} else {
-			addc(s[i]);
+			addc(str[i]);
 		}
 	}
 	addc('"');
@@ -157,10 +163,10 @@ void json_writer::json_write_signed(long long v) {
 	aprintf("%lld", v);
 }
 
-void json_writer::json_write_stringified(std::string const &s) {
+void json_writer::json_write_stringified(std::string const &str) {
 	json_adjust();
 
-	adds(s);
+	adds(str);
 }
 
 void json_writer::json_write_bool(bool b) {
