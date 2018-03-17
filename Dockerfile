@@ -1,5 +1,5 @@
 # Start from ubuntu
-FROM ubuntu:17.04
+FROM ubuntu:16.04
 
 # Update repos and install dependencies
 RUN apt-get update \
@@ -15,10 +15,5 @@ COPY . /tmp/tippecanoe-src
 RUN make \
   && make install
 
-# Remove the temp directory and unneeded packages
-WORKDIR /
-RUN rm -rf /tmp/tippecanoe-src \
-  && apt-get -y remove --purge build-essential && apt-get -y autoremove
-
-# Run the default command to show usage
-CMD tippecanoe --help
+# Run the tests
+CMD make test

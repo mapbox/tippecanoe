@@ -1,3 +1,121 @@
+## 1.27.10
+
+* Add --progress-interval setting to reduce progress indicator frequency
+
+## 1.27.9
+
+* Make clusters look better by averaging locations of clustered points
+
+## 1.27.8
+
+* Add --accumulate-attribute to keep attributes of dropped, coalesced,
+  or clustered features
+* Make sure numeric command line arguments are actually numbers
+* Don't coalesce features whose non-string-pool attributes don't match
+
+## 1.27.7
+
+* Add an option to produce only a single tile
+* Retain non-ASCII characters in layernames generated from filenames
+* Remember to close input files after reading them
+* Add --coalesce-fraction-as-needed and --coalesce-densest-as-needed
+* Report distances in both feet and meters
+
+## 1.27.6
+
+* Fix opportunities for integer overflow and out-of-bounds references
+
+## 1.27.5
+
+* Add --cluster-densest-as-needed to cluster features
+* Add --maximum-tile-features to set the maximum number of features in a tile
+
+## 1.27.4
+
+* Support CSV point input
+* Don't coalesce features that have different IDs but are otherwise identical
+* Remove the 700-point limit on coalesced features, since polygon merging
+  is no longer a performance problem
+
+## 1.27.3
+
+* Clean up duplicated code for reading tiles from a directory
+
+## 1.27.2
+
+* Tippecanoe-decode can decode directories of tiles, not just mbtiles
+* The --allow-existing option works on directories of tiles
+* Trim .geojson, not just .json, when making layer names from filenames
+
+## 1.27.1
+
+* Fix a potential null pointer when parsing GeoJSON with bare geometries
+* Fix a bug that could cause the wrong features to be coalesced when
+  input was parsed in parallel
+
+## 1.27.0
+
+* Add tippecanoe-json-tool for sorting and joining GeoJSON files
+* Fix problem where --detect-shared-borders could simplify polygons away
+* Attach --coalesce-smallest-as-needed leftovers to the last feature, not the first
+* Fix overflow when iterating through 0-length lists backwards
+
+## 1.26.7
+
+* Add an option to quiet the progress indicator but not warnings
+* Enable more compiler warnings and fix related problems
+
+## 1.26.6
+
+* Be more careful about checking for overflow when parsing numbers
+
+## 1.26.5
+
+* Support UTF-16 surrogate pairs in JSON strings
+* Support arbitrarily long lines in CSV files.
+* Treat CSV fields as numbers only if they follow JSON number syntax
+
+## 1.26.4
+
+* Array bounds bug fix in binary to decimal conversion library
+
+## 1.26.3
+
+* Guard against impossible coordinates when decoding tilesets
+
+## 1.26.2
+
+* Make sure to encode tile-joined integers as ints, not doubles
+
+## 1.26.1
+
+* Add tile-join option to rename layers
+
+## 1.26.0
+
+Fix error when parsing attributes with empty-string keys
+
+## 1.25.0
+
+* Add --coalesce-smallest-as-needed strategy for reducing tile sizes
+* Add --stats option to tipppecanoe-decode
+
+## 1.24.1
+
+* Limit the size and depth of the string pool for better performance
+
+## 1.24.0
+
+* Add feature filters using the Mapbox GL Style Specification filter syntax
+
+## 1.23.0
+
+* Add input support for Geobuf file format
+
+## 1.22.2
+
+* Add better diagnostics for NaN or Infinity in input JSON
+
 ## 1.22.1
 
 * Fix tilestats generation when long string attribute values are elided

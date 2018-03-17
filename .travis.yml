@@ -1,9 +1,37 @@
-language: generic
+language: node_js
+node_js:
+  - "6"
 
 sudo: false
 
 matrix:
   include:
+    # test on docker+centos7
+    - os: linux
+      compiler: clang
+      services:
+       - docker
+      sudo: true
+      dist: trusty
+      env: DOCKERFILE=Dockerfile.centos7
+      before_install: []
+      install:
+        - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      script:
+        - docker run -it tippecanoe-image
+    # test on docker+ubuntu
+    - os: linux
+      compiler: clang
+      services:
+       - docker
+      sudo: true
+      dist: trusty
+      env: DOCKERFILE=Dockerfile
+      before_install: []
+      install:
+        - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      script:
+        - docker run -it tippecanoe-image
     # debug+integer-santizer build
     - os: linux
       compiler: clang
@@ -15,7 +43,7 @@ matrix:
     # debug+leak+address-sanitizer build
     - os: linux
       compiler: clang
-      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=address" CFLAGS="-fsanitize=address" LDFLAGS="-fsanitize=address"
+      env: CLANG_VERSION='3.8.0' BUILDTYPE=Debug ASAN_OPTIONS=detect_leaks=1 CC="clang-3.8" CXX="clang++-3.8" CXXFLAGS="-fsanitize=address,undefined" CFLAGS="-fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" FEWER=true
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test' ]
@@ -68,7 +96,11 @@ install:
  - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
- - BUILDTYPE=${BUILDTYPE} make test
+ - npm install geobuf
+ - if [ -n "${FEWER}" ]; then
+       BUILDTYPE=${BUILDTYPE} make fewer-tests; else
+       BUILDTYPE=${BUILDTYPE} make test geobuf-test;
+   fi
  - if [ -n "${COVERAGE}" ]; then
        /usr/bin/llvm-cov-3.5 -lp *.o;
        pip install --user cpp-coveralls;

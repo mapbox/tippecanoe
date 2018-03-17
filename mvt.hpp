@@ -17,9 +17,9 @@ enum mvt_operation {
 };
 
 struct mvt_geometry {
-	long long x;
-	long long y;
-	int /* mvt_operation */ op;
+	long long x = 0;
+	long long y = 0;
+	int /* mvt_operation */ op = 0;
 
 	mvt_geometry(int op, long long x, long long y);
 
@@ -43,11 +43,12 @@ enum mvt_geometry_type {
 };
 
 struct mvt_feature {
-	std::vector<unsigned> tags;
-	std::vector<mvt_geometry> geometry;
-	int /* mvt_geometry_type */ type;
-	unsigned long long id;
-	bool has_id;
+	std::vector<unsigned> tags{};
+	std::vector<mvt_geometry> geometry{};
+	int /* mvt_geometry_type */ type = 0;
+	unsigned long long id = 0;
+	bool has_id = false;
+	bool dropped = false;
 
 	mvt_feature() {
 		has_id = false;
@@ -82,15 +83,22 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
+	std::string toString();
+
+	mvt_value() {
+		this->type = mvt_double;
+		this->string_value = "";
+		this->numeric_value.double_value = 0;
+	}
 };
 
 struct mvt_layer {
-	int version;
-	std::string name;
-	std::vector<mvt_feature> features;
-	std::vector<std::string> keys;
-	std::vector<mvt_value> values;
-	long long extent;
+	int version = 0;
+	std::string name = "";
+	std::vector<mvt_feature> features{};
+	std::vector<std::string> keys{};
+	std::vector<mvt_value> values{};
+	long long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
@@ -98,12 +106,12 @@ struct mvt_layer {
 	size_t tag_key(std::string const &key);
 
 	// For tracking the key-value constants already used in this layer
-	std::map<std::string, size_t> key_map;
-	std::map<mvt_value, size_t> value_map;
+	std::map<std::string, size_t> key_map{};
+	std::map<mvt_value, size_t> value_map{};
 };
 
 struct mvt_tile {
-	std::vector<mvt_layer> layers;
+	std::vector<mvt_layer> layers{};
 
 	std::string encode();
 	bool decode(std::string &message, bool &was_compressed);
@@ -115,5 +123,7 @@ int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);
+
 bool is_integer(const char *s, long long *v);
+bool is_unsigned_integer(const char *s, unsigned long long *v);
 #endif

@@ -8,6 +8,7 @@
 #include "mvt.hpp"
 #include "write_json.hpp"
 #include "text.hpp"
+#include "milo/dtoa_milo.h"
 
 struct lonlat {
 	int op;
@@ -16,12 +17,12 @@ struct lonlat {
 	long long x;
 	long long y;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny) {
-		this->op = nop;
-		this->lon = nlon;
-		this->lat = nlat;
-		this->x = nx;
-		this->y = ny;
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	    : op(nop),
+	      lon(nlon),
+	      lat(nlat),
+	      x(nx),
+	      y(ny) {
 	}
 };
 
@@ -54,25 +55,17 @@ void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const
 	if (val.type == mvt_string) {
 		quote(out, val.string_value);
 	} else if (val.type == mvt_int) {
-		out.append(std::to_string((long long) val.numeric_value.int_value));
+		out.append(std::to_string(val.numeric_value.int_value));
 	} else if (val.type == mvt_double) {
 		double v = val.numeric_value.double_value;
-		if (v == (long long) v) {
-			out.append(std::to_string((long long) v));
-		} else {
-			aprintf(&out, "%g", v);
-		}
+		out.append(milo::dtoa_milo(v));
 	} else if (val.type == mvt_float) {
 		double v = val.numeric_value.float_value;
-		if (v == (long long) v) {
-			out.append(std::to_string((long long) v));
-		} else {
-			aprintf(&out, "%g", v);
-		}
+		out.append(milo::dtoa_milo(v));
 	} else if (val.type == mvt_sint) {
-		out.append(std::to_string((long long) val.numeric_value.sint_value));
+		out.append(std::to_string(val.numeric_value.sint_value));
 	} else if (val.type == mvt_uint) {
-		out.append(std::to_string((long long) val.numeric_value.uint_value));
+		out.append(std::to_string(val.numeric_value.uint_value));
 	} else if (val.type == mvt_bool) {
 		out.append(val.numeric_value.bool_value ? "true" : "false");
 	} else if (val.type == mvt_list) {
@@ -114,7 +107,7 @@ void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const
 	}
 }
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, unsigned long long index, long long sequence, long long extent, bool complain) {
+void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -148,6 +141,14 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 				fprintf(fp, "\"minzoom\": %u, ", z);
 				fprintf(fp, "\"maxzoom\": %u", z);
+				need_comma = true;
+			}
+
+			if (dropped) {
+				if (need_comma) {
+					fprintf(fp, ", ");
+				}
+				fprintf(fp, "\"dropped\": %s", feat.dropped ? "true" : "false");
 				need_comma = true;
 			}
 

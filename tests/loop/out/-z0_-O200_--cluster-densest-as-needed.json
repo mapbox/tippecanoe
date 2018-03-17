@@ -1,0 +1,18 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "1.000000,1.000000,1.000000,1.000000",
+"center": "1.000000,1.000000,0",
+"description": "tests/loop/out/-z0_-O200_--cluster-densest-as-needed.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"clustered\": \"Boolean\", \"point_count\": \"Number\", \"sqrt_point_count\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1000,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"clustered\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]},{\"attribute\": \"point_count\",\"count\": 1,\"type\": \"number\",\"values\": [1000],\"min\": 1000,\"max\": 1000},{\"attribute\": \"sqrt_point_count\",\"count\": 1,\"type\": \"number\",\"values\": [31.620000],\"min\": 31.62,\"max\": 31.62}]}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/loop/out/-z0_-O200_--cluster-densest-as-needed.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "clustered": true, "point_count": 1000, "sqrt_point_count": 31.62 }, "geometry": { "type": "Point", "coordinates": [ 0.966797, 1.054628 ] } }
+] }
+] }
+] }

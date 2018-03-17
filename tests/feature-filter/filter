@@ -1,0 +1,133 @@
+{
+"layer2850085303": ["==", "foo", "bar"],
+"notlayer2850085303": [ "none", ["==", "foo", "bar"] ]
+,
+"layer1948775714": ["==", "foo", 0],
+"notlayer1948775714": [ "none", ["==", "foo", 0] ]
+,
+"layer220442869": ["==", "foo", null],
+"notlayer220442869": [ "none", ["==", "foo", null] ]
+,
+"layer1675768827": ["==", "$type", "LineString"],
+"notlayer1675768827": [ "none", ["==", "$type", "LineString"] ]
+,
+"layer827905613": ["==", "$id", 1234],
+"notlayer827905613": [ "none", ["==", "$id", 1234] ]
+,
+"layer442294443": ["!=", "foo", "bar"],
+"notlayer442294443": [ "none", ["!=", "foo", "bar"] ]
+,
+"layer1479822166": ["!=", "foo", 0],
+"notlayer1479822166": [ "none", ["!=", "foo", 0] ]
+,
+"layer1780490201": ["!=", "foo", null],
+"notlayer1780490201": [ "none", ["!=", "foo", null] ]
+,
+"layer1549998271": ["!=", "$type", "LineString"],
+"notlayer1549998271": [ "none", ["!=", "$type", "LineString"] ]
+,
+"layer2624681884": ["<", "foo", 0],
+"notlayer2624681884": [ "none", ["<", "foo", 0] ]
+,
+"layer2596070344": ["<", "foo", "0"],
+"notlayer2596070344": [ "none", ["<", "foo", "0"] ]
+,
+"layer4079511021": ["<=", "foo", 0],
+"notlayer4079511021": [ "none", ["<=", "foo", 0] ]
+,
+"layer1392333553": ["<=", "foo", "0"],
+"notlayer1392333553": [ "none", ["<=", "foo", "0"] ]
+,
+"layer4018549566": [">", "foo", 0],
+"notlayer4018549566": [ "none", [">", "foo", 0] ]
+,
+"layer3835447578": [">", "foo", "0"],
+"notlayer3835447578": [ "none", [">", "foo", "0"] ]
+,
+"layer4113007703": [">=", "foo", 0],
+"notlayer4113007703": [ "none", [">=", "foo", 0] ]
+,
+"layer4650955": [">=", "foo", "0"],
+"notlayer4650955": [ "none", [">=", "foo", "0"] ]
+,
+"layer1510660139": ["in", "foo"],
+"notlayer1510660139": [ "none", ["in", "foo"] ]
+,
+"layer2681700979": ["in", "foo", "0"],
+"notlayer2681700979": [ "none", ["in", "foo", "0"] ]
+,
+"layer328238911": ["in", "foo", 0],
+"notlayer328238911": [ "none", ["in", "foo", 0] ]
+,
+"layer584721662": ["in", "foo", null],
+"notlayer584721662": [ "none", ["in", "foo", null] ]
+,
+"layer464719784": ["in", "foo", 0, 1],
+"notlayer464719784": [ "none", ["in", "foo", 0, 1] ]
+,
+"layer1359089124": ["in", "$type", "LineString", "Polygon"],
+"notlayer1359089124": [ "none", ["in", "$type", "LineString", "Polygon"] ]
+,
+"layer3115744778": ["in", "$type", "Polygon", "LineString", "Point"],
+"notlayer3115744778": [ "none", ["in", "$type", "Polygon", "LineString", "Point"] ]
+,
+"layer262236988": ["!in", "foo"],
+"notlayer262236988": [ "none", ["!in", "foo"] ]
+,
+"layer3444677016": ["!in", "foo", "0"],
+"notlayer3444677016": [ "none", ["!in", "foo", "0"] ]
+,
+"layer3048837612": ["!in", "foo", 0],
+"notlayer3048837612": [ "none", ["!in", "foo", 0] ]
+,
+"layer3045031255": ["!in", "foo", null],
+"notlayer3045031255": [ "none", ["!in", "foo", null] ]
+,
+"layer2925029377": ["!in", "foo", 0, 1],
+"notlayer2925029377": [ "none", ["!in", "foo", 0, 1] ]
+,
+"layer2275670193": ["!in", "$type", "LineString", "Polygon"],
+"notlayer2275670193": [ "none", ["!in", "$type", "LineString", "Polygon"] ]
+,
+"layer4098096220": ["any"],
+"notlayer4098096220": [ "none", ["any"] ]
+,
+"layer3603116915": ["any", ["==", "foo", 1]],
+"notlayer3603116915": [ "none", ["any", ["==", "foo", 1]] ]
+,
+"layer3603115546": ["any", ["==", "foo", 0]],
+"notlayer3603115546": [ "none", ["any", ["==", "foo", 0]] ]
+,
+"layer4070554881": ["any", ["==", "foo", 0], ["==", "foo", 1]],
+"notlayer4070554881": [ "none", ["any", ["==", "foo", 0], ["==", "foo", 1]] ]
+,
+"layer4097977117": ["all"],
+"notlayer4097977117": [ "none", ["all"] ]
+,
+"layer2333216076": ["all", ["==", "foo", 1]],
+"notlayer2333216076": [ "none", ["all", ["==", "foo", 1]] ]
+,
+"layer2333214707": ["all", ["==", "foo", 0]],
+"notlayer2333214707": [ "none", ["all", ["==", "foo", 0]] ]
+,
+"layer1619469362": ["all", ["==", "foo", 0], ["==", "foo", 1]],
+"notlayer1619469362": [ "none", ["all", ["==", "foo", 0], ["==", "foo", 1]] ]
+,
+"layer2208582832": ["none"],
+"notlayer2208582832": [ "none", ["none"] ]
+,
+"layer3425959847": ["none", ["==", "foo", 1]],
+"notlayer3425959847": [ "none", ["none", ["==", "foo", 1]] ]
+,
+"layer3425958478": ["none", ["==", "foo", 0]],
+"notlayer3425958478": [ "none", ["none", ["==", "foo", 0]] ]
+,
+"layer253198869": ["none", ["==", "foo", 0], ["==", "foo", 1]],
+"notlayer253198869": [ "none", ["none", ["==", "foo", 0], ["==", "foo", 1]] ]
+,
+"layer938200568": ["has", "foo"],
+"notlayer938200568": [ "none", ["has", "foo"] ]
+,
+"layer1991184237": ["!has", "foo"],
+"notlayer1991184237": [ "none", ["!has", "foo"] ]
+}

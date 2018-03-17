@@ -7,48 +7,24 @@
 #include <string>
 #include "mbtiles.hpp"
 #include "jsonpull/jsonpull.h"
+#include "serial.hpp"
 
 struct parse_json_args {
 	json_pull *jp;
-	const char *reading;
-	volatile long long *layer_seq;
-	volatile long long *progress_seq;
-	long long *metapos;
-	long long *geompos;
-	long long *indexpos;
-	std::set<std::string> *exclude;
-	std::set<std::string> *include;
-	int exclude_all;
-	FILE *metafile;
-	FILE *geomfile;
-	FILE *indexfile;
-	struct memfile *poolfile;
-	struct memfile *treefile;
-	char *fname;
-	int basezoom;
 	int layer;
-	double droprate;
-	long long *file_bbox;
-	int segment;
-	int *initialized;
-	unsigned *initial_x;
-	unsigned *initial_y;
-	struct reader *readers;
-	int maxzoom;
-	std::map<std::string, layermap_entry> *layermap;
 	std::string *layername;
-	bool uses_gamma;
-	std::map<std::string, int> const *attribute_types;
-	double *dist_sum;
-	size_t *dist_count;
-	bool want_dist;
-	bool filters;
+
+	struct serialization_state *sst;
+
+	parse_json_args(json_pull *jp1, int layer1, std::string *layername1, struct serialization_state *sst1)
+	    : jp(jp1), layer(layer1), layername(layername1), sst(sst1) {
+	}
 };
 
 struct json_pull *json_begin_map(char *map, long long len);
 void json_end_map(struct json_pull *jp);
 
-void parse_json(json_pull *jp, const char *reading, volatile long long *layer_seq, volatile long long *progress_seq, long long *metapos, long long *geompos, long long *indexpos, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, FILE *metafile, FILE *geomfile, FILE *indexfile, struct memfile *poolfile, struct memfile *treefile, char *fname, int basezoom, int layer, double droprate, long long *file_bbox, int segment, int *initialized, unsigned *initial_x, unsigned *initial_y, struct reader *readers, int maxzoom, std::map<std::string, layermap_entry> *layermap, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, double *dist_sum, size_t *dist_count, bool want_dist, bool filters);
+void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername);
 void *run_parse_json(void *v);
 
 #endif

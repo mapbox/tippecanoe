@@ -6,9 +6,11 @@
 #include <string>
 #include <set>
 #include <map>
+#include <sys/stat.h>
 #include "mvt.hpp"
 #include "mbtiles.hpp"
 #include "text.hpp"
+#include "milo/dtoa_milo.h"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -255,11 +257,11 @@ std::string tilestats(std::map<std::string, layermap_entry> const &layermap1, si
 				out.append(",\n");
 
 				out.append("\t\t\t\t\t\"min\": ");
-				out.append(std::to_string(attribute.second.min));
+				out.append(milo::dtoa_milo(attribute.second.min));
 				out.append(",\n");
 
 				out.append("\t\t\t\t\t\"max\": ");
-				out.append(std::to_string(attribute.second.max));
+				out.append(milo::dtoa_milo(attribute.second.max));
 			}
 
 			out.append("\n");
@@ -466,34 +468,47 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 	if (outdir != NULL) {
 		std::string metadata = std::string(outdir) + "/metadata.json";
-		FILE *fp = fopen(metadata.c_str(), "w");
-		if (fp == NULL) {
-			perror(metadata.c_str());
-			exit(EXIT_FAILURE);
-		}
 
-		fprintf(fp, "{\n");
-
-		sqlite3_stmt *stmt;
-		bool first = true;
-		if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
-			while (sqlite3_step(stmt) == SQLITE_ROW) {
-				std::string key, value;
-
-				quote(key, (const char *) sqlite3_column_text(stmt, 0));
-				quote(value, (const char *) sqlite3_column_text(stmt, 1));
-
-				if (!first) {
-					fprintf(fp, ",\n");
-				}
-				fprintf(fp, "    \"%s\": \"%s\"", key.c_str(), value.c_str());
-				first = false;
+		struct stat st;
+		if (stat(metadata.c_str(), &st) == 0) {
+			// Leave existing metadata in place with --allow-existing
+		} else {
+			FILE *fp = fopen(metadata.c_str(), "w");
+			if (fp == NULL) {
+				perror(metadata.c_str());
+				exit(EXIT_FAILURE);
 			}
-			sqlite3_finalize(stmt);
-		}
 
-		fprintf(fp, "\n}\n");
-		fclose(fp);
+			fprintf(fp, "{\n");
+
+			sqlite3_stmt *stmt;
+			bool first = true;
+			if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
+				while (sqlite3_step(stmt) == SQLITE_ROW) {
+					std::string key, value;
+
+					const char *k = (const char *) sqlite3_column_text(stmt, 0);
+					const char *v = (const char *) sqlite3_column_text(stmt, 1);
+					if (k == NULL || v == NULL) {
+						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+						exit(EXIT_FAILURE);
+					}
+
+					quote(key, k);
+					quote(value, v);
+
+					if (!first) {
+						fprintf(fp, ",\n");
+					}
+					fprintf(fp, "    \"%s\": \"%s\"", key.c_str(), value.c_str());
+					first = false;
+				}
+				sqlite3_finalize(stmt);
+			}
+
+			fprintf(fp, "\n}\n");
+			fclose(fp);
+		}
 	}
 
 	if (outdb == NULL) {
@@ -526,7 +541,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 
 	for (size_t i = 0; i < maps.size(); i++) {
 		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
-			if (map->second.points + map->second.lines + map->second.polygons == 0) {
+			if (map->second.points + map->second.lines + map->second.polygons + map->second.retain == 0) {
 				continue;
 			}
 

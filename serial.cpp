@@ -7,11 +7,19 @@
 #include <sqlite3.h>
 #include <set>
 #include <map>
+#include <algorithm>
+#include <limits.h>
 #include "protozero/varint.hpp"
 #include "geometry.hpp"
 #include "mbtiles.hpp"
 #include "tile.hpp"
 #include "serial.hpp"
+#include "options.hpp"
+#include "main.hpp"
+#include "pool.hpp"
+#include "projection.hpp"
+#include "evaluator.hpp"
+#include "milo/dtoa_milo.h"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname) {
 	size_t w = fwrite(ptr, size, nitems, stream);
@@ -217,7 +225,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 
 	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
-		fprintf(stderr, "Internal error: %lld doesn't match %lld\n", (long long) sf->m, (long long) sf->keys.size());
+		fprintf(stderr, "Internal error: feature said to have %lld attributes but only %lld found\n", (long long) sf->m, (long long) sf->keys.size());
 		exit(EXIT_FAILURE);
 	}
 
@@ -309,4 +317,364 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	deserialize_byte_io(geoms, &sf.feature_minzoom, geompos_in);
 
 	return sf;
+}
+
+static long long scale_geometry(struct serialization_state *sst, long long *bbox, drawvec &geom) {
+	long long offset = 0;
+	long long prev = 0;
+	bool has_prev = false;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO || geom[i].op == VT_LINETO) {
+			long long x = geom[i].x;
+			long long y = geom[i].y;
+
+			if (additional[A_DETECT_WRAPAROUND]) {
+				x += offset;
+				if (has_prev) {
+					if (x - prev > (1LL << 31)) {
+						offset -= 1LL << 32;
+						x -= 1LL << 32;
+					} else if (prev - x > (1LL << 31)) {
+						offset += 1LL << 32;
+						x += 1LL << 32;
+					}
+				}
+
+				has_prev = true;
+				prev = x;
+			}
+
+			if (x < bbox[0]) {
+				bbox[0] = x;
+			}
+			if (y < bbox[1]) {
+				bbox[1] = y;
+			}
+			if (x > bbox[2]) {
+				bbox[2] = x;
+			}
+			if (y > bbox[3]) {
+				bbox[3] = y;
+			}
+
+			if (!*(sst->initialized)) {
+				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
+					*(sst->initial_x) = 1LL << 31;
+					*(sst->initial_y) = 1LL << 31;
+				} else {
+					*(sst->initial_x) = (x >> geometry_scale) << geometry_scale;
+					*(sst->initial_y) = (y >> geometry_scale) << geometry_scale;
+				}
+
+				*(sst->initialized) = 1;
+			}
+
+			geom[i].x = x >> geometry_scale;
+			geom[i].y = y >> geometry_scale;
+		}
+	}
+
+	return geom.size();
+}
+
+int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
+	struct reader *r = &(*sst->readers)[sst->segment];
+
+	sf.bbox[0] = LLONG_MAX;
+	sf.bbox[1] = LLONG_MAX;
+	sf.bbox[2] = LLONG_MIN;
+	sf.bbox[3] = LLONG_MIN;
+	scale_geometry(sst, sf.bbox, sf.geometry);
+
+	// This has to happen after scaling so that the wraparound detection has happened first.
+	// Otherwise the inner/outer calculation will be confused by bad geometries.
+	if (sf.t == VT_POLYGON) {
+		sf.geometry = fix_polygon(sf.geometry);
+	}
+
+	if (sst->want_dist) {
+		std::vector<unsigned long long> locs;
+		for (size_t i = 0; i < sf.geometry.size(); i++) {
+			if (sf.geometry[i].op == VT_MOVETO || sf.geometry[i].op == VT_LINETO) {
+				locs.push_back(encode(sf.geometry[i].x << geometry_scale, sf.geometry[i].y << geometry_scale));
+			}
+		}
+		std::sort(locs.begin(), locs.end());
+		size_t n = 0;
+		double sum = 0;
+		for (size_t i = 1; i < locs.size(); i++) {
+			if (locs[i - 1] != locs[i]) {
+				sum += log(locs[i] - locs[i - 1]);
+				n++;
+			}
+		}
+		if (n > 0) {
+			double avg = exp(sum / n);
+			// Convert approximately from tile units to feet
+			double dist_ft = sqrt(avg) / 33;
+
+			*(sst->dist_sum) += log(dist_ft) * n;
+			*(sst->dist_count) += n;
+		}
+		locs.clear();
+	}
+
+	bool inline_meta = true;
+	// Don't inline metadata for features that will span several tiles at maxzoom
+	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
+		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
+	}
+	if (sf.bbox[0] == LLONG_MAX) {
+		// No bounding box (empty geometry)
+		// Shouldn't happen, but avoid arithmetic overflow below
+	} else if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - sst->maxzoom))) {
+		inline_meta = false;
+
+		if (prevent[P_CLIPPING]) {
+			static std::atomic<long long> warned(0);
+			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
+			if (extent > warned) {
+				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
+				warned = extent;
+
+				if (extent > 10000) {
+					fprintf(stderr, "Exiting because this can't be right.\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+	}
+
+	double extent = 0;
+	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+		if (sf.t == VT_POLYGON) {
+			for (size_t i = 0; i < sf.geometry.size(); i++) {
+				if (sf.geometry[i].op == VT_MOVETO) {
+					size_t j;
+					for (j = i + 1; j < sf.geometry.size(); j++) {
+						if (sf.geometry[j].op != VT_LINETO) {
+							break;
+						}
+					}
+
+					extent += get_area(sf.geometry, i, j);
+					i = j - 1;
+				}
+			}
+		} else if (sf.t == VT_LINE) {
+			for (size_t i = 1; i < sf.geometry.size(); i++) {
+				if (sf.geometry[i].op == VT_LINETO) {
+					double xd = sf.geometry[i].x - sf.geometry[i - 1].x;
+					double yd = sf.geometry[i].y - sf.geometry[i - 1].y;
+					extent += sqrt(xd * xd + yd * yd);
+				}
+			}
+		}
+	}
+
+	if (extent <= LLONG_MAX) {
+		sf.extent = (long long) extent;
+	} else {
+		sf.extent = LLONG_MAX;
+	}
+
+	if (!prevent[P_INPUT_ORDER]) {
+		sf.seq = 0;
+	}
+
+	long long bbox_index;
+
+	// Calculate the center even if off the edge of the plane,
+	// and then mask to bring it back into the addressable area
+	long long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
+	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
+	bbox_index = encode(midx, midy);
+
+	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {
+		sf.index = bbox_index;
+	} else {
+		sf.index = 0;
+	}
+
+	if (sst->layermap->count(sf.layername) == 0) {
+		sst->layermap->insert(std::pair<std::string, layermap_entry>(sf.layername, layermap_entry(sst->layermap->size())));
+	}
+
+	auto ai = sst->layermap->find(sf.layername);
+	if (ai != sst->layermap->end()) {
+		sf.layer = ai->second.id;
+
+		if (!sst->filters) {
+			if (sf.t == VT_POINT) {
+				ai->second.points++;
+			} else if (sf.t == VT_LINE) {
+				ai->second.lines++;
+			} else if (sf.t == VT_POLYGON) {
+				ai->second.polygons++;
+			}
+		}
+	} else {
+		fprintf(stderr, "Internal error: can't find layer name %s\n", sf.layername.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
+		if (sst->exclude_all) {
+			if (sst->include->count(sf.full_keys[i]) == 0) {
+				sf.full_keys.erase(sf.full_keys.begin() + i);
+				sf.full_values.erase(sf.full_values.begin() + i);
+				sf.m--;
+				continue;
+			}
+		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
+			sf.m--;
+			continue;
+		}
+
+		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
+	}
+
+	if (sst->filter != NULL) {
+		std::map<std::string, mvt_value> attributes;
+
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			std::string key = sf.full_keys[i];
+			mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
+
+			attributes.insert(std::pair<std::string, mvt_value>(key, val));
+		}
+
+		if (sf.has_id) {
+			mvt_value v;
+			v.type = mvt_uint;
+			v.numeric_value.uint_value = sf.id;
+
+			attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+		}
+
+		mvt_value v;
+		v.type = mvt_string;
+
+		if (sf.t == mvt_point) {
+			v.string_value = "Point";
+		} else if (sf.t == mvt_linestring) {
+			v.string_value = "LineString";
+		} else if (sf.t == mvt_polygon) {
+			v.string_value = "Polygon";
+		}
+
+		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+		if (!evaluate(attributes, sf.layername, sst->filter)) {
+			return 0;
+		}
+	}
+
+	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
+		if (sf.full_values[i].type == mvt_null) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
+			sf.m--;
+		}
+	}
+
+	if (!sst->filters) {
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			type_and_string attrib;
+			attrib.type = sf.full_values[i].type;
+			attrib.string = sf.full_values[i].s;
+
+			auto fk = sst->layermap->find(sf.layername);
+			add_to_file_keys(fk->second.file_keys, sf.full_keys[i], attrib);
+		}
+	}
+
+	if (inline_meta) {
+		sf.metapos = -1;
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
+			sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
+		}
+	} else {
+		sf.metapos = r->metapos;
+		for (size_t i = 0; i < sf.full_keys.size(); i++) {
+			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
+			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
+		}
+	}
+
+	long long geomstart = r->geompos;
+	serialize_feature(r->geomfile, &sf, &r->geompos, sst->fname, *(sst->initial_x) >> geometry_scale, *(sst->initial_y) >> geometry_scale, false);
+
+	struct index index;
+	index.start = geomstart;
+	index.end = r->geompos;
+	index.segment = sst->segment;
+	index.seq = *(sst->layer_seq);
+	index.t = sf.t;
+	index.ix = bbox_index;
+
+	fwrite_check(&index, sizeof(struct index), 1, r->indexfile, sst->fname);
+	r->indexpos += sizeof(struct index);
+
+	for (size_t i = 0; i < 2; i++) {
+		if (sf.bbox[i] < r->file_bbox[i]) {
+			r->file_bbox[i] = sf.bbox[i];
+		}
+	}
+	for (size_t i = 2; i < 4; i++) {
+		if (sf.bbox[i] > r->file_bbox[i]) {
+			r->file_bbox[i] = sf.bbox[i];
+		}
+	}
+
+	if (*(sst->progress_seq) % 10000 == 0) {
+		checkdisk(sst->readers);
+		if (!quiet && !quiet_progress && progress_time()) {
+			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
+		}
+	}
+	(*(sst->progress_seq))++;
+	(*(sst->layer_seq))++;
+
+	return 1;
+}
+
+void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types) {
+	auto a = (*attribute_types).find(key);
+	if (a != attribute_types->end()) {
+		if (a->second == mvt_string) {
+			vt = mvt_string;
+		} else if (a->second == mvt_float) {
+			vt = mvt_double;
+			val = milo::dtoa_milo(atof(val.c_str()));
+		} else if (a->second == mvt_int) {
+			vt = mvt_double;
+			if (val.size() == 0) {
+				val = "0";
+			}
+
+			for (size_t ii = 0; ii < val.size(); ii++) {
+				char c = val[ii];
+				if (c < '0' || c > '9') {
+					val = std::to_string(round(atof(val.c_str())));
+					break;
+				}
+			}
+		} else if (a->second == mvt_bool) {
+			if (val == "false" || val == "0" || val == "null" || val.size() == 0 || (vt == mvt_double && atof(val.c_str()) == 0)) {
+				vt = mvt_bool;
+				val = "false";
+			} else {
+				vt = mvt_bool;
+				val = "true";
+			}
+		} else {
+			fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
+			exit(EXIT_FAILURE);
+		}
+	}
 }

@@ -2,11 +2,11 @@
 #define MEMFILE_HPP
 
 struct memfile {
-	int fd;
-	char *map;
-	long long len;
-	long long off;
-	long long tree;
+	int fd = 0;
+	char *map = NULL;
+	long long len = 0;
+	long long off = 0;
+	unsigned long tree = 0;
 };
 
 struct memfile *memfile_open(int fd);
