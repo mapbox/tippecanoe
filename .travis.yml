@@ -104,5 +104,5 @@ script:
  - if [ -n "${COVERAGE}" ]; then
        /usr/bin/llvm-cov-3.5 -lp *.o;
        pip install --user cpp-coveralls;
-       ~/.local/bin/coveralls --no-gcov -i ./ --exclude clipper;
+       ~/.local/bin/coveralls --no-gcov -i ./ --exclude catch --exclude jsonpull --exclude mapbox --exclude milo --exclude protozero ;
    fi
