@@ -74,7 +74,7 @@ size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outla
 	return outlayer.tag_value(tv);
 }
 
-void copy_nested(mvt_layer &layer, mvt_feature &feature, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
+void copy_nested(mvt_layer &layer, mvt_feature &, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
 	size_t ko = outlayer.tag_key(key);
 	size_t vo = tag_object(layer, val, outlayer);
 	outfeature.tags.push_back(ko);

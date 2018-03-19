@@ -431,57 +431,6 @@ bool mvt_value::operator<(const mvt_value &o) const {
 	return false;
 }
 
-static std::string quote(std::string const &s) {
-	std::string buf;
-
-	for (size_t i = 0; i < s.size(); i++) {
-		unsigned char ch = s[i];
-
-		if (ch == '\\' || ch == '\"') {
-			buf.push_back('\\');
-			buf.push_back(ch);
-		} else if (ch < ' ') {
-			char tmp[7];
-			sprintf(tmp, "\\u%04x", ch);
-			buf.append(std::string(tmp));
-		} else {
-			buf.push_back(ch);
-		}
-	}
-
-	return buf;
-}
-
-std::string mvt_value::toString() {
-	if (type == mvt_string) {
-		return quote(string_value);
-	} else if (type == mvt_int) {
-		return std::to_string(numeric_value.int_value);
-	} else if (type == mvt_double) {
-		double v = numeric_value.double_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
-		} else {
-			return milo::dtoa_milo(v);
-		}
-	} else if (type == mvt_float) {
-		double v = numeric_value.float_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
-		} else {
-			return milo::dtoa_milo(v);
-		}
-	} else if (type == mvt_sint) {
-		return std::to_string(numeric_value.sint_value);
-	} else if (type == mvt_uint) {
-		return std::to_string(numeric_value.uint_value);
-	} else if (type == mvt_bool) {
-		return numeric_value.bool_value ? "true" : "false";
-	} else {
-		return "unknown";
-	}
-}
-
 size_t mvt_layer::tag_key(std::string const &key) {
 	size_t ko;
 
