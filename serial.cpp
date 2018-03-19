@@ -461,7 +461,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		inline_meta = false;
 
 		if (prevent[P_CLIPPING]) {
-			static volatile long long warned = 0;
+			static std::atomic<long long> warned(0);
 			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
 			if (extent > warned) {
 				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
@@ -662,7 +662,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	if (*(sst->progress_seq) % 10000 == 0) {
 		checkdisk(sst->readers);
-		if (!quiet && !quiet_progress) {
+		if (!quiet && !quiet_progress && progress_time()) {
 			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
 		}
 	}

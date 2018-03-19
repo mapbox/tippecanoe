@@ -476,7 +476,9 @@ void runQueue() {
 		}
 	}
 
-	*((*(feature_queue[0].sst))[0].layer_seq) = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
+	// Lack of atomicity is OK, since we are single-threaded again here
+	long long was = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
+	*((*(feature_queue[0].sst))[0].layer_seq) = was;
 	feature_queue.clear();
 }
 
