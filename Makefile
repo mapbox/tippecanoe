@@ -93,7 +93,7 @@ test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test p
 	rm $@.out $@.mbtiles
 
 # Don't test overflow with geobuf, because it fails (https://github.com/mapbox/geobuf/issues/87)
-nogeobuf = tests/overflow/out/-z0.json tests/dateline/out/-z5.json
+nogeobuf = tests/overflow/out/-z0.json
 geobuf-test: tippecanoe-json-tool $(addsuffix .checkbuf,$(filter-out $(nogeobuf),$(TESTS)))
 
 # For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
