@@ -3,6 +3,8 @@
 Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
+[Mapbox Tippecanoe](\[la]https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG\[ra])
+.PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
 [Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github) \[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
 .SH Intent
@@ -201,12 +203,23 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 \fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named properties in all features, excluding all those not explicitly named
 .IP \(bu 2
 \fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Exclude all properties and encode only geometries
+.RE
+.SS Modifying feature attributes
+.RS
 .IP \(bu 2
 \fB\fC\-T\fR\fIattribute\fP\fB\fC:\fR\fItype\fP or \fB\fC\-\-attribute\-type=\fR\fIattribute\fP\fB\fC:\fR\fItype\fP: Coerce the named feature \fIattribute\fP to be of the specified \fItype\fP\&.
 The \fItype\fP may be \fB\fCstring\fR, \fB\fCfloat\fR, \fB\fCint\fR, or \fB\fCbool\fR\&.
 If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR (or, if numeric, \fB\fC0.0\fR, etc.), \fB\fCfalse\fR, \fB\fCnull\fR, or the empty string become \fB\fCfalse\fR, and otherwise become \fB\fCtrue\fR\&.
 If the type is \fB\fCfloat\fR or \fB\fCint\fR and the original attribute was non\-numeric, it becomes \fB\fC0\fR\&.
 If the type is \fB\fCint\fR and the original attribute was floating\-point, it is rounded to the nearest integer.
+.IP \(bu 2
+\fB\fC\-E\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP or \fB\fC\-\-accumulate\-attribute=\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP: Preserve the named \fIattribute\fP from features
+that are dropped, coalesced\-as\-needed, or clustered. The \fIoperation\fP may be
+\fB\fCsum\fR, \fB\fCproduct\fR, \fB\fCmean\fR, \fB\fCmax\fR, \fB\fCmin\fR, \fB\fCconcat\fR, or \fB\fCcomma\fR
+to specify how the named \fIattribute\fP is accumulated onto the attribute of the same name in a feature that does survive.
+.RE
+.SS Filtering features by attributes
+.RS
 .IP \(bu 2
 \fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
@@ -237,7 +250,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-ap\fR or \fB\fC\-\-drop\-polygons\fR: Let "dot" dropping at lower zooms apply to polygons too
 .IP \(bu 2
-\fB\fC\-K\fR \fIdistance\fP or \fB\fC\-\-cluster\-distance=\fR\fIdistance\fP: Cluster points (as with \fB\fC\-\-cluster\-densest\-as\-needed\fR, but without the experimental discovery process) that are approximately within \fIdistance\fP of each other. The units are tile coordinates within a nominally 256\-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 20 are probably appropriate for typical marker sizes.
+\fB\fC\-K\fR \fIdistance\fP or \fB\fC\-\-cluster\-distance=\fR\fIdistance\fP: Cluster points (as with \fB\fC\-\-cluster\-densest\-as\-needed\fR, but without the experimental discovery process) that are approximately within \fIdistance\fP of each other. The units are tile coordinates within a nominally 256\-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 10 are probably appropriate for typical marker sizes. See \fB\fC\-\-cluster\-densest\-as\-needed\fR below for behavior.
 .RE
 .SS Dropping a fraction of features to keep under tile size limits
 .RS
@@ -256,7 +269,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .IP \(bu 2
-\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster and a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it.
+\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster, a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it, and a \fB\fC"sqrt_point_count"\fR attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
 .RE
 .SS Dropping tightly overlapping features
 .RS
@@ -342,6 +355,8 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 .IP \(bu 2
 \fB\fC\-Q\fR or \fB\fC\-\-no\-progress\-indicator\fR: Don't report progress, but still give warnings
 .IP \(bu 2
+\fB\fC\-U\fR \fIseconds\fP or \fB\fC\-\-progress\-interval=\fR\fIseconds\fP: Don't report progress more often than the specified number of \fIseconds\fP\&.
+.IP \(bu 2
 \fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
 .RE
 .SS Filters
@@ -366,7 +381,7 @@ The postfilter receives the features at tile resolution, after simplification, c
 .PP
 The layer name is provided as part of the \fB\fCtippecanoe\fR element of the feature and must be passed through
 to keep the feature in its correct layer. In the case of the prefilter, the \fB\fCtippecanoe\fR element may also
-contain \fB\fCindex\fR, \fB\fCsequence\fR, and \fB\fCextent\fR elements, which must be passed through for internal operations like
+contain \fB\fCindex\fR, \fB\fCsequence\fR, \fB\fCextent\fR, and \fB\fCdropped\fR, elements, which must be passed through for internal operations like
 \fB\fC\-\-drop\-densest\-as\-needed\fR, \fB\fC\-\-drop\-smallest\-as\-needed\fR, and \fB\fC\-\-preserve\-input\-order\fR to work.
 .SS Examples:
 .RS
@@ -708,7 +723,7 @@ tippecanoe\-decode file.vector.pbf zoom x y
 .fi
 .RE
 .PP
-If you decode an entire file, you get a nested \fB\fCFeatureCollection\fR identifying each
+Unless you use \fB\fC\-c\fR, the output is a set of nested FeatureCollections identifying each
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.

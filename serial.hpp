@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <vector>
+#include <atomic>
 #include <sys/stat.h>
 #include "geometry.hpp"
 #include "mbtiles.hpp"
@@ -66,6 +67,7 @@ struct serial_feature {
 	std::vector<std::string> full_keys{};
 	std::vector<serial_val> full_values{};
 	std::string layername = "";
+	bool dropped = false;
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
@@ -100,8 +102,8 @@ struct serialization_state {
 	const char *fname = NULL;  // source file name
 	int line = 0;		   // user-oriented location within source for error reports
 
-	volatile long long *layer_seq = NULL;     // sequence within current layer
-	volatile long long *progress_seq = NULL;  // overall sequence for progress indicator
+	std::atomic<long long> *layer_seq = NULL;     // sequence within current layer
+	std::atomic<long long> *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
 	int segment = 0;			     // the current input thread

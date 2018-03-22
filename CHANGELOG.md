@@ -1,3 +1,23 @@
+## 1.27.11
+
+* Always include tile and layer in tippecanoe-decode, fixing corrupt JSON.
+* Clean up writing of JSON in general.
+
+## 1.27.10
+
+* Add --progress-interval setting to reduce progress indicator frequency
+
+## 1.27.9
+
+* Make clusters look better by averaging locations of clustered points
+
+## 1.27.8
+
+* Add --accumulate-attribute to keep attributes of dropped, coalesced,
+  or clustered features
+* Make sure numeric command line arguments are actually numbers
+* Don't coalesce features whose non-string-pool attributes don't match
+
 ## 1.27.7
 
 * Add an option to produce only a single tile

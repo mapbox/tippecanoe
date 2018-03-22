@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <getopt.h>
 #include <signal.h>
+#include <sys/time.h>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -66,6 +67,8 @@ static int min_detail = 7;
 
 int quiet = 0;
 int quiet_progress = 0;
+double progress_interval = 0;
+std::atomic<double> last_progress(0);
 int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
@@ -85,6 +88,7 @@ size_t CPUS;
 size_t TEMP_FILES;
 long long MAX_FILES;
 static long long diskfree;
+char **av;
 
 void checkdisk(std::vector<struct reader> *r) {
 	long long used = 0;
@@ -101,11 +105,53 @@ void checkdisk(std::vector<struct reader> *r) {
 	}
 };
 
+int atoi_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	int ret = strtol(s, &err, 10);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
+double atof_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	double ret = strtod(s, &err);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
+long long atoll_require(const char *s, const char *what) {
+	char *err = NULL;
+	if (*s == '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	long long ret = strtoll(s, &err, 10);
+	if (*err != '\0') {
+		fprintf(stderr, "%s: %s must be a number (got %s)\n", *av, what, s);
+		exit(EXIT_FAILURE);
+	}
+	return ret;
+}
+
 void init_cpus() {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
 	if (TIPPECANOE_MAX_THREADS != NULL) {
-		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+		CPUS = atoi_require(TIPPECANOE_MAX_THREADS, "TIPPECANOE_MAX_THREADS");
 	} else {
 		CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 	}
@@ -223,25 +269,6 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
 			   (additional[A_POLYGON_DROP] && ix->t == VT_POLYGON))) {
 		for (ssize_t i = maxzoom; i >= 0; i--) {
-			// XXX This resets the feature counter at the start of each tile,
-			// which makes the feature count come out close to what it is if
-			// feature dropping happens during tiling. It means that the low
-			// zooms are heavier than they legitimately should be though.
-			{
-				unsigned xxx = 0, yyy = 0;
-				if (i != 0) {
-					xxx = xx >> (32 - i);
-					yyy = yy >> (32 - i);
-				}
-				if (ds[i].x != xxx || ds[i].y != yyy) {
-					ds[i].seq = 0;
-					ds[i].gap = 0;
-					ds[i].previndex = 0;
-				}
-				ds[i].x = xxx;
-				ds[i].y = yyy;
-			}
-
 			ds[i].seq++;
 		}
 		for (ssize_t i = maxzoom; i >= 0; i--) {
@@ -269,6 +296,8 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 		}
 	}
 
+	last_progress = 0;
+
 	while (head != NULL) {
 		struct index ix = *((struct index *) (map + head->start));
 		long long pos = *geompos;
@@ -279,7 +308,7 @@ static void merge(struct mergelist *merges, size_t nmerges, unsigned char *map, 
 
 		// Count this as an 75%-accomplishment, since we already 25%-counted it
 		*progress += (ix.end - ix.start) * 3 / 4;
-		if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+		if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 			fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 			*progress_reported = 100 * *progress / *progress_max;
 		}
@@ -359,7 +388,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -375,7 +404,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	double dist_sums[CPUS];
 	size_t dist_counts[CPUS];
 
-	volatile long long layer_seq[CPUS];
+	std::atomic<long long> layer_seq[CPUS];
 	for (size_t i = 0; i < CPUS; i++) {
 		// To preserve feature ordering, unique id for each segment
 		// begins with that segment's offset into the input
@@ -452,12 +481,12 @@ struct read_parallel_arg {
 	FILE *fp = NULL;
 	long long offset = 0;
 	long long len = 0;
-	volatile int *is_parsing = NULL;
+	std::atomic<int> *is_parsing = NULL;
 	int separator = 0;
 
 	const char *reading = NULL;
 	std::vector<struct reader> *readers = NULL;
-	volatile long long *progress_seq = NULL;
+	std::atomic<long long> *progress_seq = NULL;
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
 	int exclude_all = 0;
@@ -514,7 +543,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, volatile int *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, volatile long long *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, FILE *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -649,7 +678,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 				// Count this as a 25%-accomplishment, since we will copy again
 				*progress += (ix.end - ix.start) / 4;
-				if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+				if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 					fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 					*progress_reported = 100 * *progress / *progress_max;
 				}
@@ -821,7 +850,7 @@ void radix1(int *geomfds_in, int *indexfds_in, int inputs, int prefix, int split
 
 					// Count this as an 75%-accomplishment, since we already 25%-counted it
 					*progress += (ix.end - ix.start) * 3 / 4;
-					if (!quiet && !quiet_progress && 100 * *progress / *progress_max != *progress_reported) {
+					if (!quiet && !quiet_progress && progress_time() && 100 * *progress / *progress_max != *progress_reported) {
 						fprintf(stderr, "Reordering geometry: %lld%% \r", 100 * *progress / *progress_max);
 						*progress_reported = 100 * *progress / *progress_max;
 					}
@@ -1016,7 +1045,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -1116,7 +1145,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 	diskfree = (long long) fsstat.f_bsize * fsstat.f_bavail;
 
-	volatile long long progress_seq = 0;
+	std::atomic<long long> progress_seq(0);
 
 	// 2 * CPUS: One per reader thread, one per tiling thread
 	int initialized[2 * CPUS];
@@ -1171,7 +1200,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			// Trim out characters that can't be part of selector
-                        std::string out;
+			std::string out;
 			for (size_t p = 0; p < trunc.size(); p++) {
 				if (isalpha(trunc[p]) || isdigit(trunc[p]) || trunc[p] == '_' || (trunc[p] & 0x80) != 0) {
 					out.append(trunc, p, 1);
@@ -1253,7 +1282,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 
-			long long layer_seq[CPUS];
+			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
 			std::vector<struct serialization_state> sst;
@@ -1310,7 +1339,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv")) {
-			long long layer_seq[CPUS];
+			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
 
@@ -1445,7 +1474,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				}
 				unlink(readname);
 
-				volatile int is_parsing = 0;
+				std::atomic<int> is_parsing(0);
 				long long ahead = 0;
 				long long initial_offset = overall_offset;
 				pthread_t parallel_parser;
@@ -1529,7 +1558,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			} else {
 				// Plain serial reading
 
-				long long layer_seq = overall_offset;
+				std::atomic<long long> layer_seq(overall_offset);
 				json_pull *jp = json_begin_file(fp);
 				struct serialization_state sst;
 
@@ -1795,8 +1824,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	long long indexpos = indexst.st_size;
 	progress_seq = indexpos / sizeof(struct index);
 
+	last_progress = 0;
 	if (!quiet) {
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", progress_seq, geompos, metapos, poolpos);
+		long long s = progress_seq;
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", s, geompos, metapos, poolpos);
 	}
 
 	if (indexpos == 0) {
@@ -1832,7 +1863,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
-				if (!quiet && !quiet_progress) {
+				if (!quiet && !quiet_progress && progress_time()) {
 					fprintf(stderr, "Maxzoom: %lld%% \r", progress);
 				}
 			}
@@ -1928,7 +1959,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
 				progress = nprogress;
-				if (!quiet && !quiet_progress) {
+				if (!quiet && !quiet_progress && progress_time()) {
 					fprintf(stderr, "Base zoom/drop rate: %lld%% \r", progress);
 				}
 			}
@@ -2120,8 +2151,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		size[j] = 0;
 	}
 
-	unsigned midx = 0, midy = 0;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter);
+	std::atomic<unsigned> midx(0);
+	std::atomic<unsigned> midy(0);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum);
 
 	if (maxzoom != written) {
 		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
@@ -2176,16 +2208,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 		ai->second.minzoom = minzoom;
 		ai->second.maxzoom = maxzoom;
-
-		if (additional[A_CALCULATE_FEATURE_DENSITY]) {
-			for (size_t i = 0; i < 256; i++) {
-				type_and_string tas;
-				tas.type = mvt_double;
-				tas.string = std::to_string(i);
-
-				add_to_file_keys(ai->second.file_keys, "tippecanoe_feature_density", tas);
-			}
-		}
 	}
 
 	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS]);
@@ -2230,11 +2252,45 @@ void set_attribute_type(std::map<std::string, int> &attribute_types, const char 
 	attribute_types.insert(std::pair<std::string, int>(name, t));
 }
 
+void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, const char *arg) {
+	const char *s = strchr(arg, ':');
+	if (s == NULL) {
+		fprintf(stderr, "-E%s option must be in the form -Ename:method\n", arg);
+		exit(EXIT_FAILURE);
+	}
+
+	std::string name = std::string(arg, s - arg);
+	std::string type = std::string(s + 1);
+	attribute_op t;
+
+	if (type == "sum") {
+		t = op_sum;
+	} else if (type == "product") {
+		t = op_product;
+	} else if (type == "mean") {
+		t = op_mean;
+	} else if (type == "max") {
+		t = op_max;
+	} else if (type == "min") {
+		t = op_min;
+	} else if (type == "concat") {
+		t = op_concat;
+	} else if (type == "comma") {
+		t = op_comma;
+	} else {
+		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, max, min, concat, or comma\n", type.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	attribute_accum.insert(std::pair<std::string, attribute_op>(name, t));
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
 #endif
 
+	av = argv;
 	init_cpus();
 
 	extern int optind;
@@ -2265,6 +2321,7 @@ int main(int argc, char **argv) {
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
+	std::map<std::string, attribute_op> attribute_accum;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -2312,7 +2369,12 @@ int main(int argc, char **argv) {
 		{"exclude", required_argument, 0, 'x'},
 		{"include", required_argument, 0, 'y'},
 		{"exclude-all", no_argument, 0, 'X'},
+
+		{"Modifying feature attributes", 0, 0, 0},
 		{"attribute-type", required_argument, 0, 'T'},
+		{"accumulate-attribute", required_argument, 0, 'E'},
+
+		{"Filtering features by attributes", 0, 0, 0},
 		{"feature-filter-file", required_argument, 0, 'J'},
 		{"feature-filter", required_argument, 0, 'j'},
 
@@ -2382,6 +2444,7 @@ int main(int argc, char **argv) {
 		{"Progress indicator", 0, 0, 0},
 		{"quiet", no_argument, 0, 'q'},
 		{"no-progress-indicator", no_argument, 0, 'Q'},
+		{"progress-interval", required_argument, 0, 'U'},
 		{"version", no_argument, 0, 'v'},
 
 		{"", 0, 0, 0},
@@ -2464,19 +2527,20 @@ int main(int argc, char **argv) {
 			src.layer = std::string(optarg).substr(0, cp - optarg);
 			src.file = std::string(cp + 1);
 			sources.push_back(src);
-		} break;
+			break;
+		}
 
 		case 'z':
 			if (strcmp(optarg, "g") == 0) {
 				maxzoom = MAX_ZOOM;
 				guess_maxzoom = true;
 			} else {
-				maxzoom = atoi(optarg);
+				maxzoom = atoi_require(optarg, "Maxzoom");
 			}
 			break;
 
 		case 'Z':
-			minzoom = atoi(optarg);
+			minzoom = atoi_require(optarg, "Minzoom");
 			break;
 
 		case 'R': {
@@ -2490,6 +2554,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr, "--one-tile argument must be z/x/y\n");
 				exit(EXIT_FAILURE);
 			}
+			break;
 		}
 
 		case 'B':
@@ -2498,16 +2563,16 @@ int main(int argc, char **argv) {
 			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				basezoom = -2;
 				if (optarg[0] == 'g') {
-					basezoom_marker_width = atof(optarg + 1);
+					basezoom_marker_width = atof_require(optarg + 1, "Marker width");
 				} else {
-					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+					basezoom_marker_width = sqrt(50000 / atof_require(optarg + 1, "Marker width"));
 				}
-				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+				if (basezoom_marker_width == 0 || atof_require(optarg + 1, "Marker width") == 0) {
 					fprintf(stderr, "%s: Must specify value >0 with -B%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				basezoom = atoi(optarg);
+				basezoom = atoi_require(optarg, "Basezoom");
 				if (basezoom == 0 && strcmp(optarg, "0") != 0) {
 					fprintf(stderr, "%s: Couldn't understand -B%s\n", argv[0], optarg);
 					exit(EXIT_FAILURE);
@@ -2516,7 +2581,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'K':
-			cluster_distance = atoi(optarg);
+			cluster_distance = atoi_require(optarg, "Cluster distance");
 			if (cluster_distance > 255) {
 				fprintf(stderr, "%s: --cluster-distance %d is too big; limit is 255\n", argv[0], cluster_distance);
 				exit(EXIT_FAILURE);
@@ -2524,15 +2589,15 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'd':
-			full_detail = atoi(optarg);
+			full_detail = atoi_require(optarg, "Full detail");
 			break;
 
 		case 'D':
-			low_detail = atoi(optarg);
+			low_detail = atoi_require(optarg, "Low detail");
 			break;
 
 		case 'm':
-			min_detail = atoi(optarg);
+			min_detail = atoi_require(optarg, "Min detail");
 			break;
 
 		case 'o':
@@ -2586,21 +2651,21 @@ int main(int argc, char **argv) {
 			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				droprate = -2;
 				if (optarg[0] == 'g') {
-					basezoom_marker_width = atof(optarg + 1);
+					basezoom_marker_width = atof_require(optarg + 1, "Marker width");
 				} else {
-					basezoom_marker_width = sqrt(50000 / atof(optarg + 1));
+					basezoom_marker_width = sqrt(50000 / atof_require(optarg + 1, "Marker width"));
 				}
-				if (basezoom_marker_width == 0 || atof(optarg + 1) == 0) {
+				if (basezoom_marker_width == 0 || atof_require(optarg + 1, "Marker width") == 0) {
 					fprintf(stderr, "%s: Must specify value >0 with -r%c\n", argv[0], optarg[0]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
-				droprate = atof(optarg);
+				droprate = atof_require(optarg, "Drop rate");
 			}
 			break;
 
 		case 'b':
-			buffer = atoi(optarg);
+			buffer = atoi_require(optarg, "Buffer");
 			break;
 
 		case 'f':
@@ -2619,7 +2684,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'g':
-			gamma = atof(optarg);
+			gamma = atof_require(optarg, "Gamma");
 			break;
 
 		case 'q':
@@ -2628,6 +2693,10 @@ int main(int argc, char **argv) {
 
 		case 'Q':
 			quiet_progress = 1;
+			break;
+
+		case 'U':
+			progress_interval = atof_require(optarg, "Progress interval");
 			break;
 
 		case 'p': {
@@ -2640,7 +2709,8 @@ int main(int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 			}
-		} break;
+			break;
+		}
 
 		case 'a': {
 			char *cp;
@@ -2652,7 +2722,8 @@ int main(int argc, char **argv) {
 					exit(EXIT_FAILURE);
 				}
 			}
-		} break;
+			break;
+		}
 
 		case 'v':
 			fprintf(stderr, VERSION);
@@ -2667,7 +2738,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'S':
-			simplification = atof(optarg);
+			simplification = atof_require(optarg, "Simplification");
 			if (simplification <= 0) {
 				fprintf(stderr, "%s: --simplification must be > 0\n", argv[0]);
 				exit(EXIT_FAILURE);
@@ -2675,11 +2746,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'M':
-			max_tile_size = atoll(optarg);
+			max_tile_size = atoll_require(optarg, "Max tile size");
 			break;
 
 		case 'O':
-			max_tile_features = atoll(optarg);
+			max_tile_features = atoll_require(optarg, "Max tile features");
 			break;
 
 		case 'c':
@@ -2692,6 +2763,10 @@ int main(int argc, char **argv) {
 
 		case 'T':
 			set_attribute_type(attribute_types, optarg);
+			break;
+
+		case 'E':
+			set_attribute_accum(attribute_accum, optarg);
 			break;
 
 		default: {
@@ -2833,7 +2908,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0]);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
@@ -2874,4 +2949,26 @@ FILE *fopen_oflag(const char *name, const char *mode, int oflag) {
 		return NULL;
 	}
 	return fdopen(fd, mode);
+}
+
+bool progress_time() {
+	if (progress_interval == 0.0) {
+		return true;
+	}
+
+	struct timeval tv;
+	double now;
+	if (gettimeofday(&tv, NULL) != 0) {
+		fprintf(stderr, "%s: Can't get the time of day: %s\n", *av, strerror(errno));
+		now = 0;
+	} else {
+		now = tv.tv_sec + tv.tv_usec / 1000000.0;
+	}
+
+	if (now - last_progress >= progress_interval) {
+		last_progress = now;
+		return true;
+	} else {
+		return false;
+	}
 }

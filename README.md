@@ -4,8 +4,10 @@ tippecanoe
 Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
 [like these](MADE_WITH.md).
 
+![Mapbox Tippecanoe](https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG)
+
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
-[![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
+[![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
 
 Intent
 ------
@@ -180,11 +182,21 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
  * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
  * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
+
+### Modifying feature attributes
+
  * `-T`_attribute_`:`_type_ or `--attribute-type=`_attribute_`:`_type_: Coerce the named feature _attribute_ to be of the specified _type_.
    The _type_ may be `string`, `float`, `int`, or `bool`.
    If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
+ * `-E`_attribute_`:`_operation_ or `--accumulate-attribute=`_attribute_`:`_operation_: Preserve the named _attribute_ from features
+   that are dropped, coalesced-as-needed, or clustered. The _operation_ may be
+   `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`
+   to specify how the named _attribute_ is accumulated onto the attribute of the same name in a feature that does survive.
+
+### Filtering features by attributes
+
  * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
 
@@ -206,7 +218,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
    compensate for the larger marker, or `-Bf`*number* to allow at most *number* features in the densest tile.
  * `-al` or `--drop-lines`: Let "dot" dropping at lower zooms apply to lines too
  * `-ap` or `--drop-polygons`: Let "dot" dropping at lower zooms apply to polygons too
- * `-K` _distance_ or `--cluster-distance=`_distance_: Cluster points (as with `--cluster-densest-as-needed`, but without the experimental discovery process) that are approximately within _distance_ of each other. The units are tile coordinates within a nominally 256-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 20 are probably appropriate for typical marker sizes.
+ * `-K` _distance_ or `--cluster-distance=`_distance_: Cluster points (as with `--cluster-densest-as-needed`, but without the experimental discovery process) that are approximately within _distance_ of each other. The units are tile coordinates within a nominally 256-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 10 are probably appropriate for typical marker sizes. See `--cluster-densest-as-needed` below for behavior.
 
 ### Dropping a fraction of features to keep under tile size limits
 
@@ -217,7 +229,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-aD` or `--coalesce-densest-as-needed`: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-aS` or `--coalesce-fraction-as-needed`: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
- * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster and a `"point_count"` attribute to indicate the number of features that were clustered into it.
+ * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster, a `"point_count"` attribute to indicate the number of features that were clustered into it, and a `"sqrt_point_count"` attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
 
 ### Dropping tightly overlapping features
 
@@ -276,6 +288,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
  * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
  * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
+ * `-U` _seconds_ or `--progress-interval=`_seconds_: Don't report progress more often than the specified number of _seconds_.
  * `-v` or `--version`: Report Tippecanoe's version number
 
 ### Filters
@@ -297,7 +310,7 @@ The postfilter receives the features at tile resolution, after simplification, c
 
 The layer name is provided as part of the `tippecanoe` element of the feature and must be passed through
 to keep the feature in its correct layer. In the case of the prefilter, the `tippecanoe` element may also
-contain `index`, `sequence`, and `extent` elements, which must be passed through for internal operations like
+contain `index`, `sequence`, `extent`, and `dropped`, elements, which must be passed through for internal operations like
 `--drop-densest-as-needed`, `--drop-smallest-as-needed`, and `--preserve-input-order` to work.
 
 #### Examples:
@@ -591,7 +604,7 @@ or on an individual tile:
     tippecanoe-decode file.mbtiles zoom x y
     tippecanoe-decode file.vector.pbf zoom x y
 
-If you decode an entire file, you get a nested `FeatureCollection` identifying each
+Unless you use `-c`, the output is a set of nested FeatureCollections identifying each
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.

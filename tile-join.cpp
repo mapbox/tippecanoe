@@ -47,6 +47,21 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
+void aprintf(std::string *buf, const char *format, ...) {
+	va_list ap;
+	char *tmp;
+
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
+
+	buf->append(tmp, strlen(tmp));
+	free(tmp);
+}
+
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
 	int features_added = 0;
@@ -896,7 +911,8 @@ int main(int argc, char **argv) {
 			std::string before = std::string(optarg).substr(0, cp - optarg);
 			std::string after = std::string(cp + 1);
 			renames.insert(std::pair<std::string, std::string>(before, after));
-		} break;
+			break;
+		}
 
 		case 'q':
 			quiet = true;
