@@ -39,6 +39,14 @@ The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/)
 $ brew install tippecanoe
 ```
 
+on Ubuntu:
+```js
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make
+$ make install
+```
+
 Usage
 -----
 
