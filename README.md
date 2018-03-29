@@ -35,9 +35,22 @@ Installation
 
 The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
 
-```js
+```sh
 $ brew install tippecanoe
 ```
+
+On Ubuntu it will usually be easiest to build from the source repository:
+
+```sh
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make -j
+$ make install
+```
+
+See [Development](#development) below for how to upgrade your
+C++ compiler or install prerequisite packages if you get
+compiler errors.
 
 Usage
 -----
