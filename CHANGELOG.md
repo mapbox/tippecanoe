@@ -1,3 +1,7 @@
+## 1.27.12
+
+* Check integrity of sqlite3 file before decoding or tile-joining
+
 ## 1.27.11
 
 * Always include tile and layer in tippecanoe-decode, fixing corrupt JSON.

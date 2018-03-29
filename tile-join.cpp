@@ -413,6 +413,12 @@ struct reader *begin_reading(char *fname) {
 			exit(EXIT_FAILURE);
 		}
 
+		char *err = NULL;
+		if (sqlite3_exec(db, "PRAGMA integrity_check;", NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "%s: integrity_check: %s\n", fname, err);
+			exit(EXIT_FAILURE);
+		}
+
 		const char *sql = "SELECT zoom_level, tile_column, tile_row, tile_data from tiles order by zoom_level, tile_column, tile_row;";
 		sqlite3_stmt *stmt;
 
