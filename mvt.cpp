@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <zlib.h>
+#include <libdeflate.h>
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
@@ -62,6 +63,7 @@ int decompress(std::string const &input, std::string &output) {
 int compress(std::string const &input, std::string &output) {
 	clock_t start = clock();
 
+#if 0
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
@@ -85,6 +87,32 @@ int compress(std::string const &input, std::string &output) {
 	} while (deflate_s.avail_out == 0);
 	deflateEnd(&deflate_s);
 	output.resize(length);
+#else
+	struct libdeflate_compressor *compressor_ = nullptr;
+
+	compressor_ = libdeflate_alloc_compressor(compression_rate);
+	if (!compressor_) {
+		throw std::runtime_error("libdeflate_alloc_compressor failed");
+	}
+
+	std::size_t max_compressed_size = libdeflate_gzip_compress_bound(compressor_, input.size());
+	if (max_compressed_size > output.size()) {
+		output.resize(max_compressed_size);
+	}
+
+	std::size_t actual_compressed_size = libdeflate_gzip_compress(compressor_,
+								      input.data(),
+								      input.size(),
+								      reinterpret_cast<void *>(&output[0]),
+								      max_compressed_size);
+
+	if (actual_compressed_size == 0) {
+		throw std::runtime_error("actual_compressed_size 0");
+	}
+
+	output.resize(actual_compressed_size);
+	libdeflate_free_compressor(compressor_);
+#endif
 
 	clock_t end = clock();
 	compression_time += (double) (end - start) / CLOCKS_PER_SEC;
