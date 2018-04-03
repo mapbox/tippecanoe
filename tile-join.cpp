@@ -39,6 +39,8 @@ int quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
 std::map<std::string, std::string> renames;
+int compression_rate = 9;
+double compression_time = 0;
 
 struct stats {
 	int minzoom;

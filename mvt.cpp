@@ -7,12 +7,14 @@
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <time.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
+#include "main.hpp"
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
@@ -58,13 +60,15 @@ int decompress(std::string const &input, std::string &output) {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int compress(std::string const &input, std::string &output) {
+	clock_t start = clock();
+
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
 	deflate_s.opaque = Z_NULL;
 	deflate_s.avail_in = 0;
 	deflate_s.next_in = Z_NULL;
-	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
+	deflateInit2(&deflate_s, compression_rate, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
 	deflate_s.next_in = (Bytef *) input.data();
 	deflate_s.avail_in = input.size();
 	size_t length = 0;
@@ -81,6 +85,10 @@ int compress(std::string const &input, std::string &output) {
 	} while (deflate_s.avail_out == 0);
 	deflateEnd(&deflate_s);
 	output.resize(length);
+
+	clock_t end = clock();
+	compression_time += (double) (end - start) / CLOCKS_PER_SEC;
+
 	return 0;
 }
 

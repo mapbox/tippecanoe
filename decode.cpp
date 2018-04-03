@@ -26,6 +26,8 @@
 int minzoom = 0;
 int maxzoom = 32;
 bool force = false;
+int compression_rate = 9;
+double compression_time = 0;
 
 void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y, json_writer &state) {
 	state.json_write_hash();

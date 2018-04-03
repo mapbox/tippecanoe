@@ -60,6 +60,7 @@
 #include "dirtiles.hpp"
 #include "evaluator.hpp"
 #include "text.hpp"
+#include "milo/dtoa_milo.h"
 
 static int low_detail = 12;
 static int full_detail = -1;
@@ -75,6 +76,8 @@ size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
 long justx = -1, justy = -1;
+int compression_rate = 9;
+double compression_time = 0;
 
 int prevent[256];
 int additional[256];
@@ -159,6 +162,8 @@ void init_cpus() {
 	if (CPUS < 1) {
 		CPUS = 1;
 	}
+
+	CPUS = 1;
 
 	// Guard against short struct index.segment
 	if (CPUS > 32767) {
@@ -2333,6 +2338,8 @@ int main(int argc, char **argv) {
 	}
 
 	static struct option long_options_orig[] = {
+		{"compression_rate", required_argument, 0, 'k'},
+
 		{"Output tileset", 0, 0, 0},
 		{"output", required_argument, 0, 'o'},
 		{"output-to-directory", required_argument, 0, 'e'},
@@ -2499,6 +2506,10 @@ int main(int argc, char **argv) {
 	while ((i = getopt_long(argc, argv, getopt_str, long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
+			break;
+
+		case 'k':
+			compression_rate = atoi(optarg);
 			break;
 
 		case 'n':
@@ -2928,6 +2939,9 @@ int main(int argc, char **argv) {
 	if (filter != NULL) {
 		json_free(filter);
 	}
+
+	std::string tm = milo::dtoa_milo(compression_time);
+	printf("compression time: %s\n", tm.c_str());
 
 	return ret;
 }
