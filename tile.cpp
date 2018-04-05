@@ -74,7 +74,7 @@ bool draws_something(drawvec &geom) {
 	return false;
 }
 
-static int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
+static int metacmp(const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2);
 int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2);
 
 struct coalesce {
@@ -87,7 +87,6 @@ struct coalesce {
 	unsigned long long index = 0;
 	long long original_seq = 0;
 	int type = 0;
-	int m = 0;
 	bool coalesced = false;
 	double spacing = 0;
 	bool has_id = false;
@@ -131,7 +130,7 @@ int coalcmp(const void *v1, const void *v2) {
 		}
 	}
 
-	cmp = metacmp(c1->m, c1->keys, c1->values, c1->stringpool, c2->m, c2->keys, c2->values, c2->stringpool);
+	cmp = metacmp(c1->keys, c1->values, c1->stringpool, c2->keys, c2->values, c2->stringpool);
 	if (cmp != 0) {
 		return cmp;
 	}
@@ -196,9 +195,9 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
-	int i;
-	for (i = 0; i < m; i++) {
+void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+	size_t i;
+	for (i = 0; i < metakeys.size(); i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
@@ -207,9 +206,9 @@ void decode_meta(int m, std::vector<long long> const &metakeys, std::vector<long
 	}
 }
 
-static int metacmp(int m1, const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, int m2, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
-	int i;
-	for (i = 0; i < m1 && i < m2; i++) {
+static int metacmp(const std::vector<long long> &keys1, const std::vector<long long> &values1, char *stringpool1, const std::vector<long long> &keys2, const std::vector<long long> &values2, char *stringpool2) {
+	size_t i;
+	for (i = 0; i < keys1.size() && i < keys2.size(); i++) {
 		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
 		mvt_value key2 = retrieve_string(keys2[i], stringpool2, NULL);
 
@@ -236,16 +235,16 @@ static int metacmp(int m1, const std::vector<long long> &keys1, const std::vecto
 		}
 	}
 
-	if (m1 < m2) {
+	if (keys1.size() < keys2.size()) {
 		return -1;
-	} else if (m1 > m2) {
+	} else if (keys1.size() > keys2.size()) {
 		return 1;
 	} else {
 		return 0;
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, int m, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, long long *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -336,11 +335,10 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.geometry = geom2;
 					sf.index = index;
 					sf.extent = extent;
-					sf.m = m;
 					sf.feature_minzoom = feature_minzoom;
 
 					if (metastart < 0) {
-						for (int i = 0; i < m; i++) {
+						for (size_t i = 0; i < metakeys.size(); i++) {
 							sf.keys.push_back(metakeys[i]);
 							sf.values.push_back(metavals[i]);
 						}
@@ -363,7 +361,6 @@ struct partial {
 	long long layer = 0;
 	long long original_seq = 0;
 	unsigned long long index = 0;
-	int m = 0;
 	int segment = 0;
 	bool reduced = 0;
 	int z = 0;
@@ -1318,7 +1315,7 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.m, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
 			}
 		}
 
@@ -1337,7 +1334,7 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 			std::map<std::string, mvt_value> attributes;
 			std::string layername = (*layer_unmaps)[sf.segment][sf.layer];
 
-			for (size_t i = 0; i < sf.m; i++) {
+			for (size_t i = 0; i < sf.keys.size(); i++) {
 				std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
 
 				serial_val sv;
@@ -1393,13 +1390,12 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 
 		// Remove nulls, now that the filter has run
 
-		for (ssize_t i = sf.m - 1; i >= 0; i--) {
+		for (ssize_t i = sf.keys.size() - 1; i >= 0; i--) {
 			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];
 
 			if (type == mvt_null) {
 				sf.keys.erase(sf.keys.begin() + i);
 				sf.values.erase(sf.values.begin() + i);
-				sf.m--;
 			}
 		}
 
@@ -1486,7 +1482,7 @@ void *run_prefilter(void *v) {
 			tmp_feature.geometry[i].y += sy;
 		}
 
-		decode_meta(sf.m, sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
+		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
 		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
@@ -1548,7 +1544,7 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 	// If the feature being merged into has this key as a metadata reference,
 	// promote it to a full_key so it can be modified
 
-	for (int i = 0; i < p.m; i++) {
+	for (size_t i = 0; i < p.keys.size(); i++) {
 		if (strcmp(key.c_str(), stringpool + pool_off[p.segment] + p.keys[i] + 1) == 0) {
 			serial_val sv;
 			sv.s = stringpool + pool_off[p.segment] + p.values[i] + 1;
@@ -1559,7 +1555,6 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 
 			p.keys.erase(p.keys.begin() + i);
 			p.values.erase(p.values.begin() + i);
-			p.m--;
 
 			break;
 		}
@@ -1631,7 +1626,7 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 }
 
 void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, long long *pool_off, partial &p) {
-	for (size_t i = 0; i < sf.m; i++) {
+	for (size_t i = 0; i < sf.keys.size(); i++) {
 		std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
 
 		serial_val sv;
@@ -1914,7 +1909,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				partial p;
 				p.geoms.push_back(sf.geometry);
 				p.layer = sf.layer;
-				p.m = sf.m;
 				p.t = sf.t;
 				p.segment = sf.segment;
 				p.original_seq = sf.seq;
@@ -2061,7 +2055,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					pgeoms[j].clear();
 					c.coalesced = false;
 					c.original_seq = original_seq;
-					c.m = partials[i].m;
 					c.stringpool = stringpool + pool_off[partials[i].segment];
 					c.keys = partials[i].keys;
 					c.values = partials[i].values;
@@ -2188,7 +2181,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				feature.id = layer_features[x].id;
 				feature.has_id = layer_features[x].has_id;
 
-				decode_meta(layer_features[x].m, layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
+				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());

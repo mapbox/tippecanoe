@@ -57,9 +57,9 @@ struct serial_feature {
 	unsigned long long index = 0;
 	long long extent = 0;
 
-	size_t m = 0;
 	std::vector<long long> keys{};
 	std::vector<long long> values{};
+	// If >= 0, metadata is external
 	long long metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
