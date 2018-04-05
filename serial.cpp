@@ -537,50 +537,6 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
 	}
 
-	if (sst->filter != NULL) {
-		std::map<std::string, mvt_value> attributes;
-
-		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			std::string key = sf.full_keys[i];
-			mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
-
-			attributes.insert(std::pair<std::string, mvt_value>(key, val));
-		}
-
-		if (sf.has_id) {
-			mvt_value v;
-			v.type = mvt_uint;
-			v.numeric_value.uint_value = sf.id;
-
-			attributes.insert(std::pair<std::string, mvt_value>("$id", v));
-		}
-
-		mvt_value v;
-		v.type = mvt_string;
-
-		if (sf.t == mvt_point) {
-			v.string_value = "Point";
-		} else if (sf.t == mvt_linestring) {
-			v.string_value = "LineString";
-		} else if (sf.t == mvt_polygon) {
-			v.string_value = "Polygon";
-		}
-
-		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
-
-		if (!evaluate(attributes, sf.layername, sst->filter)) {
-			return 0;
-		}
-	}
-
-	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-		if (sf.full_values[i].type == mvt_null) {
-			sf.full_keys.erase(sf.full_keys.begin() + i);
-			sf.full_values.erase(sf.full_values.begin() + i);
-			sf.m--;
-		}
-	}
-
 	if (!sst->filters) {
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
 			type_and_string attrib;

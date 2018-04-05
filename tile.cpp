@@ -38,6 +38,7 @@
 #include "main.hpp"
 #include "write_json.hpp"
 #include "milo/dtoa_milo.h"
+#include "evaluator.hpp"
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
@@ -1211,6 +1212,7 @@ struct write_tile_args {
 	bool still_dropping = false;
 	int wrote_zoom = 0;
 	size_t tiling_seg = 0;
+	struct json_object *filter = NULL;
 };
 
 bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
@@ -1289,7 +1291,7 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	return false;
 }
 
-serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, std::atomic<long long> *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, long long *geompos, std::atomic<double> *oprogress, double todo, const char *fname, int child_shards) {
+serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, std::atomic<long long> *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, long long *geompos, std::atomic<double> *oprogress, double todo, const char *fname, int child_shards, struct json_object *filter, const char *stringpool, long long *pool_off, std::vector<std::vector<std::string>> *layer_unmaps) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
 		if (sf.t < 0) {
@@ -1331,8 +1333,81 @@ serial_feature next_feature(FILE *geoms, long long *geompos_in, char *metabase, 
 			continue;
 		}
 
+		if (filter != NULL) {
+			std::map<std::string, mvt_value> attributes;
+			std::string layername = (*layer_unmaps)[sf.segment][sf.layer];
+
+			for (size_t i = 0; i < sf.m; i++) {
+				std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
+
+				serial_val sv;
+				sv.type = (stringpool + pool_off[sf.segment])[sf.values[i]];
+				sv.s = stringpool + pool_off[sf.segment] + sf.values[i] + 1;
+
+				mvt_value val = stringified_to_mvt_value(sv.type, sv.s.c_str());
+				attributes.insert(std::pair<std::string, mvt_value>(key, val));
+			}
+
+			for (size_t i = 0; i < sf.full_keys.size(); i++) {
+				std::string key = sf.full_keys[i];
+				mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
+
+				attributes.insert(std::pair<std::string, mvt_value>(key, val));
+			}
+
+			if (sf.has_id) {
+				mvt_value v;
+				v.type = mvt_uint;
+				v.numeric_value.uint_value = sf.id;
+
+				attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+			}
+
+			mvt_value v;
+			v.type = mvt_string;
+
+			if (sf.t == mvt_point) {
+				v.string_value = "Point";
+			} else if (sf.t == mvt_linestring) {
+				v.string_value = "LineString";
+			} else if (sf.t == mvt_polygon) {
+				v.string_value = "Polygon";
+			}
+
+			attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+			mvt_value v2;
+			v2.type = mvt_uint;
+			v2.numeric_value.uint_value = z;
+
+			attributes.insert(std::pair<std::string, mvt_value>("$zoom", v2));
+
+			if (!evaluate(attributes, layername, filter)) {
+				continue;
+			}
+		}
+
 		if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
 			sf.dropped = true;
+		}
+
+		// Remove nulls, now that the filter has run
+
+		for (ssize_t i = sf.m - 1; i >= 0; i--) {
+			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];
+
+			if (type == mvt_null) {
+				sf.keys.erase(sf.keys.begin() + i);
+				sf.values.erase(sf.values.begin() + i);
+				sf.m--;
+			}
+		}
+
+		for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
+			if (sf.full_values[i].type == mvt_null) {
+				sf.full_keys.erase(sf.full_keys.begin() + i);
+				sf.full_values.erase(sf.full_values.begin() + i);
+			}
 		}
 
 		return sf;
@@ -1372,6 +1447,7 @@ struct run_prefilter_args {
 	char *stringpool = NULL;
 	long long *pool_off = NULL;
 	FILE *prefilter_fp = NULL;
+	struct json_object *filter = NULL;
 };
 
 void *run_prefilter(void *v) {
@@ -1379,7 +1455,7 @@ void *run_prefilter(void *v) {
 	json_writer state(rpa->prefilter_fp);
 
 	while (1) {
-		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards);
+		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards, rpa->filter, rpa->stringpool, rpa->pool_off, rpa->layer_unmaps);
 		if (sf.t < 0) {
 			break;
 		}
@@ -1594,7 +1670,7 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
-long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, write_tile_args *arg) {
+long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
@@ -1710,6 +1786,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			rpa.layer_unmaps = layer_unmaps;
 			rpa.stringpool = stringpool;
 			rpa.pool_off = pool_off;
+			rpa.filter = filter;
 
 			if (pthread_create(&prefilter_writer, NULL, run_prefilter, &rpa) != 0) {
 				perror("pthread_create (prefilter writer)");
@@ -1729,7 +1806,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			ssize_t which_partial = -1;
 
 			if (prefilter == NULL) {
-				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards);
+				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards, filter, stringpool, pool_off, layer_unmaps);
 			} else {
 				sf = parse_feature(prefilter_jp, z, tx, ty, layermaps, tiling_seg, layer_unmaps, postfilter != NULL);
 			}
@@ -2412,7 +2489,7 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2477,7 +2554,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum, struct json_object *filter) {
 	last_progress = 0;
 
 	// The existing layermaps are one table per input thread.
@@ -2666,6 +2743,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].prefilter = prefilter;
 				args[thread].postfilter = postfilter;
 				args[thread].attribute_accum = attribute_accum;
+				args[thread].filter = filter;
 
 				args[thread].tasks = dispatches[thread].tasks;
 				args[thread].running = &running;

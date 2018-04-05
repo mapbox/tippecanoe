@@ -1,3 +1,7 @@
+## 1.27.13
+
+* Allow filtering features by zoom level in conditional expressions
+
 ## 1.27.12
 
 * Check integrity of sqlite3 file before decoding or tile-joining
