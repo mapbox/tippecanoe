@@ -516,6 +516,9 @@ void push_outward(drawvec &dv, size_t off, int edge, int distance, long long min
 static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out = geom;
 
+	// Maybe want to remove the ring-end duplicate terminators
+	// and do everything modulo the length instead?
+
 	for (int edge = 0; edge < 4; edge++) {
 		if (out.size() > 0) {
 			drawvec in = out;
@@ -558,11 +561,11 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 
 		std::multimap<int, size_t> segs_on_edge;
 
-		for (size_t i = 1; i < out.size(); i++) {
-			int len_on_edge = on_edge(out[i - 1], out[i], edge, minx, miny, maxx, maxy);
+		for (size_t i = 0; i < out.size(); i++) {
+			int len_on_edge = on_edge(out[i], out[(i + 1) % out.size()], edge, minx, miny, maxx, maxy);
 
 			if (len_on_edge > 0) {
-				segs_on_edge.insert(std::pair<int, size_t>(len_on_edge, i - 1));
+				segs_on_edge.insert(std::pair<int, size_t>(len_on_edge, i));
 			}
 		}
 
@@ -572,6 +575,14 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 			inc++;
 		}
 	}
+
+	// If the innermost edge ring is a hole, and it's entirely
+	// outside the tile, can we then get rid of all the
+	// edge rings (and potentially the entire feature, if
+	// the entire tile is contained within a hole)?
+	//
+	// If the hole actually passes through the tile, we still
+	// need it and whatever its parent ring is.
 
 	if (out.size() > 0) {
 		// If the polygon begins and ends outside the edge,
