@@ -504,6 +504,14 @@ static draw intersect(draw a, draw b, int edge, long long minx, long long miny, 
 	exit(EXIT_FAILURE);
 }
 
+int on_edge(draw d1, draw d2, int edge, long long minx, long long miny, long long maxx, long long maxy) {
+	return 0;
+}
+
+void push_outward(drawvec &dv, size_t off, int edge, int distance, long long minx, long long miny, long long maxx, long long maxy) {
+
+}
+
 // http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm
 static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
 	drawvec out = geom;
@@ -529,6 +537,39 @@ static drawvec clip_poly1(drawvec &geom, long long minx, long long miny, long lo
 
 				S = E;
 			}
+		}
+
+		// Find all the segments that are now on the edge.
+		// Sort them by increasing distance.
+		//
+		// Push each segment further outward from the edge
+		// in proportion to its sorted index.
+		//
+		// Since we know that rings can't be directly on top
+		// of each other, inner rings should have a shorter
+		// segment on the edge than outer rings and therefore
+		// can be known to be further in toward the edge.
+		//
+		// It shouldn't be possible for two rings to have the
+		// same starting and ending points on the edge, because
+		// they couldn't have started that way, and changes to
+		// the previous edges should have pushed the outer ring
+		// further out on that side.
+
+		std::multimap<int, size_t> segs_on_edge;
+
+		for (size_t i = 1; i < out.size(); i++) {
+			int len_on_edge = on_edge(out[i - 1], out[i], edge, minx, miny, maxx, maxy);
+
+			if (len_on_edge > 0) {
+				segs_on_edge.insert(std::pair<int, size_t>(len_on_edge, i - 1));
+			}
+		}
+
+		int inc = 1;
+		for (auto e : segs_on_edge) {
+			push_outward(out, e.second, edge, inc, minx, miny, maxx, maxy);
+			inc++;
 		}
 	}
 
