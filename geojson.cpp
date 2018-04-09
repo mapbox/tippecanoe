@@ -222,17 +222,17 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			height = grids->values[i]->length;
 			bool fail = false;
 			for (size_t y = 0; y < height; y++) {
-				if (grids->values[i]->values[y]->type != JSON_ARRAY) {
+				if (grids->values[i]->array[y]->type != JSON_ARRAY) {
 					fprintf(stderr, "%s:%d: grid data is not a two-dimensional array\n", sst->fname, sst->line);
 					fail = true;
 					break;
 				}
-				if (grids->values[i]->values[y]->length != grids->values[i]->values[0]->length) {
+				if (grids->values[i]->array[y]->length != grids->values[i]->array[0]->length) {
 					fprintf(stderr, "%s:%d: grid data has irregular width\n", sst->fname, sst->line);
 					fail = true;
 					break;
 				}
-				width = grids->values[i]->values[y]->length;
+				width = grids->values[i]->array[y]->length;
 			}
 			if (fail) {
 				continue;
@@ -272,17 +272,17 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			height = areas->values[i]->length;
 			bool fail = false;
 			for (size_t y = 0; y < height; y++) {
-				if (areas->values[i]->values[y]->type != JSON_ARRAY) {
+				if (areas->values[i]->array[y]->type != JSON_ARRAY) {
 					fprintf(stderr, "%s:%d: area data is not a two-dimensional array\n", sst->fname, sst->line);
 					fail = true;
 					break;
 				}
-				if (areas->values[i]->values[y]->length != areas->values[i]->values[0]->length) {
+				if (areas->values[i]->array[y]->length != areas->values[i]->array[0]->length) {
 					fprintf(stderr, "%s:%d: area data has irregular width\n", sst->fname, sst->line);
 					fail = true;
 					break;
 				}
-				width = areas->values[i]->values[y]->length;
+				width = areas->values[i]->array[y]->length;
 			}
 			if (fail) {
 				continue;

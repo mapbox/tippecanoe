@@ -247,6 +247,25 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 	return layer.tag_value(tv);
 }
 
+void tag_value(std::string const &key, mvt_value const &value, mvt_layer &layer, mvt_feature &feature) {
+	if (value.type == mvt_hash) {
+		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+		json_object *j = json_read_tree(jp);
+		if (j == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			exit(EXIT_FAILURE);
+		}
+		size_t ko = layer.tag_key(key);
+		size_t vo = tag_object(layer, j);
+		feature.tags.push_back(ko);
+		feature.tags.push_back(vo);
+		json_free(j);
+		json_end(jp);
+	} else {
+		layer.tag(feature, key, value);
+	}
+}
+
 void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	size_t i;
 	for (i = 0; i < metakeys.size(); i++) {
@@ -254,22 +273,7 @@ void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> 
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		if (value.type == mvt_hash) {
-			json_pull *jp = json_begin_string((char *) value.string_value.c_str());
-			json_object *j = json_read_tree(jp);
-			if (j == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
-				exit(EXIT_FAILURE);
-			}
-			size_t ko = layer.tag_key(key.string_value);
-			size_t vo = tag_object(layer, j);
-			feature.tags.push_back(ko);
-			feature.tags.push_back(vo);
-			json_free(j);
-			json_end(jp);
-		} else {
-			layer.tag(feature, key.string_value, value);
-		}
+		tag_value(key.string_value, value, layer, feature);
 	}
 }
 
@@ -454,7 +458,7 @@ struct partial_arg {
 	int tasks = 0;
 };
 
-bool clip_grids(partial &p);
+bool clip_grids(partial &p, drawvec &geom);
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	// From area in world coordinates to area in tile coordinates
@@ -558,7 +562,7 @@ void *partial_feature_worker(void *v) {
 
 		// Snap the clipped feature to the gridded-data grid, if any,
 		// and clip and downsample the gridded data.
-		clip_grids((*partials)[i]);
+		clip_grids((*partials)[i], geom);
 
 		to_tile_scale(geom, z, line_detail);
 
@@ -1742,7 +1746,7 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
-bool clip_grids(partial &p) {
+bool clip_grids(partial &p, drawvec &geom) {
 	for (size_t i = 0; i < p.keys.size(); i++) {
 		serial_val sv;
 		sv.type = (p.stringpool + p.pool_off[p.segment])[p.values[i]];
@@ -1788,6 +1792,8 @@ bool clip_grids(partial &p) {
 
 			json_free(j);
 			json_end(jp);
+
+			p.full_values[i].type = mvt_hash;
 		}
 	}
 
@@ -2318,7 +2324,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
-					layer.tag(feature, layer_features[x].full_keys[a], v);
+
+					tag_value(layer_features[x].full_keys[a], v, layer, feature);
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
