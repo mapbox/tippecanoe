@@ -67,6 +67,11 @@ enum mvt_value_type {
 	mvt_hash,
 	mvt_list,
 	mvt_null,
+
+	// Internal only.
+	// Represented as lists in output.
+	mvt_grid,
+	mvt_area,
 };
 
 struct mvt_value {
