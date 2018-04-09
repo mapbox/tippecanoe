@@ -387,7 +387,6 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		sf.t = dv[i].type;
 		sf.full_keys = full_keys;
 		sf.full_values = full_values;
-		sf.m = sf.full_values.size();
 
 		auto tip = other.find("tippecanoe");
 		if (tip != other.end()) {
@@ -512,7 +511,6 @@ void outBareGeometry(drawvec const &dv, int type, struct serialization_state *ss
 	sf.seq = (*sst->layer_seq);
 	sf.geometry = dv;
 	sf.t = type;
-	sf.m = 0;
 
 	serialize_feature(sst, sf);
 }

@@ -274,6 +274,12 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
 			exit(EXIT_FAILURE);
 		}
+
+		char *err = NULL;
+		if (sqlite3_exec(db, "PRAGMA integrity_check;", NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "%s: integrity_check: %s\n", fname, err);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (z < 0) {

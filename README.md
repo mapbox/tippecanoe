@@ -7,7 +7,7 @@ Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from l
 ![Mapbox Tippecanoe](https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG)
 
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
-[![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
+[![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
 
 Intent
 ------
@@ -35,9 +35,22 @@ Installation
 
 The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
 
-```js
+```sh
 $ brew install tippecanoe
 ```
+
+On Ubuntu it will usually be easiest to build from the source repository:
+
+```sh
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make -j
+$ make install
+```
+
+See [Development](#development) below for how to upgrade your
+C++ compiler or install prerequisite packages if you get
+compiler errors.
 
 Usage
 -----
@@ -197,13 +210,19 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filtering features by attributes
 
- * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
+ * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers. The special variable `$zoom` refers to the current zoom level.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
 
 Example: to find the Natural Earth countries with low `scalerank` but high `LABELRANK`:
 
 ```
 tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
+```
+
+Example: to retain only major TIGER roads at low zoom levels:
+
+```
+./tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 ```
 
 ### Dropping a fixed fraction of features by zoom level

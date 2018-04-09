@@ -61,10 +61,18 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		std::vector<std::string> line = csv_split(s.c_str());
 
 		if (line.size() != header.size()) {
-			fprintf(stderr, "%s:%zu: Mismatched column count: %zu in line, %zu in header\n", fname.c_str(), seq, line.size(), header.size());
+			fprintf(stderr, "%s:%zu: Mismatched column count: %zu in line, %zu in header\n", fname.c_str(), seq + 1, line.size(), header.size());
 			exit(EXIT_FAILURE);
 		}
 
+                if (line[loncol].empty() || line[latcol].empty()) {
+                    static int warned = 0;
+                    if (!warned) {
+                        fprintf(stderr, "%s:%zu: null geometry (additional not reported)\n", fname.c_str(), seq + 1);
+                        warned = 1;
+                    }
+                    continue;
+                }
 		double lon = atof(line[loncol].c_str());
 		double lat = atof(line[latcol].c_str());
 
@@ -108,7 +116,6 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		sf.t = 1;  // POINT
 		sf.full_keys = full_keys;
 		sf.full_values = full_values;
-		sf.m = sf.full_values.size();
 
 		serialize_feature(&sst[0], sf);
 	}
