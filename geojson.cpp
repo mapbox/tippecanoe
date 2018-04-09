@@ -244,7 +244,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 				std::string wrap = "";
 				aprintf(&wrap, "[%lld,%lld,%lld,%lld,", bbox[0], bbox[1], bbox[2], bbox[3]);
-				aprintf(&wrap, "%zu,%zu,", width, height);
+				aprintf(&wrap, "%zu,%zu,", width - 1, height - 1);
 				wrap.append(val);
 				wrap.push_back(']');
 

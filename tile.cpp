@@ -1732,6 +1732,58 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
+bool clip_grids(partial &p, char *stringpool, long long *pool_off) {
+	for (size_t i = 0; i < p.keys.size(); i++) {
+		serial_val sv;
+		sv.type = (stringpool + pool_off[p.segment])[p.values[i]];
+
+		// If the grid is a metadata reference,
+		// promote it to a full_key so it can be modified
+
+		if (sv.type == mvt_grid || sv.type == mvt_area) {
+			std::string key = stringpool + pool_off[p.segment] + p.keys[i] + 1;
+			sv.s = stringpool + pool_off[p.segment] + p.values[i] + 1;
+
+			p.full_keys.push_back(key);
+			p.full_values.push_back(sv);
+
+			p.keys.erase(p.keys.begin() + i);
+			p.values.erase(p.values.begin() + i);
+		}
+	}
+
+	for (size_t i = 0; i < p.full_keys.size(); i++) {
+		serial_val sv = p.full_values[i];
+
+		if (sv.type == mvt_grid || sv.type == mvt_area) {
+			json_pull *jp = json_begin_string((char *) sv.s.c_str());
+			json_object *j = json_read_tree(jp);
+			if (j == NULL) {
+				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			if (j->type != JSON_ARRAY) {
+				fprintf(stderr, "Internal error: gridded data is not an array: %s\n", sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			// Array should contain original feature x1, y1, x2, y2,
+			// grid width and height, and then the gridded data itself
+
+			if (j->length != 7) {
+				fprintf(stderr, "Internal error: gridded data has wrong length: %zu: %s\n", j->length, sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			json_free(j);
+			json_end(jp);
+		}
+	}
+
+	return false;
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -2030,6 +2082,11 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "sqrt_point_count", sv3);
 			}
+
+			// Snap the clipped feature to the gridded-data grid, if any,
+			// and clip and downsample the gridded data.
+
+			clip_grids(partials[i], stringpool, pool_off);
 
 			if (p.need_tilestats.size() > 0) {
 				std::string layername = (*layer_unmaps)[p.segment][p.layer];
