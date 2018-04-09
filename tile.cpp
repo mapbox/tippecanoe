@@ -431,6 +431,8 @@ struct partial {
 	int segment = 0;
 	bool reduced = 0;
 	int z = 0;
+	unsigned tx;
+	unsigned ty;
 	int line_detail = 0;
 	int maxzoom = 0;
 	double spacing = 0;
@@ -442,6 +444,8 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	char *stringpool;
+	long long *pool_off;
 };
 
 struct partial_arg {
@@ -449,6 +453,8 @@ struct partial_arg {
 	int task = 0;
 	int tasks = 0;
 };
+
+bool clip_grids(partial &p);
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	// From area in world coordinates to area in tile coordinates
@@ -549,6 +555,10 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_LINE && additional[A_REVERSE]) {
 			geom = reorder_lines(geom);
 		}
+
+		// Snap the clipped feature to the gridded-data grid, if any,
+		// and clip and downsample the gridded data.
+		clip_grids((*partials)[i]);
 
 		to_tile_scale(geom, z, line_detail);
 
@@ -1732,17 +1742,17 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
-bool clip_grids(partial &p, char *stringpool, long long *pool_off) {
+bool clip_grids(partial &p) {
 	for (size_t i = 0; i < p.keys.size(); i++) {
 		serial_val sv;
-		sv.type = (stringpool + pool_off[p.segment])[p.values[i]];
+		sv.type = (p.stringpool + p.pool_off[p.segment])[p.values[i]];
 
 		// If the grid is a metadata reference,
 		// promote it to a full_key so it can be modified
 
 		if (sv.type == mvt_grid || sv.type == mvt_area) {
-			std::string key = stringpool + pool_off[p.segment] + p.keys[i] + 1;
-			sv.s = stringpool + pool_off[p.segment] + p.values[i] + 1;
+			std::string key = p.stringpool + p.pool_off[p.segment] + p.keys[i] + 1;
+			sv.s = p.stringpool + p.pool_off[p.segment] + p.values[i] + 1;
 
 			p.full_keys.push_back(key);
 			p.full_values.push_back(sv);
@@ -2033,6 +2043,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.original_seq = sf.seq;
 				p.reduced = reduced;
 				p.z = z;
+				p.tx = tx;
+				p.ty = ty;
 				p.line_detail = line_detail;
 				p.maxzoom = maxzoom;
 				p.keys = sf.keys;
@@ -2047,6 +2059,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.stringpool = stringpool;
+				p.pool_off = pool_off;
 				partials.push_back(p);
 			}
 
@@ -2082,11 +2096,6 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "sqrt_point_count", sv3);
 			}
-
-			// Snap the clipped feature to the gridded-data grid, if any,
-			// and clip and downsample the gridded data.
-
-			clip_grids(partials[i], stringpool, pool_off);
 
 			if (p.need_tilestats.size() > 0) {
 				std::string layername = (*layer_unmaps)[p.segment][p.layer];
