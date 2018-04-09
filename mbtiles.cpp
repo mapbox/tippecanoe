@@ -608,6 +608,10 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 }
 
 void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, std::string const &attrib, type_and_string const &val) {
+	if (val.type == mvt_null) {
+		return;
+	}
+
 	auto fka = file_keys.find(attrib);
 	if (fka == file_keys.end()) {
 		file_keys.insert(std::pair<std::string, type_and_string_stats>(attrib, type_and_string_stats()));

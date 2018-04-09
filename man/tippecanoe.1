@@ -6,7 +6,7 @@ like these \[la]MADE_WITH.md\[ra]\&.
 [Mapbox Tippecanoe](\[la]https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG\[ra])
 .PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
-[Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github) \[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
+[Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg) \[la]https://codecov.io/gh/mapbox/tippecanoe\[ra]
 .SH Intent
 .PP
 The goal of Tippecanoe is to enable making a scale\-independent view of your data,
@@ -35,6 +35,21 @@ The easiest way to install tippecanoe on OSX is with Homebrew \[la]http://brew.s
 $ brew install tippecanoe
 .fi
 .RE
+.PP
+On Ubuntu it will usually be easiest to build from the source repository:
+.PP
+.RS
+.nf
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make \-j
+$ make install
+.fi
+.RE
+.PP
+See Development \[la]#development\[ra] below for how to upgrade your
+C++ compiler or install prerequisite packages if you get
+compiler errors.
 .SH Usage
 .PP
 .RS
@@ -221,7 +236,7 @@ to specify how the named \fIattribute\fP is accumulated onto the attribute of th
 .SS Filtering features by attributes
 .RS
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers. The special variable \fB\fC$zoom\fR refers to the current zoom level.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
@@ -231,6 +246,14 @@ Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but hig
 .RS
 .nf
 tippecanoe \-z5 \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
+.fi
+.RE
+.PP
+Example: to retain only major TIGER roads at low zoom levels:
+.PP
+.RS
+.nf
+\&./tippecanoe \-o roads.mbtiles \-j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 .fi
 .RE
 .SS Dropping a fixed fraction of features by zoom level

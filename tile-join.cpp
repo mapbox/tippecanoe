@@ -153,6 +153,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
 
+				mvt_value v2;
+				v2.type = mvt_uint;
+				v2.numeric_value.uint_value = z;
+
+				attributes.insert(std::pair<std::string, mvt_value>("$zoom", v2));
+
 				if (!evaluate(attributes, layer.name, filter)) {
 					continue;
 				}
@@ -410,6 +416,12 @@ struct reader *begin_reading(char *fname) {
 
 		if (sqlite3_open(fname, &db) != SQLITE_OK) {
 			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
+			exit(EXIT_FAILURE);
+		}
+
+		char *err = NULL;
+		if (sqlite3_exec(db, "PRAGMA integrity_check;", NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "%s: integrity_check: %s\n", fname, err);
 			exit(EXIT_FAILURE);
 		}
 

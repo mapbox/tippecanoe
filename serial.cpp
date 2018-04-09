@@ -242,19 +242,15 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_long_long(geomfile, sf->extent, geompos, fname);
 	}
 
-	serialize_int(geomfile, sf->m, geompos, fname);
-	if (sf->m != 0) {
-		serialize_long_long(geomfile, sf->metapos, geompos, fname);
-	}
+	serialize_long_long(geomfile, sf->metapos, geompos, fname);
 
-	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
-		fprintf(stderr, "Internal error: feature said to have %lld attributes but only %lld found\n", (long long) sf->m, (long long) sf->keys.size());
-		exit(EXIT_FAILURE);
-	}
+	if (sf->metapos < 0) {
+		serialize_long_long(geomfile, sf->keys.size(), geompos, fname);
 
-	for (size_t i = 0; i < sf->keys.size(); i++) {
-		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
-		serialize_long_long(geomfile, sf->values[i], geompos, fname);
+		for (size_t i = 0; i < sf->keys.size(); i++) {
+			serialize_long_long(geomfile, sf->keys[i], geompos, fname);
+			serialize_long_long(geomfile, sf->values[i], geompos, fname);
+		}
 	}
 
 	if (include_minzoom) {
@@ -314,19 +310,14 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	sf.layer >>= SHIFT_LAYER;
 
 	sf.metapos = 0;
-	{
-		int m;
-		deserialize_int_io(geoms, &m, geompos_in);
-		sf.m = m;
-	}
-	if (sf.m != 0) {
-		deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
-	}
+	deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
 
 	if (sf.metapos >= 0) {
 		char *meta = metabase + sf.metapos + meta_off[sf.segment];
+		long long count;
+		deserialize_long_long(&meta, &count);
 
-		for (size_t i = 0; i < sf.m; i++) {
+		for (long long i = 0; i < count; i++) {
 			long long k, v;
 			deserialize_long_long(&meta, &k);
 			deserialize_long_long(&meta, &v);
@@ -334,7 +325,10 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 			sf.values.push_back(v);
 		}
 	} else {
-		for (size_t i = 0; i < sf.m; i++) {
+		long long count;
+		deserialize_long_long_io(geoms, &count, geompos_in);
+
+		for (long long i = 0; i < count; i++) {
 			long long k, v;
 			deserialize_long_long_io(geoms, &k, geompos_in);
 			deserialize_long_long_io(geoms, &v, geompos_in);
@@ -553,61 +547,15 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 			if (sst->include->count(sf.full_keys[i]) == 0) {
 				sf.full_keys.erase(sf.full_keys.begin() + i);
 				sf.full_values.erase(sf.full_values.begin() + i);
-				sf.m--;
 				continue;
 			}
 		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
 			sf.full_keys.erase(sf.full_keys.begin() + i);
 			sf.full_values.erase(sf.full_values.begin() + i);
-			sf.m--;
 			continue;
 		}
 
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
-	}
-
-	if (sst->filter != NULL) {
-		std::map<std::string, mvt_value> attributes;
-
-		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			std::string key = sf.full_keys[i];
-			mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
-
-			attributes.insert(std::pair<std::string, mvt_value>(key, val));
-		}
-
-		if (sf.has_id) {
-			mvt_value v;
-			v.type = mvt_uint;
-			v.numeric_value.uint_value = sf.id;
-
-			attributes.insert(std::pair<std::string, mvt_value>("$id", v));
-		}
-
-		mvt_value v;
-		v.type = mvt_string;
-
-		if (sf.t == mvt_point) {
-			v.string_value = "Point";
-		} else if (sf.t == mvt_linestring) {
-			v.string_value = "LineString";
-		} else if (sf.t == mvt_polygon) {
-			v.string_value = "Polygon";
-		}
-
-		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
-
-		if (!evaluate(attributes, sf.layername, sst->filter)) {
-			return 0;
-		}
-	}
-
-	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-		if (sf.full_values[i].type == mvt_null) {
-			sf.full_keys.erase(sf.full_keys.begin() + i);
-			sf.full_values.erase(sf.full_values.begin() + i);
-			sf.m--;
-		}
 	}
 
 	if (!sst->filters) {
@@ -629,6 +577,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	} else {
 		sf.metapos = r->metapos;
+		serialize_long_long(r->metafile, sf.full_keys.size(), &r->metapos, sst->fname);
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
