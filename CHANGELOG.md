@@ -1,3 +1,8 @@
+## 1.27.13
+
+* Allow filtering features by zoom level in conditional expressions
+* Lines in CSV input with empty geometry columns will be ignored
+
 ## 1.27.12
 
 * Check integrity of sqlite3 file before decoding or tile-joining

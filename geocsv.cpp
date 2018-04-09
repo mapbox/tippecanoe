@@ -116,7 +116,6 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		sf.t = 1;  // POINT
 		sf.full_keys = full_keys;
 		sf.full_values = full_values;
-		sf.m = sf.full_values.size();
 
 		serialize_feature(&sst[0], sf);
 	}

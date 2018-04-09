@@ -393,7 +393,6 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
 			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
 			sf.extent = 0;
-			sf.m = 0;
 			sf.metapos = 0;
 			sf.has_id = false;
 

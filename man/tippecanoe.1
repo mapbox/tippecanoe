@@ -236,7 +236,7 @@ to specify how the named \fIattribute\fP is accumulated onto the attribute of th
 .SS Filtering features by attributes
 .RS
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers. The special variable \fB\fC$zoom\fR refers to the current zoom level.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
@@ -246,6 +246,14 @@ Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but hig
 .RS
 .nf
 tippecanoe \-z5 \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
+.fi
+.RE
+.PP
+Example: to retain only major TIGER roads at low zoom levels:
+.PP
+.RS
+.nf
+\&./tippecanoe \-o roads.mbtiles \-j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 .fi
 .RE
 .SS Dropping a fixed fraction of features by zoom level
