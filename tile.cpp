@@ -1831,9 +1831,6 @@ bool clip_grids(partial &p, drawvec &geom) {
 			// XXX Do something reasonable with grids that
 			// cross the antimeridian
 
-			printf("orig: %lld,%lld,%lld,%lld\n", dim[0], dim[1], dim[2], dim[3]);
-			printf("now: %lld,%lld,%lld,%lld\n", bbox[0], bbox[1], bbox[2], bbox[3]);
-
 			long long owid = dim[2] - dim[0];
 			long long oht = dim[3] - dim[1];
 
@@ -1843,10 +1840,8 @@ bool clip_grids(partial &p, drawvec &geom) {
 			long long top = floor((bbox[1] - dim[1]) * dim[4] / (double) oht);
 			long long bottom = ceil((bbox[3] - dim[1]) * dim[4] / (double) oht);
 
-			printf("so we keep %lld,%lld to %lld,%lld of %lld,%lld\n", left, top, right, bottom, dim[4], dim[5]);
-
 			if (left >= right || top >= bottom) {
-				printf("fail\n");
+				fprintf(stderr, "Internal error: bad math in grid setup\n");
 				exit(EXIT_FAILURE);
 			}
 
@@ -1867,7 +1862,23 @@ bool clip_grids(partial &p, drawvec &geom) {
 			long long bufright = tilewid + clip_buffer + sx;
 			long long bufbot = tilewid + clip_buffer + sy;
 
-			printf("buffer: %lld,%lld %lld,%lld\n", bufleft, buftop, bufright, bufbot);
+			// Figure out how much we need to downsample
+
+			double cellwidth = (nright - nleft) / (double) (right - left);
+			double cellheight = (nbot - ntop) / (double) (bottom - top);
+			long long interval = 1;
+
+			// XXX is 1/256 of the tile the correct grain?
+			while (cellwidth < tilewid / 256) {
+				interval *= 2;
+				cellwidth *= 2;
+				cellheight *= 2;
+			}
+			while (cellheight < tilewid / 256) {
+				interval *= 2;
+				cellwidth *= 2;
+				cellheight *= 2;
+			}
 
 			if (nleft < sx - tilewid) {
 				// Too big, to the left.
@@ -1878,10 +1889,9 @@ bool clip_grids(partial &p, drawvec &geom) {
 				} else if (right - left == 1) {
 					nleft = bufleft;
 				} else {
-					printf("too big, but %lld wide\n", right - left);
+					fprintf(stderr, "Internal error: grid too big, but %lld wide\n", right - left);
 					exit(EXIT_FAILURE);
 				}
-				printf("now %lld to %lld\n", nleft, nright);
 			}
 			if (nright > sx + 2 * tilewid) {
 				// Too big, to the right.
@@ -1892,10 +1902,9 @@ bool clip_grids(partial &p, drawvec &geom) {
 				} else if (right - left == 1) {
 					nright = bufright;
 				} else {
-					printf("too big, but %lld wide\n", right - left);
+					fprintf(stderr, "Internal error: grid too big, but %lld wide\n", right - left);
 					exit(EXIT_FAILURE);
 				}
-				printf("now %lld to %lld\n", nleft, nright);
 			}
 
 			if (ntop < sy - tilewid) {
@@ -1907,10 +1916,9 @@ bool clip_grids(partial &p, drawvec &geom) {
 				} else if (bottom - top == 1) {
 					ntop = buftop;
 				} else {
-					printf("too big, but %lld tall\n", bottom - top);
+					fprintf(stderr, "Internal error: grid too big, but %lld tall\n", bottom - top);
 					exit(EXIT_FAILURE);
 				}
-				printf("now %lld to %lld\n", ntop, nbot);
 			}
 			if (nbot > sy + 2 * tilewid) {
 				// Too big, to the bottom.
@@ -1921,17 +1929,18 @@ bool clip_grids(partial &p, drawvec &geom) {
 				} else if (bottom - top == 1) {
 					nbot = bufbot;
 				} else {
-					printf("too big, but %lld tall\n", bottom - top);
+					fprintf(stderr, "Internal error: grid too big, but %lld tall\n", bottom - top);
 					exit(EXIT_FAILURE);
 				}
-				printf("now %lld to %lld\n", ntop, nbot);
 			}
 
 			if (nleft < sx - tilewid || nright > sx + 2 * tilewid) {
-				printf("wide\n");
+				fprintf(stderr, "Internal error: grid cell is too wide\n");
+				exit(EXIT_FAILURE);
 			}
 			if (ntop < sy - tilewid || nbot > sy + 2 * tilewid) {
-				printf("tall\n");
+				fprintf(stderr, "Internal error: grid cell is too tall\n");
+				exit(EXIT_FAILURE);
 			}
 
 			geom.clear();
