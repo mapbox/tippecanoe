@@ -1790,10 +1790,97 @@ bool clip_grids(partial &p, drawvec &geom) {
 				exit(EXIT_FAILURE);
 			}
 
-			json_free(j);
-			json_end(jp);
+			long long dim[6];
+			for (size_t k = 0; k < 6; k++) {
+				if (j->array[k]->type == JSON_NUMBER) {
+					dim[k] = atoll(j->array[k]->string);
+				} else {
+					fprintf(stderr, "Internal error: gridded data not a number: %s\n", sv.s.c_str());
+				}
+			}
+
+			long long bbox[4] = { LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN };
+
+			// Offset from tile coordinates back to world coordinates
+			unsigned sx = 0, sy = 0;
+			if (p.z != 0) {
+				sx = p.tx << (32 - p.z);
+				sy = p.ty << (32 - p.z);
+			}
+			for (size_t k = 0; k < geom.size(); k++) {
+				if (geom[k].op == VT_MOVETO || geom[k].op == VT_LINETO) {
+					geom[k].x += sx;
+					geom[k].y += sy;
+
+					if (geom[k].x < bbox[0]) {
+						bbox[0] = geom[k].x;
+					}
+					if (geom[k].y < bbox[1]) {
+						bbox[1] = geom[k].y;
+					}
+					if (geom[k].x > bbox[2]) {
+						bbox[2] = geom[k].x;
+					}
+					if (geom[k].y > bbox[3]) {
+						bbox[3] = geom[k].y;
+					}
+				}
+			}
+
+			// XXX Do something reasonable with grids that
+			// cross the antimeridian
+
+			printf("orig: %lld,%lld,%lld,%lld\n", dim[0], dim[1], dim[2], dim[3]);
+			printf("now: %lld,%lld,%lld,%lld\n", bbox[0], bbox[1], bbox[2], bbox[3]);
+
+			long long owid = dim[2] - dim[0];
+			long long oht = dim[3] - dim[1];
+
+			double left = floor((bbox[0] - dim[0]) * dim[4] / (double) owid);
+			double right = ceil((bbox[2] - dim[0]) * dim[4] / (double) owid);
+
+			double top = floor((bbox[1] - dim[1]) * dim[4] / (double) oht);
+			double bottom = ceil((bbox[3] - dim[1]) * dim[4] / (double) oht);
+
+			printf("so we keep %f,%f to %f,%f of %lld,%lld\n", left, top, right, bottom, dim[4], dim[5]);
+
+			if (left >= right || top >= bottom) {
+				printf("fail\n");
+				exit(EXIT_FAILURE);
+			}
+
+			long long nleft = left * owid / dim[4] + dim[0];
+			long long ntop = top * oht / dim[5] + dim[1];
+			long long nright = right * owid / dim[4] + dim[0];
+			long long nbot = bottom * oht / dim[5] + dim[1];
+
+			if (nright - nleft > (1LL << (32 - p.z))) {
+				printf("wide\n");
+			}
+			if (nbot - ntop > (1LL << (32 - p.z))) {
+				printf("tall\n");
+			}
+
+			geom.clear();
+			geom.push_back(draw(VT_MOVETO, left * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
+			geom.push_back(draw(VT_LINETO, right * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
+			geom.push_back(draw(VT_LINETO, right * owid / dim[4] + dim[0], bottom * oht / dim[5] + dim[1]));
+			geom.push_back(draw(VT_LINETO, left * owid / dim[4] + dim[0], bottom * oht / dim[5] + dim[1]));
+			geom.push_back(draw(VT_LINETO, left * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
+
+			// Back to tile coordinates, since that is still expected
+			// downstream
+
+			for (size_t k = 0; k < geom.size(); k++) {
+				geom[k].x -= sx;
+				geom[k].y -= sy;
+			}
 
 			p.full_values[i].type = mvt_hash;
+			p.full_values[i].type = mvt_string;
+
+			json_free(j);
+			json_end(jp);
 		}
 	}
 
