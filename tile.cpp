@@ -1748,7 +1748,7 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 }
 
 bool clip_grids(partial &p, drawvec &geom) {
-	for (size_t i = 0; i < p.keys.size(); i++) {
+	for (ssize_t i = p.keys.size() - 1; i >= 0; i--) {
 		serial_val sv;
 		sv.type = (p.stringpool + p.pool_off[p.segment])[p.values[i]];
 
@@ -1880,6 +1880,38 @@ bool clip_grids(partial &p, drawvec &geom) {
 				cellheight *= 2;
 			}
 
+			// Downsample
+
+			std::string out;
+			json_writer jw(&out);
+			jw.json_write_array();
+
+			for (long long y = top; y < bottom + (sv.type == mvt_grid); y += interval) {
+				jw.json_write_array();
+
+				size_t yy = y;
+				if (yy >= j->array[6]->length) {
+					yy = j->array[6]->length - 1;
+				}
+
+				for (long long x = left; x < right + (sv.type == mvt_grid); x += interval) {
+					size_t xx = x;
+					if (xx >= j->array[6]->array[yy]->length) {
+						xx = j->array[6]->array[yy]->length - 1;
+					}
+
+					const char *s = json_stringify(j->array[6]->array[yy]->array[xx]);
+					jw.json_write_stringified(s);
+					free((void *) s);
+				}
+
+				jw.json_end_array();
+			}
+
+			jw.json_end_array();
+
+			// Fix feature geometry if it's too big to fit in the tile
+
 			if (nleft < sx - tilewid) {
 				// Too big, to the left.
 				if (right - left == 2) {
@@ -1960,6 +1992,7 @@ bool clip_grids(partial &p, drawvec &geom) {
 
 			p.full_values[i].type = mvt_hash;
 			p.full_values[i].type = mvt_string;
+			p.full_values[i].s = out;
 
 			json_free(j);
 			json_end(jp);
