@@ -450,6 +450,7 @@ struct partial {
 	std::set<std::string> need_tilestats;
 	char *stringpool;
 	long long *pool_off;
+	int buffer;
 };
 
 struct partial_arg {
@@ -1836,37 +1837,109 @@ bool clip_grids(partial &p, drawvec &geom) {
 			long long owid = dim[2] - dim[0];
 			long long oht = dim[3] - dim[1];
 
-			double left = floor((bbox[0] - dim[0]) * dim[4] / (double) owid);
-			double right = ceil((bbox[2] - dim[0]) * dim[4] / (double) owid);
+			long long left = floor((bbox[0] - dim[0]) * dim[4] / (double) owid);
+			long long right = ceil((bbox[2] - dim[0]) * dim[4] / (double) owid);
 
-			double top = floor((bbox[1] - dim[1]) * dim[4] / (double) oht);
-			double bottom = ceil((bbox[3] - dim[1]) * dim[4] / (double) oht);
+			long long top = floor((bbox[1] - dim[1]) * dim[4] / (double) oht);
+			long long bottom = ceil((bbox[3] - dim[1]) * dim[4] / (double) oht);
 
-			printf("so we keep %f,%f to %f,%f of %lld,%lld\n", left, top, right, bottom, dim[4], dim[5]);
+			printf("so we keep %lld,%lld to %lld,%lld of %lld,%lld\n", left, top, right, bottom, dim[4], dim[5]);
 
 			if (left >= right || top >= bottom) {
 				printf("fail\n");
 				exit(EXIT_FAILURE);
 			}
 
+			// New dimensions of rectangle, ideally
+
 			long long nleft = left * owid / dim[4] + dim[0];
 			long long ntop = top * oht / dim[5] + dim[1];
 			long long nright = right * owid / dim[4] + dim[0];
 			long long nbot = bottom * oht / dim[5] + dim[1];
 
-			if (nright - nleft > (1LL << (32 - p.z))) {
+			// Buffered tile (in world coordinates)
+
+			long long tilewid = 1LL << (32 - p.z);
+			long long clip_buffer = p.buffer * tilewid / 256;
+
+			long long bufleft = -clip_buffer + sx;
+			long long buftop = -clip_buffer + sy;
+			long long bufright = tilewid + clip_buffer + sx;
+			long long bufbot = tilewid + clip_buffer + sy;
+
+			printf("buffer: %lld,%lld %lld,%lld\n", bufleft, buftop, bufright, bufbot);
+
+			if (nleft < sx - tilewid) {
+				// Too big, to the left.
+				if (right - left == 2) {
+					long long center = (nleft + nright) / 2;
+					nleft = center - tilewid;
+					nright = center + tilewid;
+				} else if (right - left == 1) {
+					nleft = bufleft;
+				} else {
+					printf("too big, but %lld wide\n", right - left);
+					exit(EXIT_FAILURE);
+				}
+				printf("now %lld to %lld\n", nleft, nright);
+			}
+			if (nright > sx + 2 * tilewid) {
+				// Too big, to the right.
+				if (right - left == 2) {
+					long long center = (nleft + nright) / 2;
+					nleft = center - tilewid;
+					nright = center + tilewid;
+				} else if (right - left == 1) {
+					nright = bufright;
+				} else {
+					printf("too big, but %lld wide\n", right - left);
+					exit(EXIT_FAILURE);
+				}
+				printf("now %lld to %lld\n", nleft, nright);
+			}
+
+			if (ntop < sy - tilewid) {
+				// Too big, to the top.
+				if (bottom - top == 2) {
+					long long center = (ntop + nbot) / 2;
+					ntop = center - tilewid;
+					nbot = center + tilewid;
+				} else if (bottom - top == 1) {
+					ntop = buftop;
+				} else {
+					printf("too big, but %lld tall\n", bottom - top);
+					exit(EXIT_FAILURE);
+				}
+				printf("now %lld to %lld\n", ntop, nbot);
+			}
+			if (nbot > sy + 2 * tilewid) {
+				// Too big, to the bottom.
+				if (bottom - top == 2) {
+					long long center = (ntop + nbot) / 2;
+					ntop = center - tilewid;
+					nbot = center + tilewid;
+				} else if (bottom - top == 1) {
+					nbot = bufbot;
+				} else {
+					printf("too big, but %lld tall\n", bottom - top);
+					exit(EXIT_FAILURE);
+				}
+				printf("now %lld to %lld\n", ntop, nbot);
+			}
+
+			if (nleft < sx - tilewid || nright > sx + 2 * tilewid) {
 				printf("wide\n");
 			}
-			if (nbot - ntop > (1LL << (32 - p.z))) {
+			if (ntop < sy - tilewid || nbot > sy + 2 * tilewid) {
 				printf("tall\n");
 			}
 
 			geom.clear();
-			geom.push_back(draw(VT_MOVETO, left * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
-			geom.push_back(draw(VT_LINETO, right * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
-			geom.push_back(draw(VT_LINETO, right * owid / dim[4] + dim[0], bottom * oht / dim[5] + dim[1]));
-			geom.push_back(draw(VT_LINETO, left * owid / dim[4] + dim[0], bottom * oht / dim[5] + dim[1]));
-			geom.push_back(draw(VT_LINETO, left * owid / dim[4] + dim[0], top * oht / dim[5] + dim[1]));
+			geom.push_back(draw(VT_MOVETO, nleft, ntop));
+			geom.push_back(draw(VT_LINETO, nright, ntop));
+			geom.push_back(draw(VT_LINETO, nright, nbot));
+			geom.push_back(draw(VT_LINETO, nleft, nbot));
+			geom.push_back(draw(VT_LINETO, nleft, ntop));
 
 			// Back to tile coordinates, since that is still expected
 			// downstream
@@ -2154,6 +2227,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.clustered = 0;
 				p.stringpool = stringpool;
 				p.pool_off = pool_off;
+				p.buffer = buffer;
 				partials.push_back(p);
 			}
 
