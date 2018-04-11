@@ -38,7 +38,7 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
+int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *grids, json_object *areas, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
@@ -141,21 +141,17 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		}
 	}
 
+	drawvec dv;
+	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature);
+
+	std::vector<char *> metakey;
+	std::vector<std::string> metaval;
+	std::vector<int> metatype;
+
 	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
 		nprop = properties->length;
 	}
-
-	std::vector<char *> metakey;
-	metakey.resize(nprop);
-
-	std::vector<std::string> metaval;
-	metaval.resize(nprop);
-
-	std::vector<int> metatype;
-	metatype.resize(nprop);
-
-	size_t m = 0;
 
 	for (size_t i = 0; i < nprop; i++) {
 		if (properties->keys[i]->type == JSON_STRING) {
@@ -166,21 +162,149 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature);
 
 			if (type >= 0) {
-				metakey[m] = properties->keys[i]->string;
-				metatype[m] = type;
-				metaval[m] = val;
-				m++;
+				metakey.push_back(properties->keys[i]->string);
+				metatype.push_back(type);
+				metaval.push_back(val);
 			} else {
-				metakey[m] = properties->keys[i]->string;
-				metatype[m] = mvt_null;
-				metaval[m] = "null";
-				m++;
+				metakey.push_back(properties->keys[i]->string);
+				metatype.push_back(mvt_null);
+				metaval.push_back("null");
 			}
 		}
 	}
 
-	drawvec dv;
-	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature);
+	size_t narea = 0;
+	if (areas != NULL && areas->type == JSON_HASH) {
+		narea = areas->length;
+	}
+
+	size_t ngrid = 0;
+	if (grids != NULL && grids->type == JSON_HASH) {
+		ngrid = grids->length;
+	}
+
+	// Calculate bounding box so areas and grids can be clipped
+	// to exactly match up with the original at each zoom level.
+
+	long long bbox[4] = { LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN };
+	if (narea + ngrid > 0) {
+		for (size_t i = 0; i < dv.size(); i++) {
+			if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
+				if (dv[i].x < bbox[0]) {
+					bbox[0] = dv[i].x;
+				}
+				if (dv[i].y < bbox[1]) {
+					bbox[1] = dv[i].y;
+				}
+				if (dv[i].x > bbox[2]) {
+					bbox[2] = dv[i].x;
+				}
+				if (dv[i].y > bbox[3]) {
+					bbox[3] = dv[i].y;
+				}
+			}
+		}
+	}
+
+	for (size_t i = 0; i < ngrid; i++) {
+		if (grids->keys[i]->type == JSON_STRING) {
+			std::string s(grids->keys[i]->string);
+
+			int type = -1;
+			std::string val;
+			stringify_value(grids->values[i], type, val, sst->fname, sst->line, feature);
+
+			size_t height = 0, width = 0;
+			if (grids->values[i]->type != JSON_ARRAY || grids->values[i]->length == 0) {
+				fprintf(stderr, "%s:%d: grid data is not an array\n", sst->fname, sst->line);
+				continue;
+			}
+			height = grids->values[i]->length;
+			bool fail = false;
+			for (size_t y = 0; y < height; y++) {
+				if (grids->values[i]->array[y]->type != JSON_ARRAY) {
+					fprintf(stderr, "%s:%d: grid data is not a two-dimensional array\n", sst->fname, sst->line);
+					fail = true;
+					break;
+				}
+				if (grids->values[i]->array[y]->length != grids->values[i]->array[0]->length) {
+					fprintf(stderr, "%s:%d: grid data has irregular width\n", sst->fname, sst->line);
+					fail = true;
+					break;
+				}
+				width = grids->values[i]->array[y]->length;
+			}
+			if (fail) {
+				continue;
+			}
+
+			if (type == mvt_hash) {
+				metakey.push_back(grids->keys[i]->string);
+				metatype.push_back(mvt_grid);
+
+				std::string wrap = "";
+				aprintf(&wrap, "[%lld,%lld,%lld,%lld,", bbox[0], bbox[1], bbox[2], bbox[3]);
+				aprintf(&wrap, "%zu,%zu,", width - 1, height - 1);
+				wrap.append(val);
+				wrap.push_back(']');
+
+				metaval.push_back(wrap);
+			} else {
+				// Can't happen
+				fprintf(stderr, "%s:%d: grid data is not an array\n", sst->fname, sst->line);
+			}
+		}
+	}
+
+	for (size_t i = 0; i < narea; i++) {
+		if (areas->keys[i]->type == JSON_STRING) {
+			std::string s(areas->keys[i]->string);
+
+			int type = -1;
+			std::string val;
+			stringify_value(areas->values[i], type, val, sst->fname, sst->line, feature);
+
+			size_t height = 0, width = 0;
+			if (areas->values[i]->type != JSON_ARRAY || areas->values[i]->length == 0) {
+				fprintf(stderr, "%s:%d: area data is not an array\n", sst->fname, sst->line);
+				continue;
+			}
+			height = areas->values[i]->length;
+			bool fail = false;
+			for (size_t y = 0; y < height; y++) {
+				if (areas->values[i]->array[y]->type != JSON_ARRAY) {
+					fprintf(stderr, "%s:%d: area data is not a two-dimensional array\n", sst->fname, sst->line);
+					fail = true;
+					break;
+				}
+				if (areas->values[i]->array[y]->length != areas->values[i]->array[0]->length) {
+					fprintf(stderr, "%s:%d: area data has irregular width\n", sst->fname, sst->line);
+					fail = true;
+					break;
+				}
+				width = areas->values[i]->array[y]->length;
+			}
+			if (fail) {
+				continue;
+			}
+
+			if (type == mvt_hash) {
+				metakey.push_back(areas->keys[i]->string);
+				metatype.push_back(mvt_area);
+
+				std::string wrap = "";
+				aprintf(&wrap, "[%lld,%lld,%lld,%lld,", bbox[0], bbox[1], bbox[2], bbox[3]);
+				aprintf(&wrap, "%zu,%zu,", width, height);
+				wrap.append(val);
+				wrap.push_back(']');
+
+				metaval.push_back(wrap);
+			} else {
+				// Can't happen
+				fprintf(stderr, "%s:%d: area data is not an array\n", sst->fname, sst->line);
+			}
+		}
+	}
 
 	serial_feature sf;
 	sf.layer = layer;
@@ -202,7 +326,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		sf.layername = layername;
 	}
 
-	for (size_t i = 0; i < m; i++) {
+	for (size_t i = 0; i < metakey.size(); i++) {
 		sf.full_keys.push_back(metakey[i]);
 
 		serial_val sv;
@@ -301,7 +425,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 				}
 				found_geometries++;
 
-				serialize_geojson_feature(sst, j, NULL, NULL, layer, NULL, j, layername);
+				serialize_geojson_feature(sst, j, NULL, NULL, NULL, NULL, layer, NULL, j, layername);
 				json_free(j);
 				continue;
 			}
@@ -337,6 +461,9 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			continue;
 		}
 
+		json_object *grids = json_hash_get(j, "grids");
+		json_object *areas = json_hash_get(j, "areas");
+
 		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
 		json_object *id = json_hash_get(j, "id");
 
@@ -344,10 +471,10 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		if (geometries != NULL) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
-				serialize_geojson_feature(sst, geometries->array[g], properties, id, layer, tippecanoe, j, layername);
+				serialize_geojson_feature(sst, geometries->array[g], properties, grids, areas, id, layer, tippecanoe, j, layername);
 			}
 		} else {
-			serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, j, layername);
+			serialize_geojson_feature(sst, geometry, properties, grids, areas, id, layer, tippecanoe, j, layername);
 		}
 
 		json_free(j);

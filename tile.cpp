@@ -247,6 +247,25 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 	return layer.tag_value(tv);
 }
 
+void tag_value(std::string const &key, mvt_value const &value, mvt_layer &layer, mvt_feature &feature) {
+	if (value.type == mvt_hash) {
+		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+		json_object *j = json_read_tree(jp);
+		if (j == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			exit(EXIT_FAILURE);
+		}
+		size_t ko = layer.tag_key(key);
+		size_t vo = tag_object(layer, j);
+		feature.tags.push_back(ko);
+		feature.tags.push_back(vo);
+		json_free(j);
+		json_end(jp);
+	} else {
+		layer.tag(feature, key, value);
+	}
+}
+
 void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	size_t i;
 	for (i = 0; i < metakeys.size(); i++) {
@@ -254,22 +273,7 @@ void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> 
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		if (value.type == mvt_hash) {
-			json_pull *jp = json_begin_string((char *) value.string_value.c_str());
-			json_object *j = json_read_tree(jp);
-			if (j == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
-				exit(EXIT_FAILURE);
-			}
-			size_t ko = layer.tag_key(key.string_value);
-			size_t vo = tag_object(layer, j);
-			feature.tags.push_back(ko);
-			feature.tags.push_back(vo);
-			json_free(j);
-			json_end(jp);
-		} else {
-			layer.tag(feature, key.string_value, value);
-		}
+		tag_value(key.string_value, value, layer, feature);
 	}
 }
 
@@ -431,6 +435,8 @@ struct partial {
 	int segment = 0;
 	bool reduced = 0;
 	int z = 0;
+	unsigned tx;
+	unsigned ty;
 	int line_detail = 0;
 	int maxzoom = 0;
 	double spacing = 0;
@@ -442,6 +448,9 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	char *stringpool;
+	long long *pool_off;
+	int buffer;
 };
 
 struct partial_arg {
@@ -449,6 +458,8 @@ struct partial_arg {
 	int task = 0;
 	int tasks = 0;
 };
+
+bool clip_grids(partial &p, drawvec &geom);
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	// From area in world coordinates to area in tile coordinates
@@ -549,6 +560,10 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_LINE && additional[A_REVERSE]) {
 			geom = reorder_lines(geom);
 		}
+
+		// Snap the clipped feature to the gridded-data grid, if any,
+		// and clip and downsample the gridded data.
+		clip_grids((*partials)[i], geom);
 
 		to_tile_scale(geom, z, line_detail);
 
@@ -1732,6 +1747,261 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
+bool clip_grids(partial &p, drawvec &geom) {
+	for (ssize_t i = p.keys.size() - 1; i >= 0; i--) {
+		serial_val sv;
+		sv.type = (p.stringpool + p.pool_off[p.segment])[p.values[i]];
+
+		// If the grid is a metadata reference,
+		// promote it to a full_key so it can be modified
+
+		if (sv.type == mvt_grid || sv.type == mvt_area) {
+			std::string key = p.stringpool + p.pool_off[p.segment] + p.keys[i] + 1;
+			sv.s = p.stringpool + p.pool_off[p.segment] + p.values[i] + 1;
+
+			p.full_keys.push_back(key);
+			p.full_values.push_back(sv);
+
+			p.keys.erase(p.keys.begin() + i);
+			p.values.erase(p.values.begin() + i);
+		}
+	}
+
+	for (size_t i = 0; i < p.full_keys.size(); i++) {
+		serial_val sv = p.full_values[i];
+
+		if (sv.type == mvt_grid || sv.type == mvt_area) {
+			json_pull *jp = json_begin_string((char *) sv.s.c_str());
+			json_object *j = json_read_tree(jp);
+			if (j == NULL) {
+				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			if (j->type != JSON_ARRAY) {
+				fprintf(stderr, "Internal error: gridded data is not an array: %s\n", sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			// Array should contain original feature x1, y1, x2, y2,
+			// grid width and height, and then the gridded data itself
+
+			if (j->length != 7) {
+				fprintf(stderr, "Internal error: gridded data has wrong length: %zu: %s\n", j->length, sv.s.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			long long dim[6];
+			for (size_t k = 0; k < 6; k++) {
+				if (j->array[k]->type == JSON_NUMBER) {
+					dim[k] = atoll(j->array[k]->string);
+				} else {
+					fprintf(stderr, "Internal error: gridded data not a number: %s\n", sv.s.c_str());
+				}
+			}
+
+			long long bbox[4] = { LLONG_MAX, LLONG_MAX, LLONG_MIN, LLONG_MIN };
+
+			// Offset from tile coordinates back to world coordinates
+			unsigned sx = 0, sy = 0;
+			if (p.z != 0) {
+				sx = p.tx << (32 - p.z);
+				sy = p.ty << (32 - p.z);
+			}
+			for (size_t k = 0; k < geom.size(); k++) {
+				if (geom[k].op == VT_MOVETO || geom[k].op == VT_LINETO) {
+					geom[k].x += sx;
+					geom[k].y += sy;
+
+					if (geom[k].x < bbox[0]) {
+						bbox[0] = geom[k].x;
+					}
+					if (geom[k].y < bbox[1]) {
+						bbox[1] = geom[k].y;
+					}
+					if (geom[k].x > bbox[2]) {
+						bbox[2] = geom[k].x;
+					}
+					if (geom[k].y > bbox[3]) {
+						bbox[3] = geom[k].y;
+					}
+				}
+			}
+
+			// XXX Do something reasonable with grids that
+			// cross the antimeridian
+
+			long long owid = dim[2] - dim[0];
+			long long oht = dim[3] - dim[1];
+
+			long long left = floor((bbox[0] - dim[0]) * dim[4] / (double) owid);
+			long long right = ceil((bbox[2] - dim[0]) * dim[4] / (double) owid);
+
+			long long top = floor((bbox[1] - dim[1]) * dim[4] / (double) oht);
+			long long bottom = ceil((bbox[3] - dim[1]) * dim[4] / (double) oht);
+
+			if (left >= right || top >= bottom) {
+				fprintf(stderr, "Internal error: bad math in grid setup\n");
+				exit(EXIT_FAILURE);
+			}
+
+			// New dimensions of rectangle, ideally
+
+			long long nleft = left * owid / dim[4] + dim[0];
+			long long ntop = top * oht / dim[5] + dim[1];
+			long long nright = right * owid / dim[4] + dim[0];
+			long long nbot = bottom * oht / dim[5] + dim[1];
+
+			// Buffered tile (in world coordinates)
+
+			long long tilewid = 1LL << (32 - p.z);
+			long long clip_buffer = p.buffer * tilewid / 256;
+
+			long long bufleft = -clip_buffer + sx;
+			long long buftop = -clip_buffer + sy;
+			long long bufright = tilewid + clip_buffer + sx;
+			long long bufbot = tilewid + clip_buffer + sy;
+
+			// Figure out how much we need to downsample
+
+			double cellwidth = (nright - nleft) / (double) (right - left);
+			double cellheight = (nbot - ntop) / (double) (bottom - top);
+			long long interval = 1;
+
+			// XXX is 1/256 of the tile the correct grain?
+			while (cellwidth < tilewid / 256) {
+				interval *= 2;
+				cellwidth *= 2;
+				cellheight *= 2;
+			}
+			while (cellheight < tilewid / 256) {
+				interval *= 2;
+				cellwidth *= 2;
+				cellheight *= 2;
+			}
+
+			// Downsample
+
+			std::string out;
+			json_writer jw(&out);
+			jw.json_write_array();
+
+			for (long long y = top; y < bottom + (sv.type == mvt_grid); y += interval) {
+				jw.json_write_array();
+
+				size_t yy = y;
+				if (yy >= j->array[6]->length) {
+					yy = j->array[6]->length - 1;
+				}
+
+				for (long long x = left; x < right + (sv.type == mvt_grid); x += interval) {
+					size_t xx = x;
+					if (xx >= j->array[6]->array[yy]->length) {
+						xx = j->array[6]->array[yy]->length - 1;
+					}
+
+					const char *s = json_stringify(j->array[6]->array[yy]->array[xx]);
+					jw.json_write_stringified(s);
+					free((void *) s);
+				}
+
+				jw.json_end_array();
+			}
+
+			jw.json_end_array();
+
+			// Fix feature geometry if it's too big to fit in the tile
+
+			if (nleft < sx - tilewid) {
+				// Too big, to the left.
+				if (right - left == 2) {
+					long long center = (nleft + nright) / 2;
+					nleft = center - tilewid;
+					nright = center + tilewid;
+				} else if (right - left == 1) {
+					nleft = bufleft;
+				} else {
+					fprintf(stderr, "Internal error: grid too big, but %lld wide\n", right - left);
+					exit(EXIT_FAILURE);
+				}
+			}
+			if (nright > sx + 2 * tilewid) {
+				// Too big, to the right.
+				if (right - left == 2) {
+					long long center = (nleft + nright) / 2;
+					nleft = center - tilewid;
+					nright = center + tilewid;
+				} else if (right - left == 1) {
+					nright = bufright;
+				} else {
+					fprintf(stderr, "Internal error: grid too big, but %lld wide\n", right - left);
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			if (ntop < sy - tilewid) {
+				// Too big, to the top.
+				if (bottom - top == 2) {
+					long long center = (ntop + nbot) / 2;
+					ntop = center - tilewid;
+					nbot = center + tilewid;
+				} else if (bottom - top == 1) {
+					ntop = buftop;
+				} else {
+					fprintf(stderr, "Internal error: grid too big, but %lld tall\n", bottom - top);
+					exit(EXIT_FAILURE);
+				}
+			}
+			if (nbot > sy + 2 * tilewid) {
+				// Too big, to the bottom.
+				if (bottom - top == 2) {
+					long long center = (ntop + nbot) / 2;
+					ntop = center - tilewid;
+					nbot = center + tilewid;
+				} else if (bottom - top == 1) {
+					nbot = bufbot;
+				} else {
+					fprintf(stderr, "Internal error: grid too big, but %lld tall\n", bottom - top);
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			if (nleft < sx - tilewid || nright > sx + 2 * tilewid) {
+				fprintf(stderr, "Internal error: grid cell is too wide\n");
+				exit(EXIT_FAILURE);
+			}
+			if (ntop < sy - tilewid || nbot > sy + 2 * tilewid) {
+				fprintf(stderr, "Internal error: grid cell is too tall\n");
+				exit(EXIT_FAILURE);
+			}
+
+			geom.clear();
+			geom.push_back(draw(VT_MOVETO, nleft, ntop));
+			geom.push_back(draw(VT_LINETO, nright, ntop));
+			geom.push_back(draw(VT_LINETO, nright, nbot));
+			geom.push_back(draw(VT_LINETO, nleft, nbot));
+			geom.push_back(draw(VT_LINETO, nleft, ntop));
+
+			// Back to tile coordinates, since that is still expected
+			// downstream
+
+			for (size_t k = 0; k < geom.size(); k++) {
+				geom[k].x -= sx;
+				geom[k].y -= sy;
+			}
+
+			p.full_values[i].type = mvt_hash;
+			p.full_values[i].type = mvt_string;
+			p.full_values[i].s = out;
+
+			json_free(j);
+			json_end(jp);
+		}
+	}
+
+	return false;
+}
+
 long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1981,6 +2251,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.original_seq = sf.seq;
 				p.reduced = reduced;
 				p.z = z;
+				p.tx = tx;
+				p.ty = ty;
 				p.line_detail = line_detail;
 				p.maxzoom = maxzoom;
 				p.keys = sf.keys;
@@ -1995,6 +2267,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.stringpool = stringpool;
+				p.pool_off = pool_off;
+				p.buffer = buffer;
 				partials.push_back(p);
 			}
 
@@ -2252,7 +2527,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
-					layer.tag(feature, layer_features[x].full_keys[a], v);
+
+					tag_value(layer_features[x].full_keys[a], v, layer, feature);
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
