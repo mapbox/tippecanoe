@@ -19,6 +19,7 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
+#include "polygon.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
@@ -510,6 +511,8 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	out = clean_polygon(out);
 
 	return out;
 }
