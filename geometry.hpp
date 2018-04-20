@@ -62,6 +62,7 @@ drawvec remove_noop(drawvec geom, int type, int shift);
 drawvec clip_point(drawvec &geom, int z, long long buffer);
 drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip);
 drawvec simple_clip_poly(drawvec &geom, int z, int buffer);
+drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy);
 drawvec close_poly(drawvec &geom);
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
 drawvec clip_lines(drawvec &geom, int z, long long buffer);

@@ -484,10 +484,6 @@ void *partial_feature_worker(void *v) {
 			geom = reorder_lines(geom);
 		}
 
-		if (t == VT_POLYGON) {
-			geom = simple_clip_poly(geom, z, (*partials)[i].buffer);
-		}
-
 		to_tile_scale(geom, z, line_detail);
 
 		std::vector<drawvec> geoms;
@@ -499,18 +495,29 @@ void *partial_feature_worker(void *v) {
 			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before = geoms[g];
 
+				// from_tile_scale(geoms[g], z, line_detail);
+				// geoms[g] = simple_clip_poly(geoms[g], 0, 0, 1 << line_detail, 1 << line_detail);
+				// to_tile_scale(geoms[g], z, line_detail);
+
 				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+
+				from_tile_scale(geoms[g], z, line_detail);
+				geoms[g] = simple_clip_poly(geoms[g], z, (*partials)[i].buffer);
+				to_tile_scale(geoms[g], z, line_detail);
 
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g]);
 				}
 
 				if (geoms[g].size() < 3) {
+#if 0
 					if (area > 0) {
 						geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
 					} else {
 						geoms[g].clear();
 					}
+#endif
+					geoms[g].clear();
 				}
 			}
 		}
