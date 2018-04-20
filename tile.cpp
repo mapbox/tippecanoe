@@ -375,6 +375,7 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	int buffer;
 };
 
 struct partial_arg {
@@ -483,6 +484,10 @@ void *partial_feature_worker(void *v) {
 			geom = reorder_lines(geom);
 		}
 
+		if (t == VT_POLYGON) {
+			geom = simple_clip_poly(geom, z, (*partials)[i].buffer);
+		}
+
 		to_tile_scale(geom, z, line_detail);
 
 		std::vector<drawvec> geoms;
@@ -493,7 +498,9 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before = geoms[g];
+
 				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g]);
 				}
@@ -1257,7 +1264,7 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 			clipped = clip_lines(sf.geometry, z, buffer);
 		}
 		if (sf.t == VT_POLYGON) {
-			clipped = simple_clip_poly(sf.geometry, z, buffer);
+			clipped = sf.geometry;
 		}
 		if (sf.t == VT_POINT) {
 			clipped = clip_point(sf.geometry, z, buffer);
@@ -1928,6 +1935,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.buffer = buffer;
 				partials.push_back(p);
 			}
 

@@ -91,6 +91,13 @@ void to_tile_scale(drawvec &geom, int z, int detail) {
 	}
 }
 
+void from_tile_scale(drawvec &geom, int z, int detail) {
+	for (size_t i = 0; i < geom.size(); i++) {
+		geom[i].x <<= (32 - detail - z);
+		geom[i].y <<= (32 - detail - z);
+	}
+}
+
 drawvec remove_noop(drawvec geom, int type, int shift) {
 	// first pass: remove empty linetos
 
