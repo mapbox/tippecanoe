@@ -2156,9 +2156,14 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
 
 	if (maxzoom != written) {
-		fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
-		maxzoom = written;
-		ret = EXIT_FAILURE;
+		if (written > minzoom) {
+			fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
+			maxzoom = written;
+			ret = 100;
+		} else {
+			fprintf(stderr, "%s: No zoom levels were successfully written\n", *av);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	madvise(meta, metapos, MADV_DONTNEED);

@@ -1,3 +1,8 @@
+## 1.27.14
+
+* Use an exit status of 100 if some zoom levels were successfully
+  written but not all zoom levels could be tiled.
+
 ## 1.27.13
 
 * Allow filtering features by zoom level in conditional expressions
