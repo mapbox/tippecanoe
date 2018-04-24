@@ -94,6 +94,13 @@ void to_tile_scale(drawvec &geom, int z, int detail) {
 	}
 }
 
+void from_tile_scale(drawvec &geom, int z, int detail) {
+	for (size_t i = 0; i < geom.size(); i++) {
+		geom[i].x <<= (32 - detail - z);
+		geom[i].y <<= (32 - detail - z);
+	}
+}
+
 drawvec remove_noop(drawvec geom, int type, int shift) {
 	// first pass: remove empty linetos
 
@@ -509,7 +516,6 @@ int on_edge(draw d1, draw d2, int edge, long long minx, long long miny, long lon
 }
 
 void push_outward(drawvec &dv, size_t off, int edge, int distance, long long minx, long long miny, long long maxx, long long maxy) {
-
 }
 
 // http://en.wikipedia.org/wiki/Sutherland%E2%80%93Hodgman_algorithm

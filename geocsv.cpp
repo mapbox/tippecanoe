@@ -65,14 +65,14 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 			exit(EXIT_FAILURE);
 		}
 
-                if (line[loncol].empty() || line[latcol].empty()) {
-                    static int warned = 0;
-                    if (!warned) {
-                        fprintf(stderr, "%s:%zu: null geometry (additional not reported)\n", fname.c_str(), seq + 1);
-                        warned = 1;
-                    }
-                    continue;
-                }
+		if (line[loncol].empty() || line[latcol].empty()) {
+			static int warned = 0;
+			if (!warned) {
+				fprintf(stderr, "%s:%zu: null geometry (additional not reported)\n", fname.c_str(), seq + 1);
+				warned = 1;
+			}
+			continue;
+		}
 		double lon = atof(line[loncol].c_str());
 		double lat = atof(line[latcol].c_str());
 
