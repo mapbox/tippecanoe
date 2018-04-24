@@ -489,6 +489,20 @@ void *partial_feature_worker(void *v) {
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
 
+		if (t == VT_LINE) {
+			for (size_t g = 0; g < geoms.size(); g++) {
+				from_tile_scale(geoms[g], z, line_detail);
+				geoms[g] = clip_lines(geoms[g], z, (*partials)[i].buffer);
+				to_tile_scale(geoms[g], z, line_detail);
+			}
+		}
+		if (t == VT_POINT) {
+			for (size_t g = 0; g < geoms.size(); g++) {
+				from_tile_scale(geoms[g], z, line_detail);
+				geoms[g] = clip_point(geoms[g], z, (*partials)[i].buffer);
+				to_tile_scale(geoms[g], z, line_detail);
+			}
+		}
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
@@ -499,11 +513,11 @@ void *partial_feature_worker(void *v) {
 				// geoms[g] = simple_clip_poly(geoms[g], 0, 0, 1 << line_detail, 1 << line_detail);
 				// to_tile_scale(geoms[g], z, line_detail);
 
-				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
-
 				from_tile_scale(geoms[g], z, line_detail);
 				geoms[g] = simple_clip_poly(geoms[g], z, (*partials)[i].buffer);
 				to_tile_scale(geoms[g], z, line_detail);
+
+				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
 
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g]);
@@ -511,6 +525,9 @@ void *partial_feature_worker(void *v) {
 
 				if (geoms[g].size() < 3) {
 #if 0
+					// This is iffed out because revival shouldn't be trying to revive the part
+					// that was clipped away, only the part that decayed in wagyu
+
 					if (area > 0) {
 						geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
 					} else {
@@ -1267,15 +1284,7 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 		// so that we can know whether the feature itself, or only the feature's
 		// bounding box, touches the tile.
 
-		if (sf.t == VT_LINE) {
-			clipped = clip_lines(sf.geometry, z, buffer);
-		}
-		if (sf.t == VT_POLYGON) {
-			clipped = sf.geometry;
-		}
-		if (sf.t == VT_POINT) {
-			clipped = clip_point(sf.geometry, z, buffer);
-		}
+		clipped = sf.geometry;
 
 		clipped = remove_noop(clipped, sf.t, 0);
 

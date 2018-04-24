@@ -512,8 +512,6 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 		}
 	}
 
-	out = clean_polygon(out);
-
 	return out;
 }
 
