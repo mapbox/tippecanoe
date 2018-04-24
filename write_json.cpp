@@ -226,6 +226,21 @@ void json_writer::adds(std::string const &str) {
 	}
 }
 
+static void aprintf(std::string *buf, const char *format, ...) {
+        va_list ap;
+        char *tmp;
+
+        va_start(ap, format);
+        if (vasprintf(&tmp, format, ap) < 0) {
+                fprintf(stderr, "memory allocation failure\n");
+                exit(EXIT_FAILURE);
+        }
+        va_end(ap);
+
+        buf->append(tmp, strlen(tmp));
+        free(tmp);
+}
+
 struct lonlat {
 	int op;
 	double lon;
@@ -243,8 +258,16 @@ struct lonlat {
 	      id(nid) {
 	}
 
-	void print(FILE *f) {
-		fprintf(f, "[ %f, %f ]", lon, lat);
+	std::string toString() {
+		std::string ret;
+
+		if (id == 0) {
+			aprintf(&ret, "[ %f, %f ]", lon, lat);
+		} else {
+			aprintf(&ret, "[ %f, %f, \"id %lld\" ]", lon, lat, id);
+		}
+
+		return ret;
 	}
 };
 
@@ -374,10 +397,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 				state.json_write_string("coordinates");
 
-				state.json_write_array();
-				state.json_write_float(ops[0].lon);
-				state.json_write_float(ops[0].lat);
-				state.json_end_array();
+				state.json_write_stringified(ops[0].toString());
 			} else {
 				state.json_write_string("type");
 				state.json_write_string("MultiPoint");
@@ -386,10 +406,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 
 				for (size_t i = 0; i < ops.size(); i++) {
-					state.json_write_array();
-					state.json_write_float(ops[i].lon);
-					state.json_write_float(ops[i].lat);
-					state.json_end_array();
+					state.json_write_stringified(ops[i].toString());
 				}
 
 				state.json_end_array();
@@ -410,10 +427,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 
 				for (size_t i = 0; i < ops.size(); i++) {
-					state.json_write_array();
-					state.json_write_float(ops[i].lon);
-					state.json_write_float(ops[i].lat);
-					state.json_end_array();
+					state.json_write_stringified(ops[i].toString());
 				}
 
 				state.json_end_array();
@@ -429,28 +443,19 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
 						if (sstate == 0) {
-							state.json_write_array();
-							state.json_write_float(ops[i].lon);
-							state.json_write_float(ops[i].lat);
-							state.json_end_array();
+							state.json_write_stringified(ops[i].toString());
 
 							sstate = 1;
 						} else {
 							state.json_end_array();
 							state.json_write_array();
 
-							state.json_write_array();
-							state.json_write_float(ops[i].lon);
-							state.json_write_float(ops[i].lat);
-							state.json_end_array();
+							state.json_write_stringified(ops[i].toString());
 
 							sstate = 1;
 						}
 					} else {
-						state.json_write_array();
-						state.json_write_float(ops[i].lon);
-						state.json_write_float(ops[i].lat);
-						state.json_end_array();
+						state.json_write_stringified(ops[i].toString());
 					}
 				}
 
@@ -564,15 +569,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 				for (size_t j = 0; j < rings[i].size(); j++) {
 					if (rings[i][j].op != VT_CLOSEPATH) {
-						state.json_write_array();
-						state.json_write_float(rings[i][j].lon);
-						state.json_write_float(rings[i][j].lat);
-						state.json_end_array();
+						state.json_write_stringified(rings[i][j].toString());
 					} else {
-						state.json_write_array();
-						state.json_write_float(rings[i][0].lon);
-						state.json_write_float(rings[i][0].lat);
-						state.json_end_array();
+						state.json_write_stringified(rings[i][0].toString());
 					}
 				}
 
