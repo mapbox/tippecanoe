@@ -74,7 +74,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip);
 drawvec simple_clip_poly(drawvec &geom, int z, int buffer);
 drawvec close_poly(drawvec &geom);
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
-drawvec clip_lines(drawvec &geom, int z, long long buffer);
+drawvec clip_lines(drawvec geom, int z, long long buffer, long long *pointid);
 drawvec stairstep(drawvec &geom, int z, int detail);
 bool point_within_tile(long long x, long long y, int z);
 int quick_check(long long *bbox, int z, long long buffer);

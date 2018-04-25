@@ -790,11 +790,66 @@ bool point_within_tile(long long x, long long y, int z) {
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-drawvec clip_lines(drawvec &geom, int z, long long buffer) {
+drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid) {
+	drawvec out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO) {
+			if (geom[i - 1].x / width != geom[i].x / width) {
+				long long min, max;
+
+				if (geom[i - 1].x < geom[i].x) {
+					for (long long xx = geom[i - 1].x / width * width + width; xx <= geom[i].x / width * width; xx += width) {
+						long long yy = (xx - geom[i - 1].x) * (geom[i].y - geom[i - 1].y) / (geom[i].x - geom[i - 1].x) + geom[i - 1].y;
+						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+					}
+				} else {
+					for (long long xx = geom[i].x / width * width + width; xx <= geom[i - 1].x / width * width; xx += width) {
+						long long yy = (xx - geom[i].x) * (geom[i - 1].y - geom[i].y) / (geom[i - 1].x - geom[i].x) + geom[i].y;
+						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+					}
+				}
+			}
+		}
+
+		out.push_back(geom[i]);
+	}
+
+	geom = out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_LINETO) {
+			if (geom[i - 1].y / width != geom[i].y / width) {
+				long long min, may;
+
+				if (geom[i - 1].y < geom[i].y) {
+					for (long long yy = geom[i - 1].y / width * width + width; yy <= geom[i].y / width * width; yy += width) {
+						long long xx = (yy - geom[i - 1].y) * (geom[i].x - geom[i - 1].x) / (geom[i].y - geom[i - 1].y) + geom[i - 1].x;
+						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+					}
+				} else {
+					for (long long yy = geom[i].y / width * width + width; yy <= geom[i - 1].y / width * width; yy += width) {
+						long long xx = (yy - geom[i].y) * (geom[i - 1].x - geom[i].x) / (geom[i - 1].y - geom[i].y) + geom[i].x;
+						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+					}
+				}
+			}
+		}
+
+		out.push_back(geom[i]);
+	}
+
+	return out;
+}
+
+drawvec clip_lines(drawvec geom, int z, long long buffer, long long *pointid) {
 	drawvec out;
 
 	long long min = 0;
 	long long area = 1LL << (32 - z);
+
+	geom = mark_tile_edges(geom, area, pointid);
+
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
 
@@ -974,7 +1029,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 	}
 
 	if (mark_tile_bounds) {
-		geom = impose_tile_boundaries(geom, area, pointid);
+		// geom = impose_tile_boundaries(geom, area, pointid);
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {

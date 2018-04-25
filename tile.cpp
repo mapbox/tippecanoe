@@ -531,7 +531,7 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_LINE) {
 			for (size_t g = 0; g < geoms.size(); g++) {
 				from_tile_scale(geoms[g], z, line_detail);
-				geoms[g] = clip_lines(geoms[g], z, (*partials)[i].buffer);
+				geoms[g] = clip_lines(geoms[g], z, (*partials)[i].buffer, (*partials)[i].pointid);
 				to_tile_scale(geoms[g], z, line_detail);
 			}
 		}
