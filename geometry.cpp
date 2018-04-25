@@ -19,6 +19,7 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
+#include "options.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
@@ -808,13 +809,23 @@ drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
 			if (c > 1) {  // clipped
-				out.push_back(draw(VT_MOVETO, x1, y1));
-				out.push_back(draw(VT_LINETO, x2, y2));
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				if (x1 == geom[i - 1].x && y1 == geom[i - 1].y) {
+					out.push_back(draw(VT_MOVETO, x1, y1, geom[i - 1].id));
+				} else {
+					out.push_back(draw(VT_MOVETO, x1, y1));
+				}
+
+				if (x2 == geom[i].x && y2 == geom[i].y) {
+					out.push_back(draw(VT_LINETO, x2, y2, geom[i].id));
+				} else {
+					out.push_back(draw(VT_LINETO, x2, y2));
+				}
+
+				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y, geom[i].id));
 			} else if (c == 1) {  // unchanged
 				out.push_back(geom[i]);
 			} else {  // clipped away entirely
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y, geom[i].id));
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -907,7 +918,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t ke
 // If any line segment crosses a tile boundary, add a node there
 // that cannot be simplified away, to prevent the edge of any
 // feature from jumping abruptly at the tile boundary.
-drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
+drawvec impose_tile_boundaries(drawvec &geom, long long extent, long long *pointid) {
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -922,11 +933,21 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 
 			if (c > 1) {  // clipped
 				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
-					out.push_back(draw(VT_LINETO, x1, y1));
+					if (additional[A_JOIN_FEATURES_ACROSS_TILES]) {
+						out.push_back(draw(VT_LINETO, x1, y1, ++*pointid));
+					} else {
+						out.push_back(draw(VT_LINETO, x1, y1));
+					}
+
 					out[out.size() - 1].necessary = 1;
 				}
 				if (x2 != geom[i - 0].x || y2 != geom[i - 0].y) {
-					out.push_back(draw(VT_LINETO, x2, y2));
+					if (additional[A_JOIN_FEATURES_ACROSS_TILES]) {
+						out.push_back(draw(VT_LINETO, x2, y2, ++*pointid));
+					} else {
+						out.push_back(draw(VT_LINETO, x2, y2));
+					}
+
 					out[out.size() - 1].necessary = 1;
 				}
 			}
@@ -938,7 +959,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain, long long *pointid) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
@@ -953,7 +974,7 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 	}
 
 	if (mark_tile_bounds) {
-		geom = impose_tile_boundaries(geom, area);
+		geom = impose_tile_boundaries(geom, area, pointid);
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {

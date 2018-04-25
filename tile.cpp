@@ -414,6 +414,7 @@ struct partial {
 	std::set<std::string> need_tilestats;
 	long clipid = 0;
 	int buffer;
+	long long *pointid;
 };
 
 struct partial_arg {
@@ -503,7 +504,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (!already_marked) {
-					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0);
+					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, (*partials)[i].pointid);
 
 					if (t != VT_POLYGON || ngeom.size() >= 3) {
 						geom = ngeom;
@@ -964,7 +965,8 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 4);
+			long long pid = 0;
+			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 4, &pid);
 		} else {
 			simplified_arcs[ai->second] = dv;
 		}
@@ -2002,6 +2004,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.clustered = 0;
 				p.clipid = sf.clipid;
 				p.buffer = buffer;
+				p.pointid = &sf.pointid;
 				partials.push_back(p);
 			}
 
@@ -2204,8 +2207,9 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 			for (size_t x = 0; x < layer_features.size(); x++) {
 				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
 					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
+					long long pid = 27;
 					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
-										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, layer_features[x].type == VT_POLYGON ? 4 : 0);
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, layer_features[x].type == VT_POLYGON ? 4 : 0, &pid);
 				}
 
 				if (layer_features[x].type == VT_POLYGON) {
