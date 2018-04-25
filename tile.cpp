@@ -416,7 +416,7 @@ struct partial {
 	std::set<std::string> need_tilestats;
 	long clipid = 0;
 	int buffer;
-	long long *pointid;
+	long long pointid;
 };
 
 struct partial_arg {
@@ -508,7 +508,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (!already_marked) {
-					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, (*partials)[i].pointid);
+					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, &(*partials)[i].pointid);
 
 					if (t != VT_POLYGON || ngeom.size() >= 3) {
 						geom = ngeom;
@@ -535,7 +535,7 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_LINE) {
 			for (size_t g = 0; g < geoms.size(); g++) {
 				from_tile_scale(geoms[g], z, line_detail);
-				geoms[g] = clip_lines(geoms[g], z, x, y, (*partials)[i].buffer, (*partials)[i].pointid);
+				geoms[g] = clip_lines(geoms[g], z, x, y, (*partials)[i].buffer, &(*partials)[i].pointid);
 				to_tile_scale(geoms[g], z, line_detail);
 			}
 		}
@@ -2010,7 +2010,7 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.clustered = 0;
 				p.clipid = sf.clipid;
 				p.buffer = buffer;
-				p.pointid = &sf.pointid;
+				p.pointid = sf.pointid;
 				partials.push_back(p);
 			}
 
