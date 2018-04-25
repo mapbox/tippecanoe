@@ -401,6 +401,8 @@ struct partial {
 	int segment = 0;
 	bool reduced = 0;
 	int z = 0;
+	unsigned x;
+	unsigned y;
 	int line_detail = 0;
 	int maxzoom = 0;
 	double spacing = 0;
@@ -480,6 +482,8 @@ void *partial_feature_worker(void *v) {
 		(*partials)[i].geoms.clear();  // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
+		unsigned x = (*partials)[i].x;
+		unsigned y = (*partials)[i].y;
 		int line_detail = (*partials)[i].line_detail;
 		int maxzoom = (*partials)[i].maxzoom;
 
@@ -531,7 +535,7 @@ void *partial_feature_worker(void *v) {
 		if (t == VT_LINE) {
 			for (size_t g = 0; g < geoms.size(); g++) {
 				from_tile_scale(geoms[g], z, line_detail);
-				geoms[g] = clip_lines(geoms[g], z, (*partials)[i].buffer, (*partials)[i].pointid);
+				geoms[g] = clip_lines(geoms[g], z, x, y, (*partials)[i].buffer, (*partials)[i].pointid);
 				to_tile_scale(geoms[g], z, line_detail);
 			}
 		}
@@ -1988,6 +1992,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 				p.original_seq = sf.seq;
 				p.reduced = reduced;
 				p.z = z;
+				p.x = tx;
+				p.y = ty;
 				p.line_detail = line_detail;
 				p.maxzoom = maxzoom;
 				p.keys = sf.keys;

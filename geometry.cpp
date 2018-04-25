@@ -790,14 +790,24 @@ bool point_within_tile(long long x, long long y, int z) {
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid) {
+drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid, int z, unsigned tx, unsigned ty) {
 	drawvec out;
+
+	// shift to word coordinates so tile edge division will work
+	// even though it rounds toward 0 instead of rounding down
+	unsigned sx = 0, sy = 0;
+	if (z != 0) {
+		sx = tx << (32 - z);
+		sy = ty << (32 - z);
+	}
+	for (size_t i = 0; i < geom.size(); i++) {
+		geom[i].x += sx;
+		geom[i].y += sy;
+	}
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO) {
 			if (geom[i - 1].x / width != geom[i].x / width) {
-				long long min, max;
-
 				if (geom[i - 1].x < geom[i].x) {
 					for (long long xx = geom[i - 1].x / width * width + width; xx <= geom[i].x / width * width; xx += width) {
 						long long yy = (xx - geom[i - 1].x) * (geom[i].y - geom[i - 1].y) / (geom[i].x - geom[i - 1].x) + geom[i - 1].y;
@@ -816,12 +826,11 @@ drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid) {
 	}
 
 	geom = out;
+	out.clear();
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO) {
 			if (geom[i - 1].y / width != geom[i].y / width) {
-				long long min, may;
-
 				if (geom[i - 1].y < geom[i].y) {
 					for (long long yy = geom[i - 1].y / width * width + width; yy <= geom[i].y / width * width; yy += width) {
 						long long xx = (yy - geom[i - 1].y) * (geom[i].x - geom[i - 1].x) / (geom[i].y - geom[i - 1].y) + geom[i - 1].x;
@@ -839,16 +848,21 @@ drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid) {
 		out.push_back(geom[i]);
 	}
 
+	for (size_t i = 0; i < out.size(); i++) {
+		out[i].x -= sx;
+		out[i].y -= sy;
+	}
+
 	return out;
 }
 
-drawvec clip_lines(drawvec geom, int z, long long buffer, long long *pointid) {
+drawvec clip_lines(drawvec geom, int z, unsigned x, unsigned y, long long buffer, long long *pointid) {
 	drawvec out;
 
 	long long min = 0;
 	long long area = 1LL << (32 - z);
 
-	geom = mark_tile_edges(geom, area, pointid);
+	geom = mark_tile_edges(geom, area, pointid, z, x, y);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
