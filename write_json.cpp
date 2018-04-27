@@ -271,9 +271,16 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
+std::vector<mvt_feature> layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
+	std::vector<mvt_feature> incomplete;
+
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
+
+		if (feat.clipid != 0) {
+			incomplete.push_back(feat);
+			continue;
+		}
 
 		state.json_write_hash();
 		state.json_write_string("type");
@@ -596,6 +603,8 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			state.json_comma_newline();
 		}
 	}
+
+	return incomplete;
 }
 
 void fprintq(FILE *fp, const char *s) {

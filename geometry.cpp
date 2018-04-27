@@ -806,17 +806,17 @@ drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid, int z
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_LINETO) {
+		if (i > 0) {
 			if (geom[i - 1].x / width != geom[i].x / width) {
 				if (geom[i - 1].x < geom[i].x) {
 					for (long long xx = geom[i - 1].x / width * width + width; xx <= geom[i].x / width * width; xx += width) {
 						long long yy = (xx - geom[i - 1].x) * (geom[i].y - geom[i - 1].y) / (geom[i].x - geom[i - 1].x) + geom[i - 1].y;
-						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+						out.push_back(draw(geom[i].op, xx, yy, ++*pointid));
 					}
 				} else {
 					for (long long xx = geom[i].x / width * width + width; xx <= geom[i - 1].x / width * width; xx += width) {
 						long long yy = (xx - geom[i].x) * (geom[i - 1].y - geom[i].y) / (geom[i - 1].x - geom[i].x) + geom[i].y;
-						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+						out.push_back(draw(geom[i].op, xx, yy, ++*pointid));
 					}
 				}
 			}
@@ -829,17 +829,17 @@ drawvec mark_tile_edges(drawvec geom, long long width, long long *pointid, int z
 	out.clear();
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == VT_LINETO) {
+		if (i > 0) {
 			if (geom[i - 1].y / width != geom[i].y / width) {
 				if (geom[i - 1].y < geom[i].y) {
 					for (long long yy = geom[i - 1].y / width * width + width; yy <= geom[i].y / width * width; yy += width) {
 						long long xx = (yy - geom[i - 1].y) * (geom[i].x - geom[i - 1].x) / (geom[i].y - geom[i - 1].y) + geom[i - 1].x;
-						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+						out.push_back(draw(geom[i].op, xx, yy, ++*pointid));
 					}
 				} else {
 					for (long long yy = geom[i].y / width * width + width; yy <= geom[i - 1].y / width * width; yy += width) {
 						long long xx = (yy - geom[i].y) * (geom[i - 1].x - geom[i].x) / (geom[i - 1].y - geom[i].y) + geom[i].x;
-						out.push_back(draw(VT_LINETO, xx, yy, ++*pointid));
+						out.push_back(draw(geom[i].op, xx, yy, ++*pointid));
 					}
 				}
 			}
@@ -868,7 +868,7 @@ drawvec clip_lines(drawvec geom, int z, unsigned x, unsigned y, long long buffer
 	area += buffer * area / 256;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
+		if (i > 0) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
 
@@ -885,9 +885,9 @@ drawvec clip_lines(drawvec geom, int z, unsigned x, unsigned y, long long buffer
 				}
 
 				if (x2 == geom[i].x && y2 == geom[i].y) {
-					out.push_back(draw(VT_LINETO, x2, y2, geom[i].id));
+					out.push_back(draw(geom[i].op, x2, y2, geom[i].id));
 				} else {
-					out.push_back(draw(VT_LINETO, x2, y2));
+					out.push_back(draw(geom[i].op, x2, y2));
 				}
 
 				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y, geom[i].id));
