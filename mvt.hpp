@@ -95,6 +95,8 @@ struct mvt_value {
 		this->string_value = "";
 		this->numeric_value.double_value = 0;
 	}
+
+	bool operator==(const mvt_value &o) const;
 };
 
 struct mvt_layer {

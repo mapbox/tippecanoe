@@ -227,18 +227,18 @@ void json_writer::adds(std::string const &str) {
 }
 
 static void aprintf(std::string *buf, const char *format, ...) {
-        va_list ap;
-        char *tmp;
+	va_list ap;
+	char *tmp;
 
-        va_start(ap, format);
-        if (vasprintf(&tmp, format, ap) < 0) {
-                fprintf(stderr, "memory allocation failure\n");
-                exit(EXIT_FAILURE);
-        }
-        va_end(ap);
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
 
-        buf->append(tmp, strlen(tmp));
-        free(tmp);
+	buf->append(tmp, strlen(tmp));
+	free(tmp);
 }
 
 struct lonlat {

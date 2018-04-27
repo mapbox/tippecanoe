@@ -447,6 +447,24 @@ bool mvt_value::operator<(const mvt_value &o) const {
 	return false;
 }
 
+bool mvt_value::operator==(const mvt_value &o) const {
+	if (type != o.type) {
+		return false;
+	}
+
+	if ((type == mvt_string && string_value == o.string_value) ||
+	    (type == mvt_float && numeric_value.float_value == o.numeric_value.float_value) ||
+	    (type == mvt_double && numeric_value.double_value == o.numeric_value.double_value) ||
+	    (type == mvt_int && numeric_value.int_value == o.numeric_value.int_value) ||
+	    (type == mvt_uint && numeric_value.uint_value == o.numeric_value.uint_value) ||
+	    (type == mvt_sint && numeric_value.sint_value == o.numeric_value.sint_value) ||
+	    (type == mvt_bool && numeric_value.bool_value == o.numeric_value.bool_value)) {
+		return true;
+	}
+
+	return false;
+}
+
 static std::string quote(std::string const &s) {
 	std::string buf;
 

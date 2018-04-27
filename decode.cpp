@@ -231,9 +231,30 @@ std::vector<mvt_feature> handle(std::string message, int z, unsigned x, unsigned
 	return pending;
 }
 
+struct by_clipid {
+	bool operator()(const mvt_feature &a, const mvt_feature &b) {
+		return a.clipid < b.clipid;
+	}
+};
+
 void handle_split(std::vector<mvt_feature> todo) {
 	if (todo.size() > 0) {
 		printf("doing partial feature\n");
+	}
+
+	std::sort(todo.begin(), todo.end(), by_clipid());
+
+	for (size_t i = 1; i < todo.size(); i++) {
+		if (todo[i - 1].clipid > todo[i].clipid) {
+			fprintf(stderr, "Internal error: failed to sort by clipid\n");
+			exit(EXIT_FAILURE);
+		}
+		if (todo[i - 1].clipid == todo[i].clipid) {
+			if (todo[i - 1].intern_tags != todo[i].intern_tags) {
+				fprintf(stderr, "Feature clipids match but attributes don't\n");
+				exit(EXIT_FAILURE);
+			}
+		}
 	}
 }
 
