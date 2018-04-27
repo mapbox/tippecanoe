@@ -85,10 +85,10 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	state.json_write_newline();
 }
 
-std::vector<std::pair<mvt_layer, mvt_feature>> handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
+std::vector<mvt_feature> handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
 	mvt_tile tile;
 	bool was_compressed;
-	std::vector<std::pair<mvt_layer, mvt_feature>> pending;
+	std::vector<mvt_feature> pending;
 
 	try {
 		if (!tile.decode(message, was_compressed)) {
@@ -209,7 +209,8 @@ std::vector<std::pair<mvt_layer, mvt_feature>> handle(std::string message, int z
 		std::vector<mvt_feature> todo = layer_to_geojson(layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force, state);
 
 		for (auto f : todo) {
-			pending.push_back(std::pair<mvt_layer, mvt_feature>(layer, f));
+			f.intern(layer);
+			pending.push_back(f);
 		}
 
 		if (!pipeline) {
@@ -230,7 +231,7 @@ std::vector<std::pair<mvt_layer, mvt_feature>> handle(std::string message, int z
 	return pending;
 }
 
-void handle_split(std::vector<std::pair<mvt_layer, mvt_feature>> todo) {
+void handle_split(std::vector<mvt_feature> todo) {
 	if (todo.size() > 0) {
 		printf("doing partial feature\n");
 	}
@@ -242,7 +243,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	int oz = z;
 	unsigned ox = x, oy = y;
 	json_writer state(stdout);
-	std::vector<std::pair<mvt_layer, mvt_feature>> pending;
+	std::vector<mvt_feature> pending;
 
 	int fd = open(fname, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
@@ -254,7 +255,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							std::vector<std::pair<mvt_layer, mvt_feature>> todo = handle(s, z, x, y, to_decode, pipeline, stats, state);
+							std::vector<mvt_feature> todo = handle(s, z, x, y, to_decode, pipeline, stats, state);
 							handle_split(todo);
 							munmap(map, st.st_size);
 							return;
@@ -392,7 +393,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					prevz = tiles[i].z;
 				}
 
-				std::vector<std::pair<mvt_layer, mvt_feature>> todo = handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, state);
+				std::vector<mvt_feature> todo = handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, state);
 				for (auto lf : todo) {
 					pending.push_back(lf);
 				}
@@ -444,7 +445,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					prevz = tz;
 				}
 
-				std::vector<std::pair<mvt_layer, mvt_feature>> todo = handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state);
+				std::vector<mvt_feature> todo = handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state);
 				for (auto lf : todo) {
 					pending.push_back(lf);
 				}
@@ -489,7 +490,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				std::vector<std::pair<mvt_layer, mvt_feature>> todo = handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, state);
+				std::vector<mvt_feature> todo = handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, state);
 				handle_split(todo);
 
 				handled = 1;

@@ -53,10 +53,15 @@ struct mvt_feature {
 	bool dropped = false;
 	long long clipid = 0;
 
+	std::vector<mvt_value> intern_tags;
+	int intern_extent;
+
 	mvt_feature() {
 		has_id = false;
 		id = 0;
 	}
+
+	void intern(mvt_layer &l);
 };
 
 enum mvt_value_type {

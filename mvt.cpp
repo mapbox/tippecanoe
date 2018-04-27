@@ -352,7 +352,7 @@ std::string mvt_tile::encode() {
 			}
 
 			if (layers[i].features[f].clipid != 0) {
-				feature_writer.add_uint64(6, layers[i].features[f].id);
+				feature_writer.add_uint64(6, layers[i].features[f].clipid);
 			}
 
 			std::vector<uint32_t> geometry;
@@ -648,4 +648,21 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	}
 
 	return tv;
+}
+
+void mvt_feature::intern(mvt_layer &l) {
+	this->intern_extent = l.extent;
+
+	for (size_t i = 0; i < this->tags.size(); i++) {
+		mvt_value v;
+
+		if (i % 2 == 0) {
+			v.type = mvt_string;
+			v.string_value = l.keys[tags[i]];
+		} else {
+			v = l.values[tags[i]];
+		}
+
+		this->intern_tags.push_back(v);
+	}
 }
