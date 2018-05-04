@@ -1,3 +1,8 @@
+## 1.27.15
+
+* --extend-zooms-if-still-dropping now also extends zooms if features
+  are dropped by --force-feature-limit
+
 ## 1.27.14
 
 * Use an exit status of 100 if some zoom levels were successfully

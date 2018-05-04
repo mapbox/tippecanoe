@@ -2314,6 +2314,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					if ((additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
 						arg->still_dropping = true;
+					} else if (prevent[P_DYNAMIC_DROP]) {
+						arg->still_dropping = true;
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
 					continue;
@@ -2403,6 +2405,8 @@ long long write_tile(FILE *geoms, long long *geompos_in, char *metabase, char *s
 					}
 					if ((additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) && fraction < arg->fraction_out) {
 						arg->fraction_out = fraction;
+						arg->still_dropping = true;
+					} else if (prevent[P_DYNAMIC_DROP]) {
 						arg->still_dropping = true;
 					}
 					line_detail++;  // to keep it the same when the loop decrements it
