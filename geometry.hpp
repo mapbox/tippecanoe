@@ -2,6 +2,7 @@
 #define GEOMETRY_HPP
 
 #include <vector>
+#include <atomic>
 #include <sqlite3.h>
 
 #define VT_POINT 1
@@ -55,7 +56,7 @@ struct draw {
 
 typedef std::vector<draw> drawvec;
 
-drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y);
+drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y);
 void to_tile_scale(drawvec &geom, int z, int detail);
 drawvec remove_noop(drawvec geom, int type, int shift);
 drawvec clip_point(drawvec &geom, int z, long long buffer);

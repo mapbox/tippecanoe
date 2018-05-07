@@ -1,3 +1,7 @@
+## 1.27.16
+
+* Fix thread safety issues related to the out-of-disk-space checker
+
 ## 1.27.15
 
 * --extend-zooms-if-still-dropping now also extends zooms if features
