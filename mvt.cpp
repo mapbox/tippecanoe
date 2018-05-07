@@ -20,6 +20,13 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->y = ny;
 }
 
+mvt_geometry::mvt_geometry(int nop, long long nx, long long ny, long long nid) {
+	this->op = nop;
+	this->x = nx;
+	this->y = ny;
+	this->id = nid;
+}
+
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
 	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
@@ -182,6 +189,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
+					std::vector<uint64_t> geom_ids;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -212,6 +220,19 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 5: /* geometry ids */
+						{
+							auto pi = feature_reader.get_packed_uint64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								geom_ids.push_back(*it);
+							}
+							break;
+						}
+
+						case 6: /* clipping id */
+							feature.clipid = feature_reader.get_uint64();
+							break;
+
 						default:
 							feature_reader.skip();
 							break;
@@ -234,6 +255,17 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							}
 						} else {
 							feature.geometry.push_back(mvt_geometry(op, 0, 0));
+						}
+					}
+
+					size_t off = 0;
+					for (size_t g = 0; g + 1 < geom_ids.size(); g += 2) {
+						off += geom_ids[g];
+						if (off < feature.geometry.size()) {
+							feature.geometry[off].id = geom_ids[g + 1];
+						} else {
+							fprintf(stderr, "Bad offset in feature node IDs\n");
+							exit(EXIT_FAILURE);
 						}
 					}
 
@@ -319,7 +351,12 @@ std::string mvt_tile::encode() {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
 			}
 
+			if (layers[i].features[f].clipid != 0) {
+				feature_writer.add_uint64(6, layers[i].features[f].clipid);
+			}
+
 			std::vector<uint32_t> geometry;
+			std::vector<uint64_t> geometry_ids;
 
 			int px = 0, py = 0;
 			int cmd_idx = -1;
@@ -367,7 +404,21 @@ std::string mvt_tile::encode() {
 				geometry[cmd_idx] = (length << 3) | (cmd & ((1 << 3) - 1));
 			}
 
+			size_t off = 0;
+			for (size_t g = 0; g < geom.size(); g++) {
+				if (geom[g].id != 0) {
+					geometry_ids.push_back(g - off);
+					off = g;
+					geometry_ids.push_back(geom[g].id);
+				}
+			}
+
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
+
+			if (geometry_ids.size() > 0) {
+				feature_writer.add_packed_uint64(5, std::begin(geometry_ids), std::end(geometry_ids));
+			}
+
 			layer_writer.add_message(2, feature_string);
 		}
 
@@ -391,6 +442,24 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value)) {
 			return true;
 		}
+	}
+
+	return false;
+}
+
+bool mvt_value::operator==(const mvt_value &o) const {
+	if (type != o.type) {
+		return false;
+	}
+
+	if ((type == mvt_string && string_value == o.string_value) ||
+	    (type == mvt_float && numeric_value.float_value == o.numeric_value.float_value) ||
+	    (type == mvt_double && numeric_value.double_value == o.numeric_value.double_value) ||
+	    (type == mvt_int && numeric_value.int_value == o.numeric_value.int_value) ||
+	    (type == mvt_uint && numeric_value.uint_value == o.numeric_value.uint_value) ||
+	    (type == mvt_sint && numeric_value.sint_value == o.numeric_value.sint_value) ||
+	    (type == mvt_bool && numeric_value.bool_value == o.numeric_value.bool_value)) {
+		return true;
 	}
 
 	return false;
@@ -597,4 +666,21 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	}
 
 	return tv;
+}
+
+void mvt_feature::intern(mvt_layer &l) {
+	this->intern_extent = l.extent;
+
+	for (size_t i = 0; i < this->tags.size(); i++) {
+		mvt_value v;
+
+		if (i % 2 == 0) {
+			v.type = mvt_string;
+			v.string_value = l.keys[tags[i]];
+		} else {
+			v = l.values[tags[i]];
+		}
+
+		this->intern_tags.push_back(v);
+	}
 }

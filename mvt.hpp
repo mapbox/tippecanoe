@@ -20,8 +20,10 @@ struct mvt_geometry {
 	long long x = 0;
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
+	long id = 0;
 
 	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(int op, long long x, long long y, long long id);
 
 	bool operator<(mvt_geometry const &s) const {
 		if (y < s.y || (y == s.y && x < s.x)) {
@@ -49,11 +51,17 @@ struct mvt_feature {
 	unsigned long long id = 0;
 	bool has_id = false;
 	bool dropped = false;
+	long long clipid = 0;
+
+	std::vector<mvt_value> intern_tags;
+	int intern_extent;
 
 	mvt_feature() {
 		has_id = false;
 		id = 0;
 	}
+
+	void intern(mvt_layer &l);
 };
 
 enum mvt_value_type {
@@ -87,6 +95,8 @@ struct mvt_value {
 		this->string_value = "";
 		this->numeric_value.double_value = 0;
 	}
+
+	bool operator==(const mvt_value &o) const;
 };
 
 struct mvt_layer {

@@ -60,7 +60,7 @@ struct json_writer {
 	void adds(std::string const &s);
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state);
+std::vector<mvt_feature> layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state);
 void fprintq(FILE *f, const char *s);
 
 #endif

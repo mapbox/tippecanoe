@@ -2418,6 +2418,7 @@ int main(int argc, char **argv) {
 		{"buffer", required_argument, 0, 'b'},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
+		{"join-features-across-tiles", no_argument, &additional[A_JOIN_FEATURES_ACROSS_TILES], 1},
 
 		{"Reordering features within each tile", 0, 0, 0},
 		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
