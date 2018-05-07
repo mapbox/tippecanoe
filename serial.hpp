@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <vector>
 #include <atomic>
 #include <sys/stat.h>
