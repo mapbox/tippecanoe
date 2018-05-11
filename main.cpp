@@ -476,6 +476,8 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 }
 
+static ssize_t read_stream(json_pull *j, char *buffer, size_t n);
+
 struct STREAM {
 	FILE *fp;
 
@@ -498,19 +500,27 @@ struct STREAM {
 	}
 
 	json_pull *json_begin() {
-		return json_begin_file(fp);
+		return ::json_begin(read_stream, this);
 	}
 };
 
-STREAM *streamfdopen(int fd, const char *mode) {
-	FILE *fp = fdopen(fd, mode);
+static ssize_t read_stream(json_pull *j, char *buffer, size_t n) {
+	return ((STREAM *) j->source)->fread(buffer, 1, n);
+}
 
+STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
+	FILE *fp = fdopen(fd, mode);
 	if (fp == NULL) {
 		return NULL;
 	}
 
 	STREAM *s = new STREAM;
 	s->fp = fp;
+
+	if (fname.size() > 3 && fname.substr(fname.size() - 3) == std::string(".gz")) {
+		//
+	}
+
 	return s;
 }
 
@@ -1483,7 +1493,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			STREAM *fp = streamfdopen(fd, "r");
+			STREAM *fp = streamfdopen(fd, "r", sources[layer].file);
 			if (fp == NULL) {
 				perror(sources[layer].file.c_str());
 				if (close(fd) != 0) {
