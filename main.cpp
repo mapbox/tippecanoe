@@ -26,6 +26,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <zlib.h>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -477,11 +478,20 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 }
 
 static ssize_t read_stream(json_pull *j, char *buffer, size_t n);
+#define BUF 262144
 
 struct STREAM {
 	FILE *fp;
 
+	bool gz;
+	z_stream inflate_s;
+	Bytef buf[BUF];
+
 	int fclose() {
+		if (gz) {
+			inflateEnd(&inflate_s);
+		}
+
 		int ret = ::fclose(fp);
 		delete this;
 		return ret;
@@ -495,12 +505,48 @@ struct STREAM {
 		return c;
 	}
 
-	int fread(char *buf, size_t unit, size_t count) {
-		return ::fread(buf, unit, count, fp);
+	int fread(char *out, size_t unit, size_t count) {
+		if (gz) {
+			while (1) {
+				prime();
+				inflate_s.avail_out = count * unit;
+				inflate_s.next_out = (Bytef *) out;
+
+				int ret = inflate(&inflate_s, Z_SYNC_FLUSH);
+
+				if (ret == Z_STREAM_ERROR || ret == Z_MEM_ERROR || ret == Z_DATA_ERROR) {
+					fprintf(stderr, "%s: Decompression error %s\n", *av, inflate_s.msg);
+					exit(EXIT_FAILURE);
+				}
+
+				if (inflate_s.next_out != (Bytef *) out) {
+					size_t n = inflate_s.next_out - (Bytef *) out;
+					return n;
+				}
+
+				if (ret == Z_STREAM_END) {
+					return 0;
+				}
+			}
+		} else {
+			return ::fread(out, unit, count, fp);
+		}
 	}
 
 	json_pull *json_begin() {
 		return ::json_begin(read_stream, this);
+	}
+
+	void prime() {
+		// Move any existing readahead to the start
+
+		memmove(buf, inflate_s.next_in, inflate_s.avail_in);
+		inflate_s.next_in = buf;
+
+		if (inflate_s.avail_in < BUF) {
+			size_t nread = ::fread(inflate_s.next_in + inflate_s.avail_in, sizeof(char), BUF - inflate_s.avail_in, fp);
+			inflate_s.avail_in += nread;
+		}
 	}
 };
 
@@ -516,9 +562,23 @@ STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
 
 	STREAM *s = new STREAM;
 	s->fp = fp;
+	s->gz = false;
 
 	if (fname.size() > 3 && fname.substr(fname.size() - 3) == std::string(".gz")) {
-		//
+		s->inflate_s.zalloc = Z_NULL;
+		s->inflate_s.zfree = Z_NULL;
+		s->inflate_s.opaque = Z_NULL;
+		s->inflate_s.avail_in = 0;
+		s->inflate_s.next_in = Z_NULL;
+
+		if (inflateInit2(&s->inflate_s, 32 + 15) != Z_OK) {
+			fprintf(stderr, "%s: %s: Decompression error %s\n", *av, fname.c_str(), s->inflate_s.msg);
+			exit(EXIT_FAILURE);
+		}
+
+		s->inflate_s.next_in = s->buf;
+		s->inflate_s.avail_in = 0;
+		s->gz = true;
 	}
 
 	return s;
@@ -1227,30 +1287,24 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 			std::string trunc = std::string(use);
 
+			std::vector<std::string> trim = {
+				".json",
+				".geojson",
+				".geobuf",
+				".mbtiles",
+				".gz",
+			};
+
 			// Trim .json or .mbtiles from the name
-			while (true) {
-				ssize_t cp;
-				cp = trunc.find(".json");
-				if (cp >= 0 && (size_t) cp + 5 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
+			bool again = true;
+			while (again) {
+				again = false;
+				for (size_t i = 0; i < trim.size(); i++) {
+					if (trunc.size() > trim[i].size() && trunc.substr(trunc.size() - trim[i].size()) == trim[i]) {
+						trunc = trunc.substr(0, trunc.size() - trim[i].size());
+						again = true;
+					}
 				}
-				cp = trunc.find(".geojson");
-				if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				cp = trunc.find(".geobuf");
-				if (cp >= 0 && (size_t) cp + 7 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				cp = trunc.find(".mbtiles");
-				if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				break;
 			}
 
 			// Trim out characters that can't be part of selector
