@@ -486,6 +486,7 @@ struct STREAM {
 	bool gz;
 	z_stream inflate_s;
 	Bytef buf[BUF];
+	std::vector<unsigned char> ahead;
 
 	int fclose() {
 		if (gz) {
@@ -498,18 +499,40 @@ struct STREAM {
 	}
 
 	int peekc() {
-		int c = getc(fp);
-		if (c != EOF) {
-			ungetc(c, fp);
+		if (gz) {
+			if (ahead.size() > 0) {
+				return ahead[ahead.size() - 1];
+			}
+
+			char tmp[1];
+			size_t nread = read(tmp, 1);
+
+			if (nread == 0) {
+				return EOF;
+			}
+
+			ahead.push_back(tmp[0]);
+			return (unsigned char) tmp[0];
+		} else {
+			int c = getc(fp);
+			if (c != EOF) {
+				ungetc(c, fp);
+			}
+			return c;
 		}
-		return c;
 	}
 
-	int fread(char *out, size_t unit, size_t count) {
+	size_t read(char *out, size_t count) {
 		if (gz) {
+			if (ahead.size() > 0 && count > 0) {
+				out[0] = ahead[ahead.size() - 1];
+				ahead.resize(ahead.size() - 1);
+				return 1;
+			}
+
 			while (1) {
 				prime();
-				inflate_s.avail_out = count * unit;
+				inflate_s.avail_out = count;
 				inflate_s.next_out = (Bytef *) out;
 
 				int ret = inflate(&inflate_s, Z_SYNC_FLUSH);
@@ -529,7 +552,7 @@ struct STREAM {
 				}
 			}
 		} else {
-			return ::fread(out, unit, count, fp);
+			return ::fread(out, 1, count, fp);
 		}
 	}
 
@@ -551,7 +574,7 @@ struct STREAM {
 };
 
 static ssize_t read_stream(json_pull *j, char *buffer, size_t n) {
-	return ((STREAM *) j->source)->fread(buffer, 1, n);
+	return ((STREAM *) j->source)->read(buffer, n);
 }
 
 STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
@@ -1592,7 +1615,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				char buf[READ_BUF];
 				int n;
 
-				while ((n = fp->fread(buf, sizeof(char), READ_BUF)) > 0) {
+				while ((n = fp->read(buf, READ_BUF)) > 0) {
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
