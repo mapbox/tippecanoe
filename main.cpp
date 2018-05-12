@@ -610,6 +610,8 @@ STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
 STREAM *streamfpopen(FILE *fp) {
 	STREAM *s = new STREAM;
 	s->fp = fp;
+	s->gz = false;
+
 	return s;
 }
 
