@@ -56,7 +56,7 @@ Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [options] [file.json file.geobuf ...]
+$ tippecanoe -o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -142,6 +142,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 ### Input files and layer names
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
+ * _name_`.json.gz` or _name_`.geojson.gz`: Read the named gzipped GeoJSON input file into a layer called _name_.
  * _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
  * _name_`.csv`: Read the named CSV input file into a layer called _name_.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files

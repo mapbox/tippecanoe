@@ -1,3 +1,7 @@
+## 1.28.0
+
+* Directly support gzipped GeoJSON as input files
+
 ## 1.27.16
 
 * Fix thread safety issues related to the out-of-disk-space checker

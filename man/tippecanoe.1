@@ -54,7 +54,7 @@ compiler errors.
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [options] [file.json file.geobuf ...]
+$ tippecanoe \-o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
 .fi
 .RE
 .PP
@@ -148,6 +148,8 @@ or if metadata fields can't be set. You probably don't want to use this.
 .RS
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.json.gz\fR or \fIname\fP\fB\fC\&.geojson.gz\fR: Read the named gzipped GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
 .IP \(bu 2

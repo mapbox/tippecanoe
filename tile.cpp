@@ -1390,7 +1390,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 		// Remove nulls, now that the filter has run
 
-		for (ssize_t i = sf.keys.size() - 1; i >= 0; i--) {
+		for (ssize_t i = (ssize_t) sf.keys.size() - 1; i >= 0; i--) {
 			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];
 
 			if (type == mvt_null) {
@@ -2367,10 +2367,16 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
-						mg = (mingap + 1) * 1.5;
+						double nmg = (mingap + 1) * 1.5;
 
-						if (mg <= mingap) {
+						if (nmg <= mingap || nmg > ULONG_MAX) {
 							mg = ULONG_MAX;
+						} else {
+							mg = nmg;
+
+							if (mg <= mingap) {
+								mg = ULONG_MAX;
+							}
 						}
 					}
 					mingap = mg;

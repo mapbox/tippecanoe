@@ -26,6 +26,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <zlib.h>
 #include <algorithm>
 #include <vector>
 #include <string>
@@ -476,9 +477,96 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 }
 
+static ssize_t read_stream(json_pull *j, char *buffer, size_t n);
+
+struct STREAM {
+	FILE *fp = NULL;
+	gzFile gz = NULL;
+
+	int fclose() {
+		int ret;
+
+		if (gz != NULL) {
+			ret = gzclose(gz);
+		} else {
+			ret = ::fclose(fp);
+		}
+
+		delete this;
+		return ret;
+	}
+
+	int peekc() {
+		if (gz != NULL) {
+			int c = gzgetc(gz);
+			if (c != EOF) {
+				gzungetc(c, gz);
+			}
+			return c;
+		} else {
+			int c = getc(fp);
+			if (c != EOF) {
+				ungetc(c, fp);
+			}
+			return c;
+		}
+	}
+
+	size_t read(char *out, size_t count) {
+		if (gz != NULL) {
+			int ret = gzread(gz, out, count);
+			if (ret < 0) {
+				fprintf(stderr, "%s: Error reading compressed data\n", *av);
+				exit(EXIT_FAILURE);
+			}
+			return ret;
+		} else {
+			return ::fread(out, 1, count, fp);
+		}
+	}
+
+	json_pull *json_begin() {
+		return ::json_begin(read_stream, this);
+	}
+};
+
+static ssize_t read_stream(json_pull *j, char *buffer, size_t n) {
+	return ((STREAM *) j->source)->read(buffer, n);
+}
+
+STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
+	STREAM *s = new STREAM;
+	s->fp = NULL;
+	s->gz = NULL;
+
+	if (fname.size() > 3 && fname.substr(fname.size() - 3) == std::string(".gz")) {
+		s->gz = gzdopen(fd, mode);
+		if (s->gz == NULL) {
+			fprintf(stderr, "%s: %s: Decompression error\n", *av, fname.c_str());
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		s->fp = fdopen(fd, mode);
+		if (s->fp == NULL) {
+			perror(fname.c_str());
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	return s;
+}
+
+STREAM *streamfpopen(FILE *fp) {
+	STREAM *s = new STREAM;
+	s->fp = fp;
+	s->gz = NULL;
+
+	return s;
+}
+
 struct read_parallel_arg {
 	int fd = 0;
-	FILE *fp = NULL;
+	STREAM *fp = NULL;
 	long long offset = 0;
 	long long len = 0;
 	std::atomic<int> *is_parsing = NULL;
@@ -532,7 +620,7 @@ void *run_read_parallel(void *v) {
 	if (munmap(map, rpa->len) != 0) {
 		perror("munmap source file");
 	}
-	if (fclose(rpa->fp) != 0) {
+	if (rpa->fp->fclose() != 0) {
 		perror("close source file");
 		exit(EXIT_FAILURE);
 	}
@@ -543,7 +631,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, FILE *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -1173,30 +1261,24 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 			std::string trunc = std::string(use);
 
+			std::vector<std::string> trim = {
+				".json",
+				".geojson",
+				".geobuf",
+				".mbtiles",
+				".gz",
+			};
+
 			// Trim .json or .mbtiles from the name
-			while (true) {
-				ssize_t cp;
-				cp = trunc.find(".json");
-				if (cp >= 0 && (size_t) cp + 5 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
+			bool again = true;
+			while (again) {
+				again = false;
+				for (size_t i = 0; i < trim.size(); i++) {
+					if (trunc.size() > trim[i].size() && trunc.substr(trunc.size() - trim[i].size()) == trim[i]) {
+						trunc = trunc.substr(0, trunc.size() - trim[i].size());
+						again = true;
+					}
 				}
-				cp = trunc.find(".geojson");
-				if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				cp = trunc.find(".geobuf");
-				if (cp >= 0 && (size_t) cp + 7 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				cp = trunc.find(".mbtiles");
-				if (cp >= 0 && (size_t) cp + 8 == trunc.size()) {
-					trunc = trunc.substr(0, cp);
-					continue;
-				}
-				break;
 			}
 
 			// Trim out characters that can't be part of selector
@@ -1394,7 +1476,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		int read_parallel_this = read_parallel ? '\n' : 0;
 
-		if (1) {
+		if (!(sources[source].file.size() > 3 && sources[source].file.substr(sources[source].file.size() - 3) == std::string(".gz"))) {
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
@@ -1439,7 +1521,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				exit(EXIT_FAILURE);
 			}
 		} else {
-			FILE *fp = fdopen(fd, "r");
+			STREAM *fp = streamfdopen(fd, "r", sources[layer].file);
 			if (fp == NULL) {
 				perror(sources[layer].file.c_str());
 				if (close(fd) != 0) {
@@ -1449,10 +1531,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				continue;
 			}
 
-			int c = getc(fp);
-			if (c != EOF) {
-				ungetc(c, fp);
-			}
+			int c = fp->peekc();
 			if (c == 0x1E) {
 				read_parallel_this = 0x1E;
 			}
@@ -1487,7 +1566,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				char buf[READ_BUF];
 				int n;
 
-				while ((n = fread(buf, sizeof(char), READ_BUF, fp)) > 0) {
+				while ((n = fp->read(buf, READ_BUF)) > 0) {
 					fwrite_check(buf, sizeof(char), n, readfp, reading.c_str());
 					ahead += n;
 
@@ -1506,7 +1585,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, filter, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+							start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, filter, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1543,7 +1622,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, readfp, initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, filter, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+					start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, filter, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1559,7 +1638,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				// Plain serial reading
 
 				std::atomic<long long> layer_seq(overall_offset);
-				json_pull *jp = json_begin_file(fp);
+				json_pull *jp = fp->json_begin();
 				struct serialization_state sst;
 
 				sst.fname = reading.c_str();
@@ -1591,7 +1670,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				checkdisk(&readers);
 			}
 
-			if (fclose(fp) != 0) {
+			if (fp->fclose() != 0) {
 				perror("fclose input");
 				exit(EXIT_FAILURE);
 			}
