@@ -530,8 +530,22 @@ struct STREAM {
 				return 1;
 			}
 
-			while (1) {
-				prime();
+			while (true) {
+				// Move any existing readahead to the start
+				memmove(buf, inflate_s.next_in, inflate_s.avail_in);
+				inflate_s.next_in = buf;
+
+				// Read more compressed data if there is room and availability
+				bool eof = false;
+				if (inflate_s.avail_in < BUF) {
+					size_t nread = ::fread(inflate_s.next_in + inflate_s.avail_in, sizeof(char), BUF - inflate_s.avail_in, fp);
+					inflate_s.avail_in += nread;
+
+					if (nread == 0) {
+						eof = true;
+					}
+				}
+
 				inflate_s.avail_out = count;
 				inflate_s.next_out = (Bytef *) out;
 
@@ -550,6 +564,11 @@ struct STREAM {
 				if (ret == Z_STREAM_END) {
 					return 0;
 				}
+
+				if (eof) {
+					fprintf(stderr, "%s: Compressed data was truncated\n", *av);
+					exit(EXIT_FAILURE);
+				}
 			}
 		} else {
 			return ::fread(out, 1, count, fp);
@@ -558,18 +577,6 @@ struct STREAM {
 
 	json_pull *json_begin() {
 		return ::json_begin(read_stream, this);
-	}
-
-	void prime() {
-		// Move any existing readahead to the start
-
-		memmove(buf, inflate_s.next_in, inflate_s.avail_in);
-		inflate_s.next_in = buf;
-
-		if (inflate_s.avail_in < BUF) {
-			size_t nread = ::fread(inflate_s.next_in + inflate_s.avail_in, sizeof(char), BUF - inflate_s.avail_in, fp);
-			inflate_s.avail_in += nread;
-		}
 	}
 };
 
