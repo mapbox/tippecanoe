@@ -1,3 +1,7 @@
+## 1.28.1
+
+* Explicitly check for infinite and not-a-number input coordinates
+
 ## 1.28.0
 
 * Directly support gzipped GeoJSON as input files
