@@ -2378,22 +2378,34 @@ struct flag {
 	std::string arg;
 };
 
-void read_flags(std::vector<flag> &flags, const char *fname) {
-	FILE *fp = fopen(fname, "r");
-	if (fp == NULL) {
-		perror(fname);
-		exit(EXIT_FAILURE);
+void read_flags(std::vector<flag> &flags, const char *fname, bool direct) {
+	json_pull *jp;
+	json_object *obj;
+	FILE *fp = NULL;
+
+	if (direct) {
+		jp = json_begin_string(fname);
+	} else {
+		fp = fopen(fname, "r");
+		if (fp == NULL) {
+			perror(fname);
+			exit(EXIT_FAILURE);
+		}
+
+		jp = json_begin_file(fp);
 	}
 
-	json_pull *jp = json_begin_file(fp);
-	json_object *obj = json_read_tree(jp);
+	obj = json_read_tree(jp);
 	if (obj == NULL) {
 		fprintf(stderr, "%s: %s\n", fname, jp->error);
 		exit(EXIT_FAILURE);
 	}
 	json_disconnect(obj);
 	json_end(jp);
-	fclose(fp);
+
+	if (fp != NULL) {
+		fclose(fp);
+	}
 
 	if (obj->type != JSON_HASH) {
 		fprintf(stderr, "%s: %s: contents are not a JSON object\n", *av, fname);
@@ -2594,6 +2606,7 @@ int main(int argc, char **argv) {
 		{"version", no_argument, 0, 'v'},
 
 		{"Meta-options", 0, 0, 0},
+		{"options", required_argument, 0, 'h'},
 		{"options-from-file", required_argument, 0, 'H'},
 
 		{"", 0, 0, 0},
@@ -2698,8 +2711,12 @@ int main(int argc, char **argv) {
 		case 0:
 			break;
 
+		case 'h':
+			read_flags(flags, optarg, true);
+			break;
+
 		case 'H':
-			read_flags(flags, optarg);
+			read_flags(flags, optarg, false);
 			break;
 
 		case 'I': {

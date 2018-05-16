@@ -314,9 +314,17 @@ Example: to retain only major TIGER roads at low zoom levels:
 
 ### Meta-options
 
+ * `-h` _options_ or `--options=`_options_: Process additional options from the specified literal JSON object.
  * `-H` _config.json_ or `--options-from-file=`_config.json_: Read additional options from the specified _config.json_ file.
-   The file should contain one JSON object. Its keys must be long or short option names. The value corresponding
-   to each key should be a string or number, for options with arguments, or `null` or `true` for options that do not take arguments.
+   The file should contain one JSON object.
+
+Either with directly-specified options or options from a file, the options should be a single JSON object.
+Its keys must be long or short option names. The value corresponding
+to each key should be a string or number, for options with arguments, or `null` or `true` for options that do not take arguments.
+
+Example:
+
+    tippecanoe -h '{ "maximum-zoom": "g", "force": true, "output": "countries.mbtiles" }' ne_10m_admin_0_countries.json
 
 ### Filters
 
