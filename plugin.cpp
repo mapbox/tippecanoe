@@ -51,8 +51,9 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
+	json_writer state(fp);
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true);
+		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state);
 	}
 
 	if (fclose(fp) != 0) {
@@ -392,7 +393,6 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
 			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
 			sf.extent = 0;
-			sf.m = 0;
 			sf.metapos = 0;
 			sf.has_id = false;
 

@@ -1,3 +1,8 @@
+// for vasprintf() on Linux
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #define _DEFAULT_SOURCE
 #include <dirent.h>
 #include <sys/stat.h>
@@ -46,6 +51,21 @@ struct stats {
 	double midlat, midlon;
 	double minlat, minlon, maxlat, maxlon;
 };
+
+void aprintf(std::string *buf, const char *format, ...) {
+	va_list ap;
+	char *tmp;
+
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
+
+	buf->append(tmp, strlen(tmp));
+	free(tmp);
+}
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
@@ -137,6 +157,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
+
+				mvt_value v2;
+				v2.type = mvt_uint;
+				v2.numeric_value.uint_value = z;
+
+				attributes.insert(std::pair<std::string, mvt_value>("$zoom", v2));
 
 				if (!evaluate(attributes, layer.name, filter)) {
 					continue;
@@ -395,6 +421,12 @@ struct reader *begin_reading(char *fname) {
 
 		if (sqlite3_open(fname, &db) != SQLITE_OK) {
 			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
+			exit(EXIT_FAILURE);
+		}
+
+		char *err = NULL;
+		if (sqlite3_exec(db, "PRAGMA integrity_check;", NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "%s: integrity_check: %s\n", fname, err);
 			exit(EXIT_FAILURE);
 		}
 

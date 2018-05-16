@@ -1,5 +1,11 @@
+// for vasprintf() on Linux
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -8,6 +14,222 @@
 #include "mvt.hpp"
 #include "write_json.hpp"
 #include "milo/dtoa_milo.h"
+
+void json_writer::json_adjust() {
+	if (state.size() == 0) {
+		state.push_back(JSON_WRITE_TOP);
+	} else if (state[state.size() - 1] == JSON_WRITE_TOP) {
+		addc('\n');
+		state[state.size() - 1] = JSON_WRITE_TOP;
+	} else if (state[state.size() - 1] == JSON_WRITE_HASH) {
+		if (!nospace) {
+			addc(' ');
+		}
+		nospace = false;
+		state[state.size() - 1] = JSON_WRITE_HASH_KEY;
+	} else if (state[state.size() - 1] == JSON_WRITE_HASH_KEY) {
+		adds(": ");
+		state[state.size() - 1] = JSON_WRITE_HASH_VALUE;
+	} else if (state[state.size() - 1] == JSON_WRITE_HASH_VALUE) {
+		if (wantnl) {
+			adds(",\n");
+			nospace = false;
+		} else if (nospace) {
+			addc(',');
+			nospace = false;
+		} else {
+			adds(", ");
+		}
+		wantnl = false;
+		state[state.size() - 1] = JSON_WRITE_HASH_KEY;
+	} else if (state[state.size() - 1] == JSON_WRITE_ARRAY) {
+		if (!nospace) {
+			addc(' ');
+		}
+		nospace = false;
+		state[state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
+	} else if (state[state.size() - 1] == JSON_WRITE_ARRAY_ELEMENT) {
+		if (wantnl) {
+			adds(",\n");
+			nospace = false;
+		} else if (nospace) {
+			addc(',');
+			nospace = false;
+		} else {
+			adds(", ");
+		}
+		wantnl = false;
+		state[state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
+	} else {
+		fprintf(stderr, "Impossible JSON state\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void json_writer::json_write_array() {
+	json_adjust();
+	addc('[');
+
+	state.push_back(JSON_WRITE_ARRAY);
+}
+
+void json_writer::json_end_array() {
+	if (state.size() == 0) {
+		fprintf(stderr, "End JSON array at top level\n");
+		exit(EXIT_FAILURE);
+	}
+
+	json_write_tok tok = state[state.size() - 1];
+	state.pop_back();
+
+	if (tok == JSON_WRITE_ARRAY || tok == JSON_WRITE_ARRAY_ELEMENT) {
+		if (!nospace) {
+			addc(' ');
+		}
+		nospace = false;
+		addc(']');
+	} else {
+		fprintf(stderr, "End JSON array with unexpected state\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void json_writer::json_write_hash() {
+	json_adjust();
+	addc('{');
+
+	state.push_back(JSON_WRITE_HASH);
+}
+
+void json_writer::json_end_hash() {
+	if (state.size() == 0) {
+		fprintf(stderr, "End JSON hash at top level\n");
+		exit(EXIT_FAILURE);
+	}
+
+	json_write_tok tok = state[state.size() - 1];
+	state.pop_back();
+
+	if (tok == JSON_WRITE_HASH) {
+		if (!nospace) {
+			adds("  ");  // Preserve accidental extra space from before
+		}
+		nospace = false;
+		addc('}');
+	} else if (tok == JSON_WRITE_HASH_VALUE) {
+		if (!nospace) {
+			addc(' ');
+		}
+		nospace = false;
+		addc('}');
+	} else {
+		fprintf(stderr, "End JSON hash with unexpected state\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void json_writer::json_write_string(std::string const &str) {
+	json_adjust();
+
+	addc('"');
+	for (size_t i = 0; i < str.size(); i++) {
+		if (str[i] == '\\' || str[i] == '"') {
+			aprintf("\\%c", str[i]);
+		} else if ((unsigned char) str[i] < ' ') {
+			aprintf("\\u%04x", str[i]);
+		} else {
+			addc(str[i]);
+		}
+	}
+	addc('"');
+}
+
+void json_writer::json_write_number(double d) {
+	json_adjust();
+
+	adds(milo::dtoa_milo(d).c_str());
+}
+
+// Just to avoid json_writer:: changing expected output format
+void json_writer::json_write_float(double d) {
+	json_adjust();
+
+	aprintf("%f", d);
+}
+
+void json_writer::json_write_unsigned(unsigned long long v) {
+	json_adjust();
+
+	aprintf("%llu", v);
+}
+
+void json_writer::json_write_signed(long long v) {
+	json_adjust();
+
+	aprintf("%lld", v);
+}
+
+void json_writer::json_write_stringified(std::string const &str) {
+	json_adjust();
+
+	adds(str);
+}
+
+void json_writer::json_write_bool(bool b) {
+	json_adjust();
+
+	if (b) {
+		adds("true");
+	} else {
+		adds("false");
+	}
+}
+
+void json_writer::json_write_null() {
+	json_adjust();
+
+	adds("null");
+}
+
+void json_writer::json_write_newline() {
+	addc('\n');
+	nospace = true;
+}
+
+void json_writer::json_comma_newline() {
+	wantnl = true;
+}
+
+void json_writer::aprintf(const char *format, ...) {
+	va_list ap;
+	char *tmp;
+
+	va_start(ap, format);
+	if (vasprintf(&tmp, format, ap) < 0) {
+		fprintf(stderr, "memory allocation failure\n");
+		exit(EXIT_FAILURE);
+	}
+	va_end(ap);
+
+	adds(std::string(tmp, strlen(tmp)));
+	free(tmp);
+}
+
+void json_writer::addc(char c) {
+	if (f != NULL) {
+		putc(c, f);
+	} else if (s != NULL) {
+		s->push_back(c);
+	}
+}
+
+void json_writer::adds(std::string const &str) {
+	if (f != NULL) {
+		fputs(str.c_str(), f);
+	} else if (s != NULL) {
+		s->append(str);
+	}
+}
 
 struct lonlat {
 	int op;
@@ -25,85 +247,63 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain) {
+void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
-		if (comma && f != 0) {
-			fprintf(fp, ",\n");
-		}
-
-		fprintf(fp, "{ \"type\": \"Feature\"");
+		state.json_write_hash();
+		state.json_write_string("type");
+		state.json_write_string("Feature");
 
 		if (feat.has_id) {
-			fprintf(fp, ", \"id\": %llu", feat.id);
+			state.json_write_string("id");
+			state.json_write_unsigned(feat.id);
 		}
 
 		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
-			bool need_comma = false;
-
-			fprintf(fp, ", \"tippecanoe\": { ");
+			state.json_write_string("tippecanoe");
+			state.json_write_hash();
 
 			if (name) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"layer\": ");
-				fprintq(fp, layer.name.c_str());
-				need_comma = true;
+				state.json_write_string("layer");
+				state.json_write_string(layer.name);
 			}
 
 			if (zoom) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"minzoom\": %u, ", z);
-				fprintf(fp, "\"maxzoom\": %u", z);
-				need_comma = true;
+				state.json_write_string("minzoom");
+				state.json_write_unsigned(z);
+
+				state.json_write_string("maxzoom");
+				state.json_write_unsigned(z);
 			}
 
 			if (dropped) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"dropped\": %s", feat.dropped ? "true" : "false");
-				need_comma = true;
+				state.json_write_string("dropped");
+				state.json_write_bool(feat.dropped);
 			}
 
 			if (index != 0) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"index\": %llu", index);
-				need_comma = true;
+				state.json_write_string("index");
+				state.json_write_unsigned(index);
 			}
 
 			if (sequence != 0) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"sequence\": %lld", sequence);
-				need_comma = true;
+				state.json_write_string("sequence");
+				state.json_write_signed(sequence);
 			}
 
 			if (extent != 0) {
-				if (need_comma) {
-					fprintf(fp, ", ");
-				}
-				fprintf(fp, "\"extent\": %lld", extent);
-				need_comma = true;
+				state.json_write_string("extent");
+				state.json_write_signed(extent);
 			}
 
-			fprintf(fp, " }");
+			state.json_end_hash();
 		}
 
-		fprintf(fp, ", \"properties\": { ");
+		state.json_write_string("properties");
+		state.json_write_hash();
 
 		for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
-			if (t != 0) {
-				fprintf(fp, ", ");
-			}
-
 			if (feat.tags[t] >= layer.keys.size()) {
 				fprintf(stderr, "Error: out of bounds feature key (%u in %zu)\n", feat.tags[t], layer.keys.size());
 				exit(EXIT_FAILURE);
@@ -117,33 +317,33 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			mvt_value const &val = layer.values[feat.tags[t + 1]];
 
 			if (val.type == mvt_string) {
-				fprintq(fp, key);
-				fprintf(fp, ": ");
-				fprintq(fp, val.string_value.c_str());
+				state.json_write_string(key);
+				state.json_write_string(val.string_value);
 			} else if (val.type == mvt_int) {
-				fprintq(fp, key);
-				fprintf(fp, ": %lld", val.numeric_value.int_value);
+				state.json_write_string(key);
+				state.json_write_signed(val.numeric_value.int_value);
 			} else if (val.type == mvt_double) {
-				fprintq(fp, key);
-				double v = val.numeric_value.double_value;
-				fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
+				state.json_write_string(key);
+				state.json_write_number(val.numeric_value.double_value);
 			} else if (val.type == mvt_float) {
-				fprintq(fp, key);
-				double v = val.numeric_value.float_value;
-				fprintf(fp, ": %s", milo::dtoa_milo(v).c_str());
+				state.json_write_string(key);
+				state.json_write_number(val.numeric_value.float_value);
 			} else if (val.type == mvt_sint) {
-				fprintq(fp, key);
-				fprintf(fp, ": %lld", val.numeric_value.sint_value);
+				state.json_write_string(key);
+				state.json_write_signed(val.numeric_value.sint_value);
 			} else if (val.type == mvt_uint) {
-				fprintq(fp, key);
-				fprintf(fp, ": %llu", val.numeric_value.uint_value);
+				state.json_write_string(key);
+				state.json_write_unsigned(val.numeric_value.uint_value);
 			} else if (val.type == mvt_bool) {
-				fprintq(fp, key);
-				fprintf(fp, ": %s", val.numeric_value.bool_value ? "true" : "false");
+				state.json_write_string(key);
+				state.json_write_bool(val.numeric_value.bool_value);
 			}
 		}
 
-		fprintf(fp, " }, \"geometry\": { ");
+		state.json_end_hash();
+
+		state.json_write_string("geometry");
+		state.json_write_hash();
 
 		std::vector<lonlat> ops;
 
@@ -168,16 +368,30 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 
 		if (feat.type == VT_POINT) {
 			if (ops.size() == 1) {
-				fprintf(fp, "\"type\": \"Point\", \"coordinates\": [ %f, %f ]", ops[0].lon, ops[0].lat);
+				state.json_write_string("type");
+				state.json_write_string("Point");
+
+				state.json_write_string("coordinates");
+
+				state.json_write_array();
+				state.json_write_float(ops[0].lon);
+				state.json_write_float(ops[0].lat);
+				state.json_end_array();
 			} else {
-				fprintf(fp, "\"type\": \"MultiPoint\", \"coordinates\": [ ");
+				state.json_write_string("type");
+				state.json_write_string("MultiPoint");
+
+				state.json_write_string("coordinates");
+				state.json_write_array();
+
 				for (size_t i = 0; i < ops.size(); i++) {
-					if (i != 0) {
-						fprintf(fp, ", ");
-					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+					state.json_write_array();
+					state.json_write_float(ops[i].lon);
+					state.json_write_float(ops[i].lat);
+					state.json_end_array();
 				}
-				fprintf(fp, " ]");
+
+				state.json_end_array();
 			}
 		} else if (feat.type == VT_LINE) {
 			int movetos = 0;
@@ -188,32 +402,59 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 			}
 
 			if (movetos < 2) {
-				fprintf(fp, "\"type\": \"LineString\", \"coordinates\": [ ");
+				state.json_write_string("type");
+				state.json_write_string("LineString");
+
+				state.json_write_string("coordinates");
+				state.json_write_array();
+
 				for (size_t i = 0; i < ops.size(); i++) {
-					if (i != 0) {
-						fprintf(fp, ", ");
-					}
-					fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
+					state.json_write_array();
+					state.json_write_float(ops[i].lon);
+					state.json_write_float(ops[i].lat);
+					state.json_end_array();
 				}
-				fprintf(fp, " ]");
+
+				state.json_end_array();
 			} else {
-				fprintf(fp, "\"type\": \"MultiLineString\", \"coordinates\": [ [ ");
-				int state = 0;
+				state.json_write_string("type");
+				state.json_write_string("MultiLineString");
+
+				state.json_write_string("coordinates");
+				state.json_write_array();
+				state.json_write_array();
+
+				int sstate = 0;
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
-						if (state == 0) {
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-							state = 1;
+						if (sstate == 0) {
+							state.json_write_array();
+							state.json_write_float(ops[i].lon);
+							state.json_write_float(ops[i].lat);
+							state.json_end_array();
+
+							sstate = 1;
 						} else {
-							fprintf(fp, " ], [ ");
-							fprintf(fp, "[ %f, %f ]", ops[i].lon, ops[i].lat);
-							state = 1;
+							state.json_end_array();
+							state.json_write_array();
+
+							state.json_write_array();
+							state.json_write_float(ops[i].lon);
+							state.json_write_float(ops[i].lat);
+							state.json_end_array();
+
+							sstate = 1;
 						}
 					} else {
-						fprintf(fp, ", [ %f, %f ]", ops[i].lon, ops[i].lat);
+						state.json_write_array();
+						state.json_write_float(ops[i].lon);
+						state.json_write_float(ops[i].lat);
+						state.json_end_array();
 					}
 				}
-				fprintf(fp, " ] ]");
+
+				state.json_end_array();
+				state.json_end_array();
 			}
 		} else if (feat.type == VT_POLYGON) {
 			std::vector<std::vector<lonlat> > rings;
@@ -267,16 +508,27 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 					outer++;
 				}
 
-				// fprintf(fp, "\"area\": %Lf,", area);
+				// fprintf("\"area\": %Lf,", area);
 			}
 
 			if (outer > 1) {
-				fprintf(fp, "\"type\": \"MultiPolygon\", \"coordinates\": [ [ [ ");
+				state.json_write_string("type");
+				state.json_write_string("MultiPolygon");
+
+				state.json_write_string("coordinates");
+				state.json_write_array();
+				state.json_write_array();
+				state.json_write_array();
 			} else {
-				fprintf(fp, "\"type\": \"Polygon\", \"coordinates\": [ [ ");
+				state.json_write_string("type");
+				state.json_write_string("Polygon");
+
+				state.json_write_string("coordinates");
+				state.json_write_array();
+				state.json_write_array();
 			}
 
-			int state = 0;
+			int sstate = 0;
 			for (size_t i = 0; i < rings.size(); i++) {
 				if (i == 0 && areas[i] < 0) {
 					static bool warned = false;
@@ -292,45 +544,57 @@ void layer_to_geojson(FILE *fp, mvt_layer const &layer, unsigned z, unsigned x, 
 				}
 
 				if (areas[i] >= 0) {
-					if (state != 0) {
+					if (sstate != 0) {
 						// new multipolygon
-						fprintf(fp, " ] ], [ [ ");
+						state.json_end_array();
+						state.json_end_array();
+
+						state.json_write_array();
+						state.json_write_array();
 					}
-					state = 1;
+					sstate = 1;
 				}
 
-				if (state == 2) {
+				if (sstate == 2) {
 					// new ring in the same polygon
-					fprintf(fp, " ], [ ");
+					state.json_end_array();
+					state.json_write_array();
 				}
 
 				for (size_t j = 0; j < rings[i].size(); j++) {
 					if (rings[i][j].op != VT_CLOSEPATH) {
-						if (j != 0) {
-							fprintf(fp, ", ");
-						}
-
-						fprintf(fp, "[ %f, %f ]", rings[i][j].lon, rings[i][j].lat);
+						state.json_write_array();
+						state.json_write_float(rings[i][j].lon);
+						state.json_write_float(rings[i][j].lat);
+						state.json_end_array();
 					} else {
-						if (j != 0) {
-							fprintf(fp, ", ");
-						}
-
-						fprintf(fp, "[ %f, %f ]", rings[i][0].lon, rings[i][0].lat);
+						state.json_write_array();
+						state.json_write_float(rings[i][0].lon);
+						state.json_write_float(rings[i][0].lat);
+						state.json_end_array();
 					}
 				}
 
-				state = 2;
+				sstate = 2;
 			}
 
 			if (outer > 1) {
-				fprintf(fp, " ] ] ]");
+				state.json_end_array();
+				state.json_end_array();
+				state.json_end_array();
 			} else {
-				fprintf(fp, " ] ]");
+				state.json_end_array();
+				state.json_end_array();
 			}
 		}
 
-		fprintf(fp, " } }\n");
+		state.json_end_hash();
+		state.json_end_hash();
+
+		if (comma) {
+			state.json_write_newline();
+			state.json_comma_newline();
+		}
 	}
 }
 

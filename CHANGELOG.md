@@ -1,3 +1,43 @@
+## 1.28.1
+
+* Explicitly check for infinite and not-a-number input coordinates
+
+## 1.28.0
+
+* Directly support gzipped GeoJSON as input files
+
+## 1.27.16
+
+* Fix thread safety issues related to the out-of-disk-space checker
+
+## 1.27.15
+
+* --extend-zooms-if-still-dropping now also extends zooms if features
+  are dropped by --force-feature-limit
+
+## 1.27.14
+
+* Use an exit status of 100 if some zoom levels were successfully
+  written but not all zoom levels could be tiled.
+
+## 1.27.13
+
+* Allow filtering features by zoom level in conditional expressions
+* Lines in CSV input with empty geometry columns will be ignored
+
+## 1.27.12
+
+* Check integrity of sqlite3 file before decoding or tile-joining
+
+## 1.27.11
+
+* Always include tile and layer in tippecanoe-decode, fixing corrupt JSON.
+* Clean up writing of JSON in general.
+
+## 1.27.10
+
+* Add --progress-interval setting to reduce progress indicator frequency
+
 ## 1.27.9
 
 * Make clusters look better by averaging locations of clustered points

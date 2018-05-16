@@ -30,17 +30,17 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 	return w;
 }
 
-void serialize_int(FILE *out, int n, long long *fpos, const char *fname) {
+void serialize_int(FILE *out, int n, std::atomic<long long> *fpos, const char *fname) {
 	serialize_long_long(out, n, fpos, fname);
 }
 
-void serialize_long_long(FILE *out, long long n, long long *fpos, const char *fname) {
+void serialize_long_long(FILE *out, long long n, std::atomic<long long> *fpos, const char *fname) {
 	unsigned long long zigzag = protozero::encode_zigzag64(n);
 
 	serialize_ulong_long(out, zigzag, fpos, fname);
 }
 
-void serialize_ulong_long(FILE *out, unsigned long long zigzag, long long *fpos, const char *fname) {
+void serialize_ulong_long(FILE *out, unsigned long long zigzag, std::atomic<long long> *fpos, const char *fname) {
 	while (1) {
 		unsigned char b = zigzag & 0x7F;
 		if ((zigzag >> 7) != 0) {
@@ -62,12 +62,12 @@ void serialize_ulong_long(FILE *out, unsigned long long zigzag, long long *fpos,
 	}
 }
 
-void serialize_byte(FILE *out, signed char n, long long *fpos, const char *fname) {
+void serialize_byte(FILE *out, signed char n, std::atomic<long long> *fpos, const char *fname) {
 	fwrite_check(&n, sizeof(signed char), 1, out, fname);
 	*fpos += sizeof(signed char);
 }
 
-void serialize_uint(FILE *out, unsigned n, long long *fpos, const char *fname) {
+void serialize_uint(FILE *out, unsigned n, std::atomic<long long> *fpos, const char *fname) {
 	fwrite_check(&n, sizeof(unsigned), 1, out, fname);
 	*fpos += sizeof(unsigned);
 }
@@ -112,14 +112,14 @@ void deserialize_byte(char **f, signed char *n) {
 	*f += sizeof(signed char);
 }
 
-int deserialize_long_long_io(FILE *f, long long *n, long long *geompos) {
+int deserialize_long_long_io(FILE *f, long long *n, std::atomic<long long> *geompos) {
 	unsigned long long zigzag = 0;
 	int ret = deserialize_ulong_long_io(f, &zigzag, geompos);
 	*n = protozero::decode_zigzag64(zigzag);
 	return ret;
 }
 
-int deserialize_ulong_long_io(FILE *f, unsigned long long *zigzag, long long *geompos) {
+int deserialize_ulong_long_io(FILE *f, unsigned long long *zigzag, std::atomic<long long> *geompos) {
 	*zigzag = 0;
 	int shift = 0;
 
@@ -143,14 +143,14 @@ int deserialize_ulong_long_io(FILE *f, unsigned long long *zigzag, long long *ge
 	return 1;
 }
 
-int deserialize_int_io(FILE *f, int *n, long long *geompos) {
+int deserialize_int_io(FILE *f, int *n, std::atomic<long long> *geompos) {
 	long long ll = 0;
 	int ret = deserialize_long_long_io(f, &ll, geompos);
 	*n = ll;
 	return ret;
 }
 
-int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
+int deserialize_uint_io(FILE *f, unsigned *n, std::atomic<long long> *geompos) {
 	if (fread(n, sizeof(unsigned), 1, f) != 1) {
 		return 0;
 	}
@@ -158,7 +158,7 @@ int deserialize_uint_io(FILE *f, unsigned *n, long long *geompos) {
 	return 1;
 }
 
-int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
+int deserialize_byte_io(FILE *f, signed char *n, std::atomic<long long> *geompos) {
 	int c = getc(f);
 	if (c == EOF) {
 		return 0;
@@ -168,7 +168,7 @@ int deserialize_byte_io(FILE *f, signed char *n, long long *geompos) {
 	return 1;
 }
 
-static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const char *fname, long long wx, long long wy) {
+static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE *out, const char *fname, long long wx, long long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			serialize_byte(out, dv[i].op, fpos, fname);
@@ -182,7 +182,7 @@ static void write_geometry(drawvec const &dv, long long *fpos, FILE *out, const 
 	}
 }
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
+void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long> *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
 	long long layer = 0;
@@ -219,19 +219,15 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 		serialize_long_long(geomfile, sf->extent, geompos, fname);
 	}
 
-	serialize_int(geomfile, sf->m, geompos, fname);
-	if (sf->m != 0) {
-		serialize_long_long(geomfile, sf->metapos, geompos, fname);
-	}
+	serialize_long_long(geomfile, sf->metapos, geompos, fname);
 
-	if (sf->metapos < 0 && sf->m != sf->keys.size()) {
-		fprintf(stderr, "Internal error: feature said to have %lld attributes but only %lld found\n", (long long) sf->m, (long long) sf->keys.size());
-		exit(EXIT_FAILURE);
-	}
+	if (sf->metapos < 0) {
+		serialize_long_long(geomfile, sf->keys.size(), geompos, fname);
 
-	for (size_t i = 0; i < sf->keys.size(); i++) {
-		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
-		serialize_long_long(geomfile, sf->values[i], geompos, fname);
+		for (size_t i = 0; i < sf->keys.size(); i++) {
+			serialize_long_long(geomfile, sf->keys[i], geompos, fname);
+			serialize_long_long(geomfile, sf->values[i], geompos, fname);
+		}
 	}
 
 	if (include_minzoom) {
@@ -239,7 +235,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, long long *geompos, c
 	}
 }
 
-serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
 	serial_feature sf;
 
 	deserialize_byte_io(geoms, &sf.t, geompos_in);
@@ -285,19 +281,14 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 	sf.layer >>= 6;
 
 	sf.metapos = 0;
-	{
-		int m;
-		deserialize_int_io(geoms, &m, geompos_in);
-		sf.m = m;
-	}
-	if (sf.m != 0) {
-		deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
-	}
+	deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
 
 	if (sf.metapos >= 0) {
 		char *meta = metabase + sf.metapos + meta_off[sf.segment];
+		long long count;
+		deserialize_long_long(&meta, &count);
 
-		for (size_t i = 0; i < sf.m; i++) {
+		for (long long i = 0; i < count; i++) {
 			long long k, v;
 			deserialize_long_long(&meta, &k);
 			deserialize_long_long(&meta, &v);
@@ -305,7 +296,10 @@ serial_feature deserialize_feature(FILE *geoms, long long *geompos_in, char *met
 			sf.values.push_back(v);
 		}
 	} else {
-		for (size_t i = 0; i < sf.m; i++) {
+		long long count;
+		deserialize_long_long_io(geoms, &count, geompos_in);
+
+		for (long long i = 0; i < count; i++) {
 			long long k, v;
 			deserialize_long_long_io(geoms, &k, geompos_in);
 			deserialize_long_long_io(geoms, &v, geompos_in);
@@ -432,7 +426,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		inline_meta = false;
 
 		if (prevent[P_CLIPPING]) {
-			static volatile long long warned = 0;
+			static std::atomic<long long> warned(0);
 			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
 			if (extent > warned) {
 				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
@@ -524,61 +518,15 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 			if (sst->include->count(sf.full_keys[i]) == 0) {
 				sf.full_keys.erase(sf.full_keys.begin() + i);
 				sf.full_values.erase(sf.full_values.begin() + i);
-				sf.m--;
 				continue;
 			}
 		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
 			sf.full_keys.erase(sf.full_keys.begin() + i);
 			sf.full_values.erase(sf.full_values.begin() + i);
-			sf.m--;
 			continue;
 		}
 
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
-	}
-
-	if (sst->filter != NULL) {
-		std::map<std::string, mvt_value> attributes;
-
-		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			std::string key = sf.full_keys[i];
-			mvt_value val = stringified_to_mvt_value(sf.full_values[i].type, sf.full_values[i].s.c_str());
-
-			attributes.insert(std::pair<std::string, mvt_value>(key, val));
-		}
-
-		if (sf.has_id) {
-			mvt_value v;
-			v.type = mvt_uint;
-			v.numeric_value.uint_value = sf.id;
-
-			attributes.insert(std::pair<std::string, mvt_value>("$id", v));
-		}
-
-		mvt_value v;
-		v.type = mvt_string;
-
-		if (sf.t == mvt_point) {
-			v.string_value = "Point";
-		} else if (sf.t == mvt_linestring) {
-			v.string_value = "LineString";
-		} else if (sf.t == mvt_polygon) {
-			v.string_value = "Polygon";
-		}
-
-		attributes.insert(std::pair<std::string, mvt_value>("$type", v));
-
-		if (!evaluate(attributes, sf.layername, sst->filter)) {
-			return 0;
-		}
-	}
-
-	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-		if (sf.full_values[i].type == mvt_null) {
-			sf.full_keys.erase(sf.full_keys.begin() + i);
-			sf.full_values.erase(sf.full_values.begin() + i);
-			sf.m--;
-		}
 	}
 
 	if (!sst->filters) {
@@ -600,6 +548,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	} else {
 		sf.metapos = r->metapos;
+		serialize_long_long(r->metafile, sf.full_keys.size(), &r->metapos, sst->fname);
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
 			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
@@ -633,7 +582,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	if (*(sst->progress_seq) % 10000 == 0) {
 		checkdisk(sst->readers);
-		if (!quiet && !quiet_progress) {
+		if (!quiet && !quiet_progress && progress_time()) {
 			fprintf(stderr, "Read %.2f million features\r", *sst->progress_seq / 1000000.0);
 		}
 	}

@@ -56,7 +56,7 @@ tippecanoe-enumerate: enumerate.o
 tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o jsonpull/jsonpull.o dirtiles.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
 
-tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o
+tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o write_json.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-json-tool: jsontool.o jsonpull/jsonpull.o csv.o text.o
@@ -85,9 +85,11 @@ SPACE = $(NULL) $(NULL)
 test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test
 	./unit
 
+suffixes = json json.gz
+
 # Work around Makefile and filename punctuation limits: _ for space, @ for :, % for /
 %.json.check:
-	./tippecanoe -a@ -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json) < /dev/null
+	./tippecanoe -a@ -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.check,%,$(word 4,$(subst /, ,$@)))))) $(foreach suffix,$(suffixes),$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.$(suffix))) < /dev/null
 	./tippecanoe-decode $@.mbtiles > $@.out
 	cmp $@.out $(patsubst %.check,%,$@)
 	rm $@.out $@.mbtiles
@@ -101,7 +103,8 @@ fewer-tests: tippecanoe tippecanoe-decode geobuf-test raw-tiles-test parallel-te
 # XXX Use proper makefile rules instead of a for loop
 %.json.checkbuf:
 	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json); do ./tippecanoe-json-tool -w $$i | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
-	./tippecanoe -a@ -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.checkbuf,%,$(word 4,$(subst /, ,$@)))))) $(addsuffix .geobuf,$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)) < /dev/null
+	for i in $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json.gz); do gzip -dc $$i | ./tippecanoe-json-tool -w | ./node_modules/geobuf/bin/json2geobuf > $$i.geobuf; done
+	./tippecanoe -a@ -f -o $@.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json.checkbuf,%,$(word 4,$(subst /, ,$@)))))) $(foreach suffix,$(suffixes),$(addsuffix .geobuf,$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.$(suffix)))) < /dev/null
 	./tippecanoe-decode $@.mbtiles | sed 's/checkbuf/check/g' > $@.out
 	cmp $@.out $(patsubst %.checkbuf,%,$@)
 	rm $@.out $@.mbtiles
@@ -143,11 +146,13 @@ decode-test:
 	./tippecanoe -z11 -Z11 -f -o tests/muni/decode/multi.mbtiles tests/muni/*.json
 	./tippecanoe-decode -l subway tests/muni/decode/multi.mbtiles > tests/muni/decode/multi.mbtiles.json.check
 	./tippecanoe-decode -c tests/muni/decode/multi.mbtiles > tests/muni/decode/multi.mbtiles.pipeline.json.check
+	./tippecanoe-decode tests/muni/decode/multi.mbtiles 11 327 791 > tests/muni/decode/multi.mbtiles.onetile.json.check
 	./tippecanoe-decode --stats tests/muni/decode/multi.mbtiles > tests/muni/decode/multi.mbtiles.stats.json.check
 	cmp tests/muni/decode/multi.mbtiles.json.check tests/muni/decode/multi.mbtiles.json
 	cmp tests/muni/decode/multi.mbtiles.pipeline.json.check tests/muni/decode/multi.mbtiles.pipeline.json
+	cmp tests/muni/decode/multi.mbtiles.onetile.json.check tests/muni/decode/multi.mbtiles.onetile.json
 	cmp tests/muni/decode/multi.mbtiles.stats.json.check tests/muni/decode/multi.mbtiles.stats.json
-	rm -f tests/muni/decode/multi.mbtiles.json.check tests/muni/decode/multi.mbtiles tests/muni/decode/multi.mbtiles.pipeline.json.check tests/muni/decode/multi.mbtiles.stats.json.check
+	rm -f tests/muni/decode/multi.mbtiles.json.check tests/muni/decode/multi.mbtiles tests/muni/decode/multi.mbtiles.pipeline.json.check tests/muni/decode/multi.mbtiles.stats.json.check tests/muni/decode/multi.mbtiles.onetile.json.check
 
 pbf-test:
 	./tippecanoe-decode tests/pbf/11-328-791.vector.pbf 11 328 791 > tests/pbf/11-328-791.vector.pbf.out
@@ -158,12 +163,12 @@ pbf-test:
 	rm tests/pbf/11-328-791.3857.vector.pbf.out
 
 enumerate-test:
-	./tippecanoe -z5 -f -o tests/ne_110m_admin_0_countries/out/enum.mbtiles tests/ne_110m_admin_0_countries/in.json
+	./tippecanoe -z5 -f -o tests/ne_110m_admin_0_countries/out/enum.mbtiles tests/ne_110m_admin_0_countries/in.json.gz
 	./tippecanoe-enumerate tests/ne_110m_admin_0_countries/out/enum.mbtiles > tests/ne_110m_admin_0_countries/out/enum.check
 	cmp tests/ne_110m_admin_0_countries/out/enum tests/ne_110m_admin_0_countries/out/enum.check
 	rm tests/ne_110m_admin_0_countries/out/enum.mbtiles tests/ne_110m_admin_0_countries/out/enum.check
 
-join-test:
+join-test: tile-join
 	./tippecanoe -f -z12 -o tests/join-population/tabblock_06001420.mbtiles tests/join-population/tabblock_06001420.json
 	./tippecanoe -f -Z5 -z10 -o tests/join-population/macarthur.mbtiles -l macarthur tests/join-population/macarthur.json
 	./tile-join -f -Z6 -z9 -o tests/join-population/macarthur-6-9.mbtiles tests/join-population/macarthur.mbtiles
@@ -232,6 +237,12 @@ join-filter-test:
 	./tippecanoe-decode tests/feature-filter/out/filtered.mbtiles > tests/feature-filter/out/filtered.json.check
 	cmp tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.json.standard
 	rm -f tests/feature-filter/out/filtered.json.check tests/feature-filter/out/filtered.mbtiles tests/feature-filter/out/all.mbtiles
+	# Test zoom level filtering
+	./tippecanoe -r1 -z8 -f -o tests/feature-filter/out/places.mbtiles tests/ne_110m_populated_places/in.json
+	./tile-join -J tests/feature-filter/places-filter -f -o tests/feature-filter/out/places-filter.mbtiles tests/feature-filter/out/places.mbtiles
+	./tippecanoe-decode tests/feature-filter/out/places-filter.mbtiles > tests/feature-filter/out/places-filter.mbtiles.json.check
+	cmp tests/feature-filter/out/places-filter.mbtiles.json.check tests/feature-filter/out/places-filter.mbtiles.json.standard
+	rm -f tests/feature-filter/out/places.mbtiles tests/feature-filter/out/places-filter.mbtiles tests/feature-filter/out/places-filter.mbtiles.json.check
 
 json-tool-test: tippecanoe-json-tool
 	./tippecanoe-json-tool -e GEOID10 tests/join-population/tabblock_06001420.json | sort > tests/join-population/tabblock_06001420.json.sort
@@ -272,7 +283,7 @@ csv-test:
 prep-test: $(TESTS)
 
 tests/%.json: Makefile tippecanoe tippecanoe-decode
-	./tippecanoe -f -o $@.check.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))))) $(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.json)
+	./tippecanoe -f -o $@.check.mbtiles $(subst @,:,$(subst %,/,$(subst _, ,$(patsubst %.json,%,$(word 4,$(subst /, ,$@)))))) $(foreach suffix,$(suffixes),$(wildcard $(subst $(SPACE),/,$(wordlist 1,2,$(subst /, ,$@)))/*.$(suffix)))
 	./tippecanoe-decode $@.check.mbtiles > $@
 	cmp $(patsubst %.check,%,$@) $@
 	rm $@.check.mbtiles
