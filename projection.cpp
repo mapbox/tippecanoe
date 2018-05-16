@@ -14,6 +14,18 @@ struct projection *projection = &projections[0];
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
+	// Place infinite and NaN coordinates off the edge of the Mercator plane
+
+	int lat_class = fpclassify(lat);
+	int lon_class = fpclassify(lon);
+
+	if (lat_class == FP_INFINITE || lat_class == FP_NAN) {
+		lat = 89.9;
+	}
+	if (lon_class == FP_INFINITE || lon_class == FP_NAN) {
+		lon = 360;
+	}
+
 	// Must limit latitude somewhere to prevent overflow.
 	// 89.9 degrees latitude is 0.621 worlds beyond the edge of the flat earth,
 	// hopefully far enough out that there are few expectations about the shape.
@@ -49,6 +61,18 @@ void tile2lonlat(long long x, long long y, int zoom, double *lon, double *lat) {
 }
 
 void epsg3857totile(double ix, double iy, int zoom, long long *x, long long *y) {
+	// Place infinite and NaN coordinates off the edge of the Mercator plane
+
+	int iy_class = fpclassify(iy);
+	int ix_class = fpclassify(ix);
+
+	if (iy_class == FP_INFINITE || iy_class == FP_NAN) {
+		iy = 40000000.0;
+	}
+	if (ix_class == FP_INFINITE || ix_class == FP_NAN) {
+		ix = 40000000.0;
+	}
+
 	*x = ix * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31);
 	*y = ((1LL << 32) - 1) - (iy * (1LL << 31) / 6378137.0 / M_PI + (1LL << 31));
 
