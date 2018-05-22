@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <atomic>
 #include "projection.hpp"
 
 struct projection projections[] = {
@@ -107,11 +108,11 @@ unsigned long long encode(unsigned int wx, unsigned int wy) {
 	return out;
 }
 
-static unsigned char decodex[256];
-static unsigned char decodey[256];
+static std::atomic<unsigned char> decodex[256];
+static std::atomic<unsigned char> decodey[256];
 
 void decode(unsigned long long index, unsigned *wx, unsigned *wy) {
-	static int initialized = 0;
+	static std::atomic<int> initialized(0);
 	if (!initialized) {
 		for (size_t ix = 0; ix < 256; ix++) {
 			size_t xx = 0, yy = 0;
