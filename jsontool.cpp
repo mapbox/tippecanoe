@@ -318,7 +318,9 @@ void join_csv(json_object *j) {
 				} else if (is_number(v)) {
 					attr_type = JSON_NUMBER;
 				}
+			}
 
+			{
 				// This knows more about the structure of JSON objects than it ought to
 
 				json_object *ko = (json_object *) malloc(sizeof(json_object));

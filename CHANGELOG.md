@@ -1,6 +1,9 @@
 ## 1.29.0
 
 * Add the option to specify layer file, name, and description as JSON
+* In CSV input, a trailing comma now counts as a trailing empty field
+* In tippecanoe-json-tool, an empty CSV field is now an empty string,
+  not null (for consistency with tile-join)
 
 ## 1.28.1
 
