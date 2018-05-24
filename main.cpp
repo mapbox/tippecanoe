@@ -2374,6 +2374,42 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 	attribute_accum.insert(std::pair<std::string, attribute_op>(name, t));
 }
 
+void parse_json_source(const char *arg, struct source &src) {
+	json_pull *jp = json_begin_string(arg);
+	json_object *o = json_read_tree(jp);
+
+	if (o == NULL) {
+		fprintf(stderr, "%s: -L%s: %s\n", *av, arg, jp->error);
+		exit(EXIT_FAILURE);
+	}
+
+	if (o->type != JSON_HASH) {
+		fprintf(stderr, "%s: -L%s: not a JSON object\n", *av, arg);
+		exit(EXIT_FAILURE);
+	}
+
+	json_object *fname = json_hash_get(o, "file");
+	if (fname == NULL || fname->type != JSON_STRING) {
+		fprintf(stderr, "%s: -L%s: requires \"file\": filename\n", *av, arg);
+		exit(EXIT_FAILURE);
+	}
+
+	src.file = std::string(fname->string);
+
+	json_object *layer = json_hash_get(o, "layer");
+	if (layer != NULL && layer->type == JSON_STRING) {
+		src.layer = std::string(layer->string);
+	}
+
+	json_object *description = json_hash_get(o, "description");
+	if (description != NULL && description->type == JSON_STRING) {
+		src.description = std::string(description->string);
+	}
+
+	json_free(o);
+	json_end(jp);
+}
+
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -2607,14 +2643,18 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'L': {
-			char *cp = strchr(optarg, ':');
-			if (cp == NULL || cp == optarg) {
-				fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
-				exit(EXIT_FAILURE);
-			}
 			struct source src;
-			src.layer = std::string(optarg).substr(0, cp - optarg);
-			src.file = std::string(cp + 1);
+			if (optarg[0] == '{') {
+				parse_json_source(optarg, src);
+			} else {
+				char *cp = strchr(optarg, ':');
+				if (cp == NULL || cp == optarg) {
+					fprintf(stderr, "%s: -L requires layername:file\n", argv[0]);
+					exit(EXIT_FAILURE);
+				}
+				src.layer = std::string(optarg).substr(0, cp - optarg);
+				src.file = std::string(cp + 1);
+			}
 			sources.push_back(src);
 			break;
 		}
