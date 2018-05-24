@@ -573,7 +573,46 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter) {
+void handle_vector_layers(json_object *vector_layers, std::map<std::string, layermap_entry> &layermap, std::map<std::string, std::string> &attribute_descriptions) {
+	if (vector_layers != NULL && vector_layers->type == JSON_ARRAY) {
+		for (size_t i = 0; i < vector_layers->length; i++) {
+			if (vector_layers->array[i]->type == JSON_HASH) {
+				json_object *id = json_hash_get(vector_layers->array[i], "id");
+				json_object *desc = json_hash_get(vector_layers->array[i], "description");
+
+				if (id != NULL && desc != NULL && id->type == JSON_STRING && desc->type == JSON_STRING) {
+					std::string sid = id->string;
+					std::string sdesc = desc->string;
+
+					if (sdesc.size() != 0) {
+						auto f = layermap.find(sid);
+						if (f != layermap.end()) {
+							f->second.description = sdesc;
+						}
+					}
+				}
+
+				json_object *fields = json_hash_get(vector_layers->array[i], "fields");
+				if (fields != NULL && fields->type == JSON_HASH) {
+					for (size_t j = 0; j < fields->length; j++) {
+						if (fields->keys[j]->type == JSON_STRING && fields->values[j]->type) {
+							const char *desc2 = fields->values[j]->string;
+
+							if (strcmp(desc2, "Number") != 0 &&
+							    strcmp(desc2, "String") != 0 &&
+							    strcmp(desc2, "Boolean") != 0 &&
+							    strcmp(desc2, "Mixed") != 0) {
+								attribute_descriptions.insert(std::pair<std::string, std::string>(fields->keys[j]->string, desc2));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter, std::map<std::string, std::string> &attribute_descriptions) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -747,6 +786,27 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 					}
 				}
 			}
+			sqlite3_finalize(r->stmt);
+		}
+		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'json'", -1, &r->stmt, NULL) == SQLITE_OK) {
+			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
+				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
+
+				if (s != NULL) {
+					json_pull *jp = json_begin_string((const char *) s);
+					json_object *o = json_read_tree(jp);
+
+					if (o != NULL && o->type == JSON_HASH) {
+						json_object *vector_layers = json_hash_get(o, "vector_layers");
+
+						handle_vector_layers(vector_layers, layermap, attribute_descriptions);
+						json_free(o);
+					}
+
+					json_end(jp);
+				}
+			}
+
 			sqlite3_finalize(r->stmt);
 		}
 
@@ -990,7 +1050,9 @@ int main(int argc, char **argv) {
 		*rr = r;
 	}
 
-	decode(readers, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, filter);
+	std::map<std::string, std::string> attribute_descriptions;
+
+	decode(readers, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, filter, attribute_descriptions);
 
 	if (set_attribution.size() != 0) {
 		attribution = set_attribution;
@@ -1002,7 +1064,7 @@ int main(int argc, char **argv) {
 		name = set_name;
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, std::map<std::string, std::string>());
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, attribute_descriptions);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
