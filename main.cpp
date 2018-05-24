@@ -83,6 +83,7 @@ int additional[256];
 struct source {
 	std::string layer = "";
 	std::string file = "";
+	std::string description = "";
 };
 
 size_t CPUS;
@@ -1303,6 +1304,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	std::map<std::string, layermap_entry> layermap;
 	for (size_t l = 0; l < nlayers; l++) {
 		layermap_entry e = layermap_entry(l);
+		e.description = sources[l].description;
 		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, e));
 	}
 

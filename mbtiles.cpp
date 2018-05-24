@@ -397,7 +397,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				state.json_write_string(lnames[i]);
 
 				state.json_write_string("description");
-				state.json_write_string("");
+				state.json_write_string(fk->second.description);
 
 				state.json_write_string("minzoom");
 				state.json_write_signed(fk->second.minzoom);
@@ -550,6 +550,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				auto out_entry = out.find(layername);
 				out_entry->second.minzoom = map->second.minzoom;
 				out_entry->second.maxzoom = map->second.maxzoom;
+				out_entry->second.description = map->second.description;
 			}
 
 			auto out_entry = out.find(layername);
