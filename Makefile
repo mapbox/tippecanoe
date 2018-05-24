@@ -82,7 +82,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test layer-json-test
 	./unit
 
 suffixes = json json.gz
@@ -276,6 +276,12 @@ csv-test:
 	./tippecanoe-decode tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
 	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
 	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
+
+layer-json-test:
+	./tippecanoe -z0 -r1 -yNAME -f -o tests/layer-json/out.mbtiles -L'{"file":"tests/ne_110m_populated_places/in.json", "description":"World cities", "layer":"places"}'
+	./tippecanoe-decode tests/layer-json/out.mbtiles > tests/layer-json/out.mbtiles.json.check
+	cmp tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles.json
+	rm -f tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output

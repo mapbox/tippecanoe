@@ -1,3 +1,7 @@
+## 1.29.0
+
+* Add the option to specify layer file, name, and description as JSON
+
 ## 1.28.1
 
 * Explicitly check for infinite and not-a-number input coordinates
