@@ -209,6 +209,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
    If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
+ * `-Y`_attribute_`:`_description_ or `--attribute-description=`_attribute_`:`_description_: Set the `description` for the specified attribute in the tileset metadata to _description_ instead of the usual `String`, `Number`, or `Boolean`.
  * `-E`_attribute_`:`_operation_ or `--accumulate-attribute=`_attribute_`:`_operation_: Preserve the named _attribute_ from features
    that are dropped, coalesced-as-needed, or clustered. The _operation_ may be
    `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`

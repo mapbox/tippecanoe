@@ -1134,7 +1134,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2299,7 +2299,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS]);
+	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS], attribute_descriptions);
 
 	return ret;
 }
@@ -2447,6 +2447,7 @@ int main(int argc, char **argv) {
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
 	std::map<std::string, attribute_op> attribute_accum;
+	std::map<std::string, std::string> attribute_descriptions;
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
@@ -2497,6 +2498,7 @@ int main(int argc, char **argv) {
 
 		{"Modifying feature attributes", 0, 0, 0},
 		{"attribute-type", required_argument, 0, 'T'},
+		{"attribute-description", required_argument, 0, 'Y'},
 		{"accumulate-attribute", required_argument, 0, 'E'},
 
 		{"Filtering features by attributes", 0, 0, 0},
@@ -2765,6 +2767,17 @@ int main(int argc, char **argv) {
 		case 'X':
 			exclude_all = 1;
 			break;
+
+		case 'Y': {
+			char *cp = strchr(optarg, ':');
+			if (cp == NULL || cp == optarg) {
+				fprintf(stderr, "%s: -Y requires attribute:description\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			std::string attrib = std::string(optarg).substr(0, cp - optarg);
+			std::string desc = std::string(cp + 1);
+			attribute_descriptions.insert(std::pair<std::string, std::string>(attrib, desc));
+		} break;
 
 		case 'J':
 			filter = read_filter(optarg);
@@ -3037,7 +3050,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

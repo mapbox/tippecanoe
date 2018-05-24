@@ -264,7 +264,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -417,19 +417,24 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 					state.json_write_string(j->first);
 
-					int type = 0;
-					for (auto s : j->second.sample_values) {
-						type |= (1 << s.type);
-					}
+					auto f = attribute_descriptions.find(j->first);
+					if (f == attribute_descriptions.end()) {
+						int type = 0;
+						for (auto s : j->second.sample_values) {
+							type |= (1 << s.type);
+						}
 
-					if (type == (1 << mvt_double)) {
-						state.json_write_string("Number");
-					} else if (type == (1 << mvt_bool)) {
-						state.json_write_string("Boolean");
-					} else if (type == (1 << mvt_string)) {
-						state.json_write_string("String");
+						if (type == (1 << mvt_double)) {
+							state.json_write_string("Number");
+						} else if (type == (1 << mvt_bool)) {
+							state.json_write_string("Boolean");
+						} else if (type == (1 << mvt_string)) {
+							state.json_write_string("String");
+						} else {
+							state.json_write_string("Mixed");
+						}
 					} else {
-						state.json_write_string("Mixed");
+						state.json_write_string(f->second);
 					}
 				}
 
