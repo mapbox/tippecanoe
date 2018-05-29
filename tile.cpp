@@ -459,7 +459,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				bool already_marked = false;
-				if (additional[A_DETECT_SHARED_BORDERS] && t == VT_POLYGON) {
+				if ((additional[A_DETECT_SHARED_BORDERS] || additional[A_EXTRACT_BORDERS]) && t == VT_POLYGON) {
 					already_marked = true;
 				}
 
@@ -903,6 +903,29 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			simplified_arcs[ai->second] = dv;
 		}
 		count++;
+	}
+
+	if (additional[A_EXTRACT_BORDERS]) {
+		// Get rid of the original polygons and replace them with one big new LineString feature
+
+		for (ssize_t i = (ssize_t) partials.size() - 1; i >= 0; i--) {
+			if (partials[i].t == VT_POLYGON) {
+				partials.erase(partials.begin() + i);
+			}
+		}
+
+		partial p;
+		p.t = VT_LINE;
+		p.z = z;
+		p.line_detail = line_detail;
+		// XXX Don't know layer, sequence, index, segment, etc.
+
+		for (size_t i = 0; i < simplified_arcs.size(); i++) {
+			p.geoms.push_back(simplified_arcs[i]);
+		}
+
+		partials.push_back(p);
+		return true;
 	}
 
 	// If necessary, merge some adjacent polygons into some other polygons
@@ -2003,7 +2026,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		first_time = false;
 		bool merge_successful = true;
 
-		if (additional[A_DETECT_SHARED_BORDERS] || (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction < 1)) {
+		if ((additional[A_DETECT_SHARED_BORDERS] || additional[A_EXTRACT_BORDERS]) || (additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction < 1)) {
 			merge_successful = find_common_edges(partials, z, line_detail, simplification, maxzoom, merge_fraction);
 		}
 
