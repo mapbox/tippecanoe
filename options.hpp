@@ -35,6 +35,8 @@
 #define P_TINY_POLYGON_REDUCTION ((int) 't')
 #define P_TILE_COMPRESSION ((int) 'C')
 #define P_TILE_STATS ((int) 'g')
+#define P_USE_SOURCE_POLYGON_WINDING ((int) 'w')
+#define P_REVERSE_SOURCE_POLYGON_WINDING ((int) 'W')
 
 extern int prevent[256];
 extern int additional[256];

@@ -1,3 +1,7 @@
+## 1.29.1
+
+* Add --use-source-polygon-winding and --reverse-source-polygon-winding
+
 ## 1.29.0
 
 * Add the option to specify layer file, name, and description as JSON
