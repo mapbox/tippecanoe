@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "geometry.hpp"
 #include "projection.hpp"
 #include "read_json.hpp"
@@ -31,14 +31,14 @@ int mb_geometry[GEOM_TYPES] = {
 };
 
 void json_context(json_object *j) {
-	char *s = json_stringify(j);
+	std::string s = json_stringify(j);
 
-	if (strlen(s) >= 500) {
-		sprintf(s + 497, "...");
+	if (s.size() >= 500) {
+		s.resize(497);
+		s.append("...");
 	}
 
-	fprintf(stderr, "In JSON object %s\n", s);
-	free(s);  // stringify
+	fprintf(stderr, "In JSON object %s\n", s.c_str());
 }
 
 void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature) {
@@ -51,7 +51,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	int within = geometry_within[t];
 	if (within >= 0) {
 		size_t i;
-		for (i = 0; i < j->length; i++) {
+		for (i = 0; i < j->array.size(); i++) {
 			if (within == GEOM_POINT) {
 				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
 					op = VT_MOVETO;
@@ -63,13 +63,13 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			parse_geometry(within, j->array[i], out, op, fname, line, feature);
 		}
 	} else {
-		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+		if (j->array.size() >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
 			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			projection->project(lon, lat, 32, &x, &y);
 
-			if (j->length > 2) {
+			if (j->array.size() > 2) {
 				static int warned = 0;
 
 				if (!warned) {
@@ -109,21 +109,20 @@ void canonicalize(json_object *o) {
 		long long v;
 		unsigned long long uv;
 
-		if (is_integer(o->string, &v)) {
+		if (is_integer(o->string.c_str(), &v)) {
 			s = std::to_string(v);
-		} else if (is_unsigned_integer(o->string, &uv)) {
+		} else if (is_unsigned_integer(o->string.c_str(), &uv)) {
 			s = std::to_string(uv);
 		} else {
 			s = milo::dtoa_milo(o->number);
 		}
-		free(o->string);
-		o->string = strdup(s.c_str());
+		o->string = s;
 	} else if (o->type == JSON_HASH) {
-		for (size_t i = 0; i < o->length; i++) {
+		for (size_t i = 0; i < o->keys.size(); i++) {
 			canonicalize(o->values[i]);
 		}
 	} else if (o->type == JSON_ARRAY) {
-		for (size_t i = 0; i < o->length; i++) {
+		for (size_t i = 0; i < o->array.size(); i++) {
 			canonicalize(o->array[i]);
 		}
 	}
@@ -144,9 +143,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			val = "null";
 		} else {
 			canonicalize(value);
-			const char *v = json_stringify(value);
-			val = std::string(v);
-			free((void *) v);  // stringify
+			val = json_stringify(value);
 		}
 
 		if (vt == JSON_STRING) {
@@ -164,9 +161,9 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			long long v;
 			unsigned long long uv;
 
-			if (is_integer(value->string, &v)) {
+			if (is_integer(value->string.c_str(), &v)) {
 				stringified = std::to_string(v);
-			} else if (is_unsigned_integer(value->string, &uv)) {
+			} else if (is_unsigned_integer(value->string.c_str(), &uv)) {
 				stringified = std::to_string(uv);
 			} else {
 				stringified = milo::dtoa_milo(value->number);

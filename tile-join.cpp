@@ -33,7 +33,7 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "milo/dtoa_milo.h"
 
 int pk = false;
@@ -575,7 +575,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 
 void handle_vector_layers(json_object *vector_layers, std::map<std::string, layermap_entry> &layermap, std::map<std::string, std::string> &attribute_descriptions) {
 	if (vector_layers != NULL && vector_layers->type == JSON_ARRAY) {
-		for (size_t i = 0; i < vector_layers->length; i++) {
+		for (size_t i = 0; i < vector_layers->array.size(); i++) {
 			if (vector_layers->array[i]->type == JSON_HASH) {
 				json_object *id = json_hash_get(vector_layers->array[i], "id");
 				json_object *desc = json_hash_get(vector_layers->array[i], "description");
@@ -594,14 +594,14 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 
 				json_object *fields = json_hash_get(vector_layers->array[i], "fields");
 				if (fields != NULL && fields->type == JSON_HASH) {
-					for (size_t j = 0; j < fields->length; j++) {
+					for (size_t j = 0; j < fields->keys.size(); j++) {
 						if (fields->keys[j]->type == JSON_STRING && fields->values[j]->type) {
-							const char *desc2 = fields->values[j]->string;
+							std::string desc2 = fields->values[j]->string;
 
-							if (strcmp(desc2, "Number") != 0 &&
-							    strcmp(desc2, "String") != 0 &&
-							    strcmp(desc2, "Boolean") != 0 &&
-							    strcmp(desc2, "Mixed") != 0) {
+							if (desc2 != "Number" &&
+							    desc2 != "String" &&
+							    desc2 != "Boolean" &&
+							    desc2 != "Mixed") {
 								attribute_descriptions.insert(std::pair<std::string, std::string>(fields->keys[j]->string, desc2));
 							}
 						}

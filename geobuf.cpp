@@ -12,7 +12,7 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 
 #define POINT 0
 #define MULTIPOINT 1
@@ -397,13 +397,13 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 				json_object *min = json_hash_get(o, "minzoom");
 				if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_minzoom = true;
-					sf.tippecanoe_minzoom = atoi(min->string);
+					sf.tippecanoe_minzoom = atoi(min->string.c_str());
 				}
 
 				json_object *max = json_hash_get(o, "maxzoom");
 				if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_maxzoom = true;
-					sf.tippecanoe_maxzoom = atoi(max->string);
+					sf.tippecanoe_maxzoom = atoi(max->string.c_str());
 				}
 
 				json_object *tlayer = json_hash_get(o, "layer");

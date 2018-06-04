@@ -41,7 +41,7 @@
 #include "evaluator.hpp"
 
 extern "C" {
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 }
 
 #include "plugin.hpp"

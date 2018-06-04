@@ -24,7 +24,7 @@
 #include <set>
 #include <map>
 #include <string>
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "pool.hpp"
 #include "projection.hpp"
 #include "memfile.hpp"
@@ -66,12 +66,12 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	int t;
 	for (t = 0; t < GEOM_TYPES; t++) {
-		if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+		if (geometry_type->string == std::string(geometry_names[t])) {
 			break;
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string);
+		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string.c_str());
 		json_context(feature);
 		return 0;
 	}
@@ -86,7 +86,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			tippecanoe_minzoom = min->number;
 		}
 		if (min != NULL && min->type == JSON_STRING) {
-			tippecanoe_minzoom = atoi(min->string);
+			tippecanoe_minzoom = atoi(min->string.c_str());
 		}
 
 		json_object *max = json_hash_get(tippecanoe, "maxzoom");
@@ -94,7 +94,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			tippecanoe_maxzoom = max->number;
 		}
 		if (max != NULL && max->type == JSON_STRING) {
-			tippecanoe_maxzoom = atoi(max->string);
+			tippecanoe_maxzoom = atoi(max->string.c_str());
 		}
 
 		json_object *ln = json_hash_get(tippecanoe, "layer");
@@ -109,13 +109,13 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		if (id->type == JSON_NUMBER) {
 			if (id->number >= 0) {
 				char *err = NULL;
-				id_value = strtoull(id->string, &err, 10);
+				id_value = strtoull(id->string.c_str(), &err, 10);
 
 				if (err != NULL && *err != '\0') {
 					static bool warned_frac = false;
 
 					if (!warned_frac) {
-						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string.c_str());
 						warned_frac = true;
 					}
 				} else {
@@ -125,7 +125,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 				static bool warned_neg = false;
 
 				if (!warned_neg) {
-					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string.c_str());
 					warned_neg = true;
 				}
 			}
@@ -133,9 +133,8 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			static bool warned_nan = false;
 
 			if (!warned_nan) {
-				char *s = json_stringify(id);
-				fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
-				free(s);  // stringify
+				std::string s = json_stringify(id);
+				fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s.c_str());
 				warned_nan = true;
 			}
 		}
@@ -143,10 +142,10 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
-		nprop = properties->length;
+		nprop = properties->keys.size();
 	}
 
-	std::vector<char *> metakey;
+	std::vector<std::string> metakey;
 	metakey.resize(nprop);
 
 	std::vector<std::string> metaval;
@@ -222,9 +221,9 @@ void check_crs(json_object *j, const char *reading) {
 		if (properties != NULL) {
 			json_object *name = json_hash_get(properties, "name");
 			if (name->type == JSON_STRING) {
-				if (strcmp(name->string, projection->alias) != 0) {
+				if (name->string != std::string(projection->alias)) {
 					if (!quiet) {
-						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
+						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string.c_str(), projection->alias);
 						fprintf(stderr, "%s: If \"%s\" is not the expected projection, use -s to specify the right one.\n", reading, projection->alias);
 					}
 				}
@@ -241,8 +240,8 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 	while (1) {
 		json_object *j = json_read(jp);
 		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", sst->fname, jp->line, jp->error);
+			if (jp->error.size() != 0) {
+				fprintf(stderr, "%s:%zu: %s\n", sst->fname, jp->line, jp->error.c_str());
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
@@ -256,7 +255,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			found_hashes++;
 
 			if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
-				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
+				fprintf(stderr, "%s:%zu: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
 			}
 		}
 
@@ -269,7 +268,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			int i;
 			int is_geometry = 0;
 			for (i = 0; i < GEOM_TYPES; i++) {
-				if (strcmp(type->string, geometry_names[i]) == 0) {
+				if (type->string == std::string(geometry_names[i])) {
 					is_geometry = 1;
 					break;
 				}
@@ -297,7 +296,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 
 			if (is_geometry) {
 				if (found_features != 0 && found_geometries == 0) {
-					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
+					fprintf(stderr, "%s:%zu: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 				}
 				found_geometries++;
 
@@ -307,8 +306,8 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			}
 		}
 
-		if (strcmp(type->string, "Feature") != 0) {
-			if (strcmp(type->string, "FeatureCollection") == 0) {
+		if (type->string != std::string("Feature")) {
+			if (type->string == std::string("FeatureCollection")) {
 				check_crs(j, sst->fname);
 				json_free(j);
 			}
@@ -317,13 +316,13 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		}
 
 		if (found_features == 0 && found_geometries != 0) {
-			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
 		}
 		found_features++;
 
 		json_object *geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: feature with no geometry\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;
@@ -331,7 +330,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 
 		json_object *properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", sst->fname, jp->line);
+			fprintf(stderr, "%s:%zu: feature without properties hash\n", sst->fname, jp->line);
 			json_context(j);
 			json_free(j);
 			continue;
@@ -343,7 +342,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		json_object *geometries = json_hash_get(geometry, "geometries");
 		if (geometries != NULL && geometries->type == JSON_ARRAY) {
 			size_t g;
-			for (g = 0; g < geometries->length; g++) {
+			for (g = 0; g < geometries->array.size(); g++) {
 				serialize_geojson_feature(sst, geometries->array[g], properties, id, layer, tippecanoe, j, layername);
 			}
 		} else {

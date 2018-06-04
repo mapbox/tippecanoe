@@ -43,7 +43,7 @@
 #include <sys/statfs.h>
 #endif
 
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "mbtiles.hpp"
 #include "tile.hpp"
 #include "pool.hpp"
@@ -2379,7 +2379,7 @@ void parse_json_source(const char *arg, struct source &src) {
 	json_object *o = json_read_tree(jp);
 
 	if (o == NULL) {
-		fprintf(stderr, "%s: -L%s: %s\n", *av, arg, jp->error);
+		fprintf(stderr, "%s: -L%s: %s\n", *av, arg, jp->error.c_str());
 		exit(EXIT_FAILURE);
 	}
 

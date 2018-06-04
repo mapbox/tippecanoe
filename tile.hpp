@@ -7,7 +7,7 @@
 #include <atomic>
 #include <map>
 #include "mbtiles.hpp"
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 
 enum attribute_op {
 	op_sum,

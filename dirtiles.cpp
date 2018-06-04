@@ -9,7 +9,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "dirtiles.hpp"
 
 std::string dir_read_tile(std::string base, struct zxy tile) {
@@ -181,14 +181,14 @@ sqlite3 *dirmeta2tmp(const char *fname) {
 		exit(EXIT_FAILURE);
 	}
 
-	for (size_t i = 0; i < o->length; i++) {
+	for (size_t i = 0; i < o->keys.size(); i++) {
 		if (o->keys[i]->type != JSON_STRING || o->values[i]->type != JSON_STRING) {
 			fprintf(stderr, "%s: non-string in metadata\n", name.c_str());
 		}
 
-		char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string, o->values[i]->string);
+		char *sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES (%Q, %Q);", o->keys[i]->string.c_str(), o->values[i]->string.c_str());
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string, err);
+			fprintf(stderr, "set %s in metadata: %s\n", o->keys[i]->string.c_str(), err);
 		}
 		sqlite3_free(sql);
 	}

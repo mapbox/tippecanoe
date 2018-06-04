@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 #include "mbtiles.hpp"
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "serial.hpp"
 
 struct parse_json_args {

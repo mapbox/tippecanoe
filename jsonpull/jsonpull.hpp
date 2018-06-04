@@ -1,9 +1,8 @@
-#ifndef JSONPULL_H
-#define JSONPULL_H
+#ifndef JSONPULL_HPP
+#define JSONPULL_HPP
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
+#include <vector>
 
 typedef enum json_type {
 	// These types can be returned by json_read()
@@ -25,29 +24,30 @@ typedef enum json_type {
 	JSON_VALUE,
 } json_type;
 
-typedef struct json_object {
+struct json_object;
+
+struct json_object {
 	json_type type;
 	struct json_object *parent;
 	struct json_pull *parser;
 
-	char *string;
+	std::string string;
 	double number;
 
-	struct json_object **array;
-	struct json_object **keys;
-	struct json_object **values;
-	size_t length;
+	std::vector<json_object *> array;
+	std::vector<json_object *> keys;
+	std::vector<json_object *> values;
 
 	int expect;
-} json_object;
+};
 
 typedef struct json_pull {
-	char *error;
-	int line;
+	std::string error;
+	size_t line;
 
 	ssize_t (*read)(struct json_pull *, char *buf, size_t n);
 	void *source;
-	char *buffer;
+	std::string buffer;
 	ssize_t buffer_tail;
 	ssize_t buffer_head;
 
@@ -69,12 +69,8 @@ json_object *json_read_separators(json_pull *j, json_separator_callback cb, void
 void json_free(json_object *j);
 void json_disconnect(json_object *j);
 
-json_object *json_hash_get(json_object *o, const char *s);
+json_object *json_hash_get(json_object *o, std::string const &key);
 
-char *json_stringify(json_object *o);
-
-#ifdef __cplusplus
-}
-#endif
+std::string json_stringify(json_object *o);
 
 #endif
