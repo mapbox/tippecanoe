@@ -113,7 +113,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
-		if (type->string != std::string("Feature")) {
+		if (type->string != "Feature") {
 			continue;
 		}
 
@@ -155,7 +155,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
-			if (geometry_type->string == std::string(geometry_names[t])) {
+			if (geometry_type->string == geometry_names[t]) {
 				break;
 			}
 		}
@@ -171,7 +171,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (tippecanoe != NULL) {
 			layer = json_hash_get(tippecanoe, "layer");
 			if (layer != NULL && layer->type == JSON_STRING) {
-				layername = std::string(layer->string);
+				layername = layer->string;
 			}
 		}
 
@@ -318,7 +318,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
-		if (type->string != std::string("Feature")) {
+		if (type->string != "Feature") {
 			continue;
 		}
 
@@ -360,7 +360,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
-			if (geometry_type->string == std::string(geometry_names[t])) {
+			if (geometry_type->string == geometry_names[t]) {
 				break;
 			}
 		}
@@ -405,7 +405,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			if (tippecanoe != NULL) {
 				json_object *layer = json_hash_get(tippecanoe, "layer");
 				if (layer != NULL && layer->type == JSON_STRING) {
-					layername = std::string(layer->string);
+					layername = layer->string;
 				}
 
 				json_object *index = json_hash_get(tippecanoe, "index");

@@ -540,7 +540,7 @@ STREAM *streamfdopen(int fd, const char *mode, std::string const &fname) {
 	s->fp = NULL;
 	s->gz = NULL;
 
-	if (fname.size() > 3 && fname.substr(fname.size() - 3) == std::string(".gz")) {
+	if (fname.size() > 3 && fname.substr(fname.size() - 3) == ".gz") {
 		s->gz = gzdopen(fd, mode);
 		if (s->gz == NULL) {
 			fprintf(stderr, "%s: %s: Decompression error\n", *av, fname.c_str());
@@ -1351,7 +1351,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 		size_t layer = a->second.id;
 
-		if (sources[source].file.size() > 7 && sources[source].file.substr(sources[source].file.size() - 7) == std::string(".geobuf")) {
+		if (sources[source].file.size() > 7 && sources[source].file.substr(sources[source].file.size() - 7) == ".geobuf") {
 			struct stat st;
 			if (fstat(fd, &st) != 0) {
 				perror("fstat");
@@ -1422,7 +1422,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			continue;
 		}
 
-		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv")) {
+		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == ".csv") {
 			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
@@ -1478,7 +1478,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 		int read_parallel_this = read_parallel ? '\n' : 0;
 
-		if (!(sources[source].file.size() > 3 && sources[source].file.substr(sources[source].file.size() - 3) == std::string(".gz"))) {
+		if (!(sources[source].file.size() > 3 && sources[source].file.substr(sources[source].file.size() - 3) == ".gz")) {
 			if (fstat(fd, &st) == 0) {
 				off = lseek(fd, 0, SEEK_CUR);
 				if (off >= 0) {
@@ -2394,16 +2394,16 @@ void parse_json_source(const char *arg, struct source &src) {
 		exit(EXIT_FAILURE);
 	}
 
-	src.file = std::string(fname->string);
+	src.file = fname->string;
 
 	json_object *layer = json_hash_get(o, "layer");
 	if (layer != NULL && layer->type == JSON_STRING) {
-		src.layer = std::string(layer->string);
+		src.layer = layer->string;
 	}
 
 	json_object *description = json_hash_get(o, "description");
 	if (description != NULL && description->type == JSON_STRING) {
-		src.description = std::string(description->string);
+		src.description = description->string;
 	}
 
 	json_free(o);
