@@ -122,6 +122,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader value_reader(layer_reader.get_message());
 					mvt_value value;
 
+					value.type = mvt_null;
+					value.numeric_value.null_value = 0;
+
 					while (value_reader.next()) {
 						switch (value_reader.tag()) {
 						case 1: /* string */
@@ -303,6 +306,12 @@ std::string mvt_tile::encode() {
 				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
 			} else if (pbv.type == mvt_bool) {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
+			} else if (pbv.type == mvt_null) {
+				fprintf(stderr, "Internal error: trying to write null attribute to tile\n");
+				exit(EXIT_FAILURE);
+			} else {
+				fprintf(stderr, "Internal error: trying to write undefined attribute type to tile\n");
+				exit(EXIT_FAILURE);
 			}
 
 			layer_writer.add_message(4, value_string);
@@ -388,7 +397,8 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_int && numeric_value.int_value < o.numeric_value.int_value) ||
 		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
 		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
-		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value)) {
+		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value) ||
+		    (type == mvt_null && numeric_value.null_value < o.numeric_value.null_value)) {
 			return true;
 		}
 	}
@@ -442,6 +452,8 @@ std::string mvt_value::toString() {
 		return std::to_string(numeric_value.uint_value);
 	} else if (type == mvt_bool) {
 		return numeric_value.bool_value ? "true" : "false";
+	} else if (type == mvt_null) {
+		return "null";
 	} else {
 		return "unknown";
 	}
@@ -591,6 +603,7 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 		tv.numeric_value.bool_value = (s[0] == 't');
 	} else if (type == mvt_null) {
 		tv.type = mvt_null;
+		tv.numeric_value.null_value = 0;
 	} else {
 		tv.type = mvt_string;
 		tv.string_value = s;

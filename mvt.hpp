@@ -77,6 +77,7 @@ struct mvt_value {
 		unsigned long long uint_value;
 		long long sint_value;
 		bool bool_value;
+		int null_value;
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
