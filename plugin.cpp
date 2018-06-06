@@ -95,7 +95,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 	json_pull *jp = json_begin_file(f);
 
 	while (1) {
-		json_object *j = json_read(jp);
+		std::shared_ptr<json_object> j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error.size() != 0) {
 				fprintf(stderr, "Filter output:%zu: %s\n", jp->line, jp->error.c_str());
@@ -109,7 +109,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			break;
 		}
 
-		json_object *type = json_hash_get(j, "type");
+		std::shared_ptr<json_object> type = json_hash_get(j, "type");
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
@@ -117,7 +117,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			continue;
 		}
 
-		json_object *geometry = json_hash_get(j, "geometry");
+		std::shared_ptr<json_object> geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
 			fprintf(stderr, "Filter output:%zu: filtered feature with no geometry\n", jp->line);
 			json_context(j);
@@ -125,7 +125,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *properties = json_hash_get(j, "properties");
+		std::shared_ptr<json_object> properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
 			fprintf(stderr, "Filter output:%zu: feature without properties hash\n", jp->line);
 			json_context(j);
@@ -133,7 +133,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *geometry_type = json_hash_get(geometry, "type");
+		std::shared_ptr<json_object> geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
 			fprintf(stderr, "Filter output:%zu: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
@@ -146,7 +146,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *coordinates = json_hash_get(geometry, "coordinates");
+		std::shared_ptr<json_object> coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 			fprintf(stderr, "Filter output:%zu: feature without coordinates array\n", jp->line);
 			json_context(j);
@@ -166,8 +166,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		}
 
 		std::string layername = "unknown";
-		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
-		json_object *layer = NULL;
+		std::shared_ptr<json_object> tippecanoe = json_hash_get(j, "tippecanoe");
+		std::shared_ptr<json_object> layer = NULL;
 		if (tippecanoe != NULL) {
 			layer = json_hash_get(tippecanoe, "layer");
 			if (layer != NULL && layer->type == JSON_STRING) {
@@ -214,7 +214,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			feature.type = mb_geometry[t];
 			feature.geometry = to_feature(dv);
 
-			json_object *id = json_hash_get(j, "id");
+			std::shared_ptr<json_object> id = json_hash_get(j, "id");
 			if (id != NULL) {
 				feature.id = atoll(id->string.c_str());
 				feature.has_id = true;
@@ -299,7 +299,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 	serial_feature sf;
 
 	while (1) {
-		json_object *j = json_read(jp);
+		std::shared_ptr<json_object> j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error.size() != 0) {
 				fprintf(stderr, "Filter output:%zu: %s\n", jp->line, jp->error.c_str());
@@ -314,7 +314,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			return sf;
 		}
 
-		json_object *type = json_hash_get(j, "type");
+		std::shared_ptr<json_object> type = json_hash_get(j, "type");
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
@@ -322,7 +322,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			continue;
 		}
 
-		json_object *geometry = json_hash_get(j, "geometry");
+		std::shared_ptr<json_object> geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
 			fprintf(stderr, "Filter output:%zu: filtered feature with no geometry\n", jp->line);
 			json_context(j);
@@ -330,7 +330,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *properties = json_hash_get(j, "properties");
+		std::shared_ptr<json_object> properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
 			fprintf(stderr, "Filter output:%zu: feature without properties hash\n", jp->line);
 			json_context(j);
@@ -338,7 +338,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *geometry_type = json_hash_get(geometry, "type");
+		std::shared_ptr<json_object> geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
 			fprintf(stderr, "Filter output:%zu: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
@@ -351,7 +351,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		json_object *coordinates = json_hash_get(geometry, "coordinates");
+		std::shared_ptr<json_object> coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 			fprintf(stderr, "Filter output:%zu: feature without coordinates array\n", jp->line);
 			json_context(j);
@@ -401,29 +401,29 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.has_id = false;
 
 			std::string layername = "unknown";
-			json_object *tippecanoe = json_hash_get(j, "tippecanoe");
+			std::shared_ptr<json_object> tippecanoe = json_hash_get(j, "tippecanoe");
 			if (tippecanoe != NULL) {
-				json_object *layer = json_hash_get(tippecanoe, "layer");
+				std::shared_ptr<json_object> layer = json_hash_get(tippecanoe, "layer");
 				if (layer != NULL && layer->type == JSON_STRING) {
 					layername = layer->string;
 				}
 
-				json_object *index = json_hash_get(tippecanoe, "index");
+				std::shared_ptr<json_object> index = json_hash_get(tippecanoe, "index");
 				if (index != NULL && index->type == JSON_NUMBER) {
 					sf.index = index->number;
 				}
 
-				json_object *sequence = json_hash_get(tippecanoe, "sequence");
+				std::shared_ptr<json_object> sequence = json_hash_get(tippecanoe, "sequence");
 				if (sequence != NULL && sequence->type == JSON_NUMBER) {
 					sf.seq = sequence->number;
 				}
 
-				json_object *extent = json_hash_get(tippecanoe, "extent");
+				std::shared_ptr<json_object> extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && sequence->type == JSON_NUMBER) {
 					sf.extent = extent->number;
 				}
 
-				json_object *dropped = json_hash_get(tippecanoe, "dropped");
+				std::shared_ptr<json_object> dropped = json_hash_get(tippecanoe, "dropped");
 				if (dropped != NULL && dropped->type == JSON_TRUE) {
 					sf.dropped = true;
 				}
@@ -446,7 +446,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				}
 			}
 
-			json_object *id = json_hash_get(j, "id");
+			std::shared_ptr<json_object> id = json_hash_get(j, "id");
 			if (id != NULL) {
 				sf.id = atoll(id->string.c_str());
 				sf.has_id = true;

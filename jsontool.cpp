@@ -136,12 +136,12 @@ std::string sort_quote(const char *s) {
 	return ret;
 }
 
-void out(std::string const &s, int type, json_object *properties) {
+void out(std::string const &s, int type, std::shared_ptr<json_object> properties) {
 	if (extract != NULL) {
 		std::string extracted = sort_quote("null");
 		bool found = false;
 
-		json_object *o = json_hash_get(properties, extract);
+		std::shared_ptr<json_object> o = json_hash_get(properties, extract);
 		if (o != NULL) {
 			found = true;
 			if (o->type == JSON_STRING || o->type == JSON_NUMBER) {
@@ -200,7 +200,7 @@ void out(std::string const &s, int type, json_object *properties) {
 
 std::string prev_joinkey;
 
-void join_csv(json_object *j) {
+void join_csv(std::shared_ptr<json_object> j) {
 	if (header.size() == 0) {
 		std::string s = csv_getline(csvfile);
 		if (s.size() == 0) {
@@ -226,8 +226,8 @@ void join_csv(json_object *j) {
 		}
 	}
 
-	json_object *properties = json_hash_get(j, "properties");
-	json_object *key = NULL;
+	std::shared_ptr<json_object> properties = json_hash_get(j, "properties");
+	std::shared_ptr<json_object> key = NULL;
 
 	if (properties != NULL) {
 		key = json_hash_get(properties, header[0].c_str());
@@ -315,8 +315,8 @@ void join_csv(json_object *j) {
 			{
 				// This knows more about the structure of JSON objects than it ought to
 
-				json_object *ko = new json_object;
-				json_object *vo = new json_object;
+				std::shared_ptr<json_object> ko = std::make_shared<json_object>();
+				std::shared_ptr<json_object> vo = std::make_shared<json_object>();
 				if (ko == NULL || vo == NULL) {
 					perror("malloc");
 					exit(EXIT_FAILURE);
@@ -343,7 +343,7 @@ void process(FILE *fp, const char *fname) {
 	json_pull *jp = json_begin_file(fp);
 
 	while (1) {
-		json_object *j = json_read(jp);
+		std::shared_ptr<json_object> j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error.size() != 0) {
 				fprintf(stderr, "%s:%zu: %s\n", fname, jp->line, jp->error.c_str());
@@ -353,7 +353,7 @@ void process(FILE *fp, const char *fname) {
 			break;
 		}
 
-		json_object *type = json_hash_get(j, "type");
+		std::shared_ptr<json_object> type = json_hash_get(j, "type");
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
@@ -376,14 +376,14 @@ void process(FILE *fp, const char *fname) {
 			if (j->parent != NULL) {
 				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
 					if (j->parent->parent->type == JSON_HASH) {
-						json_object *geometries = json_hash_get(j->parent->parent, "geometries");
+						std::shared_ptr<json_object> geometries = json_hash_get(j->parent->parent, "geometries");
 						if (geometries != NULL) {
 							// Parent of Parent must be a GeometryCollection
 							is_geometry = 0;
 						}
 					}
 				} else if (j->parent->type == JSON_HASH) {
-					json_object *geometry = json_hash_get(j->parent, "geometry");
+					std::shared_ptr<json_object> geometry = json_hash_get(j->parent, "geometry");
 					if (geometry != NULL) {
 						// Parent must be a Feature
 						is_geometry = 0;

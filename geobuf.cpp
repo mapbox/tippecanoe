@@ -391,22 +391,22 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		auto tip = other.find("tippecanoe");
 		if (tip != other.end()) {
 			json_pull *jp = json_begin_string(tip->second.s.c_str());
-			json_object *o = json_read_tree(jp);
+			std::shared_ptr<json_object> o = json_read_tree(jp);
 
 			if (o != NULL) {
-				json_object *min = json_hash_get(o, "minzoom");
+				std::shared_ptr<json_object> min = json_hash_get(o, "minzoom");
 				if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_minzoom = true;
 					sf.tippecanoe_minzoom = atoi(min->string.c_str());
 				}
 
-				json_object *max = json_hash_get(o, "maxzoom");
+				std::shared_ptr<json_object> max = json_hash_get(o, "maxzoom");
 				if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_maxzoom = true;
 					sf.tippecanoe_maxzoom = atoi(max->string.c_str());
 				}
 
-				json_object *tlayer = json_hash_get(o, "layer");
+				std::shared_ptr<json_object> tlayer = json_hash_get(o, "layer");
 				if (tlayer != NULL && (tlayer->type == JSON_STRING || tlayer->type == JSON_NUMBER)) {
 					sf.layername = tlayer->string;
 				}

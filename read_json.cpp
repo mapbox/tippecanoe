@@ -30,7 +30,7 @@ int mb_geometry[GEOM_TYPES] = {
 	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
 };
 
-void json_context(json_object *j) {
+void json_context(std::shared_ptr<json_object> j) {
 	std::string s = json_stringify(j);
 
 	if (s.size() >= 500) {
@@ -41,7 +41,7 @@ void json_context(json_object *j) {
 	fprintf(stderr, "In JSON object %s\n", s.c_str());
 }
 
-void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature) {
+void parse_geometry(int t, std::shared_ptr<json_object> j, drawvec &out, int op, const char *fname, int line, std::shared_ptr<json_object> feature) {
 	if (j == NULL || j->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
 		json_context(feature);
@@ -103,7 +103,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	}
 }
 
-void canonicalize(json_object *o) {
+void canonicalize(std::shared_ptr<json_object> o) {
 	if (o->type == JSON_NUMBER) {
 		std::string s;
 		long long v;
@@ -128,7 +128,7 @@ void canonicalize(json_object *o) {
 	}
 }
 
-void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature) {
+void stringify_value(std::shared_ptr<json_object> value, int &type, std::string &stringified, const char *reading, int line, std::shared_ptr<json_object> feature) {
 	if (value != NULL) {
 		int vt = value->type;
 		std::string val;

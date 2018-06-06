@@ -38,8 +38,8 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 
-int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
-	json_object *geometry_type = json_hash_get(geometry, "type");
+int serialize_geojson_feature(struct serialization_state *sst, std::shared_ptr<json_object> geometry, std::shared_ptr<json_object> properties, std::shared_ptr<json_object> id, int layer, std::shared_ptr<json_object> tippecanoe, std::shared_ptr<json_object> feature, std::string layername) {
+	std::shared_ptr<json_object> geometry_type = json_hash_get(geometry, "type");
 	if (geometry_type == NULL) {
 		static int warned = 0;
 		if (!warned) {
@@ -57,7 +57,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		return 0;
 	}
 
-	json_object *coordinates = json_hash_get(geometry, "coordinates");
+	std::shared_ptr<json_object> coordinates = json_hash_get(geometry, "coordinates");
 	if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 		fprintf(stderr, "%s:%d: feature without coordinates array\n", sst->fname, sst->line);
 		json_context(feature);
@@ -81,7 +81,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	std::string tippecanoe_layername;
 
 	if (tippecanoe != NULL) {
-		json_object *min = json_hash_get(tippecanoe, "minzoom");
+		std::shared_ptr<json_object> min = json_hash_get(tippecanoe, "minzoom");
 		if (min != NULL && min->type == JSON_NUMBER) {
 			tippecanoe_minzoom = min->number;
 		}
@@ -89,7 +89,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			tippecanoe_minzoom = atoi(min->string.c_str());
 		}
 
-		json_object *max = json_hash_get(tippecanoe, "maxzoom");
+		std::shared_ptr<json_object> max = json_hash_get(tippecanoe, "maxzoom");
 		if (max != NULL && max->type == JSON_NUMBER) {
 			tippecanoe_maxzoom = max->number;
 		}
@@ -97,7 +97,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			tippecanoe_maxzoom = atoi(max->string.c_str());
 		}
 
-		json_object *ln = json_hash_get(tippecanoe, "layer");
+		std::shared_ptr<json_object> ln = json_hash_get(tippecanoe, "layer");
 		if (ln != NULL && (ln->type == JSON_STRING || ln->type == JSON_NUMBER)) {
 			tippecanoe_layername = ln->string;
 		}
@@ -214,12 +214,12 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	return serialize_feature(sst, sf);
 }
 
-void check_crs(json_object *j, const char *reading) {
-	json_object *crs = json_hash_get(j, "crs");
+void check_crs(std::shared_ptr<json_object> j, const char *reading) {
+	std::shared_ptr<json_object> crs = json_hash_get(j, "crs");
 	if (crs != NULL) {
-		json_object *properties = json_hash_get(crs, "properties");
+		std::shared_ptr<json_object> properties = json_hash_get(crs, "properties");
 		if (properties != NULL) {
-			json_object *name = json_hash_get(properties, "name");
+			std::shared_ptr<json_object> name = json_hash_get(properties, "name");
 			if (name->type == JSON_STRING) {
 				if (name->string != projection->alias) {
 					if (!quiet) {
@@ -238,7 +238,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 	long long found_geometries = 0;
 
 	while (1) {
-		json_object *j = json_read(jp);
+		std::shared_ptr<json_object> j = json_read(jp);
 		if (j == NULL) {
 			if (jp->error.size() != 0) {
 				fprintf(stderr, "%s:%zu: %s\n", sst->fname, jp->line, jp->error.c_str());
@@ -259,7 +259,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			}
 		}
 
-		json_object *type = json_hash_get(j, "type");
+		std::shared_ptr<json_object> type = json_hash_get(j, "type");
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
@@ -278,14 +278,14 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 				if (j->parent != NULL) {
 					if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
 						if (j->parent->parent->type == JSON_HASH) {
-							json_object *geometries = json_hash_get(j->parent->parent, "geometries");
+							std::shared_ptr<json_object> geometries = json_hash_get(j->parent->parent, "geometries");
 							if (geometries != NULL) {
 								// Parent of Parent must be a GeometryCollection
 								is_geometry = 0;
 							}
 						}
 					} else if (j->parent->type == JSON_HASH) {
-						json_object *geometry = json_hash_get(j->parent, "geometry");
+						std::shared_ptr<json_object> geometry = json_hash_get(j->parent, "geometry");
 						if (geometry != NULL) {
 							// Parent must be a Feature
 							is_geometry = 0;
@@ -320,7 +320,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		}
 		found_features++;
 
-		json_object *geometry = json_hash_get(j, "geometry");
+		std::shared_ptr<json_object> geometry = json_hash_get(j, "geometry");
 		if (geometry == NULL) {
 			fprintf(stderr, "%s:%zu: feature with no geometry\n", sst->fname, jp->line);
 			json_context(j);
@@ -328,7 +328,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			continue;
 		}
 
-		json_object *properties = json_hash_get(j, "properties");
+		std::shared_ptr<json_object> properties = json_hash_get(j, "properties");
 		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
 			fprintf(stderr, "%s:%zu: feature without properties hash\n", sst->fname, jp->line);
 			json_context(j);
@@ -336,10 +336,10 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			continue;
 		}
 
-		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
-		json_object *id = json_hash_get(j, "id");
+		std::shared_ptr<json_object> tippecanoe = json_hash_get(j, "tippecanoe");
+		std::shared_ptr<json_object> id = json_hash_get(j, "id");
 
-		json_object *geometries = json_hash_get(geometry, "geometries");
+		std::shared_ptr<json_object> geometries = json_hash_get(geometry, "geometries");
 		if (geometries != NULL && geometries->type == JSON_ARRAY) {
 			size_t g;
 			for (g = 0; g < geometries->array.size(); g++) {

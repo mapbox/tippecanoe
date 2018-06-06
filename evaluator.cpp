@@ -5,7 +5,7 @@
 #include "mvt.hpp"
 #include "evaluator.hpp"
 
-int compare(mvt_value one, json_object *two, bool &fail) {
+int compare(mvt_value one, std::shared_ptr<json_object> two, bool &fail) {
 	if (one.type == mvt_string) {
 		if (two->type != JSON_STRING) {
 			fail = true;
@@ -69,7 +69,7 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 	exit(EXIT_FAILURE);
 }
 
-bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
+bool eval(std::map<std::string, mvt_value> const &feature, std::shared_ptr<json_object> f) {
 	if (f == NULL || f->type != JSON_ARRAY) {
 		fprintf(stderr, "Filter is not an array: %s\n", json_stringify(f).c_str());
 		exit(EXIT_FAILURE);
@@ -269,14 +269,14 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 	exit(EXIT_FAILURE);
 }
 
-bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const &layer, json_object *filter) {
+bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const &layer, std::shared_ptr<json_object> filter) {
 	if (filter == NULL || filter->type != JSON_HASH) {
 		fprintf(stderr, "Error: filter is not a hash: %s\n", json_stringify(filter).c_str());
 		exit(EXIT_FAILURE);
 	}
 
 	bool ok = true;
-	json_object *f;
+	std::shared_ptr<json_object> f;
 
 	f = json_hash_get(filter, layer.c_str());
 	if (ok && f != NULL) {
@@ -291,7 +291,7 @@ bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const
 	return ok;
 }
 
-json_object *read_filter(const char *fname) {
+std::shared_ptr<json_object> read_filter(const char *fname) {
 	FILE *fp = fopen(fname, "r");
 	if (fp == NULL) {
 		perror(fname);
@@ -299,7 +299,7 @@ json_object *read_filter(const char *fname) {
 	}
 
 	json_pull *jp = json_begin_file(fp);
-	json_object *filter = json_read_tree(jp);
+	std::shared_ptr<json_object> filter = json_read_tree(jp);
 	if (filter == NULL) {
 		fprintf(stderr, "%s: %s\n", fname, jp->error.c_str());
 		exit(EXIT_FAILURE);
@@ -310,9 +310,9 @@ json_object *read_filter(const char *fname) {
 	return filter;
 }
 
-json_object *parse_filter(const char *s) {
+std::shared_ptr<json_object> parse_filter(const char *s) {
 	json_pull *jp = json_begin_string(s);
-	json_object *filter = json_read_tree(jp);
+	std::shared_ptr<json_object> filter = json_read_tree(jp);
 	if (filter == NULL) {
 		fprintf(stderr, "Could not parse filter %s\n", s);
 		fprintf(stderr, "%s\n", jp->error.c_str());

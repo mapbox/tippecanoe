@@ -96,8 +96,8 @@ static inline int read_wrap(json_pull *j) {
 	return c;
 }
 
-static json_object *fabricate_object(json_pull *jp, json_object *parent, json_type type) {
-	json_object *o = new json_object;
+static std::shared_ptr<json_object> fabricate_object(json_pull *jp, std::shared_ptr<json_object> parent, json_type type) {
+	std::shared_ptr<json_object> o = std::make_shared<json_object>();
 	if (o == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -108,9 +108,9 @@ static json_object *fabricate_object(json_pull *jp, json_object *parent, json_ty
 	return o;
 }
 
-static json_object *add_object(json_pull *j, json_type type) {
-	json_object *c = j->container;
-	json_object *o = fabricate_object(j, c, type);
+static std::shared_ptr<json_object> add_object(json_pull *j, json_type type) {
+	std::shared_ptr<json_object> c = j->container;
+	std::shared_ptr<json_object> o = fabricate_object(j, c, type);
 
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
@@ -119,7 +119,6 @@ static json_object *add_object(json_pull *j, json_type type) {
 				c->expect = JSON_COMMA;
 			} else {
 				j->error = "Expected a comma, not a list item";
-				delete o;
 				return NULL;
 			}
 		} else if (c->type == JSON_HASH) {
@@ -129,7 +128,6 @@ static json_object *add_object(json_pull *j, json_type type) {
 			} else if (c->expect == JSON_KEY) {
 				if (type != JSON_STRING) {
 					j->error = "Hash key is not a string";
-					delete o;
 					return NULL;
 				}
 
@@ -138,7 +136,6 @@ static json_object *add_object(json_pull *j, json_type type) {
 				c->expect = JSON_COLON;
 			} else {
 				j->error = "Expected a comma or colon";
-				delete o;
 				return NULL;
 			}
 		}
@@ -153,7 +150,7 @@ static json_object *add_object(json_pull *j, json_type type) {
 	return o;
 }
 
-json_object *json_hash_get(json_object *o, std::string const &s) {
+std::shared_ptr<json_object> json_hash_get(std::shared_ptr<json_object> o, std::string const &s) {
 	if (o == NULL || o->type != JSON_HASH) {
 		return NULL;
 	}
@@ -170,7 +167,7 @@ json_object *json_hash_get(json_object *o, std::string const &s) {
 	return NULL;
 }
 
-json_object *json_read_separators(json_pull *j, json_separator_callback cb, void *state) {
+std::shared_ptr<json_object> json_read_separators(json_pull *j, json_separator_callback cb, void *state) {
 	int c;
 
 	// In case there is an error at the top level
@@ -215,7 +212,7 @@ again:
 	/////////////////////////// Arrays
 
 	if (c == '[') {
-		json_object *o = add_object(j, JSON_ARRAY);
+		std::shared_ptr<json_object> o = add_object(j, JSON_ARRAY);
 		if (o == NULL) {
 			return NULL;
 		}
@@ -245,7 +242,7 @@ again:
 			}
 		}
 
-		json_object *ret = j->container;
+		std::shared_ptr<json_object> ret = j->container;
 		j->container = ret->parent;
 		return ret;
 	}
@@ -253,7 +250,7 @@ again:
 	/////////////////////////// Hashes
 
 	if (c == '{') {
-		json_object *o = add_object(j, JSON_HASH);
+		std::shared_ptr<json_object> o = add_object(j, JSON_HASH);
 		if (o == NULL) {
 			return NULL;
 		}
@@ -283,7 +280,7 @@ again:
 			}
 		}
 
-		json_object *ret = j->container;
+		std::shared_ptr<json_object> ret = j->container;
 		j->container = ret->parent;
 		return ret;
 	}
@@ -448,7 +445,7 @@ again:
 			}
 		}
 
-		json_object *n = add_object(j, JSON_NUMBER);
+		std::shared_ptr<json_object> n = add_object(j, JSON_NUMBER);
 		if (n != NULL) {
 			n->number = atof(val.c_str());
 			n->string = val;
@@ -578,7 +575,7 @@ again:
 			return NULL;
 		}
 
-		json_object *s = add_object(j, JSON_STRING);
+		std::shared_ptr<json_object> s = add_object(j, JSON_STRING);
 		if (s != NULL) {
 			s->string = val;
 		}
@@ -589,12 +586,12 @@ again:
 	return NULL;
 }
 
-json_object *json_read(json_pull *j) {
+std::shared_ptr<json_object> json_read(json_pull *j) {
 	return json_read_separators(j, NULL, NULL);
 }
 
-json_object *json_read_tree(json_pull *p) {
-	json_object *j;
+std::shared_ptr<json_object> json_read_tree(json_pull *p) {
+	std::shared_ptr<json_object> j;
 
 	while ((j = json_read(p)) != NULL) {
 		if (j->parent == NULL) {
@@ -605,7 +602,7 @@ json_object *json_read_tree(json_pull *p) {
 	return NULL;
 }
 
-void json_free(json_object *o) {
+void json_free(std::shared_ptr<json_object> o) {
 	size_t i;
 
 	if (o == NULL) {
@@ -615,7 +612,7 @@ void json_free(json_object *o) {
 	// Free any data linked from here
 
 	if (o->type == JSON_ARRAY) {
-		std::vector<json_object *> a = o->array;
+		std::vector<std::shared_ptr<json_object> > a = o->array;
 		size_t n = o->array.size();
 
 		o->array.resize(0);
@@ -624,8 +621,8 @@ void json_free(json_object *o) {
 			json_free(a[i]);
 		}
 	} else if (o->type == JSON_HASH) {
-		std::vector<json_object *> k = o->keys;
-		std::vector<json_object *> v = o->values;
+		std::vector<std::shared_ptr<json_object> > k = o->keys;
+		std::vector<std::shared_ptr<json_object> > v = o->values;
 		size_t n = o->keys.size();
 
 		o->keys.resize(0);
@@ -638,11 +635,9 @@ void json_free(json_object *o) {
 	}
 
 	json_disconnect(o);
-
-	delete o;
 }
 
-static void json_disconnect_parser(json_object *o) {
+static void json_disconnect_parser(std::shared_ptr<json_object> o) {
 	if (o->type == JSON_HASH) {
 		size_t i;
 		for (i = 0; i < o->keys.size(); i++) {
@@ -659,7 +654,7 @@ static void json_disconnect_parser(json_object *o) {
 	o->parser = NULL;
 }
 
-void json_disconnect(json_object *o) {
+void json_disconnect(std::shared_ptr<json_object> o) {
 	// Expunge references to this as an array element
 	// or a hash key or value.
 
@@ -695,9 +690,6 @@ void json_disconnect(json_object *o) {
 			if (i < o->parent->keys.size()) {
 				if (o->parent->keys[i] != NULL && o->parent->keys[i]->type == JSON_NULL) {
 					if (o->parent->values[i] != NULL && o->parent->values[i]->type == JSON_NULL) {
-						delete o->parent->keys[i];
-						delete o->parent->values[i];
-
 						o->parent->keys.erase(o->parent->keys.begin() + i);
 						o->parent->values.erase(o->parent->values.begin() + i);
 					}
@@ -714,7 +706,7 @@ void json_disconnect(json_object *o) {
 	o->parent = NULL;
 }
 
-static void json_print_one(std::string &val, json_object *o) {
+static void json_print_one(std::string &val, std::shared_ptr<json_object> o) {
 	if (o == NULL) {
 		val.append("...");
 	} else if (o->type == JSON_STRING) {
@@ -752,7 +744,7 @@ static void json_print_one(std::string &val, json_object *o) {
 	}
 }
 
-static void json_print(std::string &val, json_object *o) {
+static void json_print(std::string &val, std::shared_ptr<json_object> o) {
 	if (o == NULL) {
 		// Hash value in incompletely read hash
 		val.append("...");
@@ -784,7 +776,7 @@ static void json_print(std::string &val, json_object *o) {
 	}
 }
 
-std::string json_stringify(json_object *o) {
+std::string json_stringify(std::shared_ptr<json_object> o) {
 	std::string val;
 	json_print(val, o);
 	return val;

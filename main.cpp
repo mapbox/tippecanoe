@@ -390,7 +390,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, std::shared_ptr<json_object> filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -579,7 +579,7 @@ struct read_parallel_arg {
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
 	int exclude_all = 0;
-	json_object *filter = NULL;
+	std::shared_ptr<json_object> filter = NULL;
 	int maxzoom = 0;
 	int basezoom = 0;
 	int source = 0;
@@ -632,7 +632,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, std::shared_ptr<json_object> filter, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -1134,7 +1134,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, std::shared_ptr<json_object> filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2376,7 +2376,7 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 
 void parse_json_source(const char *arg, struct source &src) {
 	json_pull *jp = json_begin_string(arg);
-	json_object *o = json_read_tree(jp);
+	std::shared_ptr<json_object> o = json_read_tree(jp);
 
 	if (o == NULL) {
 		fprintf(stderr, "%s: -L%s: %s\n", *av, arg, jp->error.c_str());
@@ -2388,7 +2388,7 @@ void parse_json_source(const char *arg, struct source &src) {
 		exit(EXIT_FAILURE);
 	}
 
-	json_object *fname = json_hash_get(o, "file");
+	std::shared_ptr<json_object> fname = json_hash_get(o, "file");
 	if (fname == NULL || fname->type != JSON_STRING) {
 		fprintf(stderr, "%s: -L%s: requires \"file\": filename\n", *av, arg);
 		exit(EXIT_FAILURE);
@@ -2396,12 +2396,12 @@ void parse_json_source(const char *arg, struct source &src) {
 
 	src.file = fname->string;
 
-	json_object *layer = json_hash_get(o, "layer");
+	std::shared_ptr<json_object> layer = json_hash_get(o, "layer");
 	if (layer != NULL && layer->type == JSON_STRING) {
 		src.layer = layer->string;
 	}
 
-	json_object *description = json_hash_get(o, "description");
+	std::shared_ptr<json_object> description = json_hash_get(o, "description");
 	if (description != NULL && description->type == JSON_STRING) {
 		src.description = description->string;
 	}
@@ -2451,7 +2451,7 @@ int main(int argc, char **argv) {
 	int exclude_all = 0;
 	int read_parallel = 0;
 	int files_open_at_start;
-	json_object *filter = NULL;
+	std::shared_ptr<json_object> filter = NULL;
 
 	for (i = 0; i < 256; i++) {
 		prevent[i] = 0;

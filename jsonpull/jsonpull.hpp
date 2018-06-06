@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 typedef enum json_type {
 	// These types can be returned by json_read()
@@ -28,15 +29,15 @@ struct json_object;
 
 struct json_object {
 	json_type type;
-	struct json_object *parent;
+	std::shared_ptr<struct json_object> parent;
 	struct json_pull *parser;
 
 	std::string string;
 	double number;
 
-	std::vector<json_object *> array;
-	std::vector<json_object *> keys;
-	std::vector<json_object *> values;
+	std::vector<std::shared_ptr<json_object>> array;
+	std::vector<std::shared_ptr<json_object>> keys;
+	std::vector<std::shared_ptr<json_object>> values;
 
 	int expect;
 };
@@ -51,8 +52,8 @@ typedef struct json_pull {
 	ssize_t buffer_tail;
 	ssize_t buffer_head;
 
-	json_object *container;
-	json_object *root;
+	std::shared_ptr<json_object> container;
+	std::shared_ptr<json_object> root;
 } json_pull;
 
 json_pull *json_begin_file(FILE *f);
@@ -63,14 +64,14 @@ void json_end(json_pull *p);
 
 typedef void (*json_separator_callback)(json_type type, json_pull *j, void *state);
 
-json_object *json_read_tree(json_pull *j);
-json_object *json_read(json_pull *j);
-json_object *json_read_separators(json_pull *j, json_separator_callback cb, void *state);
-void json_free(json_object *j);
-void json_disconnect(json_object *j);
+std::shared_ptr<json_object> json_read_tree(json_pull *j);
+std::shared_ptr<json_object> json_read(json_pull *j);
+std::shared_ptr<json_object> json_read_separators(json_pull *j, json_separator_callback cb, void *state);
+void json_free(std::shared_ptr<json_object> j);
+void json_disconnect(std::shared_ptr<json_object> j);
 
-json_object *json_hash_get(json_object *o, std::string const &key);
+std::shared_ptr<json_object> json_hash_get(std::shared_ptr<json_object> o, std::string const &key);
 
-std::string json_stringify(json_object *o);
+std::string json_stringify(std::shared_ptr<json_object> o);
 
 #endif
