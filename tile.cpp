@@ -1388,7 +1388,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 			sf.dropped = true;
 		}
 
-		// Remove nulls, now that the filter has run
+		// Remove nulls, now that the expression evaluation filter has run
 
 		for (ssize_t i = (ssize_t) sf.keys.size() - 1; i >= 0; i--) {
 			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];

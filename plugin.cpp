@@ -259,7 +259,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				std::string s;
 
 				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
-				if (tp >= 0) {
+
+				// Nulls can be excluded here because this is the postfilter
+				// and it is nearly time to create the vector representation
+
+				if (tp >= 0 && tp != mvt_null) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
@@ -493,7 +497,10 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
 
-				if (v.type >= 0) {
+				// Nulls can be excluded here because the expression evaluation filter
+				// would have already run before prefiltering
+
+				if (v.type >= 0 && v.type != mvt_null) {
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));
 					sf.full_values.push_back(v);
 
