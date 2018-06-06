@@ -1,3 +1,7 @@
+## 1.29.2
+
+* Be careful to remove null attributes from prefilter/postfilter output
+
 ## 1.29.1
 
 * Add --use-source-polygon-winding and --reverse-source-polygon-winding

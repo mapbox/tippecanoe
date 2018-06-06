@@ -341,7 +341,7 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 		json_object *id = json_hash_get(j, "id");
 
 		json_object *geometries = json_hash_get(geometry, "geometries");
-		if (geometries != NULL) {
+		if (geometries != NULL && geometries->type == JSON_ARRAY) {
 			size_t g;
 			for (g = 0; g < geometries->length; g++) {
 				serialize_geojson_feature(sst, geometries->array[g], properties, id, layer, tippecanoe, j, layername);
