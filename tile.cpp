@@ -2244,7 +2244,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 		if (totalsize > 0 && tile.layers.size() > 0) {
 			if (totalsize > max_tile_features && !prevent[P_FEATURE_LIMIT]) {
-				fprintf(stderr, "tile %d/%u/%u has %zu features, >%zu    \n", z, tx, ty, totalsize, max_tile_features);
+				if (!quiet) {
+					fprintf(stderr, "tile %d/%u/%u has %zu features, >%zu    \n", z, tx, ty, totalsize, max_tile_features);
+				}
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
 					merge_fraction = merge_fraction * max_tile_features / tile.layers.size() * 0.95;

@@ -2102,7 +2102,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				// printf("%d/%u/%u %lld\n", z, max[z].x, max[z].y, max[z].count);
 			}
 
-			fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+			if (!quiet) {
+				fprintf(stderr, "Choosing a base zoom of -B%d to keep %lld features in tile %d/%u/%u.\n", basezoom, max[basezoom].count, basezoom, max[basezoom].x, max[basezoom].y);
+			}
 		}
 
 		if (obasezoom < 0 && basezoom > maxzoom) {
@@ -2116,7 +2118,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					droprate = 2.5;
 				} else {
 					droprate = exp(log((long double) max[0].count / max[maxzoom].count) / (maxzoom));
-					fprintf(stderr, "Choosing a drop rate of -r%f to get from %lld to %lld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
+					if (!quiet) {
+						fprintf(stderr, "Choosing a drop rate of -r%f to get from %lld to %lld in %d zooms\n", droprate, max[maxzoom].count, max[0].count, maxzoom);
+					}
 				}
 			}
 
@@ -2128,7 +2132,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				}
 			}
 
-			fprintf(stderr, "Choosing a base zoom of -B%d to keep %f features in tile %d/%u/%u.\n", basezoom, max[maxzoom].count * exp(log(droprate) * (maxzoom - basezoom)), maxzoom, max[maxzoom].x, max[maxzoom].y);
+			if (!quiet) {
+				fprintf(stderr, "Choosing a base zoom of -B%d to keep %f features in tile %d/%u/%u.\n", basezoom, max[maxzoom].count * exp(log(droprate) * (maxzoom - basezoom)), maxzoom, max[maxzoom].x, max[maxzoom].y);
+			}
 		} else if (droprate < 0) {
 			droprate = 1;
 
@@ -2140,7 +2146,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 					droprate = exp(log(interval) / (basezoom - z));
 					interval = exp(log(droprate) * (basezoom - z));
 
-					fprintf(stderr, "Choosing a drop rate of -r%f to keep %f features in tile %d/%u/%u.\n", droprate, max[z].count / interval, z, max[z].x, max[z].y);
+					if (!quiet) {
+						fprintf(stderr, "Choosing a drop rate of -r%f to keep %f features in tile %d/%u/%u.\n", droprate, max[z].count / interval, z, max[z].x, max[z].y);
+					}
 				}
 			}
 		}
