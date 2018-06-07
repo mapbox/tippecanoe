@@ -2163,7 +2163,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			if (effective == 0) {
-				fprintf(stderr, "With gamma, effective base zoom is 0, so no effective drop rate\n");
+				if (!quiet) {
+					fprintf(stderr, "With gamma, effective base zoom is 0, so no effective drop rate\n");
+				}
 			} else {
 				double interval_0 = exp(log(droprate) * (basezoom - 0));
 				double interval_eff = exp(log(droprate) * (basezoom - effective));
@@ -2179,7 +2181,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 				double eff_drop = exp(log(rate_at_eff / rate_at_0) / (effective - 0));
 
-				fprintf(stderr, "With gamma, effective base zoom of %d, effective drop rate of %f\n", effective, eff_drop);
+				if (!quiet) {
+					fprintf(stderr, "With gamma, effective base zoom of %d, effective drop rate of %f\n", effective, eff_drop);
+				}
 			}
 		}
 

@@ -1,6 +1,6 @@
 ## 1.29.3
 
-* Include a creator field in tileset metadata with the Tippecanoe version
+* Include a generator field in tileset metadata with the Tippecanoe version
 
 ## 1.29.2
 

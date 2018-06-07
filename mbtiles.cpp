@@ -372,7 +372,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('creator', %Q);", VERSION);
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator', %Q);", VERSION);
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set type: %s\n", err);
 		if (!forcetable) {
