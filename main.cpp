@@ -478,7 +478,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	}
 }
 
-static ssize_t read_stream(json_pull *j, char *buffer, size_t n);
+static ssize_t read_stream(std::shared_ptr<json_pull> j, char *buffer, size_t n);
 
 struct STREAM {
 	FILE *fp = NULL;
@@ -526,12 +526,12 @@ struct STREAM {
 		}
 	}
 
-	json_pull *json_begin() {
+	std::shared_ptr<json_pull> json_begin() {
 		return ::json_begin(read_stream, this);
 	}
 };
 
-static ssize_t read_stream(json_pull *j, char *buffer, size_t n) {
+static ssize_t read_stream(std::shared_ptr<json_pull> j, char *buffer, size_t n) {
 	return ((STREAM *) j->source)->read(buffer, n);
 }
 
@@ -1640,7 +1640,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				// Plain serial reading
 
 				std::atomic<long long> layer_seq(overall_offset);
-				json_pull *jp = fp->json_begin();
+				std::shared_ptr<json_pull> jp = fp->json_begin();
 				struct serialization_state sst;
 
 				sst.fname = reading.c_str();
@@ -2375,7 +2375,7 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 }
 
 void parse_json_source(const char *arg, struct source &src) {
-	json_pull *jp = json_begin_string(arg);
+	std::shared_ptr<json_pull> jp = json_begin_string(arg);
 	std::shared_ptr<json_object> o = json_read_tree(jp);
 
 	if (o == NULL) {

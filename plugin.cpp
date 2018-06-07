@@ -92,7 +92,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		perror("fdopen filter output");
 		exit(EXIT_FAILURE);
 	}
-	json_pull *jp = json_begin_file(f);
+	std::shared_ptr<json_pull> jp = json_begin_file(f);
 
 	while (1) {
 		std::shared_ptr<json_object> j = json_read(jp);
@@ -295,7 +295,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 }
 
 // Reads from the prefilter
-serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
+serial_feature parse_feature(std::shared_ptr<json_pull> jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
 	serial_feature sf;
 
 	while (1) {

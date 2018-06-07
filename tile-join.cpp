@@ -793,7 +793,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
 
 				if (s != NULL) {
-					json_pull *jp = json_begin_string((const char *) s);
+					std::shared_ptr<json_pull> jp = json_begin_string((const char *) s);
 					std::shared_ptr<json_object> o = json_read_tree(jp);
 
 					if (o != NULL && o->type == JSON_HASH) {

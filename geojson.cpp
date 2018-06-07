@@ -232,7 +232,7 @@ void check_crs(std::shared_ptr<json_object> j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
+void parse_json(struct serialization_state *sst, std::shared_ptr<json_pull> jp, int layer, std::string layername) {
 	long long found_hashes = 0;
 	long long found_features = 0;
 	long long found_geometries = 0;
@@ -275,17 +275,20 @@ void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::
 			}
 
 			if (is_geometry) {
-				if (j->parent != NULL) {
-					if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
-						if (j->parent->parent->type == JSON_HASH) {
-							std::shared_ptr<json_object> geometries = json_hash_get(j->parent->parent, "geometries");
+				std::shared_ptr<json_object> parent = j->parent.lock();
+				if (parent.use_count() != 0) {
+					if (parent->type == JSON_ARRAY) {
+						std::shared_ptr<json_object> parent_parent = parent->parent.lock();
+
+						if (parent_parent.use_count() != 0 && parent_parent->type == JSON_HASH) {
+							std::shared_ptr<json_object> geometries = json_hash_get(parent_parent, "geometries");
 							if (geometries != NULL) {
 								// Parent of Parent must be a GeometryCollection
 								is_geometry = 0;
 							}
 						}
-					} else if (j->parent->type == JSON_HASH) {
-						std::shared_ptr<json_object> geometry = json_hash_get(j->parent, "geometry");
+					} else if (parent->type == JSON_HASH) {
+						std::shared_ptr<json_object> geometry = json_hash_get(parent, "geometry");
 						if (geometry != NULL) {
 							// Parent must be a Feature
 							is_geometry = 0;
@@ -369,7 +372,7 @@ struct jsonmap {
 	unsigned long long end;
 };
 
-ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
+ssize_t json_map_read(std::shared_ptr<json_pull> jp, char *buffer, size_t n) {
 	struct jsonmap *jm = (struct jsonmap *) jp->source;
 
 	if (jm->off + n >= jm->end) {
@@ -382,7 +385,7 @@ ssize_t json_map_read(struct json_pull *jp, char *buffer, size_t n) {
 	return n;
 }
 
-struct json_pull *json_begin_map(char *map, long long len) {
+std::shared_ptr<json_pull> json_begin_map(char *map, long long len) {
 	struct jsonmap *jm = new jsonmap;
 	if (jm == NULL) {
 		perror("Out of memory");
@@ -396,7 +399,7 @@ struct json_pull *json_begin_map(char *map, long long len) {
 	return json_begin(json_map_read, jm);
 }
 
-void json_end_map(struct json_pull *jp) {
+void json_end_map(std::shared_ptr<json_pull> jp) {
 	delete (struct jsonmap *) jp->source;
 	json_end(jp);
 }

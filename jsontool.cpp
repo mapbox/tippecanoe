@@ -340,7 +340,7 @@ void join_csv(std::shared_ptr<json_object> j) {
 }
 
 void process(FILE *fp, const char *fname) {
-	json_pull *jp = json_begin_file(fp);
+	std::shared_ptr<json_pull> jp = json_begin_file(fp);
 
 	while (1) {
 		std::shared_ptr<json_object> j = json_read(jp);
@@ -373,17 +373,20 @@ void process(FILE *fp, const char *fname) {
 			   type->string == "MultiPolygon") {
 			int is_geometry = 1;
 
-			if (j->parent != NULL) {
-				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
-					if (j->parent->parent->type == JSON_HASH) {
-						std::shared_ptr<json_object> geometries = json_hash_get(j->parent->parent, "geometries");
+			std::shared_ptr<json_object> parent = j->parent.lock();
+			if (parent.use_count() != 0) {
+				if (parent->type == JSON_ARRAY) {
+					std::shared_ptr<json_object> parent_parent = parent->parent.lock();
+
+					if (parent_parent.use_count() != 0 && parent_parent->type == JSON_HASH) {
+						std::shared_ptr<json_object> geometries = json_hash_get(parent_parent, "geometries");
 						if (geometries != NULL) {
 							// Parent of Parent must be a GeometryCollection
 							is_geometry = 0;
 						}
 					}
-				} else if (j->parent->type == JSON_HASH) {
-					std::shared_ptr<json_object> geometry = json_hash_get(j->parent, "geometry");
+				} else if (parent->type == JSON_HASH) {
+					std::shared_ptr<json_object> geometry = json_hash_get(parent, "geometry");
 					if (geometry != NULL) {
 						// Parent must be a Feature
 						is_geometry = 0;

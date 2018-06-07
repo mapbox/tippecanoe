@@ -390,7 +390,7 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 
 		auto tip = other.find("tippecanoe");
 		if (tip != other.end()) {
-			json_pull *jp = json_begin_string(tip->second.s.c_str());
+			std::shared_ptr<json_pull> jp = json_begin_string(tip->second.s.c_str());
 			std::shared_ptr<json_object> o = json_read_tree(jp);
 
 			if (o != NULL) {

@@ -173,7 +173,7 @@ sqlite3 *dirmeta2tmp(const char *fname) {
 		exit(EXIT_FAILURE);
 	}
 
-	json_pull *jp = json_begin_file(f);
+	std::shared_ptr<json_pull> jp = json_begin_file(f);
 	std::shared_ptr<json_object> o = json_read_tree(jp);
 
 	if (o->type != JSON_HASH) {

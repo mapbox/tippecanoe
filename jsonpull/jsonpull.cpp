@@ -8,8 +8,8 @@
 
 #define BUFFER 10000
 
-json_pull *json_begin(ssize_t (*read)(struct json_pull *, char *buffer, size_t n), void *source) {
-	json_pull *j = new json_pull;
+std::shared_ptr<json_pull> json_begin(ssize_t (*read)(std::shared_ptr<json_pull> , char *buffer, size_t n), void *source) {
+	std::shared_ptr<json_pull> j = std::make_shared<json_pull>();
 	if (j == NULL) {
 		perror("Out of memory");
 		exit(EXIT_FAILURE);
@@ -30,7 +30,7 @@ json_pull *json_begin(ssize_t (*read)(struct json_pull *, char *buffer, size_t n
 	return j;
 }
 
-static inline int peek(json_pull *j) {
+static inline int peek(std::shared_ptr<json_pull> j) {
 	if (j->buffer_head < j->buffer_tail) {
 		return (unsigned char) j->buffer[j->buffer_head];
 	} else {
@@ -43,7 +43,7 @@ static inline int peek(json_pull *j) {
 	}
 }
 
-static inline int next(json_pull *j) {
+static inline int next(std::shared_ptr<json_pull> j) {
 	if (j->buffer_head < j->buffer_tail) {
 		return (unsigned char) j->buffer[j->buffer_head++];
 	} else {
@@ -56,15 +56,15 @@ static inline int next(json_pull *j) {
 	}
 }
 
-static ssize_t read_file(json_pull *j, char *buffer, size_t n) {
+static ssize_t read_file(std::shared_ptr<json_pull> j, char *buffer, size_t n) {
 	return fread(buffer, 1, n, (FILE *) j->source);
 }
 
-json_pull *json_begin_file(FILE *f) {
+std::shared_ptr<json_pull> json_begin_file(FILE *f) {
 	return json_begin(read_file, f);
 }
 
-static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
+static ssize_t read_string(std::shared_ptr<json_pull> j, char *buffer, size_t n) {
 	const char *cp = (const char *) j->source;
 	size_t out = 0;
 
@@ -77,16 +77,15 @@ static ssize_t read_string(json_pull *j, char *buffer, size_t n) {
 	return out;
 }
 
-json_pull *json_begin_string(const char *s) {
+std::shared_ptr<json_pull> json_begin_string(const char *s) {
 	return json_begin(read_string, (void *) s);
 }
 
-void json_end(json_pull *p) {
+void json_end(std::shared_ptr<json_pull> p) {
 	json_free(p->root);
-	delete p;
 }
 
-static inline int read_wrap(json_pull *j) {
+static inline int read_wrap(std::shared_ptr<json_pull> j) {
 	int c = next(j);
 
 	if (c == '\n') {
@@ -96,7 +95,7 @@ static inline int read_wrap(json_pull *j) {
 	return c;
 }
 
-static std::shared_ptr<json_object> fabricate_object(json_pull *jp, std::shared_ptr<json_object> parent, json_type type) {
+static std::shared_ptr<json_object> fabricate_object(std::shared_ptr<json_pull> jp, std::shared_ptr<json_object> parent, json_type type) {
 	std::shared_ptr<json_object> o = std::make_shared<json_object>();
 	if (o == NULL) {
 		perror("Out of memory");
@@ -108,7 +107,7 @@ static std::shared_ptr<json_object> fabricate_object(json_pull *jp, std::shared_
 	return o;
 }
 
-static std::shared_ptr<json_object> add_object(json_pull *j, json_type type) {
+static std::shared_ptr<json_object> add_object(std::shared_ptr<json_pull> j, json_type type) {
 	std::shared_ptr<json_object> c = j->container;
 	std::shared_ptr<json_object> o = fabricate_object(j, c, type);
 
@@ -151,7 +150,7 @@ static std::shared_ptr<json_object> add_object(json_pull *j, json_type type) {
 }
 
 std::shared_ptr<json_object> json_hash_get(std::shared_ptr<json_object> o, std::string const &s) {
-	if (o == NULL || o->type != JSON_HASH) {
+	if (o == NULL || o.use_count() == 0 || o->type != JSON_HASH) {
 		return NULL;
 	}
 
@@ -167,7 +166,7 @@ std::shared_ptr<json_object> json_hash_get(std::shared_ptr<json_object> o, std::
 	return NULL;
 }
 
-std::shared_ptr<json_object> json_read_separators(json_pull *j, json_separator_callback cb, void *state) {
+std::shared_ptr<json_object> json_read_separators(std::shared_ptr<json_pull> j, json_separator_callback cb, void *state) {
 	int c;
 
 	// In case there is an error at the top level
@@ -225,7 +224,7 @@ again:
 
 		goto again;
 	} else if (c == ']') {
-		if (j->container == NULL) {
+		if (j->container.use_count() == 0) {
 			j->error = "Found ] at top level";
 			return NULL;
 		}
@@ -243,7 +242,7 @@ again:
 		}
 
 		std::shared_ptr<json_object> ret = j->container;
-		j->container = ret->parent;
+		j->container = ret->parent.lock();
 		return ret;
 	}
 
@@ -263,7 +262,7 @@ again:
 
 		goto again;
 	} else if (c == '}') {
-		if (j->container == NULL) {
+		if (j->container.use_count() == 0) {
 			j->error = "Found } at top level";
 			return NULL;
 		}
@@ -281,7 +280,7 @@ again:
 		}
 
 		std::shared_ptr<json_object> ret = j->container;
-		j->container = ret->parent;
+		j->container = ret->parent.lock();
 		return ret;
 	}
 
@@ -586,15 +585,16 @@ again:
 	return NULL;
 }
 
-std::shared_ptr<json_object> json_read(json_pull *j) {
+std::shared_ptr<json_object> json_read(std::shared_ptr<json_pull> j) {
 	return json_read_separators(j, NULL, NULL);
 }
 
-std::shared_ptr<json_object> json_read_tree(json_pull *p) {
+std::shared_ptr<json_object> json_read_tree(std::shared_ptr<json_pull> p) {
 	std::shared_ptr<json_object> j;
 
 	while ((j = json_read(p)) != NULL) {
-		if (j->parent == NULL) {
+		std::shared_ptr<json_object> parent = j->parent.lock();
+		if (parent.use_count() == 0) {
 			return j;
 		}
 	}
@@ -651,59 +651,62 @@ static void json_disconnect_parser(std::shared_ptr<json_object> o) {
 		}
 	}
 
-	o->parser = NULL;
+	o->parser = std::weak_ptr<json_pull>();
 }
 
 void json_disconnect(std::shared_ptr<json_object> o) {
 	// Expunge references to this as an array element
 	// or a hash key or value.
 
-	if (o->parent != NULL) {
-		if (o->parent->type == JSON_ARRAY) {
+	std::shared_ptr<json_object> parent = o->parent.lock();
+	std::shared_ptr<json_pull> parser = o->parser.lock();
+
+	if (parent.use_count() != 0) {
+		if (parent->type == JSON_ARRAY) {
 			size_t i;
 
-			for (i = 0; i < o->parent->array.size(); i++) {
-				if (o->parent->array[i] == o) {
+			for (i = 0; i < parent->array.size(); i++) {
+				if (parent->array[i] == o) {
 					break;
 				}
 			}
 
-			if (i < o->parent->array.size()) {
-				o->parent->array.erase(o->parent->array.begin() + i);
+			if (i < parent->array.size()) {
+				parent->array.erase(parent->array.begin() + i);
 			}
 		}
 
-		if (o->parent->type == JSON_HASH) {
+		if (parent->type == JSON_HASH) {
 			size_t i;
 
-			for (i = 0; i < o->parent->keys.size(); i++) {
-				if (o->parent->keys[i] == o) {
-					o->parent->keys[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
+			for (i = 0; i < parent->keys.size(); i++) {
+				if (parent->keys[i] == o) {
+					parent->keys[i] = fabricate_object(parser, parent, JSON_NULL);
 					break;
 				}
-				if (o->parent->values[i] == o) {
-					o->parent->values[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
+				if (parent->values[i] == o) {
+					parent->values[i] = fabricate_object(parser, parent, JSON_NULL);
 					break;
 				}
 			}
 
-			if (i < o->parent->keys.size()) {
-				if (o->parent->keys[i] != NULL && o->parent->keys[i]->type == JSON_NULL) {
-					if (o->parent->values[i] != NULL && o->parent->values[i]->type == JSON_NULL) {
-						o->parent->keys.erase(o->parent->keys.begin() + i);
-						o->parent->values.erase(o->parent->values.begin() + i);
+			if (i < parent->keys.size()) {
+				if (parent->keys[i] != NULL && parent->keys[i]->type == JSON_NULL) {
+					if (parent->values[i] != NULL && parent->values[i]->type == JSON_NULL) {
+						parent->keys.erase(parent->keys.begin() + i);
+						parent->values.erase(parent->values.begin() + i);
 					}
 				}
 			}
 		}
 	}
 
-	if (o->parser != NULL && o->parser->root == o) {
-		o->parser->root = NULL;
+	if (parser.use_count() != 0 && parser->root == o) {
+		parser->root = NULL;
 	}
 
 	json_disconnect_parser(o);
-	o->parent = NULL;
+	o->parent = std::weak_ptr<json_object>();
 }
 
 static void json_print_one(std::string &val, std::shared_ptr<json_object> o) {

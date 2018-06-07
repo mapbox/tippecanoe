@@ -298,7 +298,7 @@ std::shared_ptr<json_object> read_filter(const char *fname) {
 		exit(EXIT_FAILURE);
 	}
 
-	json_pull *jp = json_begin_file(fp);
+	std::shared_ptr<json_pull> jp = json_begin_file(fp);
 	std::shared_ptr<json_object> filter = json_read_tree(jp);
 	if (filter == NULL) {
 		fprintf(stderr, "%s: %s\n", fname, jp->error.c_str());
@@ -311,7 +311,7 @@ std::shared_ptr<json_object> read_filter(const char *fname) {
 }
 
 std::shared_ptr<json_object> parse_filter(const char *s) {
-	json_pull *jp = json_begin_string(s);
+	std::shared_ptr<json_pull> jp = json_begin_string(s);
 	std::shared_ptr<json_object> filter = json_read_tree(jp);
 	if (filter == NULL) {
 		fprintf(stderr, "Could not parse filter %s\n", s);
