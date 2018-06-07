@@ -2870,7 +2870,7 @@ int main(int argc, char **argv) {
 		}
 
 		case 'v':
-			fprintf(stderr, VERSION);
+			fprintf(stderr, "%s\n", VERSION);
 			exit(EXIT_FAILURE);
 
 		case 'P':

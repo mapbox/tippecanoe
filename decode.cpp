@@ -223,7 +223,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, std::set<std::string> const &exclude_meta) {
 	sqlite3 *db = NULL;
 	bool isdir = false;
 	int oz = z;
@@ -303,21 +303,23 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			}
 
 			while (sqlite3_step(stmt2) == SQLITE_ROW) {
-				if (within) {
-					state.json_comma_newline();
-				}
-				within = 1;
-
 				const unsigned char *name = sqlite3_column_text(stmt2, 0);
 				const unsigned char *value = sqlite3_column_text(stmt2, 1);
 
-				if (name == NULL || value == NULL) {
-					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-					exit(EXIT_FAILURE);
-				}
+				if (exclude_meta.count((char *) name) == 0) {
+					if (within) {
+						state.json_comma_newline();
+					}
+					within = 1;
 
-				state.json_write_string((char *) name);
-				state.json_write_string((char *) value);
+					if (name == NULL || value == NULL) {
+						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+						exit(EXIT_FAILURE);
+					}
+
+					state.json_write_string((char *) name);
+					state.json_write_string((char *) value);
+				}
 			}
 
 			state.json_write_newline();
@@ -481,6 +483,7 @@ int main(int argc, char **argv) {
 	std::set<std::string> to_decode;
 	bool pipeline = false;
 	bool stats = false;
+	std::set<std::string> exclude_meta;
 
 	struct option long_options[] = {
 		{"projection", required_argument, 0, 's'},
@@ -490,6 +493,7 @@ int main(int argc, char **argv) {
 		{"tag-layer-and-zoom", no_argument, 0, 'c'},
 		{"stats", no_argument, 0, 'S'},
 		{"force", no_argument, 0, 'f'},
+		{"exclude-metadata-row", required_argument, 0, 'x'},
 		{0, 0, 0, 0},
 	};
 
@@ -537,15 +541,19 @@ int main(int argc, char **argv) {
 			force = true;
 			break;
 
+		case 'x':
+			exclude_meta.insert(optarg);
+			break;
+
 		default:
 			usage(argv);
 		}
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline, stats);
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline, stats, exclude_meta);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1, to_decode, pipeline, stats);
+		decode(argv[optind], -1, -1, -1, to_decode, pipeline, stats, exclude_meta);
 	} else {
 		usage(argv);
 	}

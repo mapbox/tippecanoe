@@ -17,6 +17,7 @@
 #include "text.hpp"
 #include "milo/dtoa_milo.h"
 #include "write_json.hpp"
+#include "version.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -365,6 +366,15 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", vector ? "pbf" : "png");
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set format: %s\n", err);
+		if (!forcetable) {
+			exit(EXIT_FAILURE);
+		}
+	}
+	sqlite3_free(sql);
+
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('creator', %Q);", VERSION);
+	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "set type: %s\n", err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}
