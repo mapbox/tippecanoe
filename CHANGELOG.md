@@ -1,3 +1,7 @@
+## 1.29.3
+
+* Include a generator field in tileset metadata with the Tippecanoe version
+
 ## 1.29.2
 
 * Be careful to remove null attributes from prefilter/postfilter output

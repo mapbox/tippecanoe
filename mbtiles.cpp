@@ -17,6 +17,7 @@
 #include "text.hpp"
 #include "milo/dtoa_milo.h"
 #include "write_json.hpp"
+#include "version.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
@@ -264,7 +265,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -365,6 +366,16 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", vector ? "pbf" : "png");
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set format: %s\n", err);
+		if (!forcetable) {
+			exit(EXIT_FAILURE);
+		}
+	}
+	sqlite3_free(sql);
+
+	std::string version = program + " " + VERSION;
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator', %Q);", version.c_str());
+	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "set type: %s\n", err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}

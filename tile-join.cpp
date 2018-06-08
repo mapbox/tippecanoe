@@ -1064,7 +1064,7 @@ int main(int argc, char **argv) {
 		name = set_name;
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, attribute_descriptions);
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, attribute_descriptions, "tile-join");
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
