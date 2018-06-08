@@ -2311,7 +2311,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS], attribute_descriptions);
+	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS], attribute_descriptions, "tippecanoe");
 
 	return ret;
 }
@@ -2882,7 +2882,7 @@ int main(int argc, char **argv) {
 		}
 
 		case 'v':
-			fprintf(stderr, "%s\n", VERSION);
+			fprintf(stderr, "tippecanoe %s\n", VERSION);
 			exit(EXIT_FAILURE);
 
 		case 'P':
