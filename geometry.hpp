@@ -22,19 +22,22 @@ struct draw {
 	signed char op;
 	long long y : 40;
 	signed char necessary;
+	long id;
 
 	draw(int nop, long long nx, long long ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),
-	      necessary(0) {
+	      necessary(0),
+	      id(0) {
 	}
 
 	draw()
 	    : x(0),
 	      op(0),
 	      y(0),
-	      necessary(0) {
+	      necessary(0),
+	      id(0) {
 	}
 
 	bool operator<(draw const &s) const {

@@ -20,6 +20,7 @@ struct mvt_geometry {
 	long long x = 0;
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
+	long id = 0;
 
 	mvt_geometry(int op, long long x, long long y);
 
@@ -49,6 +50,7 @@ struct mvt_feature {
 	unsigned long long id = 0;
 	bool has_id = false;
 	bool dropped = false;
+	long clipid = 0;
 
 	mvt_feature() {
 		has_id = false;

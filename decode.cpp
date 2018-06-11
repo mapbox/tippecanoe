@@ -85,7 +85,80 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	state.json_write_newline();
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
+void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vector<std::vector<mvt_tile>> subtiles, size_t n) {
+	// Set up a corresponding feature within each sub-tile
+	// (Empty features will have to get torn down later)
+
+	for (size_t x = 0; x < n; x++) {
+		for (size_t y = 0; y < n; y++) {
+			mvt_feature nf;
+
+			nf.tags = feature.tags;
+			nf.type = feature.type;
+			nf.id = feature.id;
+			nf.has_id = feature.has_id;
+
+			mvt_tile &nt = subtiles[x][y];
+			mvt_layer &nl = nt.layers[nt.layers.size() - 1];
+			nl.features.push_back(nf);
+		}
+	}
+
+	if (feature.type == mvt_point) {
+
+	}
+}
+
+mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
+	// Features will be split into an NxN grid of sub-tiles,
+	// to be merged back together at the end,
+	// which should result in the original set of features
+	// except (perhaps) for their sequence.
+
+	size_t n = 1 << tile_zoom;
+	std::vector<std::vector<mvt_tile>> subtiles;
+	subtiles.resize(n);
+	for (size_t i = 0; i < n; i++) {
+		subtiles[i].resize(n);
+	}
+
+	for (size_t i = 0; i < tile.layers.size(); i++) {
+		mvt_layer &layer = tile.layers[i];
+
+		// Set up a corresponding layer within each sub-tile
+		// (Empty layers will have to get torn down later)
+
+		for (size_t x = 0; x < n; x++) {
+			for (size_t y = 0; y < n; y++) {
+				mvt_layer nl;
+
+				// Note that for simplicity this is copying *all* the
+				// keys and values to the sub-layers, not only the ones
+				// actually needed for the sub-features.
+
+				nl.version = layer.version;
+				nl.extent = layer.extent << tile_zoom;
+				nl.name = layer.name;
+				nl.keys = layer.keys;
+				nl.values = layer.values;
+
+				subtiles[x][y].layers.push_back(nl);
+			}
+		}
+
+		// Iterate through features, copying them into sub-tiles
+
+		for (size_t j = 0; j < layer.features.size(); j++) {
+			mvt_feature &feature = layer.features[j];
+
+			split_feature(layer, feature, subtiles, n);
+		}
+	}
+
+	return tile;
+}
+
+void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state, int tile_zoom) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -102,6 +175,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 	if (stats) {
 		do_stats(tile, message.size(), was_compressed, z, x, y, state);
 		return;
+	}
+
+	if (tile_zoom >= 0) {
+		tile = split_and_merge(tile, tile_zoom);
 	}
 
 	if (!pipeline) {
@@ -223,7 +300,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, std::set<std::string> const &exclude_meta) {
+void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, std::set<std::string> const &exclude_meta, int tile_zoom) {
 	sqlite3 *db = NULL;
 	bool isdir = false;
 	int oz = z;
@@ -240,7 +317,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, to_decode, pipeline, stats, state);
+							handle(s, z, x, y, to_decode, pipeline, stats, state, tile_zoom);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -372,7 +449,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				}
 				fclose(f);
 
-				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, state);
+				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, state, tile_zoom);
 			}
 		} else {
 			const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
@@ -413,7 +490,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				ty = (1LL << tz) - 1 - ty;
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state);
+				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state, tile_zoom);
 			}
 
 			sqlite3_finalize(stmt);
@@ -453,7 +530,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, state);
+				handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, state, tile_zoom);
 				handled = 1;
 			}
 
@@ -484,6 +561,7 @@ int main(int argc, char **argv) {
 	bool pipeline = false;
 	bool stats = false;
 	std::set<std::string> exclude_meta;
+	int tile_zoom = -1;
 
 	struct option long_options[] = {
 		{"projection", required_argument, 0, 's'},
@@ -494,6 +572,7 @@ int main(int argc, char **argv) {
 		{"stats", no_argument, 0, 'S'},
 		{"force", no_argument, 0, 'f'},
 		{"exclude-metadata-row", required_argument, 0, 'x'},
+		{"tile", required_argument, 0, 't'},
 		{0, 0, 0, 0},
 	};
 
@@ -545,15 +624,19 @@ int main(int argc, char **argv) {
 			exclude_meta.insert(optarg);
 			break;
 
+		case 't':
+			tile_zoom = atoi(optarg);
+			break;
+
 		default:
 			usage(argv);
 		}
 	}
 
 	if (argc == optind + 4) {
-		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline, stats, exclude_meta);
+		decode(argv[optind], atoi(argv[optind + 1]), atoi(argv[optind + 2]), atoi(argv[optind + 3]), to_decode, pipeline, stats, exclude_meta, tile_zoom);
 	} else if (argc == optind + 1) {
-		decode(argv[optind], -1, -1, -1, to_decode, pipeline, stats, exclude_meta);
+		decode(argv[optind], -1, -1, -1, to_decode, pipeline, stats, exclude_meta, tile_zoom);
 	} else {
 		usage(argv);
 	}
