@@ -86,6 +86,44 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 }
 
 void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vector<std::vector<mvt_tile>> subtiles, size_t n) {
+	static long clipid_pool = 0;
+	const std::vector<mvt_geometry> &geom = feature.geometry;
+	long extent = layer.extent;
+
+	// Calculate bounding box of feature
+
+	long minx = LONG_MAX;
+	long miny = LONG_MAX;
+	long maxx = LONG_MIN;
+	long maxy = LONG_MIN;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == mvt_moveto || geom[i].op == mvt_lineto) {
+			if (geom[i].x < minx) {
+				minx = geom[i].x;
+			}
+			if (geom[i].y < miny) {
+				miny = geom[i].y;
+			}
+			if (geom[i].x > maxx) {
+				maxx = geom[i].x;
+			}
+			if (geom[i].y > maxy) {
+				maxy = geom[i].y;
+			}
+		}
+	}
+
+	// Is it bigger than one sub-tile?
+	// If so, generate an ID for matching
+	// XXX Is this right for edges on the border?
+
+	long nclipid = 0;
+	if (minx / (extent << n) != maxx / (extent << n) ||
+	    miny / (extent << n) != maxy / (extent << n)) {
+		nclipid = ++clipid_pool;
+	}
+
 	// Set up a corresponding feature within each sub-tile
 	// (Empty features will have to get torn down later)
 
@@ -97,6 +135,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 			nf.type = feature.type;
 			nf.id = feature.id;
 			nf.has_id = feature.has_id;
+			nf.clipid = nclipid;
 
 			mvt_tile &nt = subtiles[x][y];
 			mvt_layer &nl = nt.layers[nt.layers.size() - 1];
