@@ -21,6 +21,7 @@ struct mvt_geometry {
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
 	long id = 0;
+	bool phantom = false;
 
 	mvt_geometry(int op, long long x, long long y);
 

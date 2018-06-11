@@ -89,6 +89,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	static long clipid_pool = 0;
 	const std::vector<mvt_geometry> &geom = feature.geometry;
 	long extent = layer.extent;
+	long nextent = extent >> n;
 
 	// Calculate bounding box of feature
 
@@ -119,8 +120,8 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	// XXX Is this right for edges on the border?
 
 	long nclipid = 0;
-	if (minx / (extent << n) != maxx / (extent << n) ||
-	    miny / (extent << n) != maxy / (extent << n)) {
+	if (minx / (extent >> n) != maxx / (extent >> n) ||
+	    miny / (extent >> n) != maxy / (extent >> n)) {
 		nclipid = ++clipid_pool;
 	}
 
@@ -143,8 +144,94 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		}
 	}
 
-	if (feature.type == mvt_point) {
+	if (feature.type == mvt_linestring) {
+		std::vector<mvt_geometry> ogeom = geom;
+		std::vector<mvt_geometry> ngeom;
+		long pointid = 0;
 
+		// XXX shift coordinate system so division will round downward?
+
+		// Part 1: Assign (phantom) point IDs in the middle of any
+		// segments that cross from one sub-tile to another
+
+		for (size_t i = 0; i < ogeom.size(); i++) {
+			if (i > 0 && (ogeom[i].x / nextent != ogeom[i - 1].x / nextent)) {
+				long first = (ogeom[i - 1].x / nextent) * nextent;
+				long second = (ogeom[i].x / nextent) * nextent;
+
+				if (second > first) {
+					for (long x = first + 1; x <= second; x += nextent) {
+						long y = ogeom[i - 1].y + (double) (ogeom[i].y - ogeom[i - 1].y) * (x - first) / (ogeom[i].x - ogeom[i - 1].x);
+						mvt_geometry p(ogeom[i].op, x, y);
+						p.id = ++pointid;
+						p.phantom = true;
+						ngeom.push_back(p);
+					}
+				} else {
+					for (long x = first; x >= second + 1; x -= nextent) {
+						long y = ogeom[i - 1].y + (double) (ogeom[i].y - ogeom[i - 1].y) * (x - first) / (ogeom[i].x - ogeom[i - 1].x);
+						mvt_geometry p(ogeom[i].op, x, y);
+						p.id = ++pointid;
+						p.phantom = true;
+						ngeom.push_back(p);
+					}
+				}
+			}
+
+			ngeom.push_back(ogeom[i]);
+		}
+
+		// Part 1a: same, but for Y axis crossings
+
+		ogeom = ngeom;
+		ngeom.clear();
+		for (size_t i = 0; i < ogeom.size(); i++) {
+			if (i > 0 && (ogeom[i].y / nextent != ogeom[i - 1].y / nextent)) {
+				long first = (ogeom[i - 1].y / nextent) * nextent;
+				long second = (ogeom[i].y / nextent) * nextent;
+
+				if (second > first) {
+					for (long y = first + 1; y <= second; y += nextent) {
+						long x = ogeom[i - 1].x + (double) (ogeom[i].x - ogeom[i - 1].x) * (y - first) / (ogeom[i].y - ogeom[i - 1].y);
+						mvt_geometry p(ogeom[i].op, x, y);
+						p.id = ++pointid;
+						p.phantom = true;
+						ngeom.push_back(p);
+					}
+				} else {
+					for (long y = first; y >= second + 1; y -= nextent) {
+						long x = ogeom[i - 1].x + (double) (ogeom[i].x - ogeom[i - 1].x) * (y - first) / (ogeom[i].y - ogeom[i - 1].y);
+						mvt_geometry p(ogeom[i].op, x, y);
+						p.id = ++pointid;
+						p.phantom = true;
+						ngeom.push_back(p);
+					}
+				}
+			}
+
+			ngeom.push_back(ogeom[i]);
+		}
+
+		// Part 2: Assign (real) point IDs for both ends of any
+		// segments that travel along a sub-tile edge
+		for (size_t i = 0; i < ngeom.size(); i++) {
+			if (i > 0 && ((ngeom[i].x == ngeom[i - 1].x && ngeom[i].x % nextent == 0) ||
+				      (ngeom[i].y == ngeom[i - 1].y && ngeom[i].y % nextent == 0))) {
+				if (ogeom[i].id == 0) {
+					ogeom[i].id = ++pointid;
+				}
+				if (ogeom[i - 1].id == 0) {
+					ogeom[i - 1].id = ++pointid;
+				}
+			}
+		}
+	} else {
+		// deal with other feature types later
+
+		mvt_tile &nt = subtiles[0][0];
+		mvt_layer &nl = nt.layers[nt.layers.size() - 1];
+		mvt_feature &nf = nl.features[nl.features.size() - 1];
+		nf.geometry = geom;
 	}
 }
 
@@ -176,7 +263,7 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 				// actually needed for the sub-features.
 
 				nl.version = layer.version;
-				nl.extent = layer.extent << tile_zoom;
+				nl.extent = layer.extent >> tile_zoom;
 				nl.name = layer.name;
 				nl.keys = layer.keys;
 				nl.values = layer.values;
