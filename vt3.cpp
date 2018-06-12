@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <protozero/pbf_reader.hpp>
 #include <sys/stat.h>
+#include <algorithm>
 #include "mvt.hpp"
 #include "projection.hpp"
 #include "geometry.hpp"
@@ -51,13 +52,30 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		}
 	}
 
+	// Extend bounding box by buffer
+
+	long buffer = nextent * 5 / 256;  // XXX make configurable
+	minx -= buffer;
+	miny -= buffer;
+	maxx += buffer;
+	maxy += buffer;
+
+	long left = floor((double) minx / nextent);
+	long top = floor((double) miny / nextent);
+	long right = floor((double) maxx / nextent);
+	long bottom = floor((double) maxy / nextent);
+
+	left = std::min(left, 0L);
+	top = std::min(top, 0L);
+	right = std::max(right, (long) (n - 1));
+	bottom = std::max(right, (long) (n - 1));
+
 	// Is it bigger than one sub-tile?
 	// If so, generate an ID for matching
 	// XXX Is this right for edges on the border?
 
 	long nclipid = 0;
-	if (minx / nextent != maxx / nextent ||
-	    miny / nextent != maxy / nextent) {
+	if (left != right || top != bottom) {
 		nclipid = ++clipid_pool;
 	}
 
@@ -85,15 +103,13 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		std::vector<mvt_geometry> ngeom;
 		long pointid = 0;
 
-		// XXX shift coordinate system so division will round downward?
-
 		// Part 1: Assign (phantom) point IDs in the middle of any
 		// segments that cross from one sub-tile to another
 
 		for (size_t i = 0; i < ogeom.size(); i++) {
-			if (i > 0 && (ogeom[i].x / nextent != ogeom[i - 1].x / nextent)) {
-				long first = (ogeom[i - 1].x / nextent) * nextent;
-				long second = (ogeom[i].x / nextent) * nextent;
+			if (i > 0 && (floor((double) ogeom[i].x / nextent) != floor((double) ogeom[i - 1].x / nextent))) {
+				long first = floor((double) ogeom[i - 1].x / nextent) * nextent;
+				long second = floor((double) ogeom[i].x / nextent) * nextent;
 
 				if (second > first) {
 					for (long x = first + 1; x <= second; x += nextent) {
@@ -122,7 +138,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		ogeom = ngeom;
 		ngeom.clear();
 		for (size_t i = 0; i < ogeom.size(); i++) {
-			if (i > 0 && (ogeom[i].y / nextent != ogeom[i - 1].y / nextent)) {
+			if (i > 0 && (floor((double) ogeom[i].y / nextent) != floor((double) ogeom[i - 1].y / nextent))) {
 				long first = (ogeom[i - 1].y / nextent) * nextent;
 				long second = (ogeom[i].y / nextent) * nextent;
 
@@ -161,6 +177,8 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 				}
 			}
 		}
+
+		// Part 3: Clip the geometry to each of the sub-tiles
 	} else {
 		// deal with other feature types later
 
