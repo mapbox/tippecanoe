@@ -89,7 +89,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	static long clipid_pool = 0;
 	const std::vector<mvt_geometry> &geom = feature.geometry;
 	long extent = layer.extent;
-	long nextent = extent >> n;
+	long nextent = extent / n;
 
 	// Calculate bounding box of feature
 
@@ -120,8 +120,8 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	// XXX Is this right for edges on the border?
 
 	long nclipid = 0;
-	if (minx / (extent >> n) != maxx / (extent >> n) ||
-	    miny / (extent >> n) != maxy / (extent >> n)) {
+	if (minx / nextent != maxx / nextent ||
+	    miny / nextent != maxy / nextent) {
 		nclipid = ++clipid_pool;
 	}
 
