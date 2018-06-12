@@ -258,7 +258,8 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					for (size_t g = 0; g + 1 < geom_ids.size(); g += 2) {
 						off += geom_ids[g];
 						if (off < feature.geometry.size()) {
-							feature.geometry[off].id = geom_ids[g + 1];
+							feature.geometry[off].id = geom_ids[g + 1] >> 1;
+							feature.geometry[off].phantom = geom_ids[g + 1] & 1;
 						} else {
 							fprintf(stderr, "Bad offset in feature node IDs\n");
 							exit(EXIT_FAILURE);
@@ -408,10 +409,11 @@ std::string mvt_tile::encode() {
 
 			size_t off = 0;
 			for (size_t g = 0; g < geom.size(); g++) {
-				if (geom[g].id != 0) {
+				unsigned long id = (geom[g].id << 1) || (geom[g].phantom ? 1 : 0);
+				if (id != 0) {
 					geometry_ids.push_back(g - off);
 					off = g;
-					geometry_ids.push_back(geom[g].id);
+					geometry_ids.push_back(id);
 				}
 			}
 

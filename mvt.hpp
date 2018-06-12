@@ -20,6 +20,11 @@ struct mvt_geometry {
 	long long x = 0;
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
+
+	// 0 false: no id
+	// 0 true: outside, introduced by clipping
+	// N true: on edge, introduced by clipping
+	// N false: along or on edge, to be preserved
 	long id = 0;
 	bool phantom = false;
 

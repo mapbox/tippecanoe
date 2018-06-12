@@ -36,13 +36,13 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 
 			int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
 
-			if (c > 1) {  // clipped
+			if (c == CLIP_ELIMINATED) {
+				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
+			} else if (c == CLIP_OK) {
+				out.push_back(geom[i]);
+			} else {
 				out.push_back(mvt_geometry(mvt_moveto, x1, y1));
 				out.push_back(mvt_geometry(mvt_lineto, x2, y2));
-				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
-			} else if (c == 1) {  // unchanged
-				out.push_back(geom[i]);
-			} else {  // clipped away entirely
 				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
 			}
 		} else {
@@ -58,6 +58,11 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	const std::vector<mvt_geometry> &geom = feature.geometry;
 	long extent = layer.extent;
 	long nextent = extent / n;
+
+	if (nextent * (long) n != extent) {
+		fprintf(stderr, "Extent %ld doesn't subdivide evenly by %zud\n", extent, n);
+		exit(EXIT_FAILURE);
+	}
 
 	// Calculate bounding box of feature
 
@@ -138,7 +143,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		// segments that cross from one sub-tile to another
 
 		for (size_t i = 0; i < ogeom.size(); i++) {
-			if (i > 0 && (floor((double) ogeom[i].x / nextent) != floor((double) ogeom[i - 1].x / nextent))) {
+			if (i > 0 && ogeom[i].op == mvt_lineto && (floor((double) ogeom[i].x / nextent) != floor((double) ogeom[i - 1].x / nextent))) {
 				long first = floor((double) ogeom[i - 1].x / nextent) * nextent;
 				long second = floor((double) ogeom[i].x / nextent) * nextent;
 
@@ -169,7 +174,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		ogeom = ngeom;
 		ngeom.clear();
 		for (size_t i = 0; i < ogeom.size(); i++) {
-			if (i > 0 && (floor((double) ogeom[i].y / nextent) != floor((double) ogeom[i - 1].y / nextent))) {
+			if (i > 0 && ogeom[i].op == mvt_lineto && (floor((double) ogeom[i].y / nextent) != floor((double) ogeom[i - 1].y / nextent))) {
 				long first = (ogeom[i - 1].y / nextent) * nextent;
 				long second = (ogeom[i].y / nextent) * nextent;
 
@@ -195,16 +200,12 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 			ngeom.push_back(ogeom[i]);
 		}
 
-		// Part 2: Assign (real) point IDs for both ends of any
-		// segments that travel along a sub-tile edge
+		// Part 2: Assign (real) point IDs for any points that are on a sub-tile edge
 		for (size_t i = 0; i < ngeom.size(); i++) {
-			if (i > 0 && ((ngeom[i].x == ngeom[i - 1].x && ngeom[i].x % nextent == 0) ||
-				      (ngeom[i].y == ngeom[i - 1].y && ngeom[i].y % nextent == 0))) {
+			if (ngeom[i].x % nextent == 0 || ngeom[i].y % nextent == 0) {
 				if (ogeom[i].id == 0) {
 					ogeom[i].id = ++pointid;
-				}
-				if (ogeom[i - 1].id == 0) {
-					ogeom[i - 1].id = ++pointid;
+					ogeom[i].phantom = false;
 				}
 			}
 		}
@@ -265,6 +266,15 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 			split_feature(layer, feature, subtiles, n);
 		}
 	}
+
+	// Trim unused features from layers, layers from tiles
+
+	// Write each tile to PBF
+	// Decode each tile back from PBF
+
+	// Recreate original tile from decoded sub-tiles
+
+	// Verify that the original data has been recreated
 
 	return tile;
 }
