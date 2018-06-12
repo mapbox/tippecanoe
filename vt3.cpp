@@ -21,6 +21,37 @@
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "vt3.hpp"
+#include "clip.hpp"
+
+std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left, long top, long right, long bottom) {
+	std::vector<mvt_geometry> out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (i > 0 && (geom[i - 1].op == mvt_moveto || geom[i - 1].op == mvt_lineto) && geom[i].op == mvt_lineto) {
+			double x1 = geom[i - 1].x;
+			double y1 = geom[i - 1].y;
+
+			double x2 = geom[i - 0].x;
+			double y2 = geom[i - 0].y;
+
+			int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+
+			if (c > 1) {  // clipped
+				out.push_back(mvt_geometry(mvt_moveto, x1, y1));
+				out.push_back(mvt_geometry(mvt_lineto, x2, y2));
+				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
+			} else if (c == 1) {  // unchanged
+				out.push_back(geom[i]);
+			} else {  // clipped away entirely
+				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
+			}
+		} else {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
 
 void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vector<std::vector<mvt_tile>> subtiles, size_t n) {
 	static long clipid_pool = 0;
