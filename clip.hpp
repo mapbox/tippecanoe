@@ -23,11 +23,17 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 	return code;
 }
 
+#define CLIP_OK 0
+#define CLIP_ELIMINATED 1
+#define CLIP_CHANGED_FIRST 2
+#define CLIP_CHANGED_SECOND 4
+#define CLIP_CHANGED (CLIP_CHANGED_FIRST | CLIP_CHANGED_SECOND)
+
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
 	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
 	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
+	int changed = CLIP_OK;
 	int accept = 0;
-	int changed = 0;
 
 	while (1) {
 		if (!(outcode0 | outcode1)) {  // Bitwise OR is 0. Trivially accept and get out of loop
@@ -65,19 +71,19 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 				*x0 = x;
 				*y0 = y;
 				outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
-				changed = 1;
+				changed |= CLIP_CHANGED_FIRST;
 			} else {
 				*x1 = x;
 				*y1 = y;
 				outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
-				changed = 1;
+				changed |= CLIP_CHANGED_SECOND;
 			}
 		}
 	}
 
-	if (accept == 0) {
-		return 0;
+	if (accept) {
+		return changed;
 	} else {
-		return changed + 1;
+		return CLIP_ELIMINATED;
 	}
 }

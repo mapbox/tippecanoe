@@ -663,13 +663,13 @@ drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
 
-			if (c > 1) {  // clipped
+			if (c == CLIP_ELIMINATED) {
+				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+			} else if (c == CLIP_OK) {
+				out.push_back(geom[i]);
+			} else {
 				out.push_back(draw(VT_MOVETO, x1, y1));
 				out.push_back(draw(VT_LINETO, x2, y2));
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
-			} else if (c == 1) {  // unchanged
-				out.push_back(geom[i]);
-			} else {  // clipped away entirely
 				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
 			}
 		} else {
@@ -776,7 +776,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 
 			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
 
-			if (c > 1) {  // clipped
+			if (c & CLIP_CHANGED) {
 				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
 					out.push_back(draw(VT_LINETO, x1, y1));
 					out[out.size() - 1].necessary = 1;
