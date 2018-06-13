@@ -44,8 +44,32 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 			} else if (c == CLIP_OK) {
 				out.push_back(geom[i]);
 			} else if ((c & CLIP_CHANGED_FIRST) && (c & CLIP_CHANGED_SECOND)) {
+#if 0
 				fprintf(stderr, "Shouldn't happen in clipping\n");
+				printf("%lld,%lld to %lld,%lld becomes %f,%f to %f,%f in %ld,%ld to %ld,%ld\n", geom[i - 1].x, geom[i - 1].y, geom[i].x, geom[i].y,
+				       x1, y1, x2, y2, left, top, right, bottom);
 				exit(EXIT_FAILURE);
+#endif
+				// These must both be on the edge of the buffer, outside the tile itself,
+				// so both sides survive but as irrelevant phantom geometry
+
+				mvt_geometry outside1(mvt_moveto, x1, y1);
+				outside1.phantom = true;
+				outside1.id = 0;
+
+				mvt_geometry outside2(mvt_lineto, x2, y2);
+				outside2.phantom = true;
+				outside2.id = 0;
+
+				out.push_back(outside1);
+				out.push_back(outside2);
+
+				// Do we really need this, or will the next segment always
+				// start with a moveto?
+				mvt_geometry noop(mvt_moveto, geom[i].x, geom[i].y);
+				noop.phantom = true;
+				noop.id = 0;
+				out.push_back(noop);
 			} else if (c & CLIP_CHANGED_FIRST) {
 				mvt_geometry outside(mvt_moveto, x1, y1);
 				outside.phantom = true;
@@ -61,6 +85,13 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 				outside.id = 0;
 
 				out.push_back(outside);
+
+				// Do we really need this, or will the next segment always
+				// start with a moveto?
+				mvt_geometry noop(mvt_moveto, geom[i].x, geom[i].y);
+				noop.phantom = true;
+				noop.id = 0;
+				out.push_back(noop);
 			} else {
 				fprintf(stderr, "Can't happen in clipping\n");
 				exit(EXIT_FAILURE);
@@ -73,8 +104,35 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 	return out;
 }
 
-void clip_lines_to_tile(std::vector<mvt_geometry> geom, mvt_tile &tile, long x, long y, long extent) {
-	geom = clip_lines(geom, x * extent, y * extent, (x + 1) * extent, (y + 1) * extent);
+static void dump(std::vector<mvt_geometry> geom) {
+	for (size_t i = 0; i < geom.size(); i++) {
+		printf("%d %lld,%lld %ld %s\n", geom[i].op, geom[i].x, geom[i].y, geom[i].id, geom[i].phantom ? "true" : "false");
+	}
+}
+
+static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std::vector<mvt_geometry> orig) {
+	std::vector<mvt_geometry> out;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == mvt_moveto && i + 1 < geom.size() && geom[i + 1].op == mvt_moveto) {
+			if (geom[i].id != 0) {
+				fprintf(stderr, "Removing a moveto with an id %ld\n", geom[i].id);
+				dump(geom);
+				fprintf(stderr, "Orig was\n");
+				dump(orig);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			out.push_back(geom[i]);
+		}
+	}
+
+	return out;
+}
+
+void clip_lines_to_tile(std::vector<mvt_geometry> geom, mvt_tile &tile, long x, long y, long extent, long buffer, std::vector<mvt_geometry> orig) {
+	geom = clip_lines(geom, x * extent - buffer, y * extent - buffer, (x + 1) * extent + buffer, (y + 1) * extent + buffer);
+	geom = remove_noop(geom, orig);
 
 	mvt_layer &nl = tile.layers[tile.layers.size() - 1];
 	mvt_feature &nf = nl.features[nl.features.size() - 1];
@@ -119,6 +177,11 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	// Extend bounding box by buffer
 
 	long buffer = nextent * 5 / 256;  // XXX make configurable
+	if (buffer <= 0) {
+		fprintf(stderr, "buffer was eliminated\n");
+		buffer = 1;
+		exit(EXIT_FAILURE);
+	}
 	minx -= buffer;
 	miny -= buffer;
 	maxx += buffer;
@@ -242,7 +305,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 
 		for (size_t x = 0; x < n; x++) {
 			for (size_t y = 0; y < n; y++) {
-				clip_lines_to_tile(ngeom, subtiles[x][y], x, y, nextent);
+				clip_lines_to_tile(ngeom, subtiles[x][y], x, y, nextent, buffer, geom);
 			}
 		}
 	} else {
