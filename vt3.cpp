@@ -116,11 +116,13 @@ static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == mvt_moveto && i + 1 < geom.size() && geom[i + 1].op == mvt_moveto) {
 			if (geom[i].id != 0) {
+#if 0
 				fprintf(stderr, "Removing a moveto with an id %ld\n", geom[i].id);
 				dump(geom);
 				fprintf(stderr, "Orig was\n");
 				dump(orig);
 				exit(EXIT_FAILURE);
+#endif
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -230,6 +232,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		std::vector<mvt_geometry> ngeom;
 		long pointid = 0;
 
+#if 0
 		// Part 1: Assign (phantom) point IDs in the middle of any
 		// segments that cross from one sub-tile to another
 
@@ -290,6 +293,8 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 
 			ngeom.push_back(ogeom[i]);
 		}
+#endif
+		ngeom = ogeom;
 
 		// Part 2: Assign (real) point IDs for any points that are on a sub-tile edge
 		for (size_t i = 0; i < ngeom.size(); i++) {
@@ -346,7 +351,7 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 				// actually needed for the sub-features.
 
 				nl.version = layer.version;
-				nl.extent = layer.extent >> tile_zoom;
+				nl.extent = layer.extent; // >> tile_zoom;
 				nl.name = layer.name;
 				nl.keys = layer.keys;
 				nl.values = layer.values;
@@ -370,6 +375,15 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 	// Decode each tile back from PBF
 
 	// Recreate original tile from decoded sub-tiles
+
+	tile.layers.clear();
+	for (size_t x = 0; x < n; x++) {
+		for (size_t y = 0; y < n; y++) {
+			for (size_t k = 0; k < subtiles[x][y].layers.size(); k++) {
+				tile.layers.push_back(subtiles[x][y].layers[k]);
+			}
+		}
+	}
 
 	// Verify that the original data has been recreated
 
