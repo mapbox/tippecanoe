@@ -194,10 +194,10 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	long right = floor((double) maxx / nextent);
 	long bottom = floor((double) maxy / nextent);
 
-	left = std::min(left, 0L);
-	top = std::min(top, 0L);
-	right = std::max(right, (long) (n - 1));
-	bottom = std::max(right, (long) (n - 1));
+	left = std::max(left, 0L);
+	top = std::max(top, 0L);
+	right = std::min(right, (long) (n - 1));
+	bottom = std::min(bottom, (long) (n - 1));
 
 	// Is it bigger than one sub-tile?
 	// If so, generate an ID for matching
@@ -338,6 +338,70 @@ void trim_tile(mvt_tile &tile) {
 	}
 }
 
+struct partial {
+	long clipid;
+	const mvt_feature *f;
+	const mvt_layer *l;
+};
+
+mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n) {
+	mvt_tile tile;
+	std::vector<partial> partials;
+
+	for (size_t x = 0; x < n; x++) {
+		for (size_t y = 0; y < n; y++) {
+			mvt_tile const &t = subtiles[x][y];
+
+			for (size_t i = 0; i < t.layers.size(); i++) {
+				mvt_layer const &l = t.layers[i];
+
+				for (size_t j = 0; j < l.features.size(); j++) {
+					mvt_feature const &f = l.features[j];
+
+					if (f.clipid == 0) {
+						size_t k;
+						for (k = 0; k < tile.layers.size(); k++) {
+							if (tile.layers[k].name == l.name) {
+								break;
+							}
+						}
+
+						if (k == tile.layers.size()) {
+							mvt_layer nl = mvt_layer();
+							nl.name = l.name;
+							nl.extent = l.extent; // * n
+							tile.layers.push_back(nl);
+						}
+
+						mvt_feature nf;
+						nf.type = f.type;
+						nf.id = f.id;
+						nf.has_id = f.has_id;
+						nf.clipid = f.clipid;
+						nf.geometry = f.geometry;
+
+						for (size_t kv = 0; kv + 1 < f.tags.size(); kv += 2) {
+							tile.layers[k].tag(nf, l.keys[f.tags[kv]], l.values[f.tags[kv + 1]]);
+						}
+
+						tile.layers[k].features.push_back(nf);
+					} else {
+						partial p;
+						p.clipid = f.clipid;
+						p.f = &f;
+						p.l = &l;
+						partials.push_back(p);
+					}
+				}
+			}
+		}
+	}
+
+	// XXX do partials
+
+	return tile;
+}
+
 mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 	// Features will be split into an NxN grid of sub-tiles,
 	// to be merged back together at the end,
@@ -397,6 +461,9 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 
 	// Recreate original tile from decoded sub-tiles
 
+	tile = reassemble(subtiles, n);
+
+#if 0
 	tile.layers.clear();
 	for (size_t x = 0; x < n; x++) {
 		for (size_t y = 0; y < n; y++) {
@@ -405,6 +472,7 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 			}
 		}
 	}
+#endif
 
 	// Verify that the original data has been recreated
 
