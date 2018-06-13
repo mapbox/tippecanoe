@@ -37,13 +37,33 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 			int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
 
 			if (c == CLIP_ELIMINATED) {
-				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
+				mvt_geometry outside(mvt_moveto, geom[i].x, geom[i].y);
+				outside.phantom = true;
+				outside.id = 0;
+				out.push_back(outside);
 			} else if (c == CLIP_OK) {
 				out.push_back(geom[i]);
+			} else if ((c & CLIP_CHANGED_FIRST) && (c & CLIP_CHANGED_SECOND)) {
+				fprintf(stderr, "Shouldn't happen in clipping\n");
+				exit(EXIT_FAILURE);
+			} else if (c & CLIP_CHANGED_FIRST) {
+				mvt_geometry outside(mvt_moveto, x1, y1);
+				outside.phantom = true;
+				outside.id = 0;
+
+				out.push_back(outside);
+				out.push_back(geom[i]);
+			} else if (c & CLIP_CHANGED_SECOND) {
+				out.push_back(geom[i - 1]);
+
+				mvt_geometry outside(mvt_lineto, x2, y2);
+				outside.phantom = true;
+				outside.id = 0;
+
+				out.push_back(outside);
 			} else {
-				out.push_back(mvt_geometry(mvt_moveto, x1, y1));
-				out.push_back(mvt_geometry(mvt_lineto, x2, y2));
-				out.push_back(mvt_geometry(mvt_moveto, geom[i].x, geom[i].y));
+				fprintf(stderr, "Can't happen in clipping\n");
+				exit(EXIT_FAILURE);
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -53,7 +73,15 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 	return out;
 }
 
-void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vector<std::vector<mvt_tile>> subtiles, size_t n) {
+void clip_lines_to_tile(std::vector<mvt_geometry> geom, mvt_tile &tile, long x, long y, long extent) {
+	geom = clip_lines(geom, x * extent, y * extent, (x + 1) * extent, (y + 1) * extent);
+
+	mvt_layer &nl = tile.layers[tile.layers.size() - 1];
+	mvt_feature &nf = nl.features[nl.features.size() - 1];
+	nf.geometry = geom;
+}
+
+void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vector<std::vector<mvt_tile>> &subtiles, size_t n) {
 	static long clipid_pool = 0;
 	const std::vector<mvt_geometry> &geom = feature.geometry;
 	long extent = layer.extent;
@@ -203,14 +231,20 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		// Part 2: Assign (real) point IDs for any points that are on a sub-tile edge
 		for (size_t i = 0; i < ngeom.size(); i++) {
 			if (ngeom[i].x % nextent == 0 || ngeom[i].y % nextent == 0) {
-				if (ogeom[i].id == 0) {
-					ogeom[i].id = ++pointid;
-					ogeom[i].phantom = false;
+				if (ngeom[i].id == 0) {
+					ngeom[i].id = ++pointid;
+					ngeom[i].phantom = false;
 				}
 			}
 		}
 
 		// Part 3: Clip the geometry to each of the sub-tiles
+
+		for (size_t x = 0; x < n; x++) {
+			for (size_t y = 0; y < n; y++) {
+				clip_lines_to_tile(ngeom, subtiles[x][y], x, y, nextent);
+			}
+		}
 	} else {
 		// deal with other feature types later
 
