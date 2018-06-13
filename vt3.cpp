@@ -232,7 +232,6 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		std::vector<mvt_geometry> ngeom;
 		long pointid = 0;
 
-#if 0
 		// Part 1: Assign (phantom) point IDs in the middle of any
 		// segments that cross from one sub-tile to another
 
@@ -241,17 +240,17 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 				long first = floor((double) ogeom[i - 1].x / nextent) * nextent;
 				long second = floor((double) ogeom[i].x / nextent) * nextent;
 
-				if (second > first) {
-					for (long x = first + 1; x <= second; x += nextent) {
-						long y = ogeom[i - 1].y + (double) (ogeom[i].y - ogeom[i - 1].y) * (x - first) / (ogeom[i].x - ogeom[i - 1].x);
+				if (second >= first) {
+					for (long x = first + nextent; x <= second; x += nextent) {
+						long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
 						mvt_geometry p(ogeom[i].op, x, y);
 						p.id = ++pointid;
 						p.phantom = true;
 						ngeom.push_back(p);
 					}
 				} else {
-					for (long x = first; x >= second + 1; x -= nextent) {
-						long y = ogeom[i - 1].y + (double) (ogeom[i].y - ogeom[i - 1].y) * (x - first) / (ogeom[i].x - ogeom[i - 1].x);
+					for (long x = first; x >= second + nextent; x -= nextent) {
+						long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
 						mvt_geometry p(ogeom[i].op, x, y);
 						p.id = ++pointid;
 						p.phantom = true;
@@ -269,20 +268,20 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 		ngeom.clear();
 		for (size_t i = 0; i < ogeom.size(); i++) {
 			if (i > 0 && ogeom[i].op == mvt_lineto && (floor((double) ogeom[i].y / nextent) != floor((double) ogeom[i - 1].y / nextent))) {
-				long first = (ogeom[i - 1].y / nextent) * nextent;
-				long second = (ogeom[i].y / nextent) * nextent;
+				long first = floor((double) ogeom[i - 1].y / nextent) * nextent;
+				long second = floor((double) ogeom[i].y / nextent) * nextent;
 
-				if (second > first) {
-					for (long y = first + 1; y <= second; y += nextent) {
-						long x = ogeom[i - 1].x + (double) (ogeom[i].x - ogeom[i - 1].x) * (y - first) / (ogeom[i].y - ogeom[i - 1].y);
+				if (second >= first) {
+					for (long y = first + nextent; y <= second; y += nextent) {
+						long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
 						mvt_geometry p(ogeom[i].op, x, y);
 						p.id = ++pointid;
 						p.phantom = true;
 						ngeom.push_back(p);
 					}
 				} else {
-					for (long y = first; y >= second + 1; y -= nextent) {
-						long x = ogeom[i - 1].x + (double) (ogeom[i].x - ogeom[i - 1].x) * (y - first) / (ogeom[i].y - ogeom[i - 1].y);
+					for (long y = first; y >= second + nextent; y -= nextent) {
+						long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
 						mvt_geometry p(ogeom[i].op, x, y);
 						p.id = ++pointid;
 						p.phantom = true;
@@ -293,8 +292,6 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 
 			ngeom.push_back(ogeom[i]);
 		}
-#endif
-		ngeom = ogeom;
 
 		// Part 2: Assign (real) point IDs for any points that are on a sub-tile edge
 		for (size_t i = 0; i < ngeom.size(); i++) {
