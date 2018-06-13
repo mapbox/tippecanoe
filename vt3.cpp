@@ -114,7 +114,7 @@ static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].op == mvt_moveto && i + 1 < geom.size() && geom[i + 1].op == mvt_moveto) {
+		if (geom[i].op == mvt_moveto && (i + 1 >= geom.size() || geom[i + 1].op == mvt_moveto)) {
 			if (geom[i].id != 0) {
 #if 0
 				fprintf(stderr, "Removing a moveto with an id %ld\n", geom[i].id);
@@ -320,6 +320,24 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 	}
 }
 
+void trim_tile(mvt_tile &tile) {
+	for (ssize_t i = tile.layers.size() - 1; i >= 0; i--) {
+		mvt_layer &layer = tile.layers[i];
+
+		for (ssize_t j = layer.features.size() - 1; j >= 0; j--) {
+			mvt_feature &feature = layer.features[j];
+
+			if (feature.geometry.size() == 0) {
+				layer.features.erase(layer.features.begin() + j);
+			}
+		}
+
+		if (layer.features.size() == 0) {
+			tile.layers.erase(tile.layers.begin() + i);
+		}
+	}
+}
+
 mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 	// Features will be split into an NxN grid of sub-tiles,
 	// to be merged back together at the end,
@@ -367,6 +385,12 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 	}
 
 	// Trim unused features from layers, layers from tiles
+
+	for (size_t x = 0; x < n; x++) {
+		for (size_t y = 0; y < n; y++) {
+			trim_tile(subtiles[x][y]);
+		}
+	}
 
 	// Write each tile to PBF
 	// Decode each tile back from PBF
