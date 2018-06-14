@@ -26,78 +26,70 @@
 std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left, long top, long right, long bottom) {
 	std::vector<mvt_geometry> out;
 
+	bool inside = false;
+
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (i > 0 && (geom[i - 1].op == mvt_moveto || geom[i - 1].op == mvt_lineto) && geom[i].op == mvt_lineto) {
-			double x1 = geom[i - 1].x;
-			double y1 = geom[i - 1].y;
+		if (geom[i].op == mvt_moveto) {
+			if (geom[i].x >= left && geom[i].x <= right && geom[i].y >= top && geom[i].y <= bottom) {
+				// First point is inside.
 
-			double x2 = geom[i - 0].x;
-			double y2 = geom[i - 0].y;
-
-			int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
-
-			if (c == CLIP_ELIMINATED) {
-				mvt_geometry outside(mvt_moveto, geom[i].x, geom[i].y);
-				outside.phantom = true;
-				outside.id = 0;
-				out.push_back(outside);
-			} else if (c == CLIP_OK) {
 				out.push_back(geom[i]);
-			} else if ((c & CLIP_CHANGED_FIRST) && (c & CLIP_CHANGED_SECOND)) {
-#if 0
-				fprintf(stderr, "Shouldn't happen in clipping\n");
-				printf("%lld,%lld to %lld,%lld becomes %f,%f to %f,%f in %ld,%ld to %ld,%ld\n", geom[i - 1].x, geom[i - 1].y, geom[i].x, geom[i].y,
-				       x1, y1, x2, y2, left, top, right, bottom);
-				exit(EXIT_FAILURE);
-#endif
-				// These must both be on the edge of the buffer, outside the tile itself,
-				// so both sides survive but as irrelevant phantom geometry
-
-				mvt_geometry outside1(mvt_moveto, x1, y1);
-				outside1.phantom = true;
-				outside1.id = 0;
-
-				mvt_geometry outside2(mvt_lineto, x2, y2);
-				outside2.phantom = true;
-				outside2.id = 0;
-
-				out.push_back(outside1);
-				out.push_back(outside2);
-
-				// Do we really need this, or will the next segment always
-				// start with a moveto?
-				mvt_geometry noop(mvt_moveto, geom[i].x, geom[i].y);
-				noop.phantom = true;
-				noop.id = 0;
-				out.push_back(noop);
-			} else if (c & CLIP_CHANGED_FIRST) {
-				mvt_geometry outside(mvt_moveto, x1, y1);
-				outside.phantom = true;
-				outside.id = 0;
-
-				out.push_back(outside);
-				out.push_back(geom[i]);
-			} else if (c & CLIP_CHANGED_SECOND) {
-				out.push_back(geom[i - 1]);
-
-				mvt_geometry outside(mvt_lineto, x2, y2);
-				outside.phantom = true;
-				outside.id = 0;
-
-				out.push_back(outside);
-
-				// Do we really need this, or will the next segment always
-				// start with a moveto?
-				mvt_geometry noop(mvt_moveto, geom[i].x, geom[i].y);
-				noop.phantom = true;
-				noop.id = 0;
-				out.push_back(noop);
+				inside = true;
 			} else {
-				fprintf(stderr, "Can't happen in clipping\n");
-				exit(EXIT_FAILURE);
+				inside = false;
 			}
 		} else {
-			out.push_back(geom[i]);
+			if (geom[i].x >= left && geom[i].x <= right && geom[i].y >= top && geom[i].y <= bottom) {
+				// Next point is inside.
+
+				if (inside) {
+					// Moving from inside to another inside, so just include the new point
+					out.push_back(geom[i]);
+				} else {
+					// Moving from outside to inside, so clip and include the inner portion
+					double x1 = geom[i - 1].x;
+					double y1 = geom[i - 1].y;
+
+					double x2 = geom[i - 0].x;
+					double y2 = geom[i - 0].y;
+
+					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+
+					mvt_geometry phantom(mvt_moveto, x1, y1);
+					phantom.phantom = true;
+					phantom.id = 0;
+					out.push_back(phantom);
+					out.push_back(geom[i]);
+				}
+
+				inside = true;
+			} else {
+				// Next point is outside.
+
+				if (inside) {
+					// Moving from inside to outside, so clip and include the inner portion
+					double x1 = geom[i - 1].x;
+					double y1 = geom[i - 1].y;
+
+					double x2 = geom[i - 0].x;
+					double y2 = geom[i - 0].y;
+
+					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+
+					// Inside already drawing, so don't need the start point
+					// out.push_back(geom[i - 1]);
+
+					mvt_geometry phantom(mvt_lineto, x2, y2);
+					phantom.phantom = true;
+					phantom.id = 0;
+					out.push_back(phantom);
+				} else {
+					// Outside to outside, so skip
+					// XXX include overlapping portion
+				}
+
+				inside = false;
+			}
 		}
 	}
 
@@ -116,13 +108,11 @@ static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == mvt_moveto && (i + 1 >= geom.size() || geom[i + 1].op == mvt_moveto)) {
 			if (geom[i].id != 0) {
-#if 0
-				fprintf(stderr, "Removing a moveto with an id %ld\n", geom[i].id);
+				fprintf(stderr, "Removing a moveto with an id %ld in %zu\n", geom[i].id, geom.size());
 				dump(geom);
 				fprintf(stderr, "Orig was\n");
 				dump(orig);
 				exit(EXIT_FAILURE);
-#endif
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -266,6 +256,7 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 
 		ogeom = ngeom;
 		ngeom.clear();
+
 		for (size_t i = 0; i < ogeom.size(); i++) {
 			if (i > 0 && ogeom[i].op == mvt_lineto && (floor((double) ogeom[i].y / nextent) != floor((double) ogeom[i - 1].y / nextent))) {
 				long first = floor((double) ogeom[i - 1].y / nextent) * nextent;
