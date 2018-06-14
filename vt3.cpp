@@ -54,6 +54,10 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					double y2 = geom[i - 0].y;
 
 					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+					if (c != CLIP_CHANGED_FIRST) {
+						fprintf(stderr, "Expected first to change\n");
+						exit(EXIT_FAILURE);
+					}
 
 					mvt_geometry phantom(mvt_moveto, x1, y1);
 					phantom.phantom = true;
@@ -75,6 +79,10 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					double y2 = geom[i - 0].y;
 
 					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+					if (c != CLIP_CHANGED_SECOND) {
+						fprintf(stderr, "Expected second to change\n");
+						exit(EXIT_FAILURE);
+					}
 
 					// Inside already drawing, so don't need the start point
 					// out.push_back(geom[i - 1]);
@@ -351,11 +359,116 @@ void trim_tile(mvt_tile &tile) {
 	}
 }
 
+mvt_feature *add_to_tile(mvt_feature const &f, mvt_layer const &l, mvt_tile &tile) {
+	size_t k;
+	for (k = 0; k < tile.layers.size(); k++) {
+		if (tile.layers[k].name == l.name) {
+			break;
+		}
+	}
+
+	if (k == tile.layers.size()) {
+		mvt_layer nl = mvt_layer();
+		nl.name = l.name;
+		nl.extent = l.extent;  // * n
+		tile.layers.push_back(nl);
+	}
+
+	mvt_feature nf;
+	nf.type = f.type;
+	nf.id = f.id;
+	nf.has_id = f.has_id;
+	nf.clipid = f.clipid;
+
+	for (size_t kv = 0; kv + 1 < f.tags.size(); kv += 2) {
+		tile.layers[k].tag(nf, l.keys[f.tags[kv]], l.values[f.tags[kv + 1]]);
+	}
+
+	tile.layers[k].features.push_back(nf);
+	return &tile.layers[k].features[tile.layers[k].features.size() - 1];
+}
+
 struct partial {
 	long clipid;
 	const mvt_feature *f;
 	const mvt_layer *l;
+
+	bool operator<(const partial &p) const {
+		return clipid < p.clipid;
+	}
 };
+
+void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mvt_tile &tile) {
+	std::vector<std::vector<mvt_geometry>> revised;
+	revised.resize(end);
+
+	for (size_t i = start; i < end; i++) {
+		// Discard the portions of geometry that are in the buffer
+
+		std::vector<mvt_geometry> geom = partials[i].f->geometry;
+		std::vector<mvt_geometry> out;
+		for (size_t j = 0; j < geom.size(); j++) {
+			if (geom[j].phantom && geom[j].id == 0) {
+				if (geom[j].op == mvt_moveto && j + 1 < geom.size()) {
+					geom[j + 1].op = mvt_moveto;
+				}
+			} else {
+				out.push_back(geom[j]);
+			}
+		}
+		revised[i] = out;
+	}
+
+	mvt_feature *nf = add_to_tile(*partials[start].f, *partials[start].l, tile);
+
+#if 1
+	for (size_t i = start; i < end; i++) {
+		for (size_t j = 0; j < revised[i].size(); j++) {
+			nf->geometry.push_back(revised[i][j]);
+		}
+	}
+#else
+
+	// Pull out individual arcs from the various geometries
+
+	std::multimap<long, std::vector<mvt_geometry>> arcs;
+
+	for (size_t i = start; i < end; i++) {
+		for (size_t j = 0; j < revised[i].size(); j++) {
+			std::vector<mvt_geometry> arc;
+			revised[i][j].op = mvt_moveto;
+			arc.push_back(revised[i][j]);
+
+			long id = revised[i][j].id;
+
+			size_t k;
+			for (k = j + 1; k < revised[i].size(); k++) {
+				// Or would it be better to keep movetos together here,
+				// as a way to chain to the next arc?
+				if (revised[i][k].id != 0 || revised[i][k].op == mvt_moveto) {
+					break;
+				}
+				arc.push_back(revised[i][k]);
+			}
+
+			arcs.insert(std::pair<long, std::vector<mvt_geometry>>(id, arc));
+			j = k - 1;
+		}
+	}
+
+	// Outer loop because removing an arc once it is used invalidates the iterator
+	bool again = true;
+	while (again) {
+		again = false;
+
+		for (auto a = arcs.begin(); a != arcs.end(); a++) {
+			for (size_t j = 0; j < a->second.size(); j++) {
+				nf->geometry.push_back(a->second[j]);
+			}
+		}
+	}
+#endif
+}
 
 mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n) {
 	mvt_tile tile;
@@ -372,32 +485,8 @@ mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n
 					mvt_feature const &f = l.features[j];
 
 					if (f.clipid == 0) {
-						size_t k;
-						for (k = 0; k < tile.layers.size(); k++) {
-							if (tile.layers[k].name == l.name) {
-								break;
-							}
-						}
-
-						if (k == tile.layers.size()) {
-							mvt_layer nl = mvt_layer();
-							nl.name = l.name;
-							nl.extent = l.extent; // * n
-							tile.layers.push_back(nl);
-						}
-
-						mvt_feature nf;
-						nf.type = f.type;
-						nf.id = f.id;
-						nf.has_id = f.has_id;
-						nf.clipid = f.clipid;
-						nf.geometry = f.geometry;
-
-						for (size_t kv = 0; kv + 1 < f.tags.size(); kv += 2) {
-							tile.layers[k].tag(nf, l.keys[f.tags[kv]], l.values[f.tags[kv + 1]]);
-						}
-
-						tile.layers[k].features.push_back(nf);
+						mvt_feature *nf = add_to_tile(f, l, tile);
+						nf->geometry = f.geometry;
 					} else {
 						partial p;
 						p.clipid = f.clipid;
@@ -411,6 +500,21 @@ mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n
 	}
 
 	// XXX do partials
+
+	std::sort(partials.begin(), partials.end());
+
+	for (size_t i = 0; i < partials.size(); i++) {
+		size_t j;
+		for (j = i; j < partials.size(); j++) {
+			if (partials[j].clipid != partials[i].clipid) {
+				break;
+			}
+		}
+
+		merge_partials(partials, i, j, tile);
+
+		i = j - 1;
+	}
 
 	return tile;
 }
@@ -443,7 +547,7 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 				// actually needed for the sub-features.
 
 				nl.version = layer.version;
-				nl.extent = layer.extent; // >> tile_zoom;
+				nl.extent = layer.extent;  // >> tile_zoom;
 				nl.name = layer.name;
 				nl.keys = layer.keys;
 				nl.values = layer.values;
