@@ -84,8 +84,27 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					phantom.id = 0;
 					out.push_back(phantom);
 				} else {
-					// Outside to outside, so skip
-					// XXX include overlapping portion
+					// Outside to outside, so discardable on both sides
+
+					double x1 = geom[i - 1].x;
+					double y1 = geom[i - 1].y;
+
+					double x2 = geom[i - 0].x;
+					double y2 = geom[i - 0].y;
+
+					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
+
+					if (c != CLIP_ELIMINATED) {
+						mvt_geometry phantom1(mvt_moveto, x1, y1);
+						phantom1.phantom = true;
+						phantom1.id = 0;
+						out.push_back(phantom1);
+
+						mvt_geometry phantom2(mvt_lineto, x2, y2);
+						phantom2.phantom = true;
+						phantom2.id = 0;
+						out.push_back(phantom2);
+					}
 				}
 
 				inside = false;
@@ -114,6 +133,9 @@ static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std
 				dump(orig);
 				exit(EXIT_FAILURE);
 			}
+
+			fprintf(stderr, "Discarded something\n");
+			exit(EXIT_FAILURE);
 		} else {
 			out.push_back(geom[i]);
 		}
