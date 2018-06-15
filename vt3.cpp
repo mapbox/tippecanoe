@@ -543,7 +543,13 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 				arcs.erase(also);
 			}
 
-			for (size_t i = 0; i < add.size(); i++) {
+			// get rid of artificial joining node if that's what it is
+			if (out[out.size() - 1].phantom) {
+				out.pop_back();
+			}
+
+			// skip first because it is the moveto
+			for (size_t i = 1; i < add.size(); i++) {
 				out.push_back(add[i]);
 			}
 		}
