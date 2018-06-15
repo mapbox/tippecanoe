@@ -59,7 +59,7 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 						exit(EXIT_FAILURE);
 					}
 
-					mvt_geometry phantom(mvt_moveto, x1, y1);
+					mvt_geometry phantom(mvt_moveto, round(x1), round(y1));
 					phantom.phantom = true;
 					phantom.id = 0;
 					out.push_back(phantom);
@@ -87,7 +87,7 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					// Inside already drawing, so don't need the start point
 					// out.push_back(geom[i - 1]);
 
-					mvt_geometry phantom(mvt_lineto, x2, y2);
+					mvt_geometry phantom(mvt_lineto, round(x2), round(y2));
 					phantom.phantom = true;
 					phantom.id = 0;
 					out.push_back(phantom);
@@ -103,12 +103,12 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					int c = clip(&x1, &y1, &x2, &y2, left, top, right, bottom);
 
 					if (c != CLIP_ELIMINATED) {
-						mvt_geometry phantom1(mvt_moveto, x1, y1);
+						mvt_geometry phantom1(mvt_moveto, round(x1), round(y1));
 						phantom1.phantom = true;
 						phantom1.id = 0;
 						out.push_back(phantom1);
 
-						mvt_geometry phantom2(mvt_lineto, x2, y2);
+						mvt_geometry phantom2(mvt_lineto, round(x2), round(y2));
 						phantom2.phantom = true;
 						phantom2.id = 0;
 						out.push_back(phantom2);
@@ -392,6 +392,8 @@ struct partial {
 	long clipid;
 	const mvt_feature *f;
 	const mvt_layer *l;
+	long x;
+	long y;
 
 	bool operator<(const partial &p) const {
 		return clipid < p.clipid;
@@ -399,30 +401,45 @@ struct partial {
 };
 
 void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mvt_tile &tile) {
+	// Pull out contiguous portions of original geometry
+
 	std::vector<std::vector<mvt_geometry>> revised;
-	revised.resize(end);
 
 	for (size_t i = start; i < end; i++) {
-		// Discard the portions of geometry that are in the buffer
+		std::vector<mvt_geometry> const &geom = partials[i].f->geometry;
 
-		std::vector<mvt_geometry> geom = partials[i].f->geometry;
-		std::vector<mvt_geometry> out;
 		for (size_t j = 0; j < geom.size(); j++) {
-			if (geom[j].phantom && geom[j].id == 0) {
-				if (geom[j].op == mvt_moveto && j + 1 < geom.size()) {
-					geom[j + 1].op = mvt_moveto;
-				}
-			} else {
+			if (geom[j].op == mvt_moveto) {
+				size_t k;
+				std::vector<mvt_geometry> out;
 				out.push_back(geom[j]);
+
+				for (k = j + 1; k < geom.size(); k++) {
+					if (geom[k].op == mvt_moveto) {
+						break;
+					}
+					out.push_back(geom[k]);
+				}
+
+				revised.push_back(out);
+				j = k - 1;
 			}
 		}
-		revised[i] = out;
 	}
+
+	// Now need to discard anything that happens in the buffer,
+	// because it should all be duplicated.
+
+	// Do this by location instead of by ID, because geometry is
+	// only tagged as phantom if it actually touches the tile
+	// or buffer edge, not if it just happens to be in the buffer
+
+	// ...
 
 	mvt_feature *nf = add_to_tile(*partials[start].f, *partials[start].l, tile);
 
-#if 1
-	for (size_t i = start; i < end; i++) {
+#if 0
+	for (size_t i = 0; i < revised.size(); i++) {
 		for (size_t j = 0; j < revised[i].size(); j++) {
 			nf->geometry.push_back(revised[i][j]);
 		}
@@ -433,10 +450,9 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 
 	std::multimap<long, std::vector<mvt_geometry>> arcs;
 
-	for (size_t i = start; i < end; i++) {
+	for (size_t i = 0; i < revised.size(); i++) {
 		for (size_t j = 0; j < revised[i].size(); j++) {
 			std::vector<mvt_geometry> arc;
-			revised[i][j].op = mvt_moveto;
 			arc.push_back(revised[i][j]);
 
 			long id = revised[i][j].id;
@@ -445,10 +461,14 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 			for (k = j + 1; k < revised[i].size(); k++) {
 				// Or would it be better to keep movetos together here,
 				// as a way to chain to the next arc?
-				if (revised[i][k].id != 0 || revised[i][k].op == mvt_moveto) {
+				if (revised[i][k].op == mvt_moveto) {
 					break;
 				}
 				arc.push_back(revised[i][k]);
+				if (revised[i][k].id != 0) {
+					revised[i][k].op = mvt_moveto;
+					break;
+				}
 			}
 
 			arcs.insert(std::pair<long, std::vector<mvt_geometry>>(id, arc));
@@ -492,6 +512,8 @@ mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n
 						p.clipid = f.clipid;
 						p.f = &f;
 						p.l = &l;
+						p.x = x;
+						p.y = y;
 						partials.push_back(p);
 					}
 				}
