@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include "geometry.hpp"
 #include "mbtiles.hpp"
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
@@ -163,7 +163,7 @@ struct serialization_state {
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
 	int exclude_all = 0;
-	json_object *filter = NULL;
+	std::shared_ptr<json_object> filter = NULL;
 };
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf);

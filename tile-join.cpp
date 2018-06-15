@@ -33,7 +33,7 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "milo/dtoa_milo.h"
 
 int pk = false;
@@ -67,7 +67,7 @@ void aprintf(std::string *buf, const char *format, ...) {
 	free(tmp);
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, std::shared_ptr<json_object> filter) {
 	mvt_tile tile;
 	int features_added = 0;
 	bool was_compressed;
@@ -472,7 +472,7 @@ struct arg {
 	std::set<std::string> *keep_layers = NULL;
 	std::set<std::string> *remove_layers = NULL;
 	int ifmatched = 0;
-	json_object *filter = NULL;
+	std::shared_ptr<json_object> filter = NULL;
 };
 
 void *join_worker(void *v) {
@@ -517,7 +517,7 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::shared_ptr<json_object> filter) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
@@ -573,12 +573,12 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void handle_vector_layers(json_object *vector_layers, std::map<std::string, layermap_entry> &layermap, std::map<std::string, std::string> &attribute_descriptions) {
+void handle_vector_layers(std::shared_ptr<json_object> vector_layers, std::map<std::string, layermap_entry> &layermap, std::map<std::string, std::string> &attribute_descriptions) {
 	if (vector_layers != NULL && vector_layers->type == JSON_ARRAY) {
-		for (size_t i = 0; i < vector_layers->length; i++) {
+		for (size_t i = 0; i < vector_layers->array.size(); i++) {
 			if (vector_layers->array[i]->type == JSON_HASH) {
-				json_object *id = json_hash_get(vector_layers->array[i], "id");
-				json_object *desc = json_hash_get(vector_layers->array[i], "description");
+				std::shared_ptr<json_object> id = json_hash_get(vector_layers->array[i], "id");
+				std::shared_ptr<json_object> desc = json_hash_get(vector_layers->array[i], "description");
 
 				if (id != NULL && desc != NULL && id->type == JSON_STRING && desc->type == JSON_STRING) {
 					std::string sid = id->string;
@@ -592,16 +592,16 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 					}
 				}
 
-				json_object *fields = json_hash_get(vector_layers->array[i], "fields");
+				std::shared_ptr<json_object> fields = json_hash_get(vector_layers->array[i], "fields");
 				if (fields != NULL && fields->type == JSON_HASH) {
-					for (size_t j = 0; j < fields->length; j++) {
+					for (size_t j = 0; j < fields->keys.size(); j++) {
 						if (fields->keys[j]->type == JSON_STRING && fields->values[j]->type) {
-							const char *desc2 = fields->values[j]->string;
+							std::string desc2 = fields->values[j]->string;
 
-							if (strcmp(desc2, "Number") != 0 &&
-							    strcmp(desc2, "String") != 0 &&
-							    strcmp(desc2, "Boolean") != 0 &&
-							    strcmp(desc2, "Mixed") != 0) {
+							if (desc2 != "Number" &&
+							    desc2 != "String" &&
+							    desc2 != "Boolean" &&
+							    desc2 != "Mixed") {
 								attribute_descriptions.insert(std::pair<std::string, std::string>(fields->keys[j]->string, desc2));
 							}
 						}
@@ -612,7 +612,7 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 	}
 }
 
-void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter, std::map<std::string, std::string> &attribute_descriptions) {
+void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, std::shared_ptr<json_object> filter, std::map<std::string, std::string> &attribute_descriptions) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
 	for (size_t i = 0; i < CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
@@ -793,11 +793,11 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
 
 				if (s != NULL) {
-					json_pull *jp = json_begin_string((const char *) s);
-					json_object *o = json_read_tree(jp);
+					std::shared_ptr<json_pull> jp = json_begin_string((const char *) s);
+					std::shared_ptr<json_object> o = json_read_tree(jp);
 
 					if (o != NULL && o->type == JSON_HASH) {
-						json_object *vector_layers = json_hash_get(o, "vector_layers");
+						std::shared_ptr<json_object> vector_layers = json_hash_get(o, "vector_layers");
 
 						handle_vector_layers(vector_layers, layermap, attribute_descriptions);
 						json_free(o);
@@ -832,7 +832,7 @@ int main(int argc, char **argv) {
 	char *csv = NULL;
 	int force = 0;
 	int ifmatched = 0;
-	json_object *filter = NULL;
+	std::shared_ptr<json_object> filter = NULL;
 
 	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 

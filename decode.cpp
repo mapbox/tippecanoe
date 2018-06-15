@@ -20,7 +20,7 @@
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "write_json.hpp"
-#include "jsonpull/jsonpull.h"
+#include "jsonpull/jsonpull.hpp"
 #include "dirtiles.hpp"
 
 int minzoom = 0;
