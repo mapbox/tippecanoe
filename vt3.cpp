@@ -359,7 +359,7 @@ void trim_tile(mvt_tile &tile) {
 	}
 }
 
-mvt_feature *add_to_tile(mvt_feature const &f, mvt_layer const &l, mvt_tile &tile) {
+mvt_feature *add_to_tile(mvt_feature const &f, mvt_layer const &l, mvt_tile &tile, size_t n) {
 	size_t k;
 	for (k = 0; k < tile.layers.size(); k++) {
 		if (tile.layers[k].name == l.name) {
@@ -370,7 +370,7 @@ mvt_feature *add_to_tile(mvt_feature const &f, mvt_layer const &l, mvt_tile &til
 	if (k == tile.layers.size()) {
 		mvt_layer nl = mvt_layer();
 		nl.name = l.name;
-		nl.extent = l.extent;  // * n
+		nl.extent = l.extent * n;
 		tile.layers.push_back(nl);
 	}
 
@@ -400,7 +400,7 @@ struct partial {
 	}
 };
 
-void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mvt_tile &tile) {
+void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mvt_tile &tile, size_t n) {
 	// Pull out contiguous portions of original geometry
 
 	std::vector<std::vector<mvt_geometry>> revised;
@@ -421,22 +421,39 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 					out.push_back(geom[k]);
 				}
 
-				revised.push_back(out);
+				// Now need to discard anything that happens in the buffer,
+				// because it should all be duplicated.
+
+				// Do this by location instead of by ID, because geometry is
+				// only tagged as phantom if it actually touches the tile
+				// or buffer edge, not if it just happens to be in the buffer
+
+				long minx = partials[i].l->extent * partials[i].x;
+				long maxx = partials[i].l->extent * (partials[i].x + 1);
+				long miny = partials[i].l->extent * partials[i].y;
+				long maxy = partials[i].l->extent * (partials[i].y + 1);
+
+				std::vector<mvt_geometry> out2;
+				bool within = false;
+				for (size_t l = 0; l < out.size(); l++) {
+					if (out[l].x >= minx && out[l].x <= maxx && out[l].y >= miny && out[l].y <= maxy) {
+						if (!within) {
+							out[l].op = mvt_moveto;
+						}
+						out2.push_back(out[l]);
+						within = true;
+					} else {
+						within = false;
+					}
+				}
+
+				revised.push_back(out2);
 				j = k - 1;
 			}
 		}
 	}
 
-	// Now need to discard anything that happens in the buffer,
-	// because it should all be duplicated.
-
-	// Do this by location instead of by ID, because geometry is
-	// only tagged as phantom if it actually touches the tile
-	// or buffer edge, not if it just happens to be in the buffer
-
-	// ...
-
-	mvt_feature *nf = add_to_tile(*partials[start].f, *partials[start].l, tile);
+	mvt_feature *nf = add_to_tile(*partials[start].f, *partials[start].l, tile, n);
 
 #if 0
 	for (size_t i = 0; i < revised.size(); i++) {
@@ -505,7 +522,7 @@ mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n
 					mvt_feature const &f = l.features[j];
 
 					if (f.clipid == 0) {
-						mvt_feature *nf = add_to_tile(f, l, tile);
+						mvt_feature *nf = add_to_tile(f, l, tile, n);
 						nf->geometry = f.geometry;
 					} else {
 						partial p;
@@ -533,7 +550,7 @@ mvt_tile reassemble(std::vector<std::vector<mvt_tile>> const &subtiles, size_t n
 			}
 		}
 
-		merge_partials(partials, i, j, tile);
+		merge_partials(partials, i, j, tile, n);
 
 		i = j - 1;
 	}
@@ -569,7 +586,7 @@ mvt_tile split_and_merge(mvt_tile tile, int tile_zoom) {
 				// actually needed for the sub-features.
 
 				nl.version = layer.version;
-				nl.extent = layer.extent;  // >> tile_zoom;
+				nl.extent = layer.extent >> tile_zoom;
 				nl.name = layer.name;
 				nl.keys = layer.keys;
 				nl.values = layer.values;
