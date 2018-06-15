@@ -465,6 +465,10 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 
 	// Pull out individual arcs from the various geometries
 
+	// Multimap because there may be multiple arcs with id 0,
+	// as the start of multilinestrings. (Also multiple arcs
+	// with the same id on tile edges, but those duplicates
+	// need to be eliminated)
 	std::multimap<long, std::vector<mvt_geometry>> arcs;
 
 	for (size_t i = 0; i < revised.size(); i++) {
@@ -488,11 +492,70 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 				}
 			}
 
-			arcs.insert(std::pair<long, std::vector<mvt_geometry>>(id, arc));
+			// Don't insert anything that was clipped down to just one moveto
+			if (arc.size() > 1) {
+				arcs.insert(std::pair<long, std::vector<mvt_geometry>>(id, arc));
+			}
+
 			j = k - 1;
 		}
 	}
 
+#if 0
+	for (auto a = arcs.begin(); a != arcs.end(); ++a) {
+		printf("arc %ld:\n", a->first);
+		dump(a->second);
+	}
+	printf("---\n");
+#endif
+
+	// std::map<long, std::vector<mvt_geometry>> arcs2;
+
+	while (arcs.size() > 0) {
+		std::vector<mvt_geometry> out = arcs.begin()->second;
+		arcs.erase(arcs.begin());
+
+		while (out[out.size() - 1].id != 0) {
+			long id = out[out.size() - 1].id;
+
+			auto found = arcs.find(id);
+			if (found == arcs.end()) {
+				break; // why would this happen?
+			}
+
+			std::vector<mvt_geometry> add = found->second;
+			arcs.erase(found);
+
+			while (true) {
+				auto also = arcs.find(id);
+				if (also == arcs.end()) {
+					break;
+				}
+
+				if (also->second != add) {
+					fprintf(stderr, "Found conflicting arc for %ld\n", id);
+					dump(add);
+					printf("vs\n");
+					dump(also->second);
+					exit(EXIT_FAILURE);
+				}
+
+				arcs.erase(also);
+			}
+
+			for (size_t i = 0; i < add.size(); i++) {
+				out.push_back(add[i]);
+			}
+		}
+
+		for (size_t i = 0; i < out.size(); i++) {
+			nf->geometry.push_back(out[i]);
+		}
+
+		// arcs2.insert(std::pair<long, std::vector<mvt_geometry>>(out[0].id, out));
+	}
+
+#if 0
 	// Outer loop because removing an arc once it is used invalidates the iterator
 	bool again = true;
 	while (again) {
@@ -504,6 +567,7 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 			}
 		}
 	}
+#endif
 #endif
 }
 
