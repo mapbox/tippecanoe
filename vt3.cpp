@@ -260,21 +260,24 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 				long first = floor((double) ogeom[i - 1].x / nextent) * nextent;
 				long second = floor((double) ogeom[i].x / nextent) * nextent;
 
-				if (second >= first) {
-					for (long x = first + nextent; x <= second; x += nextent) {
-						long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
-						mvt_geometry p(ogeom[i].op, x, y);
-						p.id = ++pointid;
-						p.phantom = true;
-						ngeom.push_back(p);
-					}
-				} else {
-					for (long x = first; x >= second + nextent; x -= nextent) {
-						long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
-						mvt_geometry p(ogeom[i].op, x, y);
-						p.id = ++pointid;
-						p.phantom = true;
-						ngeom.push_back(p);
+				// If <= 2, one endpoint or the other is on the edge, not crossing it
+				if (llabs(ogeom[i].x - ogeom[i - 1].x) > 2) {
+					if (second >= first) {
+						for (long x = first + nextent; x <= second; x += nextent) {
+							long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
+							mvt_geometry p(ogeom[i].op, x, y);
+							p.id = ++pointid;
+							p.phantom = true;
+							ngeom.push_back(p);
+						}
+					} else {
+						for (long x = first; x >= second + nextent; x -= nextent) {
+							long y = round(ogeom[i - 1].y + (ogeom[i].y - ogeom[i - 1].y) * (double) (x - ogeom[i - 1].x) / (ogeom[i].x - ogeom[i - 1].x));
+							mvt_geometry p(ogeom[i].op, x, y);
+							p.id = ++pointid;
+							p.phantom = true;
+							ngeom.push_back(p);
+						}
 					}
 				}
 			}
@@ -292,21 +295,24 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 				long first = floor((double) ogeom[i - 1].y / nextent) * nextent;
 				long second = floor((double) ogeom[i].y / nextent) * nextent;
 
-				if (second >= first) {
-					for (long y = first + nextent; y <= second; y += nextent) {
-						long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
-						mvt_geometry p(ogeom[i].op, x, y);
-						p.id = ++pointid;
-						p.phantom = true;
-						ngeom.push_back(p);
-					}
-				} else {
-					for (long y = first; y >= second + nextent; y -= nextent) {
-						long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
-						mvt_geometry p(ogeom[i].op, x, y);
-						p.id = ++pointid;
-						p.phantom = true;
-						ngeom.push_back(p);
+				// If <= 2, one endpoint or the other is on the edge, not crossing it
+				if (llabs(ogeom[i].y - ogeom[i - 1].y) > 2) {
+					if (second >= first) {
+						for (long y = first + nextent; y <= second; y += nextent) {
+							long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
+							mvt_geometry p(ogeom[i].op, x, y);
+							p.id = ++pointid;
+							p.phantom = true;
+							ngeom.push_back(p);
+						}
+					} else {
+						for (long y = first; y >= second + nextent; y -= nextent) {
+							long x = round(ogeom[i - 1].x + (ogeom[i].x - ogeom[i - 1].x) * (double) (y - ogeom[i - 1].y) / (ogeom[i].y - ogeom[i - 1].y));
+							mvt_geometry p(ogeom[i].op, x, y);
+							p.id = ++pointid;
+							p.phantom = true;
+							ngeom.push_back(p);
+						}
 					}
 				}
 			}
