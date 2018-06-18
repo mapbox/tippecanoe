@@ -265,9 +265,22 @@ Example: to retain only major TIGER roads at low zoom levels:
 .PP
 .RS
 .nf
-\&./tippecanoe \-o roads.mbtiles \-j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
+tippecanoe \-o roads.mbtiles \-j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 .fi
 .RE
+.PP
+Tippecanoe also accepts expressions of the form \fB\fC[ "attribute\-filter", name, expression ]\fR, to filter individual feature attributes
+instead of entire features. For example, you can exclude the road names at low zoom levels by doing
+.PP
+.RS
+.nf
+tippecanoe \-o roads.mbtiles \-j '{ "*": [ "attribute\-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }' tl_2015_06001_roads.json
+.fi
+.RE
+.PP
+An \fB\fCattribute\-filter\fR expression itself is always considered to evaluate to \fB\fCtrue\fR (in other words, to retain the feature instead
+of dropping it). If you want to use multiple \fB\fCattribute\-filter\fR expressions, or to use other expressions to remove features from
+the same layer, enclose them in an \fB\fCall\fR expression so they will all be evaluated.
 .SS Dropping a fixed fraction of features by zoom level
 .RS
 .IP \(bu 2

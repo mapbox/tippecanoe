@@ -1288,6 +1288,24 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	return false;
 }
 
+void remove_attributes(serial_feature &sf, std::set<std::string> const &exclude_attributes, const char *stringpool, long long *pool_off) {
+	for (ssize_t i = sf.keys.size() - 1; i >= 0; i--) {
+		std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
+		if (exclude_attributes.count(key) > 0) {
+			sf.keys.erase(sf.keys.begin() + i);
+			sf.values.erase(sf.values.begin() + i);
+		}
+	}
+
+	for (ssize_t i = sf.full_keys.size() - 1; i >= 0; i--) {
+		std::string key = sf.full_keys[i];
+		if (exclude_attributes.count(key) > 0) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
+		}
+	}
+}
+
 serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, std::atomic<long long> *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, std::atomic<long long> *geompos, std::atomic<double> *oprogress, double todo, const char *fname, int child_shards, struct json_object *filter, const char *stringpool, long long *pool_off, std::vector<std::vector<std::string>> *layer_unmaps) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
@@ -1333,6 +1351,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 		if (filter != NULL) {
 			std::map<std::string, mvt_value> attributes;
 			std::string layername = (*layer_unmaps)[sf.segment][sf.layer];
+			std::set<std::string> exclude_attributes;
 
 			for (size_t i = 0; i < sf.keys.size(); i++) {
 				std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
@@ -1379,8 +1398,12 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 			attributes.insert(std::pair<std::string, mvt_value>("$zoom", v2));
 
-			if (!evaluate(attributes, layername, filter)) {
+			if (!evaluate(attributes, layername, filter, exclude_attributes)) {
 				continue;
+			}
+
+			if (exclude_attributes.size() > 0) {
+				remove_attributes(sf, exclude_attributes, stringpool, pool_off);
 			}
 		}
 

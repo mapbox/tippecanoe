@@ -229,8 +229,19 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 Example: to retain only major TIGER roads at low zoom levels:
 
 ```
-./tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
+tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 ```
+
+Tippecanoe also accepts expressions of the form `[ "attribute-filter", name, expression ]`, to filter individual feature attributes
+instead of entire features. For example, you can exclude the road names at low zoom levels by doing
+
+```
+tippecanoe -o roads.mbtiles -j '{ "*": [ "attribute-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }' tl_2015_06001_roads.json
+```
+
+An `attribute-filter` expression itself is always considered to evaluate to `true` (in other words, to retain the feature instead
+of dropping it). If you want to use multiple `attribute-filter` expressions, or to use other expressions to remove features from
+the same layer, enclose them in an `all` expression so they will all be evaluated.
 
 ### Dropping a fixed fraction of features by zoom level
 
