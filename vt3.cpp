@@ -23,6 +23,15 @@
 #include "vt3.hpp"
 #include "clip.hpp"
 
+bool check_empty_lineto(std::vector<mvt_geometry> &geom) {
+	for (size_t i = 1; i < geom.size(); i++) {
+		if (geom[i].op == mvt_lineto && geom[i - 1].x == geom[i].x && geom[i - 1].y == geom[i].y) {
+			return true;
+		}
+	}
+	return false;
+}
+
 std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left, long top, long right, long bottom) {
 	std::vector<mvt_geometry> out;
 
@@ -64,6 +73,10 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					phantom.id = 0;
 					out.push_back(phantom);
 					out.push_back(geom[i]);
+
+					if (phantom == geom[i]) {
+						fprintf(stderr, "clip out to in made empty lineto\n");
+					}
 				}
 
 				inside = true;
@@ -88,9 +101,20 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 					// out.push_back(geom[i - 1]);
 
 					mvt_geometry phantom(mvt_lineto, round(x2), round(y2));
-					phantom.phantom = true;
-					phantom.id = 0;
-					out.push_back(phantom);
+
+					if (phantom == out[out.size() - 1]) {
+						if (out[out.size() - 1].id == 0) {
+							fprintf(stderr, "In to out is clipped away but has no id %lld,%lld\n", phantom.x, phantom.y);
+						}
+					} else {
+						phantom.phantom = true;
+						phantom.id = 0;
+						out.push_back(phantom);
+					}
+
+					if (out[out.size() - 2] == out[out.size() - 1]) {
+						fprintf(stderr, "clip in to out made empty lineto\n");
+					}
 				} else {
 					// Outside to outside, so discardable on both sides
 
@@ -112,12 +136,21 @@ std::vector<mvt_geometry> clip_lines(std::vector<mvt_geometry> &geom, long left,
 						phantom2.phantom = true;
 						phantom2.id = 0;
 						out.push_back(phantom2);
+
+						if (phantom1 == phantom2) {
+							fprintf(stderr, "clip in discardable made empty lineto\n");
+						}
 					}
 				}
 
 				inside = false;
 			}
 		}
+	}
+
+	if (check_empty_lineto(out)) {
+		fprintf(stderr, "empty lineto in clip\n");
+		exit(EXIT_FAILURE);
 	}
 
 	return out;
@@ -147,6 +180,11 @@ static std::vector<mvt_geometry> remove_noop(std::vector<mvt_geometry> geom, std
 		} else {
 			out.push_back(geom[i]);
 		}
+	}
+
+	if (check_empty_lineto(out)) {
+		fprintf(stderr, "empty lineto in remove noop\n");
+		exit(EXIT_FAILURE);
 	}
 
 	return out;
@@ -285,6 +323,11 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 			ngeom.push_back(ogeom[i]);
 		}
 
+		if (check_empty_lineto(ngeom)) {
+			fprintf(stderr, "empty lineto in adding crossings\n");
+			exit(EXIT_FAILURE);
+		}
+
 		// Part 1a: same, but for Y axis crossings
 
 		ogeom = ngeom;
@@ -318,6 +361,11 @@ void split_feature(mvt_layer const &layer, mvt_feature const &feature, std::vect
 			}
 
 			ngeom.push_back(ogeom[i]);
+		}
+
+		if (check_empty_lineto(ngeom)) {
+			fprintf(stderr, "empty lineto in adding crossings\n");
+			exit(EXIT_FAILURE);
 		}
 
 		// Part 2: Assign (real) point IDs for any points that are on a sub-tile edge
@@ -427,6 +475,11 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 					out.push_back(geom[k]);
 				}
 
+				if (check_empty_lineto(out)) {
+					fprintf(stderr, "empty lineto in buffer removal 1\n");
+					exit(EXIT_FAILURE);
+				}
+
 				// Now need to discard anything that happens in the buffer,
 				// because it should all be duplicated.
 
@@ -451,6 +504,11 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 					} else {
 						within = false;
 					}
+				}
+
+				if (check_empty_lineto(out2)) {
+					fprintf(stderr, "empty lineto in buffer removal\n");
+					exit(EXIT_FAILURE);
 				}
 
 				revised.push_back(out2);
@@ -496,6 +554,11 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 					revised[i][k].op = mvt_moveto;
 					break;
 				}
+			}
+
+			if (check_empty_lineto(arc)) {
+				fprintf(stderr, "empty lineto in arc making\n");
+				exit(EXIT_FAILURE);
 			}
 
 			// Don't insert anything that was clipped down to just one moveto
@@ -558,6 +621,11 @@ void merge_partials(std::vector<partial> &partials, size_t start, size_t end, mv
 			for (size_t i = 1; i < add.size(); i++) {
 				out.push_back(add[i]);
 			}
+		}
+
+		if (check_empty_lineto(out)) {
+			fprintf(stderr, "empty lineto in reassembly\n");
+			exit(EXIT_FAILURE);
 		}
 
 		for (size_t i = 0; i < out.size(); i++) {
