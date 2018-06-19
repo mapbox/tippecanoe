@@ -1,4 +1,6 @@
-{"type":"FeatureCollection","features":[
+{"type":"FeatureCollection",
+"crs": { "type": "name", "properties": { } },
+"features":[
 {"type":"Feature","properties":{
 "boolean": true,
 "otherboolean": false,

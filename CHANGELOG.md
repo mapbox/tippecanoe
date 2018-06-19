@@ -1,3 +1,7 @@
+## 1.30.0
+
+* Add a filter extension to allow filtering individual attributes
+
 ## 1.29.3
 
 * Include a generator field in tileset metadata with the Tippecanoe version

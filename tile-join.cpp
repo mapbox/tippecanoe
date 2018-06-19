@@ -126,6 +126,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
+			std::set<std::string> exclude_attributes;
 
 			if (filter != NULL) {
 				std::map<std::string, mvt_value> attributes;
@@ -164,7 +165,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				attributes.insert(std::pair<std::string, mvt_value>("$zoom", v2));
 
-				if (!evaluate(attributes, layer.name, filter)) {
+				if (!evaluate(attributes, layer.name, filter, exclude_attributes)) {
 					continue;
 				}
 			}
@@ -215,7 +216,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					continue;
 				}
 
-				if (exclude.count(std::string(key)) == 0) {
+				if (exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
 					type_and_string tas;
 					tas.type = type;
 					tas.string = value;
@@ -246,7 +247,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (exclude.count(joinkey) == 0) {
+							if (exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
