@@ -221,7 +221,7 @@ void check_crs(json_object *j, const char *reading) {
 		json_object *properties = json_hash_get(crs, "properties");
 		if (properties != NULL) {
 			json_object *name = json_hash_get(properties, "name");
-			if (name->type == JSON_STRING) {
+			if (name != NULL && name->type == JSON_STRING) {
 				if (strcmp(name->string, projection->alias) != 0) {
 					if (!quiet) {
 						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
