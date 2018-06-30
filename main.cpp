@@ -2386,6 +2386,73 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 	attribute_accum.insert(std::pair<std::string, attribute_op>(name, t));
 }
 
+struct flag {
+	std::string option;
+	bool has_arg;
+	std::string arg;
+};
+
+void read_flags(std::vector<flag> &flags, const char *fname, bool direct) {
+	json_pull *jp;
+	json_object *obj;
+	FILE *fp = NULL;
+
+	if (direct) {
+		jp = json_begin_string(fname);
+	} else {
+		fp = fopen(fname, "r");
+		if (fp == NULL) {
+			perror(fname);
+			exit(EXIT_FAILURE);
+		}
+
+		jp = json_begin_file(fp);
+	}
+
+	obj = json_read_tree(jp);
+	if (obj == NULL) {
+		fprintf(stderr, "%s: %s\n", fname, jp->error);
+		exit(EXIT_FAILURE);
+	}
+	json_disconnect(obj);
+	json_end(jp);
+
+	if (fp != NULL) {
+		fclose(fp);
+	}
+
+	if (obj->type != JSON_HASH) {
+		fprintf(stderr, "%s: %s: contents are not a JSON object\n", *av, fname);
+		exit(EXIT_FAILURE);
+	}
+
+	for (size_t i = 0; i < obj->length; i++) {
+		if (obj->keys[i]->type != JSON_STRING) {
+			fprintf(stderr, "%s: %s: %s: option is not a string\n", *av, fname, json_stringify(obj->keys[i]));
+			exit(EXIT_FAILURE);
+		}
+
+		if (obj->values[i]->type != JSON_STRING && obj->values[i]->type != JSON_NUMBER && obj->values[i]->type != JSON_NULL && obj->values[i]->type != JSON_TRUE) {
+			fprintf(stderr, "%s: %s: %s: option argument is not a string, number, or null\n", *av, fname, json_stringify(obj->values[i]));
+			exit(EXIT_FAILURE);
+		}
+
+		flag f;
+		f.option = obj->keys[i]->string;
+
+		if (obj->values[i]->type == JSON_STRING || obj->values[i]->type == JSON_NUMBER) {
+			f.has_arg = true;
+			f.arg = obj->values[i]->string;
+		} else {
+			f.has_arg = false;
+		}
+
+		flags.push_back(f);
+	}
+
+	json_free(obj);
+}
+
 void parse_json_source(const char *arg, struct source &src) {
 	json_pull *jp = json_begin_string(arg);
 	json_object *o = json_read_tree(jp);
@@ -2470,6 +2537,9 @@ int main(int argc, char **argv) {
 		additional[i] = 0;
 	}
 
+	std::vector<flag> flags;
+	std::vector<const char *> to_free;
+
 	static struct option long_options_orig[] = {
 		{"Output tileset", 0, 0, 0},
 		{"output", required_argument, 0, 'o'},
@@ -2485,6 +2555,7 @@ int main(int argc, char **argv) {
 		{"Input files and layer names", 0, 0, 0},
 		{"layer", required_argument, 0, 'l'},
 		{"named-layer", required_argument, 0, 'L'},
+		{"input-file", required_argument, 0, 'I'},
 
 		{"Parallel processing of input", 0, 0, 0},
 		{"read-parallel", no_argument, 0, 'P'},
@@ -2588,6 +2659,10 @@ int main(int argc, char **argv) {
 		{"progress-interval", required_argument, 0, 'U'},
 		{"version", no_argument, 0, 'v'},
 
+		{"Meta-options", 0, 0, 0},
+		{"options", required_argument, 0, 'h'},
+		{"options-from-file", required_argument, 0, 'H'},
+
 		{"", 0, 0, 0},
 		{"prevent", required_argument, 0, 'p'},
 		{"additional", required_argument, 0, 'a'},
@@ -2637,10 +2712,74 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, getopt_str, long_options, NULL)) != -1) {
+	while (true) {
+		if (flags.size() > 0) {
+			flag f = flags[0];
+			flags.erase(flags.begin());
+
+			struct option *found = NULL;
+			for (size_t j = 0; long_options[j].name != NULL; j++) {
+				if (f.option == long_options[j].name) {
+					found = &long_options[j];
+					break;
+				}
+
+				if (f.option.size() == 1 && long_options[j].val == f.option[0]) {
+					found = &long_options[j];
+					break;
+				}
+			}
+
+			if (found == NULL) {
+				i = '?';
+				fprintf(stderr, "%s: %s: No such option\n", *av, f.option.c_str());
+			} else {
+				if (found->flag != NULL) {
+					i = 0;
+					*(found->flag) = found->val;
+				} else {
+					i = found->val;
+
+					if (found->has_arg == required_argument && !f.has_arg) {
+						fprintf(stderr, "%s: %s requires an argument but one was not specified\n", *av, found->name);
+						exit(EXIT_FAILURE);
+					}
+
+					if (found->has_arg == no_argument && f.has_arg) {
+						fprintf(stderr, "%s: %s does not require an argument but one was specified\n", *av, found->name);
+						exit(EXIT_FAILURE);
+					}
+
+					optarg = strdup(f.arg.c_str());
+					to_free.push_back(optarg);
+				}
+			}
+		} else {
+			i = getopt_long(argc, argv, getopt_str, long_options, NULL);
+			if (i == -1) {
+				break;
+			}
+		}
+
 		switch (i) {
 		case 0:
 			break;
+
+		case 'h':
+			read_flags(flags, optarg, true);
+			break;
+
+		case 'H':
+			read_flags(flags, optarg, false);
+			break;
+
+		case 'I': {
+			struct source src;
+			src.layer = "";
+			src.file = optarg;
+			sources.push_back(src);
+			break;
+		}
 
 		case 'n':
 			name = optarg;
@@ -3083,6 +3222,10 @@ int main(int argc, char **argv) {
 
 	if (filter != NULL) {
 		json_free(filter);
+	}
+
+	for (size_t a = 0; a < to_free.size(); a++) {
+		free((void *) to_free[a]);
 	}
 
 	return ret;

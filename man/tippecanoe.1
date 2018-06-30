@@ -160,6 +160,8 @@ specified, the files are all merged into the single named layer, even if they tr
 .IP \(bu 2
 \fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
 .IP \(bu 2
+\fB\fC\-I\fR \fIfile.json\fP\fB\fCor\fR\-\-input\-file=\fB\fC_file.json_\fR: Specify an input file as if it were named as a separate command line argument
+.IP \(bu 2
 \fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata. Example:
 .RE
 .PP
@@ -410,6 +412,26 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 \fB\fC\-U\fR \fIseconds\fP or \fB\fC\-\-progress\-interval=\fR\fIseconds\fP: Don't report progress more often than the specified number of \fIseconds\fP\&.
 .IP \(bu 2
 \fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
+.RE
+.SS Meta\-options
+.RS
+.IP \(bu 2
+\fB\fC\-h\fR \fIoptions\fP or \fB\fC\-\-options=\fR\fIoptions\fP: Process additional options from the specified literal JSON object.
+.IP \(bu 2
+\fB\fC\-H\fR \fIconfig.json\fP or \fB\fC\-\-options\-from\-file=\fR\fIconfig.json\fP: Read additional options from the specified \fIconfig.json\fP file.
+The file should contain one JSON object.
+.RE
+.PP
+Either with directly\-specified options or options from a file, the options should be a single JSON object.
+Its keys must be long or short option names. The value corresponding
+to each key should be a string or number, for options with arguments, or \fB\fCnull\fR or \fB\fCtrue\fR for options that do not take arguments.
+.PP
+Example:
+.PP
+.RS
+.nf
+tippecanoe \-h '{ "maximum\-zoom": "g", "force": true, "output": "countries.mbtiles" }' ne_10m_admin_0_countries.json
+.fi
 .RE
 .SS Filters
 .RS
