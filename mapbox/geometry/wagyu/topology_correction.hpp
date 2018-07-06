@@ -692,6 +692,17 @@ void fixup_parents_siblings(ring_ptr<T> parent, ring_ptr<T> ring, ring_manager<T
 }
 
 template <typename T>
+bool is_ancestor_of(ring_ptr<T> ring, ring_ptr<T> existing) {
+    for (; existing != nullptr; existing = existing->parent) {
+        if (existing == ring) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
 void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
                                       ring_ptr<T> new_ring,
                                       ring_manager<T>& rings) {
@@ -704,7 +715,7 @@ void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
             assert((*r)->points);
             bool ring_area_is_positive = area((*r)) > 0.0;
             if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r), new_ring)) {
+                poly2_contains_poly1((*r), new_ring) && !is_ancestor_of(*r, new_ring)) {
                 (*r)->parent = new_ring;
                 new_ring->children.push_back((*r));
                 r = rings.children.erase(r);
@@ -719,7 +730,7 @@ void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
             assert((*r) != parent);
             bool ring_area_is_positive = area((*r)) > 0.0;
             if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r), new_ring)) {
+                poly2_contains_poly1((*r), new_ring) && !is_ancestor_of(*r, new_ring)) {
                 (*r)->parent = new_ring;
                 new_ring->children.push_back((*r));
                 r = parent->children.erase(r);
