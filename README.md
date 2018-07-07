@@ -570,7 +570,7 @@ The options are:
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),
-it doesn't have any of tippecanoe's recourses if the new tiles are bigger than the 500K tile limit.
+it doesn't have any of tippecanoe's resources if the new tiles are bigger than the 500K tile limit.
 If a tile is too big and you haven't specified `-pk`, it is just left out of the new tileset.
 
 Example
