@@ -82,19 +82,13 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	if (tippecanoe != NULL) {
 		json_object *min = json_hash_get(tippecanoe, "minzoom");
-		if (min != NULL && min->type == JSON_NUMBER) {
-			tippecanoe_minzoom = min->number;
-		}
-		if (min != NULL && min->type == JSON_STRING) {
-			tippecanoe_minzoom = atoi(min->string);
+		if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
+			tippecanoe_minzoom = integer_zoom(sst->fname, min->string);
 		}
 
 		json_object *max = json_hash_get(tippecanoe, "maxzoom");
-		if (max != NULL && max->type == JSON_NUMBER) {
-			tippecanoe_maxzoom = max->number;
-		}
-		if (max != NULL && max->type == JSON_STRING) {
-			tippecanoe_maxzoom = atoi(max->string);
+		if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
+			tippecanoe_maxzoom = integer_zoom(sst->fname, max->string);
 		}
 
 		json_object *ln = json_hash_get(tippecanoe, "layer");

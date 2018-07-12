@@ -52,6 +52,26 @@
       ]
     ]
   }
+},
+
+{
+  "type": "Feature",
+  "tippecanoe": { "minzoom": 1e1 },
+  "properties": { "zoom": "nothing, since 10 > 5"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [ [ 0, 0 ], [ 1, 1 ] ]
+  }
+},
+
+{
+  "type": "Feature",
+  "tippecanoe": { "maxzoom": 1e1},
+  "properties": { "zoom": "0-5, since 10 > 5"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [ [ 0, 0 ], [ 1, 1 ] ]
+  }
 }
 
 ]}
