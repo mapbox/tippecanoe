@@ -84,6 +84,7 @@ struct source {
 	std::string layer = "";
 	std::string file = "";
 	std::string description = "";
+	std::string format = "";
 };
 
 size_t CPUS;
@@ -1351,7 +1352,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 		size_t layer = a->second.id;
 
-		if (sources[source].file.size() > 7 && sources[source].file.substr(sources[source].file.size() - 7) == std::string(".geobuf")) {
+		if (sources[source].format == "geobuf" || (sources[source].file.size() > 7 && sources[source].file.substr(sources[source].file.size() - 7) == std::string(".geobuf"))) {
 			struct stat st;
 			if (fstat(fd, &st) != 0) {
 				perror("fstat");
@@ -1361,8 +1362,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			char *map = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
 			if (map == MAP_FAILED) {
-				perror("mmap");
-				perror(sources[source].file.c_str());
+				fprintf(stderr, "%s: mmap: %s: %s\n", *av, reading.c_str(), strerror(errno));
 				exit(EXIT_FAILURE);
 			}
 
@@ -1422,7 +1422,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			continue;
 		}
 
-		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv")) {
+		if (sources[source].format == "csv" || (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv"))) {
 			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
@@ -2416,6 +2416,11 @@ void parse_json_source(const char *arg, struct source &src) {
 	json_object *description = json_hash_get(o, "description");
 	if (description != NULL && description->type == JSON_STRING) {
 		src.description = std::string(description->string);
+	}
+
+	json_object *format = json_hash_get(o, "format");
+	if (format != NULL && format->type == JSON_STRING) {
+		src.format = std::string(format->string);
 	}
 
 	json_free(o);

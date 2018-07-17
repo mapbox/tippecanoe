@@ -278,13 +278,25 @@ allow-existing-test:
 	rm -r tests/allow-existing/both.dir.json.check tests/allow-existing/both.dir tests/allow-existing/both.mbtiles.json.check tests/allow-existing/both.mbtiles
 
 csv-test:
+	# Reading from named CSV
 	./tippecanoe -q -zg -f -o tests/csv/out.mbtiles tests/csv/ne_110m_populated_places_simple.csv
+	./tippecanoe-decode -x generator tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
+	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
+	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
+	# Same, but specifying csv with -L format
+	./tippecanoe -q -zg -f -o tests/csv/out.mbtiles -L'{"file":"", "format":"csv", "layer":"ne_110m_populated_places_simplecsv"}' < tests/csv/ne_110m_populated_places_simple.csv
 	./tippecanoe-decode -x generator tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
 	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
 	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
 
 layer-json-test:
+	# GeoJSON with description and named layer
 	./tippecanoe -q -z0 -r1 -yNAME -f -o tests/layer-json/out.mbtiles -L'{"file":"tests/ne_110m_populated_places/in.json", "description":"World cities", "layer":"places"}'
+	./tippecanoe-decode -x generator tests/layer-json/out.mbtiles > tests/layer-json/out.mbtiles.json.check
+	cmp tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles.json
+	rm -f tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles
+	# Same, but reading from the standard input
+	./tippecanoe -q -z0 -r1 -yNAME -f -o tests/layer-json/out.mbtiles -L'{"file":"", "description":"World cities", "layer":"places"}' < tests/ne_110m_populated_places/in.json
 	./tippecanoe-decode -x generator tests/layer-json/out.mbtiles > tests/layer-json/out.mbtiles.json.check
 	cmp tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles.json
 	rm -f tests/layer-json/out.mbtiles.json.check tests/layer-json/out.mbtiles
