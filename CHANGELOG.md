@@ -1,3 +1,10 @@
+## 1.30.1
+
+* Ensure that per-feature minzoom and maxzoom are integers
+* Report compression errors in tippecanoe-decode
+* Add the ability to specify the file format with -L{"format":"…"}
+* Add an option to treat empty CSV columns as nulls, not empty strings
+
 ## 1.30.0
 
 * Add a filter extension to allow filtering individual attributes
