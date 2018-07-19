@@ -39,6 +39,7 @@
 int pk = false;
 int pC = false;
 int pg = false;
+int pe = false;
 size_t CPUS;
 int quiet = false;
 int maxzoom = 32;
@@ -243,11 +244,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								} else if (is_number(joinval)) {
 									attr_type = mvt_double;
 								}
+							} else if (pe) {
+								attr_type = mvt_null;
 							}
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0) {
+							if (exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
@@ -876,6 +879,7 @@ int main(int argc, char **argv) {
 
 		{"no-tile-size-limit", no_argument, &pk, 1},
 		{"no-tile-compression", no_argument, &pC, 1},
+		{"empty-csv-columns-are-null", no_argument, &pe, 1},
 		{"no-tile-stats", no_argument, &pg, 1},
 
 		{0, 0, 0, 0},
@@ -952,6 +956,8 @@ int main(int argc, char **argv) {
 				pC = true;
 			} else if (strcmp(optarg, "g") == 0) {
 				pg = true;
+			} else if (strcmp(optarg, "e") == 0) {
+				pe = true;
 			} else {
 				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
 				exit(EXIT_FAILURE);

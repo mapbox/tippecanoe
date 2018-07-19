@@ -18,6 +18,7 @@ const char *extract = NULL;
 FILE *csvfile = NULL;
 std::vector<std::string> header;
 std::vector<std::string> fields;
+int pe = false;
 
 std::string buffered;
 int buffered_type = -1;
@@ -318,9 +319,11 @@ void join_csv(json_object *j) {
 				} else if (is_number(v)) {
 					attr_type = JSON_NUMBER;
 				}
+			} else if (pe) {
+				attr_type = JSON_NULL;
 			}
 
-			{
+			if (attr_type != JSON_NULL) {
 				// This knows more about the structure of JSON objects than it ought to
 
 				json_object *ko = (json_object *) malloc(sizeof(json_object));
@@ -433,6 +436,8 @@ int main(int argc, char **argv) {
 		{"wrap", no_argument, 0, 'w'},
 		{"extract", required_argument, 0, 'e'},
 		{"csv", required_argument, 0, 'c'},
+		{"empty-csv-columns-are-null", no_argument, &pe, 1},
+		{"prevent", required_argument, 0, 'p'},
 
 		{0, 0, 0, 0},
 	};
@@ -453,6 +458,9 @@ int main(int argc, char **argv) {
 
 	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
+		case 0:
+			break;
+
 		case 'w':
 			wrap = true;
 			break;
@@ -463,6 +471,15 @@ int main(int argc, char **argv) {
 
 		case 'c':
 			csv = optarg;
+			break;
+
+		case 'p':
+			if (strcmp(optarg, "e") == 0) {
+				pe = true;
+			} else {
+				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		default:

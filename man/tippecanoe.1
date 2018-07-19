@@ -160,7 +160,7 @@ specified, the files are all merged into the single named layer, even if they tr
 .IP \(bu 2
 \fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
 .IP \(bu 2
-\fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata. Example:
+\fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. (If the \fB\fC"file"\fR key is an empty string, it means to read from the standard input stream.) It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata, and/or a \fB\fC"format"\fR field to specify \fB\fCcsv\fR or \fB\fCgeobuf\fR file format if it is not obvious from the \fB\fCname\fR\&. Example:
 .RE
 .PP
 .RS
@@ -244,6 +244,8 @@ If the type is \fB\fCint\fR and the original attribute was floating\-point, it i
 that are dropped, coalesced\-as\-needed, or clustered. The \fIoperation\fP may be
 \fB\fCsum\fR, \fB\fCproduct\fR, \fB\fCmean\fR, \fB\fCmax\fR, \fB\fCmin\fR, \fB\fCconcat\fR, or \fB\fCcomma\fR
 to specify how the named \fIattribute\fP is accumulated onto the attribute of the same name in a feature that does survive.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .RE
 .SS Filtering features by attributes
 .RS
@@ -675,6 +677,8 @@ The options are:
 \fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .RE
 .SS Setting or disabling tile size limits
 .RS
@@ -829,6 +833,8 @@ The formatting makes excessive use of \fB\fC\\u\fR quoting so that it follows JS
 be sorted correctly by tools that just do ASCII comparisons.
 .IP \(bu 2
 \fB\fC\-c\fR \fIfile.csv\fP or \fB\fC\-\-csv=\fR\fIfile.csv\fP: Join attributes from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .RE
 .SS Example
 .PP

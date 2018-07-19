@@ -1,5 +1,7 @@
 #include "text.hpp"
 #include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
 /**
  * Returns an empty string if `s` is valid utf8;
@@ -121,4 +123,13 @@ std::string truncate16(std::string const &s, size_t runes) {
 	}
 
 	return std::string(s, 0, lastgood - start);
+}
+
+int integer_zoom(std::string where, std::string text) {
+	double d = atof(text.c_str());
+	if (!isnormal(d) || d != floor(d) || d < 0 || d > 32) {
+		fprintf(stderr, "%s: Expected integer zoom level in \"tippecanoe\" GeoJSON extension, not %s\n", where.c_str(), text.c_str());
+		exit(EXIT_FAILURE);
+	}
+	return d;
 }

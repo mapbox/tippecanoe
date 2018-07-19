@@ -8,12 +8,19 @@
 #include "text.hpp"
 #include "csv.hpp"
 #include "milo/dtoa_milo.h"
+#include "options.hpp"
 
 void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fname, int layer, std::string layername) {
-	FILE *f = fopen(fname.c_str(), "r");
-	if (f == NULL) {
-		perror(fname.c_str());
-		exit(EXIT_FAILURE);
+	FILE *f;
+
+	if (fname.size() == 0) {
+		f = stdin;
+	} else {
+		f = fopen(fname.c_str(), "r");
+		if (f == NULL) {
+			perror(fname.c_str());
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	std::string s;
@@ -91,6 +98,9 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 				serial_val sv;
 				if (is_number(line[i])) {
 					sv.type = mvt_double;
+				} else if (line[i].size() == 0 && prevent[P_EMPTY_CSV_COLUMNS]) {
+					sv.type = mvt_null;
+					line[i] = "null";
 				} else {
 					sv.type = mvt_string;
 				}
@@ -120,8 +130,10 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		serialize_feature(&sst[0], sf);
 	}
 
-	if (fclose(f) != 0) {
-		perror("fclose");
-		exit(EXIT_FAILURE);
+	if (fname.size() != 0) {
+		if (fclose(f) != 0) {
+			perror("fclose");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
