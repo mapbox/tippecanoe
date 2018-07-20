@@ -139,6 +139,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
 
+				for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
+					std::string key = layer.keys[feat.properties[t]];
+					mvt_value val = layer.decode_property(feat.properties[t + 1]);
+
+					attributes.insert(std::pair<std::string, mvt_value>(key, val));
+				}
+
 				if (feat.has_id) {
 					mvt_value v;
 					v.type = mvt_uint;

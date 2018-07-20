@@ -219,7 +219,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							feature.has_id = true;
 							break;
 
-						case 2: /* tag */
+						case 2: /* tags */
 						{
 							auto pi = feature_reader.get_packed_uint32();
 							for (auto it = pi.first; it != pi.second; ++it) {
@@ -237,6 +237,15 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							auto pi = feature_reader.get_packed_uint32();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								geoms.push_back(*it);
+							}
+							break;
+						}
+
+						case 5: /* properties */
+						{
+							auto pi = feature_reader.get_packed_uint64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								feature.properties.push_back(*it);
 							}
 							break;
 						}
@@ -349,6 +358,7 @@ std::string mvt_tile::encode() {
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
+			feature_writer.add_packed_uint64(2, std::begin(layers[i].features[f].properties), std::end(layers[i].features[f].properties));
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
@@ -509,6 +519,119 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 
 	feature.tags.push_back(ko);
 	feature.tags.push_back(vo);
+}
+
+void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
+	std::map<std::string, size_t>::iterator ki = key_map.find(key);
+	size_t ko;
+
+	if (ki == key_map.end()) {
+		ko = keys.size();
+		keys.push_back(key);
+		key_map.insert(std::pair<std::string, size_t>(key, ko));
+	} else {
+		ko = ki->second;
+	}
+
+	std::map<mvt_value, unsigned long>::iterator vi = property_map.find(value);
+	unsigned long vo;
+
+	if (vi == value_map.end()) {
+		if (value.type == mvt_string) {
+			vo = (string_values.size() << 3) | 5;
+			string_values.push_back(value.string_value);
+		} else if (value.type == mvt_float) {
+			vo = (float_values.size() << 3) | 3;
+			float_values.push_back(value.numeric_value.float_value);
+		} else if (value.type == mvt_double) {
+			vo = (double_values.size() << 3) | 4;
+			double_values.push_back(value.numeric_value.double_value);
+		} else if (value.type == mvt_int) {
+			if (value.numeric_value.int_value >= -(1L << 60) + 1 && value.numeric_value.int_value <= (1L << 60) - 1) {
+				vo = (protozero::encode_zigzag64(value.numeric_value.int_value) << 3) | 0;
+			} else {
+				vo = (sint64_values.size() << 3) | 6;
+				sint64_values.push_back(value.numeric_value.int_value);
+			}
+		} else if (value.type == mvt_sint) {
+			if (value.numeric_value.sint_value >= -(1L << 60) + 1 && value.numeric_value.sint_value <= (1L << 60) - 1) {
+				vo = (protozero::encode_zigzag64(value.numeric_value.sint_value) << 3) | 0;
+			} else {
+				vo = (sint64_values.size() << 3) | 6;
+				sint64_values.push_back(value.numeric_value.sint_value);
+			}
+		} else if (value.type == mvt_uint) {
+			if (value.numeric_value.uint_value <= (1L << 61) - 1) {
+				vo = (value.numeric_value.uint_value << 3) | 1;
+			} else {
+				vo = (uint64_values.size() << 3) | 7;
+				uint64_values.push_back(value.numeric_value.uint_value);
+			}
+		} else if (value.type == mvt_bool) {
+			vo = (value.numeric_value.bool_value << 3) | 2;
+		} else {
+			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
+			exit(EXIT_FAILURE);
+		}
+
+		property_map.insert(std::pair<mvt_value, size_t>(value, vo));
+	} else {
+		vo = vi->second;
+	}
+
+	feature.properties.push_back(ko);
+	feature.properties.push_back(vo);
+}
+
+mvt_value mvt_layer::decode_property(unsigned long property) const {
+	int type = property & 7;
+	mvt_value ret;
+
+	switch (type) {
+	case 0: /* signed integer */
+		ret.type = mvt_sint;
+		ret.numeric_value.sint_value = protozero::decode_zigzag64(property >> 3);
+		return ret;
+
+	case 1: /* unsigned integer */
+		ret.type = mvt_uint;
+		ret.numeric_value.uint_value = property >> 3;
+		return ret;
+
+	case 2: /* boolean */
+		ret.type = mvt_bool;
+		ret.numeric_value.bool_value = property >> 3;
+		return ret;
+
+	case 3: /* float reference */
+		ret.type = mvt_float;
+		ret.numeric_value.float_value = float_values[property >> 3];
+		return ret;
+
+	case 4: /* double reference */
+		ret.type = mvt_double;
+		ret.numeric_value.double_value = double_values[property >> 3];
+		return ret;
+
+	case 5: /* string reference */
+		ret.type = mvt_string;
+		ret.string_value = string_values[property >> 3];
+		return ret;
+
+	case 6: /* signed int reference */
+		ret.type = mvt_sint;
+		ret.numeric_value.sint_value = sint64_values[property >> 3];
+		return ret;
+
+	case 7: /* unsigned int reference */
+		ret.type = mvt_uint;
+		ret.numeric_value.uint_value = uint64_values[property >> 3];
+		return ret;
+
+	default:
+		fprintf(stderr, "Unknown attribute type %d\n", type);
+		exit(EXIT_FAILURE);
+	}
 }
 
 bool is_integer(const char *s, long long *v) {

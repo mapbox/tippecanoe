@@ -247,6 +247,37 @@ struct lonlat {
 	}
 };
 
+void write_kv(json_writer &state, const char *key, mvt_value const &val) {
+	if (val.type == mvt_string) {
+		state.json_write_string(key);
+		state.json_write_string(val.string_value);
+	} else if (val.type == mvt_int) {
+		state.json_write_string(key);
+		state.json_write_signed(val.numeric_value.int_value);
+	} else if (val.type == mvt_double) {
+		state.json_write_string(key);
+		state.json_write_number(val.numeric_value.double_value);
+	} else if (val.type == mvt_float) {
+		state.json_write_string(key);
+		state.json_write_number(val.numeric_value.float_value);
+	} else if (val.type == mvt_sint) {
+		state.json_write_string(key);
+		state.json_write_signed(val.numeric_value.sint_value);
+	} else if (val.type == mvt_uint) {
+		state.json_write_string(key);
+		state.json_write_unsigned(val.numeric_value.uint_value);
+	} else if (val.type == mvt_bool) {
+		state.json_write_string(key);
+		state.json_write_bool(val.numeric_value.bool_value);
+	} else if (val.type == mvt_null) {
+		state.json_write_string(key);
+		state.json_write_null();
+	} else {
+		fprintf(stderr, "Internal error: property with unknown type\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
 void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
@@ -316,34 +347,14 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			const char *key = layer.keys[feat.tags[t]].c_str();
 			mvt_value const &val = layer.values[feat.tags[t + 1]];
 
-			if (val.type == mvt_string) {
-				state.json_write_string(key);
-				state.json_write_string(val.string_value);
-			} else if (val.type == mvt_int) {
-				state.json_write_string(key);
-				state.json_write_signed(val.numeric_value.int_value);
-			} else if (val.type == mvt_double) {
-				state.json_write_string(key);
-				state.json_write_number(val.numeric_value.double_value);
-			} else if (val.type == mvt_float) {
-				state.json_write_string(key);
-				state.json_write_number(val.numeric_value.float_value);
-			} else if (val.type == mvt_sint) {
-				state.json_write_string(key);
-				state.json_write_signed(val.numeric_value.sint_value);
-			} else if (val.type == mvt_uint) {
-				state.json_write_string(key);
-				state.json_write_unsigned(val.numeric_value.uint_value);
-			} else if (val.type == mvt_bool) {
-				state.json_write_string(key);
-				state.json_write_bool(val.numeric_value.bool_value);
-			} else if (val.type == mvt_null) {
-				state.json_write_string(key);
-				state.json_write_null();
-			} else {
-				fprintf(stderr, "Internal error: property with unknown type\n");
-				exit(EXIT_FAILURE);
-			}
+			write_kv(state, key, val);
+		}
+
+		for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
+			const char *key = layer.keys[feat.tags[t]].c_str();
+			mvt_value const &val = layer.decode_property(feat.tags[t + 1]);
+
+			write_kv(state, key, val);
 		}
 
 		state.json_end_hash();

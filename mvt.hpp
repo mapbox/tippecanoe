@@ -44,6 +44,7 @@ enum mvt_geometry_type {
 
 struct mvt_feature {
 	std::vector<unsigned> tags{};
+	std::vector<unsigned long> properties{};
 	std::vector<mvt_geometry> geometry{};
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
@@ -96,14 +97,23 @@ struct mvt_layer {
 	std::vector<mvt_feature> features{};
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
+	std::vector<std::string> string_values{};
+	std::vector<double> double_values{};
+	std::vector<float> float_values{};
+	std::vector<long> sint64_values{};
+	std::vector<unsigned long> uint64_values{};
 	long long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
+	void tag_v3(mvt_feature &feature, std::string key, mvt_value value);
 
 	// For tracking the key-value constants already used in this layer
 	std::map<std::string, size_t> key_map{};
 	std::map<mvt_value, size_t> value_map{};
+	std::map<mvt_value, unsigned long> property_map{};
+
+	mvt_value decode_property(unsigned long property) const;
 };
 
 struct mvt_tile {
