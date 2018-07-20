@@ -186,12 +186,29 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.id = feat.id;
 			}
 
-			std::map<std::string, std::pair<mvt_value, type_and_string>> attributes;
-			std::vector<std::string> key_order;
+			std::vector<std::pair<std::string, mvt_value>> todo;
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 				const char *key = layer.keys[feat.tags[t]].c_str();
 				mvt_value &val = layer.values[feat.tags[t + 1]];
+
+				todo.push_back(std::pair<std::string, mvt_value>(key, val));
+			}
+
+			for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
+				const char *key = layer.keys[feat.properties[t]].c_str();
+				mvt_value val = layer.decode_property(feat.properties[t + 1]);
+
+				todo.push_back(std::pair<std::string, mvt_value>(key, val));
+			}
+
+			std::map<std::string, std::pair<mvt_value, type_and_string>> attributes;
+			std::vector<std::string> key_order;
+
+			for (size_t t = 0; t < todo.size(); t++) {
+				const char *key = todo[t].first.c_str();
+				mvt_value &val = todo[t].second;
+
 				std::string value;
 				int type = -1;
 
