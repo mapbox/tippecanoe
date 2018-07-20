@@ -202,6 +202,46 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					layer.extent = layer_reader.get_uint32();
 					break;
 
+				case 7: /* string */
+					layer.string_values.push_back(layer_reader.get_string());
+					break;
+
+				case 8: /* doubles */
+				{
+					auto pi = layer_reader.get_packed_double();
+					for (auto it = pi.first; it != pi.second; ++it) {
+						layer.double_values.push_back(*it);
+					}
+					break;
+				}
+
+				case 9: /* floats */
+				{
+					auto pi = layer_reader.get_packed_float();
+					for (auto it = pi.first; it != pi.second; ++it) {
+						layer.float_values.push_back(*it);
+					}
+					break;
+				}
+
+				case 10: /* signed integers */
+				{
+					auto pi = layer_reader.get_packed_sint64();
+					for (auto it = pi.first; it != pi.second; ++it) {
+						layer.sint64_values.push_back(*it);
+					}
+					break;
+				}
+
+				case 11: /* unsigned integers */
+				{
+					auto pi = layer_reader.get_packed_uint64();
+					for (auto it = pi.first; it != pi.second; ++it) {
+						layer.uint64_values.push_back(*it);
+					}
+					break;
+				}
+
 				case 15: /* version */
 					layer.version = layer_reader.get_uint32();
 					break;
@@ -352,13 +392,22 @@ std::string mvt_tile::encode() {
 			layer_writer.add_message(4, value_string);
 		}
 
+		for (size_t v = 0; v < layers[i].string_values.size(); v++) {
+			layer_writer.add_string(7, layers[i].string_values[v]);
+		}
+
+		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
+		layer_writer.add_packed_float(9, std::begin(layers[i].float_values), std::end(layers[i].float_values));
+		layer_writer.add_packed_sint64(10, std::begin(layers[i].sint64_values), std::end(layers[i].sint64_values));
+		layer_writer.add_packed_uint64(11, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
+
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
-			feature_writer.add_packed_uint64(2, std::begin(layers[i].features[f].properties), std::end(layers[i].features[f].properties));
+			feature_writer.add_packed_uint64(5, std::begin(layers[i].features[f].properties), std::end(layers[i].features[f].properties));
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
@@ -536,7 +585,7 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 	std::map<mvt_value, unsigned long>::iterator vi = property_map.find(value);
 	unsigned long vo;
 
-	if (vi == value_map.end()) {
+	if (vi == property_map.end()) {
 		if (value.type == mvt_string) {
 			vo = (string_values.size() << 3) | 5;
 			string_values.push_back(value.string_value);
@@ -605,26 +654,46 @@ mvt_value mvt_layer::decode_property(unsigned long property) const {
 
 	case 3: /* float reference */
 		ret.type = mvt_float;
+		if (property >> 3 >= float_values.size()) {
+			fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property >> 3, float_values.size());
+			exit(EXIT_FAILURE);
+		}
 		ret.numeric_value.float_value = float_values[property >> 3];
 		return ret;
 
 	case 4: /* double reference */
 		ret.type = mvt_double;
+		if (property >> 3 >= double_values.size()) {
+			fprintf(stderr, "Out of bounds double reference: %lu vs %zu\n", property >> 3, double_values.size());
+			exit(EXIT_FAILURE);
+		}
 		ret.numeric_value.double_value = double_values[property >> 3];
 		return ret;
 
 	case 5: /* string reference */
 		ret.type = mvt_string;
+		if (property >> 3 >= string_values.size()) {
+			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property >> 3, string_values.size());
+			exit(EXIT_FAILURE);
+		}
 		ret.string_value = string_values[property >> 3];
 		return ret;
 
 	case 6: /* signed int reference */
 		ret.type = mvt_sint;
+		if (property >> 3 >= sint64_values.size()) {
+			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property >> 3, sint64_values.size());
+			exit(EXIT_FAILURE);
+		}
 		ret.numeric_value.sint_value = sint64_values[property >> 3];
 		return ret;
 
 	case 7: /* unsigned int reference */
 		ret.type = mvt_uint;
+		if (property >> 3 >= uint64_values.size()) {
+			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property >> 3, uint64_values.size());
+			exit(EXIT_FAILURE);
+		}
 		ret.numeric_value.uint_value = uint64_values[property >> 3];
 		return ret;
 

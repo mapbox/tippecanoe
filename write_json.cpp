@@ -351,8 +351,8 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		}
 
 		for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
-			const char *key = layer.keys[feat.tags[t]].c_str();
-			mvt_value const &val = layer.decode_property(feat.tags[t + 1]);
+			const char *key = layer.keys[feat.properties[t]].c_str();
+			mvt_value const &val = layer.decode_property(feat.properties[t + 1]);
 
 			write_kv(state, key, val);
 		}

@@ -300,7 +300,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					auto fa = attributes.find(k);
 
 					if (fa != attributes.end()) {
-						outlayer.tag(outfeature, k, fa->second.first);
+						outlayer.tag_v3(outfeature, k, fa->second.first);
 						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
 						attributes.erase(fa);
 					}
