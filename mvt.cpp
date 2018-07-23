@@ -14,6 +14,8 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 
+int mvt_format = mvt_blake;
+
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
 	this->x = nx;
@@ -512,7 +514,7 @@ static std::string quote(std::string const &s) {
 	return buf;
 }
 
-std::string mvt_value::toString() {
+std::string mvt_value::toString() const {
 	if (type == mvt_string) {
 		return quote(string_value);
 	} else if (type == mvt_int) {
@@ -630,6 +632,38 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 
 	feature.properties.push_back(ko);
 	feature.properties.push_back(vo);
+}
+
+void mvt_layer::reorder_values() {
+	std::vector<mvt_value> orig_values = values;
+
+	std::sort(values.begin(), values.end());
+
+	std::map<mvt_value, size_t> new_value_map;
+	for (size_t i = 0; i < values.size(); i++) {
+		new_value_map.insert(std::pair<mvt_value, size_t>(values[i], i));
+	}
+
+	for (size_t i = 0; i < features.size(); i++) {
+		for (size_t j = 1; j < features[i].tags.size(); j += 2) {
+			mvt_value v = orig_values[features[i].tags[j]];
+			auto f = new_value_map.find(v);
+
+			if (f == new_value_map.end()) {
+				std::string vs = v.toString();
+				fprintf(stderr, "Internal error: value %s was lost\n", vs.c_str());
+#if 0
+				for (auto a = new_value_map.begin(); a != new_value_map.end(); ++a) {
+					std::string const vs2 = a->first.toString();
+					fprintf(stderr, "%s: %zu\n", vs2.c_str(), a->second);
+				}
+#endif
+				exit(EXIT_FAILURE);
+			}
+
+			features[i].tags[j] = f->second;
+		}
+	}
 }
 
 mvt_value mvt_layer::decode_property(unsigned long property) const {

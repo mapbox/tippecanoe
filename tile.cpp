@@ -202,7 +202,11 @@ void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> 
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		layer.tag_v3(feature, key.string_value, value);
+		if (mvt_format == mvt_blake) {
+			layer.tag_v3(feature, key.string_value, value);
+		} else {
+			layer.tag(feature, key.string_value, value);
+		}
 	}
 }
 
@@ -2210,7 +2214,12 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
-					layer.tag_v3(feature, layer_features[x].full_keys[a], v);
+
+					if (mvt_format == mvt_blake) {
+						layer.tag_v3(feature, layer_features[x].full_keys[a], v);
+					} else {
+						layer.tag(feature, layer_features[x].full_keys[a], v);
+					}
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
@@ -2225,7 +2234,12 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					mvt_value v;
 					v.type = mvt_sint;
 					v.numeric_value.sint_value = glow;
-					layer.tag_v3(feature, "tippecanoe_feature_density", v);
+
+					if (mvt_format == mvt_blake) {
+						layer.tag_v3(feature, "tippecanoe_feature_density", v);
+					} else {
+						layer.tag(feature, "tippecanoe_feature_density", v);
+					}
 
 					serial_val sv;
 					sv.type = mvt_double;
@@ -2353,6 +2367,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			std::string compressed;
+
+			if (mvt_format == mvt_reordered) {
+				for (size_t i = 0; i < tile.layers.size(); i++) {
+					tile.layers[i].reorder_values();
+				}
+			}
+
 			std::string pbf = tile.encode();
 
 			if (!prevent[P_TILE_COMPRESSION]) {

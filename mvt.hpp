@@ -10,6 +10,14 @@
 struct mvt_value;
 struct mvt_layer;
 
+enum mvt_fmt {
+	mvt_blake,
+	mvt_original,
+	mvt_reordered,
+};
+
+extern int mvt_format;
+
 enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
@@ -82,7 +90,7 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
-	std::string toString();
+	std::string toString() const;
 
 	mvt_value() {
 		this->type = mvt_double;
@@ -114,6 +122,7 @@ struct mvt_layer {
 	std::map<mvt_value, unsigned long> property_map{};
 
 	mvt_value decode_property(unsigned long property) const;
+	void reorder_values();
 };
 
 struct mvt_tile {

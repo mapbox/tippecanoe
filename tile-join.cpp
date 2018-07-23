@@ -317,7 +317,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					auto fa = attributes.find(k);
 
 					if (fa != attributes.end()) {
-						outlayer.tag_v3(outfeature, k, fa->second.first);
+						if (mvt_format == mvt_blake) {
+							outlayer.tag_v3(outfeature, k, fa->second.first);
+						} else {
+							outlayer.tag(outfeature, k, fa->second.first);
+						}
 						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
 						attributes.erase(fa);
 					}
@@ -525,6 +529,12 @@ void *join_worker(void *v) {
 		}
 
 		if (anything) {
+			if (mvt_format == mvt_reordered) {
+				for (size_t i = 0; i < outtile.layers.size(); i++) {
+					outtile.layers[i].reorder_values();
+				}
+			}
+
 			std::string pbf = outtile.encode();
 			std::string compressed;
 
@@ -905,6 +915,7 @@ int main(int argc, char **argv) {
 		{"no-tile-compression", no_argument, &pC, 1},
 		{"empty-csv-columns-are-null", no_argument, &pe, 1},
 		{"no-tile-stats", no_argument, &pg, 1},
+		{"tile-format", required_argument, 0, 'V'},
 
 		{0, 0, 0, 0},
 	};
@@ -927,6 +938,19 @@ int main(int argc, char **argv) {
 	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
+			break;
+
+		case 'V':
+			if (strcmp(optarg, "blake") == 0) {
+				mvt_format = mvt_blake;
+			} else if (strcmp(optarg, "original") == 0) {
+				mvt_format = mvt_original;
+			} else if (strcmp(optarg, "reordered") == 0) {
+				mvt_format = mvt_reordered;
+			} else {
+				fprintf(stderr, "Unknown vector tile format %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'o':
