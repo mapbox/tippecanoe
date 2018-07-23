@@ -636,12 +636,19 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 
 void mvt_layer::reorder_values() {
 	std::vector<mvt_value> orig_values = values;
+	std::vector<std::string> orig_keys = keys;
 
 	std::sort(values.begin(), values.end());
+	std::sort(keys.begin(), keys.end());
 
 	std::map<mvt_value, size_t> new_value_map;
 	for (size_t i = 0; i < values.size(); i++) {
 		new_value_map.insert(std::pair<mvt_value, size_t>(values[i], i));
+	}
+
+	std::map<std::string, size_t> new_key_map;
+	for (size_t i = 0; i < keys.size(); i++) {
+		new_key_map.insert(std::pair<std::string, size_t>(keys[i], i));
 	}
 
 	for (size_t i = 0; i < features.size(); i++) {
@@ -652,12 +659,18 @@ void mvt_layer::reorder_values() {
 			if (f == new_value_map.end()) {
 				std::string vs = v.toString();
 				fprintf(stderr, "Internal error: value %s was lost\n", vs.c_str());
-#if 0
-				for (auto a = new_value_map.begin(); a != new_value_map.end(); ++a) {
-					std::string const vs2 = a->first.toString();
-					fprintf(stderr, "%s: %zu\n", vs2.c_str(), a->second);
-				}
-#endif
+				exit(EXIT_FAILURE);
+			}
+
+			features[i].tags[j] = f->second;
+		}
+
+		for (size_t j = 0; j < features[i].tags.size(); j += 2) {
+			std::string k = orig_keys[features[i].tags[j]];
+			auto f = new_key_map.find(k);
+
+			if (f == new_key_map.end()) {
+				fprintf(stderr, "Internal error: key %s was lost\n", k.c_str());
 				exit(EXIT_FAILURE);
 			}
 
