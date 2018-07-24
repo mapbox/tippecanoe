@@ -266,7 +266,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				if (tp >= 0 && tp != mvt_null) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 
-					if (mvt_format == mvt_blake) {
+					if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
 						l->second.tag_v3(feature, std::string(properties->keys[i]->string), v);
 					} else {
 						l->second.tag(feature, std::string(properties->keys[i]->string), v);

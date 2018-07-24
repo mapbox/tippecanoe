@@ -592,8 +592,18 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 			vo = (string_values.size() << 3) | 5;
 			string_values.push_back(value.string_value);
 		} else if (value.type == mvt_float) {
-			vo = (float_values.size() << 3) | 3;
-			float_values.push_back(value.numeric_value.float_value);
+			if (mvt_format == mvt_blake_float) {
+				unsigned char buf[sizeof(float)];
+				memcpy(buf, &value.numeric_value.float_value, sizeof(float));
+				unsigned long val = 0;
+				for (size_t i = 0; i < sizeof(float); i++) {
+					val |= buf[i] << (i * 8);
+				}
+				vo = (val << 3) | 3;
+			} else {
+				vo = (float_values.size() << 3) | 3;
+				float_values.push_back(value.numeric_value.float_value);
+			}
 		} else if (value.type == mvt_double) {
 			vo = (double_values.size() << 3) | 4;
 			double_values.push_back(value.numeric_value.double_value);
@@ -701,11 +711,22 @@ mvt_value mvt_layer::decode_property(unsigned long property) const {
 
 	case 3: /* float reference */
 		ret.type = mvt_float;
-		if (property >> 3 >= float_values.size()) {
-			fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property >> 3, float_values.size());
-			exit(EXIT_FAILURE);
+		if (mvt_format == mvt_blake_float) {
+			unsigned char buf[sizeof(float)];
+			unsigned long val = property >> 3;
+			for (size_t i = 0; i < sizeof(float); i++) {
+				buf[i] = val >> (i * 8);
+			}
+			float f;
+			memcpy(&f, buf, sizeof(float));
+			ret.numeric_value.float_value = f;
+		} else {
+			if (property >> 3 >= float_values.size()) {
+				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property >> 3, float_values.size());
+				exit(EXIT_FAILURE);
+			}
+			ret.numeric_value.float_value = float_values[property >> 3];
 		}
-		ret.numeric_value.float_value = float_values[property >> 3];
 		return ret;
 
 	case 4: /* double reference */
