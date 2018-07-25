@@ -1975,8 +1975,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			if (maxzoom < 0) {
 				maxzoom = 0;
 			}
-			if (maxzoom > MAX_ZOOM) {
-				maxzoom = MAX_ZOOM;
+			if (maxzoom > 32 - full_detail) {
+				maxzoom = 32 - full_detail;
+			}
+			if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
+				maxzoom = 33 - low_detail;
 			}
 
 			if (!quiet) {
@@ -1991,8 +1994,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			if (mz < 0) {
 				mz = 0;
 			}
-			if (mz > MAX_ZOOM) {
-				mz = MAX_ZOOM;
+			if (mz > 32 - full_detail) {
+				mz = 32 - full_detail;
+			}
+			if (mz > 33 - low_detail) {  // that is, mz - 1 > 32 - low_detail
+				mz = 33 - low_detail;
 			}
 
 			if (mz > maxzoom || count <= 0) {
@@ -2992,6 +2998,10 @@ int main(int argc, char **argv) {
 		if (maxzoom > 32 - full_detail) {
 			maxzoom = 32 - full_detail;
 			fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+		}
+		if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
+			maxzoom = 33 - low_detail;
+			fprintf(stderr, "Highest supported zoom with low detail %d is %d\n", low_detail, maxzoom);
 		}
 	}
 	if (maxzoom > MAX_ZOOM) {

@@ -1,3 +1,7 @@
+## 1.30.2
+
+* Don't guess a higher maxzoom than is allowed for manual selection
+
 ## 1.30.1
 
 * Ensure that per-feature minzoom and maxzoom are integers
