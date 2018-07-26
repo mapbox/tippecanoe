@@ -1,3 +1,7 @@
+## 1.30.3
+
+* Add an option to automatically assign ids to features
+
 ## 1.30.2
 
 * Don't guess a higher maxzoom than is allowed for manual selection

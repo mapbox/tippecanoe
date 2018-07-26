@@ -387,6 +387,13 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.geometry = fix_polygon(sf.geometry);
 	}
 
+	if (!sf.has_id) {
+		if (additional[A_GENERATE_IDS]) {
+			sf.has_id = true;
+			sf.id = sf.seq + 1;
+		}
+	}
+
 	if (sst->want_dist) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {

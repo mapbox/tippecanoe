@@ -2573,6 +2573,7 @@ int main(int argc, char **argv) {
 
 		{"Adding calculated attributes", 0, 0, 0},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
+		{"generate-ids", no_argument, &additional[A_GENERATE_IDS], 1},
 
 		{"Trying to correct bad source geometry", 0, 0, 0},
 		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
