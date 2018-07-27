@@ -132,7 +132,7 @@
 ,
 { "type": "Feature", "properties": { "NAME": "Accra", "SOV0NAME": "Ghana", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -0.263672, 5.615986 ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Nukualofa", "SOV0NAME": "Tonga", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -175.253906, -21.125498 ] } }
+{ "type": "Feature", "properties": { "NAME": "Nukualofa", "SOV0NAME": "Tonga", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ -175.253906, -21.125498 ], [ 184.746094, -21.125498 ] ] } }
 ,
 { "type": "Feature", "properties": { "NAME": "Apia", "SOV0NAME": "Samoa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -171.826172, -13.838080 ] } }
 ,
@@ -422,7 +422,7 @@
 ,
 { "type": "Feature", "properties": { "NAME": "Majuro", "SOV0NAME": "Marshall Islands", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 171.298828, 7.188101 ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Tarawa", "SOV0NAME": "Kiribati", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 172.968750, 1.406109 ] } }
+{ "type": "Feature", "properties": { "NAME": "Tarawa", "SOV0NAME": "Kiribati", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 172.968750, 1.406109 ], [ -187.031250, 1.406109 ] ] } }
 ,
 { "type": "Feature", "properties": { "NAME": "Brazzaville", "SOV0NAME": "Congo (Brazzaville)", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 15.205078, -4.214943 ] } }
 ,
@@ -490,13 +490,13 @@
 ,
 { "type": "Feature", "properties": { "NAME": "Port Vila", "SOV0NAME": "Vanuatu", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 168.310547, -17.727759 ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Funafuti", "SOV0NAME": "Tuvalu", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 179.208984, -8.494105 ] } }
+{ "type": "Feature", "properties": { "NAME": "Funafuti", "SOV0NAME": "Tuvalu", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 179.208984, -8.494105 ], [ -180.791016, -8.494105 ] ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Suva", "SOV0NAME": "Fiji", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 178.417969, -18.062312 ] } }
+{ "type": "Feature", "properties": { "NAME": "Suva", "SOV0NAME": "Fiji", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 178.417969, -18.062312 ], [ -181.582031, -18.062312 ] ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Auckland", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 174.726562, -36.809285 ] } }
+{ "type": "Feature", "properties": { "NAME": "Auckland", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 174.726562, -36.809285 ], [ -185.273438, -36.809285 ] ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Wellington", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 174.726562, -41.244772 ] } }
+{ "type": "Feature", "properties": { "NAME": "Wellington", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 174.726562, -41.244772 ], [ -185.273438, -41.244772 ] ] } }
 ] }
 ] }
 ] }

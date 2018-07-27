@@ -1,3 +1,8 @@
+## 1.30.4
+
+* Features within the z0 tile buffer of the antimeridian (not only
+  those that cross it) are duplicated on both sides.
+
 ## 1.30.3
 
 * Add an option to automatically assign ids to features
