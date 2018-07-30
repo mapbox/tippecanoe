@@ -13,6 +13,78 @@
 
 {
   "type": "Feature",
+  "properties": {"where": "-180"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ -180, 20 ],
+      [ -180, 50 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
+  "properties": {"where": "180"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ 180, 10 ],
+      [ 180, 30 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
+  "properties": {"where": "-173, duplicated"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ -173, 10 ],
+      [ -173, 30 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
+  "properties": {"where": "-172, not duplicated"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ -172, 10 ],
+      [ -172, 30 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
+  "properties": {"where": "173, duplicated"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ 173, 10 ],
+      [ 173, 30 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
+  "properties": {"where": "172, not duplicated"},
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [ 172, 10 ],
+      [ 172, 30 ]
+    ]
+  }
+},
+
+{
+  "type": "Feature",
   "tippecanoe": { "maxzoom": 2 },
   "properties": {"zoom": "z0-2"},
   "geometry": {

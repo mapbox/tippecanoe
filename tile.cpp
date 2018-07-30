@@ -1219,19 +1219,19 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	}
 
 	if (z == 0) {
-		if (sf.bbox[0] < 0 || sf.bbox[2] > 1LL << 32) {
+		if (sf.bbox[0] <= (1LL << 32) * buffer / 256 || sf.bbox[2] >= (1LL << 32) - ((1LL << 32) * buffer / 256)) {
 			// If the geometry extends off the edge of the world, concatenate on another copy
 			// shifted by 360 degrees, and then make sure both copies get clipped down to size.
 
 			size_t n = sf.geometry.size();
 
-			if (sf.bbox[0] < 0) {
+			if (sf.bbox[0] <= (1LL << 32) * buffer / 256) {
 				for (size_t i = 0; i < n; i++) {
 					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
 				}
 			}
 
-			if (sf.bbox[2] > 1LL << 32) {
+			if (sf.bbox[2] >= (1LL << 32) - ((1LL << 32) * buffer / 256)) {
 				for (size_t i = 0; i < n; i++) {
 					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
 				}
