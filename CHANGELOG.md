@@ -1,3 +1,7 @@
+## 1.30.5
+
+* Take cluster distance into account when guessing a maxzoom
+
 ## 1.30.4
 
 * Features within the z0 tile buffer of the antimeridian (not only
