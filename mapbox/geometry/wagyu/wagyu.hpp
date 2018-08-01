@@ -16,10 +16,11 @@
 #include <mapbox/geometry/wagyu/vatti.hpp>
 
 #define WAGYU_MAJOR_VERSION 0
-#define WAGYU_MINOR_VERSION 3
-#define WAGYU_PATCH_VERSION 0
+#define WAGYU_MINOR_VERSION 4
+#define WAGYU_PATCH_VERSION 3
 
-#define WAGYU_VERSION (WAGYU_MAJOR_VERSION * 100000) + (WAGYU_MINOR_VERSION * 100) + (WAGYU_PATCH_VERSION)
+#define WAGYU_VERSION                                                                              \
+    (WAGYU_MAJOR_VERSION * 100000) + (WAGYU_MINOR_VERSION * 100) + (WAGYU_PATCH_VERSION)
 
 namespace mapbox {
 namespace geometry {
@@ -28,9 +29,7 @@ namespace wagyu {
 template <typename T>
 class wagyu {
 private:
-    using value_type = T;
-
-    local_minimum_list<value_type> minima_list;
+    local_minimum_list<T> minima_list;
     bool reverse_output;
 
     wagyu(wagyu const&) = delete;
@@ -44,12 +43,14 @@ public:
         clear();
     }
 
-    bool add_ring(mapbox::geometry::linear_ring<value_type> const& pg,
+    template <typename T2>
+    bool add_ring(mapbox::geometry::linear_ring<T2> const& pg,
                   polygon_type p_type = polygon_type_subject) {
         return add_linear_ring(pg, minima_list, p_type);
     }
 
-    bool add_polygon(mapbox::geometry::polygon<value_type> const& ppg,
+    template <typename T2>
+    bool add_polygon(mapbox::geometry::polygon<T2> const& ppg,
                      polygon_type p_type = polygon_type_subject) {
         bool result = false;
         for (auto const& r : ppg) {
@@ -68,11 +69,11 @@ public:
         minima_list.clear();
     }
 
-    mapbox::geometry::box<value_type> get_bounds() {
-        mapbox::geometry::point<value_type> min = { 0, 0 };
-        mapbox::geometry::point<value_type> max = { 0, 0 };
+    mapbox::geometry::box<T> get_bounds() {
+        mapbox::geometry::point<T> min = { 0, 0 };
+        mapbox::geometry::point<T> max = { 0, 0 };
         if (minima_list.empty()) {
-            return mapbox::geometry::box<value_type>(min, max);
+            return mapbox::geometry::box<T>(min, max);
         }
         bool first_set = false;
         for (auto const& lm : minima_list) {
@@ -109,25 +110,28 @@ public:
                 }
             }
         }
-        return mapbox::geometry::box<value_type>(min, max);
+        return mapbox::geometry::box<T>(min, max);
     }
 
+    template <typename T2>
     bool execute(clip_type cliptype,
-                 mapbox::geometry::multi_polygon<value_type>& solution,
+                 mapbox::geometry::multi_polygon<T2>& solution,
                  fill_type subject_fill_type,
                  fill_type clip_fill_type) {
 
-        ring_manager<T> rings;
-
-        build_hot_pixels(minima_list, rings);
-
-        if (!execute_vatti(minima_list, rings, cliptype, subject_fill_type, clip_fill_type)) {
+        if (minima_list.empty()) {
             return false;
         }
 
-        do_simple_polygons(rings);
+        ring_manager<T> manager;
 
-        build_result(solution, rings, reverse_output);
+        build_hot_pixels(minima_list, manager);
+
+        execute_vatti(minima_list, manager, cliptype, subject_fill_type, clip_fill_type);
+
+        correct_topology(manager);
+
+        build_result(solution, manager, reverse_output);
 
         return true;
     }

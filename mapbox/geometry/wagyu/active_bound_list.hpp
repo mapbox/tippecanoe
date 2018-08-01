@@ -19,7 +19,7 @@ namespace geometry {
 namespace wagyu {
 
 template <typename T>
-using active_bound_list = std::list<bound_ptr<T>>;
+using active_bound_list = std::vector<bound_ptr<T>>;
 
 template <typename T>
 using active_bound_list_itr = typename active_bound_list<T>::iterator;
@@ -83,37 +83,36 @@ bool is_even_odd_alt_fill_type(bound<T> const& bound,
 }
 
 template <typename T>
-inline bool bound2_inserts_before_bound1(bound<T> const& bound1, bound<T> const& bound2) {
-    if (values_are_equal(bound2.current_x, bound1.current_x)) {
-        if (bound2.current_edge->top.y > bound1.current_edge->top.y) {
-            return bound2.current_edge->top.x <
-                   get_current_x(*(bound1.current_edge), bound2.current_edge->top.y);
+struct bound_insert_location {
+
+    bound<T> const& bound2;
+
+    bound_insert_location(bound<T> const& b) : bound2(b) {
+    }
+
+    bool operator()(bound_ptr<T> const& b) {
+        auto const& bound1 = *b;
+        if (values_are_equal(bound2.current_x, bound1.current_x)) {
+            if (bound2.current_edge->top.y > bound1.current_edge->top.y) {
+                return static_cast<double>(bound2.current_edge->top.x) <
+                       get_current_x(*(bound1.current_edge), bound2.current_edge->top.y);
+            } else {
+                return static_cast<double>(bound1.current_edge->top.x) >
+                       get_current_x(*(bound2.current_edge), bound1.current_edge->top.y);
+            }
         } else {
-            return bound1.current_edge->top.x >
-                   get_current_x(*(bound2.current_edge), bound1.current_edge->top.y);
+            return bound2.current_x < bound1.current_x;
         }
-    } else {
-        return bound2.current_x < bound1.current_x;
     }
-}
+};
 
 template <typename T>
-active_bound_list_itr<T> insert_bound_into_ABL(bound<T>& bnd, active_bound_list<T>& active_bounds) {
-    auto itr = active_bounds.begin();
-    while (itr != active_bounds.end() && !bound2_inserts_before_bound1(*(*itr), bnd)) {
-        ++itr;
-    }
-    return active_bounds.insert(itr, &bnd);
-}
+active_bound_list_itr<T>
+insert_bound_into_ABL(bound<T>& left, bound<T>& right, active_bound_list<T>& active_bounds) {
 
-template <typename T>
-active_bound_list_itr<T> insert_bound_into_ABL(bound<T>& bnd,
-                                               active_bound_list_itr<T> itr,
-                                               active_bound_list<T>& active_bounds) {
-    while (itr != active_bounds.end() && !bound2_inserts_before_bound1(*(*itr), bnd)) {
-        ++itr;
-    }
-    return active_bounds.insert(itr, &bnd);
+    auto itr =
+        std::find_if(active_bounds.begin(), active_bounds.end(), bound_insert_location<T>(left));
+    return active_bounds.insert(itr, { &left, &right });
 }
 
 template <typename T>
@@ -147,39 +146,23 @@ inline bool next_edge_is_horizontal(active_bound_list_itr<T>& bnd) {
 }
 
 template <typename T>
-inline void swap_positions_in_ABL(active_bound_list_itr<T>& bnd1,
-                                  active_bound_list_itr<T>& bnd2,
-                                  active_bound_list<T>& active_bounds) {
-    if (std::next(bnd2) == bnd1) {
-        active_bounds.splice(bnd2, active_bounds, bnd1);
-    } else {
-        active_bounds.splice(bnd1, active_bounds, bnd2);
-    }
-}
-
-template <typename T>
-void next_edge_in_bound(active_bound_list_itr<T>& bnd, scanbeam_list<T>& scanbeam) {
-    ++((*bnd)->current_edge);
-    if ((*bnd)->current_edge != (*bnd)->edges.end()) {
-        ++((*bnd)->next_edge);
-        (*bnd)->current_x = static_cast<double>((*bnd)->current_edge->bot.x);
-        if (!current_edge_is_horizontal<T>(bnd)) {
-            scanbeam.push((*bnd)->current_edge->top.y);
+void next_edge_in_bound(bound<T>& bnd, scanbeam_list<T>& scanbeam) {
+    auto& current_edge = bnd.current_edge;
+    ++current_edge;
+    if (current_edge != bnd.edges.end()) {
+        ++(bnd.next_edge);
+        bnd.current_x = static_cast<double>(current_edge->bot.x);
+        if (!is_horizontal<T>(*current_edge)) {
+            scanbeam.push_back(current_edge->top.y);
         }
     }
 }
 
 template <typename T>
-active_bound_list_itr<T> get_maxima_pair(active_bound_list_itr<T> bnd,
+active_bound_list_itr<T> get_maxima_pair(active_bound_list_itr<T> const& bnd,
                                          active_bound_list<T>& active_bounds) {
-    auto bnd_itr = active_bounds.begin();
-    while (bnd_itr != active_bounds.end()) {
-        if (*bnd_itr == (*bnd)->maximum_bound) {
-            break;
-        }
-        ++bnd_itr;
-    }
-    return bnd_itr;
+    bound_ptr<T> maximum = (*bnd)->maximum_bound;
+    return std::find(active_bounds.begin(), active_bounds.end(), maximum);
 }
 
 template <typename T>
@@ -247,9 +230,7 @@ void set_winding_count(active_bound_list_itr<T>& bnd_itr,
     if (is_even_odd_alt_fill_type(*(*bnd_itr), subject_fill_type, clip_fill_type)) {
         // EvenOdd filling ...
         while (bnd_itr_forward != bnd_itr) {
-            if ((*bnd_itr_forward)->winding_delta != 0) {
-                (*bnd_itr)->winding_count2 = ((*bnd_itr)->winding_count2 == 0 ? 1 : 0);
-            }
+            (*bnd_itr)->winding_count2 = ((*bnd_itr)->winding_count2 == 0 ? 1 : 0);
             ++bnd_itr_forward;
         }
     } else {
@@ -362,21 +343,21 @@ void insert_lm_left_and_right_bound(bound<T>& left_bound,
                                     fill_type clip_fill_type) {
 
     // Both left and right bound
-    auto lb_abl_itr = insert_bound_into_ABL(left_bound, active_bounds);
-    auto rb_abl_itr = active_bounds.insert(std::next(lb_abl_itr), &right_bound);
+    auto lb_abl_itr = insert_bound_into_ABL(left_bound, right_bound, active_bounds);
+    auto rb_abl_itr = std::next(lb_abl_itr);
     set_winding_count(lb_abl_itr, active_bounds, subject_fill_type, clip_fill_type);
     (*rb_abl_itr)->winding_count = (*lb_abl_itr)->winding_count;
     (*rb_abl_itr)->winding_count2 = (*lb_abl_itr)->winding_count2;
     if (is_contributing(left_bound, cliptype, subject_fill_type, clip_fill_type)) {
-        add_local_minimum_point(lb_abl_itr, rb_abl_itr, active_bounds,
+        add_local_minimum_point(*(*lb_abl_itr), *(*rb_abl_itr), active_bounds,
                                 (*lb_abl_itr)->current_edge->bot, rings);
     }
 
     // Add top of edges to scanbeam
-    scanbeam.push((*lb_abl_itr)->current_edge->top.y);
+    scanbeam.push_back((*lb_abl_itr)->current_edge->top.y);
 
     if (!current_edge_is_horizontal<T>(rb_abl_itr)) {
-        scanbeam.push((*rb_abl_itr)->current_edge->top.y);
+        scanbeam.push_back((*rb_abl_itr)->current_edge->top.y);
     }
 }
 

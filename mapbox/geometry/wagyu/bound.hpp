@@ -64,6 +64,10 @@ struct bound {
           poly_type(std::move(b.poly_type)),
           side(std::move(b.side)) {
     }
+
+    bound(bound<T>const& b) = delete;
+    bound<T>& operator=(bound<T> const&) = delete;
+
 };
 
 #ifdef DEBUG
