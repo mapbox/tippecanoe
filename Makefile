@@ -296,7 +296,7 @@ csv-test:
 	cmp tests/csv/out-null.mbtiles.json.check tests/csv/out-null.mbtiles.json
 	rm -f tests/csv/out-null.mbtiles.json.check tests/csv/out-null.mbtiles
 	# Same, but specifying csv with -L format
-	./tippecanoe -q -zg -f -o tests/csv/out.mbtiles -L'{"file":"", "format":"csv", "layer":"ne_110m_populated_places_simplecsv"}' < tests/csv/ne_110m_populated_places_simple.csv
+	./tippecanoe -q -zg -f -o tests/csv/out.mbtiles -L'{"file":"", "format":"csv", "layer":"ne_110m_populated_places_simple"}' < tests/csv/ne_110m_populated_places_simple.csv
 	./tippecanoe-decode -x generator tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
 	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
 	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
