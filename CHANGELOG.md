@@ -1,4 +1,4 @@
-## 1.30.5
+## 1.30.6
 
 * Take cluster distance into account when guessing a maxzoom
 

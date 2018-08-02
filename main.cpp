@@ -1268,6 +1268,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				".geojson",
 				".geobuf",
 				".mbtiles",
+				".csv",
 				".gz",
 			};
 
