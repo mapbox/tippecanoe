@@ -1268,6 +1268,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				".geojson",
 				".geobuf",
 				".mbtiles",
+				".csv",
 				".gz",
 			};
 
@@ -1984,6 +1985,20 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			if (!quiet) {
 				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet (%d meters) apart\n", maxzoom, (int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
+			}
+
+			bool changed = false;
+			while (maxzoom < 32 - full_detail && maxzoom < 33 - low_detail && cluster_distance > 0) {
+				unsigned long long zoom_mingap = ((1LL << (32 - maxzoom)) / 256 * cluster_distance) * ((1LL << (32 - maxzoom)) / 256 * cluster_distance);
+				if (avg > zoom_mingap) {
+					break;
+				}
+
+				maxzoom++;
+				changed = true;
+			}
+			if (changed) {
+				printf("Choosing a maxzoom of -z%d to keep most features distinct with cluster distance %d\n", maxzoom, cluster_distance);
 			}
 		}
 
