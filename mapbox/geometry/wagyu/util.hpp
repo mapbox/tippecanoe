@@ -31,15 +31,11 @@ double area(mapbox::geometry::linear_ring<T> const& poly) {
 }
 
 inline bool value_is_zero(double val) {
-    return std::fabs(val) < std::numeric_limits<double>::epsilon();
+    return std::fabs(val) < (5.0 * std::numeric_limits<double>::epsilon());
 }
 
 inline bool values_are_equal(double x, double y) {
     return value_is_zero(x - y);
-}
-
-inline bool values_near_equal(double x, double y) {
-    return std::fabs(x - y) < (5.0 * std::numeric_limits<double>::epsilon());
 }
 
 inline bool greater_than_or_equal(double x, double y) {
@@ -73,6 +69,16 @@ bool slopes_equal(mapbox::geometry::point<T> const& pt1,
                   mapbox::geometry::point<T> const& pt3,
                   mapbox::geometry::point<T> const& pt4) {
     return (pt1.y - pt2.y) * (pt3.x - pt4.x) == (pt1.x - pt2.x) * (pt3.y - pt4.y);
+}
+
+template <typename T>
+inline T wround(double value) {
+    return static_cast<T>(::llround(value));
+}
+
+template <>
+inline std::int64_t wround<std::int64_t>(double value) {
+    return ::llround(value);
 }
 }
 }

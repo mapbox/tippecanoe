@@ -114,7 +114,7 @@ bool find_intersect_loop(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>
             ring_ptr<T> it_ring1 = it->second.op1->ring;
             ring_ptr<T> it_ring2 = it->second.op2->ring;
             if (!it_ring1 || !it_ring2 || it_ring1 != ring_search ||
-                (!ring_is_hole(it_ring1) && !ring_is_hole(it_ring2))) {
+                (!it_ring1->is_hole() && !it_ring2->is_hole())) {
                 it = dupe_ring.erase(it);
                 continue;
             }
@@ -135,7 +135,7 @@ bool find_intersect_loop(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>
         ring_ptr<T> it_ring = it->second.op2->ring;
         if (visited.count(it_ring) > 0 || it_ring == nullptr ||
             (ring_parent != it_ring && ring_parent != it_ring->parent) ||
-            value_is_zero(area(it_ring)) || *prev_pt == *it->second.op2) {
+            value_is_zero(it_ring->area()) || *prev_pt == *it->second.op2) {
             continue;
         }
         if (find_intersect_loop(dupe_ring, iList, ring_parent, ring_origin, it_ring, visited,
@@ -145,431 +145,6 @@ bool find_intersect_loop(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>
         }
     }
     return false;
-}
-
-template <typename T>
-void remove_spikes(point_ptr<T>& pt) {
-    ring_ptr<T> r = pt->ring;
-    while (true) {
-        if (pt->next == pt) {
-            r->points = nullptr;
-            r->area = std::numeric_limits<double>::quiet_NaN();
-            pt->ring = nullptr;
-            pt = nullptr;
-            break;
-        } else if (*(pt) == *(pt->next)) {
-            point_ptr<T> old_next = pt->next;
-            old_next->next->prev = pt;
-            pt->next = old_next->next;
-            old_next->next = old_next;
-            old_next->prev = old_next;
-            if (r->points == old_next) {
-                r->points = pt;
-            }
-            r->area = std::numeric_limits<double>::quiet_NaN();
-            old_next->ring = nullptr;
-        } else if (*(pt) == *(pt->prev)) {
-            point_ptr<T> old_prev = pt->prev;
-            old_prev->prev->next = pt;
-            pt->prev = old_prev->prev;
-            old_prev->next = old_prev;
-            old_prev->prev = old_prev;
-            if (r->points == old_prev) {
-                r->points = pt;
-            }
-            r->area = std::numeric_limits<double>::quiet_NaN();
-            old_prev->ring = nullptr;
-        } else if (*(pt->next) == *(pt->prev)) {
-            point_ptr<T> next = pt->next;
-            point_ptr<T> prev = pt->prev;
-            next->prev = prev;
-            prev->next = next;
-            if (r->points == pt) {
-                r->points = prev;
-            }
-            r->area = std::numeric_limits<double>::quiet_NaN();
-            pt->ring = nullptr;
-            pt->next = pt;
-            pt->prev = pt;
-            pt = next;
-        } else {
-            break;
-        }
-    }
-}
-
-template <typename T>
-void fixup_children_complex(ring_ptr<T> old_ring,
-                            ring_ptr<T> new_ring,
-                            ring_vector<T> const& grand_children,
-                            ring_manager<T> const& rings) {
-    // Tests if any of the children from the old ring are now children of the new ring
-    for (auto r = old_ring->children.begin(); r != old_ring->children.end();) {
-        assert((*r)->points);
-        assert((*r) != old_ring);
-        if ((*r) == new_ring) {
-            ++r;
-            continue;
-        }
-        if (poly2_contains_poly1(*r, new_ring)) {
-            (*r)->parent = new_ring;
-            new_ring->children.push_back((*r));
-            r = old_ring->children.erase(r);
-        } else if (poly2_contains_poly1(*r, old_ring)) {
-            ++r;
-        } else {
-            // Rare situation where one of old_rings's previous grand children
-            // should actually contain this ring.
-            bool found = false;
-            for (auto const& gc : grand_children) {
-                if (poly2_contains_poly1(*r, gc)) {
-                    (*r)->parent = gc;
-                    gc->children.push_back((*r));
-                    r = old_ring->children.erase(r);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                if (old_ring->parent == nullptr) {
-                    for (auto const& r2 : rings.children) {
-                        if (r2 != new_ring && r2 != old_ring && r2->points && r2 != (*r) &&
-                            poly2_contains_poly1(*r, r2)) {
-                            (*r)->parent = r2;
-                            r2->children.push_back((*r));
-                            r = old_ring->children.erase(r);
-                            found = true;
-                            break;
-                        }
-                    }
-                } else {
-                    for (auto const& r2 : old_ring->parent->children) {
-                        if (r2 != new_ring && r2 != old_ring && r2->points && r2 != (*r) &&
-                            poly2_contains_poly1((*r), r2)) {
-                            (*r)->parent = r2;
-                            r2->children.push_back((*r));
-                            r = old_ring->children.erase(r);
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!found) {
-                throw std::runtime_error("No proper parent for child ring found");
-            }
-        }
-    }
-}
-
-template <typename T>
-bool fix_intersects(std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                    point_ptr<T> op_j,
-                    point_ptr<T> op_k,
-                    ring_manager<T>& rings,
-                    mapbox::geometry::point<T>& rewind_point) {
-    ring_ptr<T> ring_j = op_j->ring;
-    ring_ptr<T> ring_k = op_k->ring;
-    if (ring_j == ring_k) {
-        return false;
-    }
-
-    if (!ring_is_hole(ring_j) && !ring_is_hole(ring_k)) {
-        // Both are not holes, return nothing to do.
-        return false;
-    }
-
-    ring_ptr<T> ring_origin;
-    ring_ptr<T> ring_search;
-    ring_ptr<T> ring_parent;
-    point_ptr<T> op_origin_1;
-    point_ptr<T> op_origin_2;
-    if (!ring_is_hole(ring_j)) {
-        ring_origin = ring_j;
-        ring_parent = ring_origin;
-        ring_search = ring_k;
-        op_origin_1 = op_j;
-        op_origin_2 = op_k;
-    } else if (!ring_is_hole(ring_k)) {
-        ring_origin = ring_k;
-        ring_parent = ring_origin;
-        ring_search = ring_j;
-        op_origin_1 = op_k;
-        op_origin_2 = op_j;
-
-    } else {
-        // both are holes
-        // Order doesn't matter
-        ring_origin = ring_j;
-        ring_parent = ring_origin->parent;
-        ring_search = ring_k;
-        op_origin_1 = op_j;
-        op_origin_2 = op_k;
-    }
-    if (ring_parent != ring_search->parent) {
-        // The two holes do not have the same parent, do not add them
-        // simply return!
-        return false;
-    }
-    bool found = false;
-    std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> iList;
-    {
-        auto range = dupe_ring.equal_range(ring_search);
-        // Check for direct connection
-        for (auto& it = range.first; it != range.second;) {
-            if (!it->second.op1->ring) {
-                it = dupe_ring.erase(it);
-                continue;
-            }
-            if (!it->second.op2->ring) {
-                it = dupe_ring.erase(it);
-                continue;
-            }
-            ring_ptr<T> it_ring2 = it->second.op2->ring;
-            if (it_ring2 == ring_origin) {
-                found = true;
-                if (*op_origin_1 != *(it->second.op2)) {
-                    iList.emplace_back(ring_search, it->second);
-                    break;
-                }
-            }
-            ++it;
-        }
-    }
-    if (iList.empty()) {
-        auto range = dupe_ring.equal_range(ring_search);
-        std::set<ring_ptr<T>> visited;
-        visited.insert(ring_search);
-        // Check for connection through chain of other intersections
-        for (auto& it = range.first;
-             it != range.second && it != dupe_ring.end() && it->first == ring_search; ++it) {
-            ring_ptr<T> it_ring = it->second.op2->ring;
-            if (it_ring != ring_search && *op_origin_2 != *it->second.op2 && it_ring != nullptr &&
-                (ring_parent == it_ring || ring_parent == it_ring->parent) &&
-                !value_is_zero(area(it_ring)) &&
-                find_intersect_loop(dupe_ring, iList, ring_parent, ring_origin, it_ring, visited,
-                                    op_origin_2, it->second.op2, rings)) {
-                found = true;
-                iList.emplace_front(ring_search, it->second);
-                break;
-            }
-        }
-    }
-    if (!found) {
-        point_ptr_pair<T> intPt_origin = { op_origin_1, op_origin_2 };
-        point_ptr_pair<T> intPt_search = { op_origin_2, op_origin_1 };
-        dupe_ring.emplace(ring_origin, std::move(intPt_origin));
-        dupe_ring.emplace(ring_search, std::move(intPt_search));
-        return false;
-    }
-
-    if (iList.empty()) {
-        // The situation where both origin and search are holes might have a missing
-        // search condition, we must check if a new pair must be added.
-        bool missing = true;
-        auto rng = dupe_ring.equal_range(ring_origin);
-        // Check for direct connection
-        for (auto& it = rng.first; it != rng.second; ++it) {
-            ring_ptr<T> it_ring2 = it->second.op2->ring;
-            if (it_ring2 == ring_search) {
-                missing = false;
-            }
-        }
-        if (missing) {
-            point_ptr_pair<T> intPt_origin = { op_origin_1, op_origin_2 };
-            dupe_ring.emplace(ring_origin, std::move(intPt_origin));
-        }
-        return false;
-    }
-
-    if (ring_is_hole(ring_origin)) {
-        for (auto& iRing : iList) {
-            ring_ptr<T> ring_itr = iRing.first;
-            if (!ring_is_hole(ring_itr)) {
-                // Make the hole the origin!
-                point_ptr<T> op1 = op_origin_1;
-                op_origin_1 = iRing.second.op1;
-                iRing.second.op1 = op1;
-                point_ptr<T> op2 = op_origin_2;
-                op_origin_2 = iRing.second.op2;
-                iRing.second.op2 = op2;
-                iRing.first = ring_origin;
-                ring_origin = ring_itr;
-                ring_parent = ring_origin;
-                break;
-            }
-        }
-    }
-
-    // Switch
-    point_ptr<T> op_origin_1_next = op_origin_1->next;
-    point_ptr<T> op_origin_2_next = op_origin_2->next;
-    op_origin_1->next = op_origin_2_next;
-    op_origin_2->next = op_origin_1_next;
-    op_origin_1_next->prev = op_origin_2;
-    op_origin_2_next->prev = op_origin_1;
-
-    for (auto& iRing : iList) {
-        mapbox::geometry::point<T> possible_rewind_point = find_rewind_point(iRing.second.op2);
-        if (possible_rewind_point.y > rewind_point.y ||
-            (possible_rewind_point.y == rewind_point.y &&
-             possible_rewind_point.x < rewind_point.x)) {
-            rewind_point.x = possible_rewind_point.x;
-            rewind_point.y = possible_rewind_point.y;
-        }
-    }
-
-    for (auto& iRing : iList) {
-        point_ptr<T> op_search_1 = iRing.second.op1;
-        point_ptr<T> op_search_2 = iRing.second.op2;
-        point_ptr<T> op_search_1_next = op_search_1->next;
-        point_ptr<T> op_search_2_next = op_search_2->next;
-        op_search_1->next = op_search_2_next;
-        op_search_2->next = op_search_1_next;
-        op_search_1_next->prev = op_search_2;
-        op_search_2_next->prev = op_search_1;
-    }
-
-    remove_spikes(op_origin_1);
-    remove_spikes(op_origin_2);
-
-    if (op_origin_1 == nullptr || op_origin_2 == nullptr) {
-        if (op_origin_1 == nullptr && op_origin_2 == nullptr) {
-            // Self destruction!
-            ring_origin->points = nullptr;
-            ring_origin->area = std::numeric_limits<double>::quiet_NaN();
-            remove_ring(ring_origin, rings);
-            for (auto& iRing : iList) {
-                ring_ptr<T> ring_itr = iRing.first;
-                ring_itr->points = nullptr;
-                ring_itr->area = std::numeric_limits<double>::quiet_NaN();
-                remove_ring(ring_itr, rings);
-            }
-        } else {
-            if (op_origin_1 == nullptr) {
-                ring_origin->points = op_origin_2;
-            } else {
-                //(op_origin_2 == nullptr)
-                ring_origin->points = op_origin_1;
-            }
-            ring_origin->area = std::numeric_limits<double>::quiet_NaN();
-            update_points_ring(ring_origin);
-            for (auto& iRing : iList) {
-                ring_ptr<T> ring_itr = iRing.first;
-                ring_itr->points = nullptr;
-                ring_itr->area = std::numeric_limits<double>::quiet_NaN();
-                ring_itr->bottom_point = nullptr;
-                if (ring_is_hole(ring_origin)) {
-                    ring1_replaces_ring2(ring_origin, ring_itr, rings);
-                } else {
-                    ring1_replaces_ring2(ring_origin->parent, ring_itr, rings);
-                }
-            }
-        }
-    } else {
-        ring_ptr<T> ring_new = create_new_ring(rings);
-        std::size_t size_1 = 0;
-        std::size_t size_2 = 0;
-        double area_1 = area_from_point(op_origin_1, size_1);
-        double area_2 = area_from_point(op_origin_2, size_2);
-        if (ring_is_hole(ring_origin) && ((area_1 < 0.0))) {
-            ring_origin->points = op_origin_1;
-            ring_origin->area = area_1;
-            ring_origin->size = size_1;
-            ring_new->points = op_origin_2;
-            ring_new->area = area_2;
-            ring_new->size = size_2;
-        } else {
-            ring_origin->points = op_origin_2;
-            ring_origin->area = area_2;
-            ring_origin->size = size_2;
-            ring_new->points = op_origin_1;
-            ring_new->area = area_1;
-            ring_new->size = size_1;
-        }
-
-        update_points_ring(ring_origin);
-        update_points_ring(ring_new);
-
-        ring_origin->bottom_point = nullptr;
-
-        ring_vector<T> grand_children;
-        for (auto& iRing : iList) {
-            ring_ptr<T> ring_itr = iRing.first;
-            ring_itr->points = nullptr;
-            ring_itr->area = std::numeric_limits<double>::quiet_NaN();
-            ring_itr->bottom_point = nullptr;
-            for (auto& c : ring_itr->children) {
-                grand_children.push_back(c);
-            }
-            if (ring_is_hole(ring_origin)) {
-                ring1_replaces_ring2(ring_origin, ring_itr, rings);
-            } else {
-                ring1_replaces_ring2(ring_origin->parent, ring_itr, rings);
-            }
-        }
-        if (ring_is_hole(ring_origin)) {
-            ring_new->parent = ring_origin;
-            ring_new->parent->children.push_back(ring_new);
-            fixup_children_complex(ring_origin, ring_new, grand_children, rings);
-            fixup_children_complex(ring_parent, ring_new, grand_children, rings);
-        } else {
-            ring_new->parent = ring_origin->parent;
-            if (ring_new->parent == nullptr) {
-                rings.children.push_back(ring_new);
-            } else {
-                ring_new->parent->children.push_back(ring_new);
-            }
-            fixup_children_complex(ring_origin, ring_new, grand_children, rings);
-        }
-    }
-
-    std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> move_list;
-
-    for (auto& iRing : iList) {
-        auto range_itr = dupe_ring.equal_range(iRing.first);
-        if (range_itr.first != range_itr.second) {
-            for (auto& it = range_itr.first; it != range_itr.second; ++it) {
-                ring_ptr<T> it_ring = it->second.op1->ring;
-                ring_ptr<T> it_ring2 = it->second.op2->ring;
-                if (it_ring == nullptr || it_ring2 == nullptr || it_ring == it_ring2) {
-                    continue;
-                }
-                if ((ring_is_hole(it_ring) || ring_is_hole(it_ring2))) {
-                    move_list.emplace_back(it_ring, it->second);
-                }
-            }
-            dupe_ring.erase(iRing.first);
-        }
-    }
-
-    auto range_itr = dupe_ring.equal_range(ring_origin);
-    for (auto& it = range_itr.first; it != range_itr.second;) {
-        ring_ptr<T> it_ring = it->second.op1->ring;
-        ring_ptr<T> it_ring2 = it->second.op2->ring;
-        if (it_ring == nullptr || it_ring2 == nullptr || it_ring == it_ring2) {
-            it = dupe_ring.erase(it);
-            continue;
-        }
-        if (it_ring != ring_origin) {
-            if ((ring_is_hole(it_ring) || ring_is_hole(it_ring2))) {
-                move_list.emplace_back(it_ring, it->second);
-            }
-            it = dupe_ring.erase(it);
-        } else {
-            if ((ring_is_hole(it_ring) || ring_is_hole(it_ring2))) {
-                ++it;
-            } else {
-                it = dupe_ring.erase(it);
-            }
-        }
-    }
-
-    if (!move_list.empty()) {
-        dupe_ring.insert(move_list.begin(), move_list.end());
-    }
-
-    return true;
 }
 
 template <typename T>
@@ -588,399 +163,54 @@ struct point_ptr_cmp {
 };
 
 template <typename T>
-struct point_ptr_depth_cmp {
-    inline bool operator()(point_ptr<T> op1, point_ptr<T> op2) {
-        std::size_t depth_1 = ring_depth(op1->ring);
-        std::size_t depth_2 = ring_depth(op2->ring);
-        return depth_1 > depth_2;
-    }
-};
-
-template <typename T>
-void update_duplicate_point_entries(
-    ring_ptr<T> ring, std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring) {
-    auto range = dupe_ring.equal_range(ring);
-    std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> move_list;
-    for (auto& it = range.first; it != range.second;) {
-        ring_ptr<T> it_ring = it->second.op1->ring;
-        ring_ptr<T> it_ring_2 = it->second.op2->ring;
-        if (it_ring == nullptr || it_ring_2 == nullptr) {
-            it = dupe_ring.erase(it);
+void correct_orientations(ring_manager<T>& manager) {
+    for (auto& r : manager.rings) {
+        if (!r.points) {
             continue;
         }
-        if (it_ring != ring) {
-            if ((ring_is_hole(it_ring) || ring_is_hole(it_ring_2))) {
-                move_list.emplace_back(it_ring, it->second);
-            }
-            it = dupe_ring.erase(it);
-        } else {
-            if ((ring_is_hole(it_ring) || ring_is_hole(it_ring_2))) {
-                ++it;
-            } else {
-                it = dupe_ring.erase(it);
-            }
-        }
-    }
-    if (!move_list.empty()) {
-        dupe_ring.insert(move_list.begin(), move_list.end());
-    }
-}
-
-template <typename T>
-bool parent_in_tree(ring_ptr<T> r, ring_ptr<T> possible_parent) {
-
-    ring_ptr<T> current_ring = r->parent;
-    while (current_ring != nullptr) {
-        if (current_ring == possible_parent) {
-            return true;
-        }
-        current_ring = current_ring->parent;
-    }
-    return false;
-}
-
-template <typename T>
-void fixup_children_sibling(ring_ptr<T> old_ring, ring_ptr<T> new_ring) {
-    for (auto r = old_ring->children.begin(); r != old_ring->children.end();) {
-        if ((*r) == new_ring) {
-            ++r;
+        r.recalculate_stats();
+        if (r.size() < 3) {
+            remove_ring_and_points(&r, manager, false);
             continue;
         }
-        if (poly2_contains_poly1(*r, new_ring)) {
-            (*r)->parent = new_ring;
-            new_ring->children.push_back((*r));
-            r = old_ring->children.erase(r);
-        } else {
-            ++r;
+        if (ring_is_hole(&r) != r.is_hole()) {
+            reverse_ring(r.points);
+            r.recalculate_stats();
         }
     }
 }
 
 template <typename T>
-void fixup_parents_siblings(ring_ptr<T> parent, ring_ptr<T> ring, ring_manager<T>& rings) {
-    bool parent_ring_area_is_positive = area(parent) > 0.0;
-    if (parent->parent == nullptr) {
-        for (auto r = rings.children.begin(); r != rings.children.end();) {
-            assert((*r)->points);
-            bool ring_area_is_positive = area((*r)) > 0.0;
-            if ((*r) != parent && ring_area_is_positive == parent_ring_area_is_positive &&
-                poly2_contains_poly1(ring, (*r))) {
-                ring->parent = (*r);
-                (*r)->children.push_back(ring);
-                parent->children.remove(ring);
-                break;
-            } else {
-                ++r;
-            }
-        }
-    } else {
-        ring_ptr<T> grand_parent = parent->parent;
-        for (auto r = grand_parent->children.begin(); r != grand_parent->children.end();) {
-            assert((*r)->points);
-            bool ring_area_is_positive = area((*r)) > 0.0;
-            if ((*r) != parent && ring_area_is_positive == parent_ring_area_is_positive &&
-                poly2_contains_poly1(ring, (*r))) {
-                ring->parent = (*r);
-                (*r)->children.push_back(ring);
-                parent->children.remove(ring);
-                break;
-            } else {
-                ++r;
-            }
-        }
+point_vector<T> sort_ring_points(ring_ptr<T> r) {
+    point_vector<T> sorted_points;
+    point_ptr<T> point_itr = r->points;
+    point_ptr<T> last_point = point_itr->prev;
+    while (point_itr != last_point) {
+        sorted_points.push_back(point_itr);
+        point_itr = point_itr->next;
     }
+    sorted_points.push_back(last_point);
+    std::stable_sort(sorted_points.begin(), sorted_points.end(),
+                     [](point_ptr<T> const& pt1, point_ptr<T> const& pt2) {
+                         if (pt1->y != pt2->y) {
+                             return (pt1->y > pt2->y);
+                         }
+                         return (pt1->x < pt2->x);
+                     });
+    return sorted_points;
 }
 
 template <typename T>
-void fixup_children_new_interior_ring(ring_ptr<T> old_ring,
-                                      ring_ptr<T> new_ring,
-                                      ring_manager<T>& rings) {
-    bool old_ring_area_is_positive = area(old_ring) > 0.0;
-    // Now we must search the siblings of the old ring
-    // This is slow, but there is no other way I know of currently
-    // to solve these problems.
-    if (old_ring->parent == nullptr) {
-        for (auto r = rings.children.begin(); r != rings.children.end();) {
-            assert((*r)->points);
-            bool ring_area_is_positive = area((*r)) > 0.0;
-            if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r), new_ring)) {
-                (*r)->parent = new_ring;
-                new_ring->children.push_back((*r));
-                r = rings.children.erase(r);
-            } else {
-                ++r;
-            }
-        }
-    } else {
-        ring_ptr<T> parent = old_ring->parent;
-        for (auto r = parent->children.begin(); r != parent->children.end();) {
-            assert((*r)->points);
-            assert((*r) != parent);
-            bool ring_area_is_positive = area((*r)) > 0.0;
-            if ((*r) != new_ring && ring_area_is_positive == old_ring_area_is_positive &&
-                poly2_contains_poly1((*r), new_ring)) {
-                (*r)->parent = new_ring;
-                new_ring->children.push_back((*r));
-                r = parent->children.erase(r);
-            } else {
-                ++r;
-            }
-        }
+ring_ptr<T> correct_self_intersection(point_ptr<T> pt1,
+                                      point_ptr<T> pt2,
+                                      ring_manager<T>& manager) {
+    if (pt1->ring != pt2->ring) {
+        return static_cast<ring_ptr<T>>(nullptr);
     }
-}
 
-#ifdef DEBUG
-
-template <typename T>
-void check_if_intersections_cross(point_ptr<T> p1, point_ptr<T> p2) {
-    // LCOV_EXCL_START
-    point_ptr<T> p1_next = p1->next;
-    point_ptr<T> p2_next = p2->next;
-    point_ptr<T> p1_prev = p1->prev;
-    point_ptr<T> p2_prev = p2->prev;
-    while (*p1_next == *p1) {
-        if (p1_next == p1) {
-            return;
-        }
-        p1_next = p1_next->next;
-    }
-    while (*p2_next == *p2) {
-        if (p2_next == p2) {
-            return;
-        }
-        p2_next = p2_next->next;
-    }
-    while (*p1_prev == *p1) {
-        if (p1_prev == p1) {
-            return;
-        }
-        p1_prev = p1_prev->prev;
-    }
-    while (*p2_prev == *p2) {
-        if (p2_prev == p2) {
-            return;
-        }
-        p2_prev = p2_prev->prev;
-    }
-    double a1_p1 = std::atan2(static_cast<double>(p1_prev->y - p1->y),
-                              static_cast<double>(p1_prev->x - p1->x));
-    double a2_p1 = std::atan2(static_cast<double>(p1_next->y - p1->y),
-                              static_cast<double>(p1_next->x - p1->x));
-    double a1_p2 = std::atan2(static_cast<double>(p2_prev->y - p2->y),
-                              static_cast<double>(p2_prev->x - p2->x));
-    double a2_p2 = std::atan2(static_cast<double>(p2_next->y - p2->y),
-                              static_cast<double>(p2_next->x - p2->x));
-    double min_p1 = std::min(a1_p1, a2_p1);
-    double max_p1 = std::max(a1_p1, a2_p1);
-    double min_p2 = std::min(a1_p2, a2_p2);
-    double max_p2 = std::max(a1_p2, a2_p2);
-    if ((min_p1 < max_p2 && min_p1 > min_p2 && max_p1 > max_p2) ||
-        (min_p2 < max_p1 && min_p2 > min_p1 && max_p2 > max_p1)) {
-        throw std::runtime_error("Paths are found to be crossing");
-    }
-    // LCOV_EXCL_END
-}
-
-#endif
-
-template <typename T>
-void handle_self_intersections(point_ptr<T> op,
-                               point_ptr<T> op2,
-                               std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                               ring_manager<T>& rings) {
-    // Check that are same ring
-    assert(op->ring == op2->ring);
-    ring_ptr<T> ring = op->ring;
-    double original_area = area(ring);
-    bool original_is_positive = (original_area > 0.0);
-#ifdef DEBUG
-    check_if_intersections_cross(op, op2);
-#endif
+    ring_ptr<T> ring = pt1->ring;
 
     // split the polygon into two ...
-    point_ptr<T> op3 = op->prev;
-    point_ptr<T> op4 = op2->prev;
-    op->prev = op4;
-    op4->next = op;
-    op2->prev = op3;
-    op3->next = op2;
-
-    remove_spikes(op);
-    remove_spikes(op2);
-
-    if (op == nullptr && op2 == nullptr) {
-        // Self destruction!
-        // I am not positive that it could ever reach this point -- but leaving
-        // the logic in here for now.
-        ring->points = nullptr;
-        ring->area = std::numeric_limits<double>::quiet_NaN();
-        remove_ring(ring, rings);
-        update_duplicate_point_entries(ring, dupe_ring);
-        return;
-    } else if (op == nullptr) {
-        ring->points = op2;
-        ring->area = std::numeric_limits<double>::quiet_NaN();
-        update_duplicate_point_entries(ring, dupe_ring);
-        return;
-    } else if (op2 == nullptr) {
-        ring->points = op;
-        ring->area = std::numeric_limits<double>::quiet_NaN();
-        update_duplicate_point_entries(ring, dupe_ring);
-        return;
-    }
-
-    ring_ptr<T> new_ring = create_new_ring(rings);
-    std::size_t size_1 = 0;
-    std::size_t size_2 = 0;
-    double area_1 = area_from_point(op, size_1);
-    double area_2 = area_from_point(op2, size_2);
-    bool area_1_is_positive = (area_1 > 0.0);
-    bool area_2_is_positive = (area_2 > 0.0);
-    bool area_1_is_zero = value_is_zero(area_1);
-    bool area_2_is_zero = value_is_zero(area_2);
-
-    // Situation # 1 - Orientations are NOT the same:
-    // - One ring contains the other and MUST be a child of that ring
-    // - The one that changed orientation is the child of the other ring
-    //
-    // Situation # 2 - Orientations are the same
-    // - The rings are now split, such a new ring of the same orientation
-    //   must be created.
-    // - If the new ring is WITHIN the old ring:
-    //      * It WILL be the child of a hole of that ring (this ring may not yet be created)
-    //        or possible the child of a child of a child of the ring (an so on)...
-    // - If the new ring is OUTSIDE the old ring:
-    //      * It may contain any of the children of the old ring.
-    if (area_2_is_zero || area_1_is_zero || area_1_is_positive != area_2_is_positive) {
-        // Situation #1 - new_ring is contained by ring ...
-        if (area_2_is_zero || (!area_1_is_zero && area_1_is_positive == original_is_positive)) {
-            ring->points = op;
-            ring->area = area_1;
-            ring->size = size_1;
-            new_ring->points = op2;
-            new_ring->area = area_2;
-            new_ring->size = size_2;
-        } else {
-            ring->points = op2;
-            ring->area = area_2;
-            ring->size = size_2;
-            new_ring->points = op;
-            new_ring->area = area_1;
-            new_ring->size = size_1;
-        }
-        update_points_ring(ring);
-        update_points_ring(new_ring);
-        new_ring->parent = ring;
-        new_ring->parent->children.push_back(new_ring);
-        fixup_children_new_interior_ring(ring, new_ring, rings);
-    } else {
-        // Situation #2 - create new ring
-        // The largest absolute area is the parent
-        if (std::fabs(area_1) > std::fabs(area_2)) {
-            ring->points = op;
-            ring->area = area_1;
-            ring->size = size_1;
-            new_ring->points = op2;
-            new_ring->area = area_2;
-            new_ring->size = size_2;
-        } else {
-            ring->points = op2;
-            ring->area = area_2;
-            ring->size = size_2;
-            new_ring->points = op;
-            new_ring->area = area_1;
-            new_ring->size = size_1;
-        }
-        update_points_ring(ring);
-        update_points_ring(new_ring);
-        // Polygons are completely seperate
-        new_ring->parent = ring->parent;
-        if (new_ring->parent == nullptr) {
-            rings.children.push_back(new_ring);
-        } else {
-            new_ring->parent->children.push_back(new_ring);
-        }
-        fixup_children_sibling(ring, new_ring);
-        // The parent might need to be reassigned in rare situations
-        if (ring->parent) {
-            if (!poly2_contains_poly1(ring, ring->parent)) {
-                // Parent ring split on outside - search parent's siblings
-                fixup_parents_siblings(ring->parent, ring, rings);
-            } else if (!poly2_contains_poly1(new_ring, ring->parent)) {
-                // child ring split on the outside
-                fixup_parents_siblings(ring->parent, new_ring, rings);
-            }
-        }
-    }
-    update_duplicate_point_entries(ring, dupe_ring);
-}
-
-template <typename T>
-mapbox::geometry::point<T> find_rewind_point(point_ptr<T> pt) {
-    mapbox::geometry::point<T> rewind;
-    rewind.x = pt->x;
-    rewind.y = pt->y;
-    point_ptr<T> itr = pt->next;
-    while (pt != itr) {
-        if (itr->y > rewind.y || (itr->y == rewind.y && itr->x < rewind.x)) {
-            rewind.x = itr->x;
-            rewind.y = itr->y;
-        }
-        itr = itr->next;
-    }
-    return rewind;
-}
-
-template <typename T>
-bool handle_collinear_edges(point_ptr<T> pt1,
-                            point_ptr<T> pt2,
-                            std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                            ring_manager<T>& rings,
-                            mapbox::geometry::point<T>& rewind_point) {
-    ring_ptr<T> ring1 = pt1->ring;
-    ring_ptr<T> ring2 = pt2->ring;
-    if (ring1 == ring2) {
-        return false;
-    }
-
-    bool valid = (ring1 != ring2 && (ring1->parent == ring2->parent || ring2->parent == ring1 ||
-                                     ring1->parent == ring2));
-    if (!valid) {
-        return false;
-    }
-
-    if (*(pt1->next) != *(pt2->prev) && *(pt2->next) != *(pt1->prev)) {
-        return false;
-    }
-
-    if (ring1->parent == ring2) {
-        // switch ring1 and ring2
-        std::swap(pt1, pt2);
-        std::swap(ring1, ring2);
-    }
-
-    mapbox::geometry::point<T> rewind_1 = find_rewind_point(pt1);
-    mapbox::geometry::point<T> rewind_2 = find_rewind_point(pt2);
-
-    // The lower right of the two points is the rewind point.
-    mapbox::geometry::point<T> possible_rewind;
-    if (rewind_1.y > rewind_2.y) {
-        possible_rewind = rewind_2;
-    } else if (rewind_1.y < rewind_2.y) {
-        possible_rewind = rewind_1;
-    } else if (rewind_1.x > rewind_2.x) {
-        possible_rewind = rewind_1;
-    } else {
-        possible_rewind = rewind_2;
-    }
-    if (possible_rewind.y > rewind_point.y ||
-        (possible_rewind.y == rewind_point.y && possible_rewind.x < rewind_point.x)) {
-        rewind_point.x = possible_rewind.x;
-        rewind_point.y = possible_rewind.y;
-    }
-
-    // swap points
     point_ptr<T> pt3 = pt1->prev;
     point_ptr<T> pt4 = pt2->prev;
     pt1->prev = pt4;
@@ -988,998 +218,1150 @@ bool handle_collinear_edges(point_ptr<T> pt1,
     pt2->prev = pt3;
     pt3->next = pt2;
 
-    // remove spikes
-    remove_spikes(pt1);
-    if (!pt1) {
-        // rings self destructed
-        ring1->points = nullptr;
-        ring1->area = std::numeric_limits<double>::quiet_NaN();
-        remove_ring(ring1, rings);
-        ring2->points = nullptr;
-        ring2->area = std::numeric_limits<double>::quiet_NaN();
-        remove_ring(ring2, rings);
-        return false;
-    }
-    if (pt2->ring) {
-        remove_spikes(pt2);
-        if (!pt2) {
-            // rings self destructed
-            // Not sure this logic is reachable, but leaving it in for now.
-            ring1->points = nullptr;
-            ring1->area = std::numeric_limits<double>::quiet_NaN();
-            remove_ring(ring1, rings);
-            ring2->points = nullptr;
-            ring2->area = std::numeric_limits<double>::quiet_NaN();
-            remove_ring(ring2, rings);
-            return false;
-        }
-        // We could have removed pt1 during this process..
-        // if we did we need to reassign pt2 to pt1
-        if (!pt1->ring) {
-            pt1 = pt2;
-        }
-    }
-    ring1->points = pt1;
-    ring2->points = nullptr;
-    ring1->area = std::numeric_limits<double>::quiet_NaN();
-    ring2->area = std::numeric_limits<double>::quiet_NaN();
-    if (ring2->parent == ring1) {
-        ring1_replaces_ring2(ring1->parent, ring2, rings);
+    ring_ptr<T> new_ring = create_new_ring(manager);
+    std::size_t size_1 = 0;
+    std::size_t size_2 = 0;
+    mapbox::geometry::box<T> box1({ 0, 0 }, { 0, 0 });
+    mapbox::geometry::box<T> box2({ 0, 0 }, { 0, 0 });
+    double area_1 = area_from_point(pt1, size_1, box1);
+    double area_2 = area_from_point(pt2, size_2, box2);
+
+    if (std::fabs(area_1) > std::fabs(area_2)) {
+        ring->points = pt1;
+        ring->set_stats(area_1, size_1, box1);
+        new_ring->points = pt2;
+        new_ring->set_stats(area_2, size_2, box2);
     } else {
-        ring1_replaces_ring2(ring1, ring2, rings);
+        ring->points = pt2;
+        ring->set_stats(area_2, size_2, box2);
+        new_ring->points = pt1;
+        new_ring->set_stats(area_1, size_1, box1);
     }
-    update_points_ring(ring1);
-    update_duplicate_point_entries(ring2, dupe_ring);
-
-    return true;
+    update_points_ring(new_ring);
+    return new_ring;
 }
 
 template <typename T>
-bool point_2_is_between_point_1_and_point_3(point_ptr<T> pt1, point_ptr<T> pt2, point_ptr<T> pt3) {
-    if ((*pt1 == *pt3) || (*pt1 == *pt2) || (*pt3 == *pt2)) {
-        return false;
-    } else if (pt1->x != pt3->x) {
-        return (pt2->x > pt1->x) == (pt2->x < pt3->x);
-    } else {
-        return (pt2->y > pt1->y) == (pt2->y < pt3->y);
-    }
-}
-
-enum orientation_type : std::uint8_t {
-    orientation_collinear_spike = 0,
-    orientation_clockwise,
-    orientation_collinear_line,
-    orientation_counter_clockwise
-};
-
-// To find orientation of ordered triplet (p, q, r)
-// Orientation between q and r with respect to p.
-template <typename T>
-inline orientation_type orientation_of_points(point_ptr<T> p, point_ptr<T> q, point_ptr<T> r) {
-    T val = (q->y - p->y) * (r->x - q->x) - (q->x - p->x) * (r->y - q->y);
-    if (val == 0) {
-        if (point_2_is_between_point_1_and_point_3(q, p, r)) {
-            return orientation_collinear_line;
-        } else {
-            return orientation_collinear_spike;
-        }
-    }
-    return (val > 0) ? orientation_clockwise : orientation_counter_clockwise;
-}
-
-// Self intersection point vector
-template <typename T>
-using si_point_vector = std::vector<std::pair<point_ptr<T>, bool>>;
-
-#ifdef DEBUG
-
-template <typename T>
-std::string output_si_angles(point_ptr<T> pt) {
-    // LCOV_EXCL_START
-    std::ostringstream out;
-    double prev_angle = std::atan2(static_cast<double>(pt->prev->y - pt->y),
-                                   static_cast<double>(pt->prev->x - pt->x));
-    prev_angle = (180.0 / M_PI) * prev_angle;
-    if (prev_angle < 0.0) {
-        prev_angle += 360.0;
-    }
-    double next_angle = std::atan2(static_cast<double>(pt->next->y - pt->y),
-                                   static_cast<double>(pt->next->x - pt->x));
-    next_angle = (180.0 / M_PI) * next_angle;
-    if (next_angle < 0.0) {
-        next_angle += 360.0;
-    }
-    out << " angles: " << prev_angle << " , " << next_angle;
-    out << " - [[" << pt->prev->x << "," << pt->prev->y << "],[";
-    out << pt->x << "," << pt->y << "],[";
-    out << pt->next->x << "," << pt->next->y << "]]";
-    return out.str();
-    // LCOV_EXCL_END
-}
-
-template <typename T>
-std::string output_compare_si_angles(point_ptr<T> pt, point_ptr<T> compare) {
-    std::ostringstream out;
-    double cmp_prev_angle = std::atan2(static_cast<double>(compare->prev->y - compare->y),
-                                       static_cast<double>(compare->prev->x - compare->x));
-    double prev_angle = std::atan2(static_cast<double>(pt->prev->y - pt->y),
-                                   static_cast<double>(pt->prev->x - pt->x));
-    prev_angle = (180.0 / M_PI) * prev_angle;
-    if (prev_angle < 0.0) {
-        prev_angle += 360.0;
-    }
-    cmp_prev_angle = (180.0 / M_PI) * cmp_prev_angle;
-    if (cmp_prev_angle < 0.0) {
-        cmp_prev_angle += 360.0;
-    }
-    double cmp_next_angle = std::atan2(static_cast<double>(compare->next->y - compare->y),
-                                       static_cast<double>(compare->next->x - compare->x));
-    double next_angle = std::atan2(static_cast<double>(pt->next->y - pt->y),
-                                   static_cast<double>(pt->next->x - pt->x));
-    next_angle = (180.0 / M_PI) * next_angle;
-    if (next_angle < 0.0) {
-        next_angle += 360.0;
-    }
-    cmp_next_angle = (180.0 / M_PI) * cmp_next_angle;
-    if (cmp_next_angle < 0.0) {
-        cmp_next_angle += 360.0;
-    }
-    out << " compared to prev: " << prev_angle - cmp_prev_angle << ", "
-        << next_angle - cmp_prev_angle << std::endl;
-    out << " compared to next: " << prev_angle - cmp_next_angle << ", "
-        << next_angle - cmp_next_angle << std::endl;
-    return out.str();
-}
-
-template <class charT, class traits, typename T>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     const si_point_vector<T>& pts) {
-    out << "Self Intersection Point Vector:" << std::endl;
-    for (auto& pt : pts) {
-        out << output_si_angles(pt.first);
-        if (pt.second) {
-            out << " - clockwise" << std::endl;
-        } else {
-            out << " - counter clockwise" << std::endl;
-        }
-    }
-    return out;
-}
-
-template <class charT, class traits>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     const orientation_type& ot) {
-    switch (ot) {
-    case orientation_collinear_spike:
-        out << "collinear - spike";
-        break;
-    case orientation_clockwise:
-        out << "clockwise";
-        break;
-    case orientation_collinear_line:
-        out << "collinear - line";
-        break;
-    case orientation_counter_clockwise:
-        out << "counter clockwise";
-        break;
-    };
-    return out;
-}
-
-#endif
-
-template <typename T>
-bool clockwise_of_next(point_ptr<T> const& origin, point_ptr<T> pt) {
-
-    // Determine if the prev and next of pt is either clockwise of next from
-    // origin (and therefore ccw of previous) or if it is ccw of next and clockwise
-    // of previous
-
-    // First inspect orientation of points, keep in mind this is the orientations of
-    // the three points
-    orientation_type ot_origin = orientation_of_points(origin, origin->next, origin->prev);
-    if (ot_origin == orientation_collinear_spike) {
-        return true;
-    } else if (ot_origin == orientation_clockwise) {
-        orientation_type ot_prev_next = orientation_of_points(origin, origin->next, pt->prev);
-        if (ot_prev_next == orientation_collinear_spike) {
-            orientation_type ot_next_next = orientation_of_points(origin, origin->next, pt->next);
-            if (ot_next_next == orientation_collinear_spike) {
-                // Pt forms a spike on origin next
-                // so lets assume it is CW.
-                // I am not sure that we would ever encounter a spike so this will
-                // be missing from coverage, but left in code.
-                return true;
-            } else if (ot_next_next == orientation_clockwise) {
-                // We need to check which is after "origin->next" traveling
-                // clockwise -- origin->prev or pt->next
-                orientation_type ot_next_prev =
-                    orientation_of_points(origin, origin->prev, pt->next);
-                if (ot_next_prev == orientation_collinear_spike) {
-                    // Both origin and pt follow the same paths.
-                    // so we will call this clockwise
-                    return true;
-                } else if (ot_next_prev == orientation_clockwise) {
-                    // pt->next is clockwise of prev
-                    return false;
-                } else if (ot_next_prev == orientation_collinear_line) {
-                    // This shouldn't happen
-                    // LCOV_EXCL_START
-                    throw std::runtime_error("Impossible situation reached in clockwise_of_next");
-                    // LCOV_EXCL_END
-                } else {
-                    // Pt next is counter clockwise of origin prev
-                    return true;
-                }
-            } else {
-                // ot_next_next == orientation_collinear_line
-                // ot_next_next == orientation_counter_clockwise
-                return false;
-            }
-        } else if (ot_prev_next == orientation_clockwise) {
-            // We need to check which is after "origin->next" traveling
-            // clockwise -- origin->prev or pt->prev
-            orientation_type ot_prev_prev = orientation_of_points(origin, origin->prev, pt->prev);
-            if (ot_prev_prev == orientation_clockwise ||
-                ot_prev_prev == orientation_collinear_spike) {
-                // pt->prev is before this, so.. between the two.
-                return false;
-            } else {
-                // ot_prev_prev == orientation_clockwise
-                // ot_prev_prev == orientation_collinear_line
-                return true;
-            }
-        } else {
-            // ot_prev_next == orientation_collinear_line
-            // ot_prev_next == orientation_counter_clockwise
-            return false;
-        }
-    } else if (ot_origin == orientation_collinear_line) {
-        orientation_type ot_prev_next = orientation_of_points(origin, origin->next, pt->prev);
-        if (ot_prev_next == orientation_collinear_spike ||
-            ot_prev_next == orientation_collinear_line) {
-            // prev and next on top of each other
-            orientation_type ot_next_next = orientation_of_points(origin, origin->next, pt->next);
-            if (ot_next_next == orientation_counter_clockwise) {
-                return false;
-            } else {
-                // ot_next_next == orientation_collinear_spike
-                // ot_next_next == orientation_clockwise
-                // ot_next_next == orientation_collinear_line
-                return true;
-            }
-        } else if (ot_prev_next == orientation_clockwise) {
-            return true;
-        } else {
-            // ot_prev_next == orientation_counter_clockwise
-            return false;
-        }
-    } else {
-        // orientation_counter_clockwise
-        orientation_type ot_prev_next = orientation_of_points(origin, origin->next, pt->prev);
-        if (ot_prev_next == orientation_collinear_spike) {
-            orientation_type ot_next_next = orientation_of_points(origin, origin->next, pt->next);
-            if (ot_next_next == orientation_collinear_spike) {
-                // Pt forms a spike on origin next
-                // so lets assume it is CW.
-                // I am not sure that we would ever encounter a spike so this will
-                // be missing from coverage, but left in code.
-                return true;
-            } else if (ot_next_next == orientation_counter_clockwise) {
-                // We need to check which is after "origin->next" traveling
-                // counter clockwise -- origin->prev or pt->next
-                orientation_type ot_next_prev =
-                    orientation_of_points(origin, origin->prev, pt->next);
-                if (ot_next_prev == orientation_collinear_spike) {
-                    // Both origin and pt follow the same paths.
-                    // so we will call this clockwise
-                    return true;
-                } else if (ot_next_prev == orientation_clockwise) {
-                    // pt->next is clockwise of prev
-                    return false;
-                } else if (ot_next_prev == orientation_collinear_line) {
-                    // This shouldn't happen?
-                    // LCOV_EXCL_START
-                    throw std::runtime_error(
-                        "Impossible situation reached in clockwise_of_next - 2");
-                    // LCOV_EXCL_END
-                } else {
-                    // Pt next is counter clockwise of origin prev
-                    return true;
-                }
-            } else {
-                // ot_next_next == orientation_clockwise
-                // ot_next_next == orientation_collinear_line
-                return true;
-            }
-        } else if (ot_prev_next == orientation_counter_clockwise) {
-            // We need to check which is after "origin->next" traveling
-            // counter clockwise -- origin->prev or pt->prev
-            orientation_type ot_prev_prev = orientation_of_points(origin, origin->prev, pt->prev);
-            if (ot_prev_prev == orientation_clockwise ||
-                ot_prev_prev == orientation_collinear_spike) {
-                // pt->prev is before this, so.. between the two.
-                return false;
-            } else {
-                // ot_prev_prev == orientation_counter_clockwise
-                // ot_prev_prev == orientation_collinear_line
-                return true;
-            }
-        } else {
-            // ot_prev_next == orientation_collinear_line
-            // ot_prev_next == orientation_clockwise
-            return true;
-        }
-    }
-}
-
-template <typename T>
-inline bool cw_p1p2_prev_collinear_spike(point_ptr<T> const& origin,
-                                         point_ptr<T> const& next,
-                                         point_ptr<T> const& p1,
-                                         point_ptr<T> const& p2) {
-
-    // we must compare the nexts to determine the order between the two.
-    orientation_type ot_p1_next = orientation_of_points(origin, next, p1->next);
-    orientation_type ot_p2_next = orientation_of_points(origin, next, p2->next);
-    if (ot_p1_next == orientation_collinear_spike) {
-        // p1 is a spike on origin next
-        if (ot_p2_next == orientation_collinear_spike) {
-            // I am not sure that a spike will ever occur at this point in the processing!
-            return true;
-        } else {
-            return false;
-        }
-    } else if (ot_p1_next == orientation_clockwise) {
-        if (ot_p2_next == orientation_collinear_spike) {
-            return true;
-        } else if (ot_p2_next == orientation_clockwise) {
-            // Both are clockwise we have to compare.
-            orientation_type ot = orientation_of_points(origin, p1->next, p2->next);
-            if (ot == orientation_collinear_spike) {
-                return true;
-            } else if (ot == orientation_clockwise) {
-                return false;
-            } else if (ot == orientation_collinear_line) {
-                return false;
-            } else {
-                return true;
-            }
-        } else {
-            // ot_p2_next == orienation_collinear_line
-            // ot_p2_next == orienation_counter_clockwise
-            return false;
-        }
-    } else if (ot_p1_next == orientation_collinear_line) {
-        if (ot_p2_next == orientation_counter_clockwise) {
-            return false;
-        } else {
-            // ot_p2_next == orienation_collinear_spike
-            // ot_p2_next == orienation_clockwise
-            // ot_p2_next == orienation_collinear_line
-            return true;
-        }
-    } else {
-        // ot_p1_next == orientation_counter_clockwise
-        if (ot_p2_next == orientation_counter_clockwise) {
-            // Both are counter clockwise we have to compare.
-            orientation_type ot = orientation_of_points(origin, p1->next, p2->next);
-            if (ot == orientation_collinear_spike) {
-                return true;
-            } else if (ot == orientation_clockwise) {
-                return false;
-            } else if (ot == orientation_collinear_line) {
-                return false;
-            } else {
-                return true;
-            }
-        } else {
-            // ot_p2_next == orienation_collinear_spike
-            // ot_p2_next == orienation_clockwise
-            // ot_p2_next == orienation_collinear_line
-            return true;
-        }
-    }
-}
-
-template <typename T>
-inline bool ccw_p1p2_prev_collinear_spike(point_ptr<T> const& origin,
-                                          point_ptr<T> const& next,
-                                          point_ptr<T> const& p1,
-                                          point_ptr<T> const& p2) {
-
-    // we must compare the nexts to determine the order between the two.
-    orientation_type ot_p1_next = orientation_of_points(origin, next, p1->next);
-    orientation_type ot_p2_next = orientation_of_points(origin, next, p2->next);
-    if (ot_p1_next == orientation_collinear_spike) {
-        // p1 is a spike on origin next
-        if (ot_p2_next == orientation_collinear_spike) {
-            return true;
-        } else {
-            return false;
-        }
-    } else if (ot_p1_next == orientation_clockwise) {
-        if (ot_p2_next == orientation_collinear_spike) {
-            return false;
-        } else if (ot_p2_next == orientation_clockwise) {
-            // Both are clockwise we have to compare.
-            orientation_type ot = orientation_of_points(origin, p1->next, p2->next);
-            if (ot == orientation_collinear_spike) {
-                return true;
-            } else if (ot == orientation_clockwise) {
-                return true;
-            } else if (ot == orientation_collinear_line) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            // ot_p2_next == orienation_collinear_line
-            // ot_p2_next == orienation_counter_clockwise
-            return true;
-        }
-    } else if (ot_p1_next == orientation_collinear_line) {
-        if (ot_p2_next == orientation_clockwise) {
-            return false;
-        } else {
-            // ot_p2_next == orienation_collinear_spike
-            // ot_p2_next == orienation_counter_clockwise
-            // ot_p2_next == orienation_collinear_line
-            return true;
-        }
-    } else {
-        // ot_p1_next == orientation_counter_clockwise
-        if (ot_p2_next == orientation_counter_clockwise) {
-            // Both are counter clockwise we have to compare.
-            orientation_type ot = orientation_of_points(origin, p1->next, p2->next);
-            if (ot == orientation_collinear_spike) {
-                return true;
-            } else if (ot == orientation_clockwise) {
-                return true;
-            } else if (ot == orientation_collinear_line) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            // ot_p2_next == orienation_collinear_spike
-            // ot_p2_next == orienation_clockwise
-            // ot_p2_next == orienation_collinear_line
-            return false;
-        }
-    }
-}
-
-template <typename T>
-struct si_point_sorter {
-
-    point_ptr<T> origin;
-    point_ptr<T> next;
-
-    si_point_sorter(point_ptr<T> origin_) : origin(origin_), next(origin_->next) {
-    }
-
-    // Sorting order
-    //
-    // Primary Sort:
-    // * Left of next, right of previous
-    // * Right of next, left of previous
-    //
-    // Secondary Sort:
-    // * Magnitude of angle (direction based on primary sort)
-    //   between item's previous and origin's next
-
-    inline bool operator()(std::pair<point_ptr<T>, bool> const& pp1,
-                           std::pair<point_ptr<T>, bool> const& pp2) {
-        // Because a next must be paired with a previous, we are only
-        // caring first about previous segments for ordering
-        point_ptr<T> p1 = pp1.first;
-        point_ptr<T> p2 = pp2.first;
-        if (pp1.second != pp2.second) {
-            return pp1.second;
-        }
-
-        orientation_type ot_p1 = orientation_of_points(origin, next, p1->prev);
-        orientation_type ot_p2 = orientation_of_points(origin, next, p2->prev);
-        if (pp1.second) {
-            if (ot_p1 == orientation_collinear_spike) {
-                // p1 prev lines up with origin next
-                if (ot_p2 != orientation_collinear_spike) {
-                    // ot_p2 == orienation_clockwise
-                    // ot_p2 == orienation_collinear_line
-                    // ot_p2 == orienation_counter_clockwise
-                    return true;
-                } else {
-                    // ot_p2 == orientation_collinear_spike
-                    return cw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                }
-            } else if (ot_p1 == orientation_clockwise) {
-                if (ot_p2 == orientation_collinear_spike) {
-                    return false;
-                } else if (ot_p2 == orientation_clockwise) {
-                    orientation_type ot_p1p2 = orientation_of_points(origin, p1->prev, p2->prev);
-                    if (ot_p1p2 == orientation_collinear_spike) {
-                        // Both p1 prev and p2 prev are on top of each other
-                        return cw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                    } else if (ot_p1p2 == orientation_clockwise) {
-                        return true;
-                    } else {
-                        // ot_p1p2 == orientation_counter_clockwise
-                        // ot_p1p2 == orientation_collinear_line
-                        return false;
-                    }
-                } else {
-                    // ot_p2 == orientation_collinear_line
-                    // ot_p2 == orientation_counter_clockwise
-                    return true;
-                }
-            } else if (ot_p1 == orientation_collinear_line) {
-                if (ot_p2 == orientation_collinear_spike || ot_p2 == orientation_clockwise) {
-                    return false;
-                } else if (ot_p2 == orientation_collinear_line) {
-                    return cw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                } else {
-                    // ot_p2 == orientation_counter_clockwise
-                    return true;
-                }
-            } else {
-                // ot_p1 == orientation_counter_clockwise
-                if (ot_p2 == orientation_counter_clockwise) {
-                    orientation_type ot_p1p2 = orientation_of_points(origin, p1->prev, p2->prev);
-                    if (ot_p1p2 == orientation_collinear_spike) {
-                        // Both p1 prev and p2 prev are on top of each other
-                        return cw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                    } else if (ot_p1p2 == orientation_clockwise) {
-                        return true;
-                    } else {
-                        // ot_p1p2 == orientation_counter_clockwise
-                        // ot_p1p2 == orientation_collinear_line
-                        return false;
-                    }
-                } else {
-                    // ot_p2 == orientation_collinear_spike
-                    // ot_p2 == orientation_counter_clockwise
-                    // ot_p2 == orientation_collinear_line
-                    return false;
-                }
-            }
-        } else {
-            if (ot_p1 == orientation_collinear_spike) {
-                // p1 prev lines up with origin next
-                if (ot_p2 != orientation_collinear_spike) {
-                    // ot_p2 == orienation_clockwise
-                    // ot_p2 == orienation_collinear_line
-                    // ot_p2 == orienation_counter_clockwise
-                    return true;
-                } else {
-                    // ot_p2 == orientation_collinear_spike
-                    return ccw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                }
-            } else if (ot_p1 == orientation_clockwise) {
-                if (ot_p2 == orientation_collinear_spike) {
-                    return false;
-                } else if (ot_p2 == orientation_clockwise) {
-                    orientation_type ot_p1p2 = orientation_of_points(origin, p1->prev, p2->prev);
-                    if (ot_p1p2 == orientation_collinear_spike) {
-                        // Both p1 prev and p2 prev are on top of each other
-                        return ccw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                    } else if (ot_p1p2 == orientation_counter_clockwise) {
-                        return true;
-                    } else {
-                        // ot_p1p2 == orientation_clockwise
-                        // ot_p1p2 == orientation_collinear_line
-                        return false;
-                    }
-                } else {
-                    // ot_p2 == orientation_collinear_line
-                    // ot_p2 == orientation_counter_clockwise
-                    return false;
-                }
-            } else if (ot_p1 == orientation_collinear_line) {
-                if (ot_p2 == orientation_collinear_spike ||
-                    ot_p2 == orientation_counter_clockwise) {
-                    return false;
-                } else if (ot_p2 == orientation_collinear_line) {
-                    return ccw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                } else {
-                    // ot_p2 == orientation_clockwise
-                    return true;
-                }
-            } else {
-                // ot_p1 == orientation_counter_clockwise
-                if (ot_p2 == orientation_collinear_spike) {
-                    return false;
-                } else if (ot_p2 == orientation_counter_clockwise) {
-                    orientation_type ot_p1p2 = orientation_of_points(origin, p1->prev, p2->prev);
-                    if (ot_p1p2 == orientation_collinear_spike) {
-                        // Both p1 prev and p2 prev are on top of each other
-                        return ccw_p1p2_prev_collinear_spike(origin, next, p1, p2);
-                    } else if (ot_p1p2 == orientation_counter_clockwise) {
-                        return true;
-                    } else {
-                        // ot_p1p2 == orientation_clockwise
-                        // ot_p1p2 == orientation_collinear_line
-                        return false;
-                    }
-                } else {
-                    // ot_p2 == orientation_clockwise
-                    // ot_p2 == orientation_collinear_line
-                    return true;
-                }
-            }
-        }
-    }
-};
-
-template <typename T>
-si_point_vector<T> build_si_point_vector(std::size_t first_index,
-                                         std::size_t last_index,
-                                         std::size_t current_index,
-                                         ring_ptr<T> match_ring,
-                                         ring_manager<T>& rings) {
-    si_point_vector<T> point_vec;
-    point_ptr<T> origin = rings.all_points[current_index];
-    for (std::size_t j = first_index; j <= last_index; ++j) {
-        if (j == current_index) {
+void correct_repeated_points(ring_manager<T>& manager,
+                             ring_vector<T>& new_rings,
+                             point_vector_itr<T> const& begin,
+                             point_vector_itr<T> const& end) {
+    for (auto itr1 = begin; itr1 != end; ++itr1) {
+        if ((*itr1)->ring == nullptr) {
             continue;
         }
-        point_ptr<T> op_j = rings.all_points[j];
-        if (op_j->ring == match_ring) {
-            bool clockwise = clockwise_of_next(origin, op_j);
-            point_vec.emplace_back(op_j, clockwise);
-        }
-    }
-    return point_vec;
-}
-
-template <typename T>
-bool process_repeated_point_set(std::size_t first_index,
-                                std::size_t last_index,
-                                std::size_t current_index,
-                                std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                                ring_manager<T>& rings) {
-    point_ptr<T> point_1 = rings.all_points[current_index];
-    if (point_1->ring == nullptr) {
-        return false;
-    }
-
-    // Build point vector
-    si_point_vector<T> vec =
-        build_si_point_vector(first_index, last_index, current_index, point_1->ring, rings);
-
-    if (vec.empty()) {
-        return false;
-    }
-
-    // Sort points in vector
-    std::stable_sort(vec.begin(), vec.end(), si_point_sorter<T>(point_1));
-
-    auto vec_itr = vec.begin();
-    point_ptr<T> point_2 = vec_itr->first;
-
-    // If there are collinear sets of lines, we might not be able to just pick
-    // the first point in the sorted list (and we will have to do special processing).
-    if (vec.size() > 2) {
-        ++vec_itr;
-        point_ptr<T> point_3 = vec_itr->first;
-        orientation_type ot_next = orientation_of_points(point_2, point_2->next, point_3->next);
-        if (ot_next == orientation_collinear_spike) {
-            orientation_type ot_prev = orientation_of_points(point_2, point_2->prev, point_3->prev);
-            if (ot_prev == orientation_collinear_spike) {
-                // Start at point_1 and we will travel around the circle until we find another point
-                // at
-                // the same location. We will measure its area, and then continue till the next
-                // point at
-                // the same location. The smallest absolute value of area is the one we will use.
-                point_ptr<T> point_a = point_1;
-                point_ptr<T> min_a = nullptr;
-                point_ptr<T> min_b = nullptr;
-                point_ptr<T> pt = point_1->next;
-                double area = 0.0;
-                double min_area = std::numeric_limits<double>::max();
-                while (pt != point_1) {
-                    area += static_cast<double>(pt->prev->x + pt->x) *
-                            static_cast<double>(pt->prev->y - pt->y);
-                    if (*pt == *point_1) {
-                        if (std::fabs(area) < min_area) {
-                            min_area = std::fabs(area);
-                            min_a = point_a;
-                            min_b = pt;
-                        }
-                        point_a = pt;
-                        area = 0.0;
-                    }
-                    pt = pt->next;
-                }
-                if (point_a == point_1) {
-                    // LCOV_EXCL_START
-                    throw std::runtime_error("No other point was between point_1 on the path");
-                    // LCOV_EXCL_END
-                }
-                area += static_cast<double>(pt->prev->x + pt->x) *
-                        static_cast<double>(pt->prev->y - pt->y);
-                if (std::fabs(area) < min_area) {
-                    min_area = std::fabs(area);
-                    min_a = point_a;
-                    min_b = pt;
-                }
-                handle_self_intersections(min_a, min_b, dupe_ring, rings);
-                return true;
-            }
-        }
-    }
-    handle_self_intersections(point_1, point_2, dupe_ring, rings);
-    return true;
-}
-
-template <typename T>
-void process_repeated_points(std::size_t first_index,
-                             std::size_t last_index,
-                             std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                             ring_manager<T>& rings) {
-    for (std::size_t j = first_index; j <= last_index; ++j) {
-        while (process_repeated_point_set(first_index, last_index, j, dupe_ring, rings))
-            ;
-    }
-
-#ifdef DEBUG
-    // LCOV_EXCL_START
-    for (std::size_t j = first_index; j <= last_index; ++j) {
-        point_ptr<T> op_j = rings.all_points[j];
-        if (!op_j->ring) {
-            continue;
-        }
-        double ring_area = area(op_j->ring);
-        bool ring_is_positive = ring_area > 0.0;
-        bool ring_is_zero = value_is_zero(ring_area);
-        if (!ring_is_zero) {
-            if (op_j->ring->parent) {
-                double parent_area = area(op_j->ring->parent);
-                bool parent_is_positive = parent_area > 0.0;
-                bool parent_is_zero = value_is_zero(parent_area);
-                if (!parent_is_zero && ring_is_positive == parent_is_positive) {
-                    throw std::runtime_error(
-                        "Created a ring with a parent having the same orientation (sign of area)");
-                }
-            }
-            for (auto& c : op_j->ring->children) {
-                double c_area = area(c);
-                bool c_is_positive = c_area > 0.0;
-                bool c_is_zero = value_is_zero(c_area);
-                if (!c_is_zero && ring_is_positive == c_is_positive) {
-                    throw std::runtime_error(
-                        "Created a ring with a child having the same orientation (sign of area)");
-                }
-            }
-        }
-    }
-// LCOV_EXCL_END
-#endif
-}
-
-template <typename T>
-bool process_chains(std::size_t first_index,
-                    std::size_t last_index,
-                    std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                    ring_manager<T>& rings,
-                    mapbox::geometry::point<T>& rewind_point) {
-    bool rewind = false;
-    for (std::size_t j = first_index; j <= last_index; ++j) {
-        point_ptr<T> op_j = rings.all_points[j];
-        if (!op_j->ring) {
-            continue;
-        }
-        for (std::size_t k = j + 1; k <= last_index; ++k) {
-            point_ptr<T> op_k = rings.all_points[k];
-            if (!op_k->ring || !op_j->ring) {
+        for (auto itr2 = std::next(itr1); itr2 != end; ++itr2) {
+            if ((*itr2)->ring == nullptr) {
                 continue;
             }
-            if (fix_intersects(dupe_ring, op_j, op_k, rings, rewind_point)) {
-                rewind = true;
+            ring_ptr<T> new_ring = correct_self_intersection(*itr1, *itr2, manager);
+            if (new_ring != nullptr) {
+                new_rings.push_back(new_ring);
             }
         }
     }
-    return rewind;
 }
 
 template <typename T>
-bool process_collinear_edges(std::size_t first_index,
-                             std::size_t last_index,
-                             std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& dupe_ring,
-                             ring_manager<T>& rings,
-                             mapbox::geometry::point<T>& rewind_point) {
-    bool rewind = false;
-    for (std::size_t j = first_index; j <= last_index; ++j) {
-        point_ptr<T> op_j = rings.all_points[j];
-        if (!op_j->ring) {
-            continue;
-        }
-        for (std::size_t k = j + 1; k <= last_index; ++k) {
-            point_ptr<T> op_k = rings.all_points[k];
-            if (!op_k->ring || !op_j->ring) {
-                continue;
-            }
-            if (handle_collinear_edges(op_j, op_k, dupe_ring, rings, rewind_point)) {
-                rewind = true;
-            }
-        }
-    }
-    return rewind;
-}
-
-template <typename T>
-bool index_is_after_point(std::size_t const& i,
-                          mapbox::geometry::point<T> const& pt,
-                          ring_manager<T> const& rings) {
-    if (i == 0) {
-        return false;
-    }
-
-    if (rings.all_points[i]->y == pt.y) {
-        return rings.all_points[i]->x >= pt.x;
-    } else {
-        return rings.all_points[i]->y < pt.y;
-    }
-}
-
-template <typename T>
-void rewind_to_point(std::size_t& i,
-                     mapbox::geometry::point<T> const& pt,
-                     ring_manager<T> const& rings) {
-    if (i >= rings.rings.size()) {
-        i = rings.rings.size() - 1;
-    }
-    while (index_is_after_point(i, pt, rings)) {
-        --i;
-    }
-}
-
-template <typename T>
-void remove_spikes_in_polygons(ring_ptr<T> r, ring_manager<T>& rings) {
-
-    point_ptr<T> first_point = r->points;
-    remove_spikes(first_point);
-    if (!first_point) {
-        r->points = nullptr;
-        r->area = std::numeric_limits<double>::quiet_NaN();
-        remove_ring(r, rings);
-        return;
-    }
-    point_ptr<T> p = first_point->next;
-    while (p != first_point) {
-        remove_spikes(p);
-        if (!p) {
-            r->points = nullptr;
-            r->area = std::numeric_limits<double>::quiet_NaN();
-            remove_ring(r, rings);
-            return;
-        }
-        if (p->ring && !first_point->ring) {
-            first_point = p;
-        }
-        p = p->next;
-    }
-}
-
-template <typename T>
-void fixup_out_polygon(ring<T>& ring, ring_manager<T>& rings) {
-    // FixupOutPolygon() - removes duplicate points and simplifies consecutive
-    // parallel edges by removing the middle vertex.
-    point_ptr<T> lastOK = nullptr;
-    ring.bottom_point = nullptr;
-    point_ptr<T> pp = ring.points;
-
-    for (;;) {
-        if (pp->prev == pp || pp->prev == pp->next) {
-            // We now need to make sure any children rings to this are promoted and their hole
-            // status is changed
-            // promote_children_of_removed_ring(&ring, rings);
-            remove_ring(&ring, rings);
-            dispose_out_points(pp);
-            ring.points = nullptr;
-            return;
-        }
-
-        // test for duplicate points and collinear edges ...
-        if ((*pp == *pp->next) || (*pp == *pp->prev) || (slopes_equal(*pp->prev, *pp, *pp->next))) {
-            lastOK = nullptr;
-            point_ptr<T> tmp = pp;
-            pp->prev->next = pp->next;
-            pp->next->prev = pp->prev;
-            pp = pp->prev;
-            tmp->ring = nullptr;
-            tmp->next = tmp;
-            tmp->prev = tmp;
-        } else if (pp == lastOK) {
-            break;
-        } else {
-            if (!lastOK) {
-                lastOK = pp;
-            }
-            pp = pp->next;
-        }
-    }
-    ring.points = pp;
-}
-
-template <typename T>
-void do_simple_polygons(ring_manager<T>& rings) {
-    // fix orientations ...
-    for (auto& r : rings.rings) {
-        if (!r.points) {
-            continue;
-        }
-        std::size_t s = 0;
-        if (ring_is_hole(&r) == (area_from_point(r.points, s) > 0)) {
-            reverse_ring(r.points);
-        }
-        remove_spikes_in_polygons(&r, rings);
-        r.area = std::numeric_limits<double>::quiet_NaN();
-    }
-
-    std::stable_sort(rings.all_points.begin(), rings.all_points.end(), point_ptr_cmp<T>());
-    std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>> dupe_ring;
-    dupe_ring.reserve(rings.rings.size());
-
-    // Find sets of repeated points and process them
+void find_and_correct_repeated_points(ring_ptr<T> r,
+                                      ring_manager<T>& manager,
+                                      ring_vector<T>& new_rings) {
+    auto sorted_points = sort_ring_points(r);
+    // Find sets of repeated points
     std::size_t count = 0;
-    for (std::size_t i = 1; i < rings.all_points.size(); ++i) {
-        if (*rings.all_points[i] == *rings.all_points[i - 1]) {
+    auto prev_itr = sorted_points.begin();
+    auto itr = std::next(prev_itr);
+    while (itr != sorted_points.end()) {
+        if (*(*prev_itr) == *(*(itr))) {
             ++count;
-            if (i < (rings.all_points.size() - 1)) {
+            ++prev_itr;
+            ++itr;
+            if (itr != sorted_points.end()) {
                 continue;
             } else {
-                ++i;
+                ++prev_itr;
             }
+        } else {
+            ++prev_itr;
+            ++itr;
         }
-
         if (count == 0) {
             continue;
         }
-        std::size_t first_index = i - count - 1;
-        std::size_t last_index = i - 1;
-        auto sort_begin = rings.all_points.begin();
-        std::advance(sort_begin, first_index);
-        auto sort_end = rings.all_points.begin();
-        std::advance(sort_end, i);
-        std::stable_sort(sort_begin, sort_end, point_ptr_depth_cmp<T>());
-        process_repeated_points(first_index, last_index, dupe_ring, rings);
-        mapbox::geometry::point<T> rewind_point(std::numeric_limits<T>::min(),
-                                                std::numeric_limits<T>::min());
-        bool do_rewind = false;
-        if (process_chains(first_index, last_index, dupe_ring, rings, rewind_point)) {
-            do_rewind = true;
-        }
-        if (process_collinear_edges(first_index, last_index, dupe_ring, rings, rewind_point)) {
-            do_rewind = true;
-        }
-        if (do_rewind) {
-            rewind_to_point(i, rewind_point, rings);
-        }
+        auto first = prev_itr;
+        std::advance(first, -(static_cast<int>(count) + 1));
+        correct_repeated_points(manager, new_rings, first, prev_itr);
         count = 0;
     }
+}
 
-#if DEBUG
-    // LCOV_EXCL_START
-    for (auto& r : rings.rings) {
-        if (!r.points) {
+template <typename T>
+void reassign_children_if_necessary(ring_ptr<T> new_ring,
+                                    ring_ptr<T> sibling_ring,
+                                    ring_manager<T>& manager,
+                                    ring_vector<T>& new_rings) {
+    auto& children = sibling_ring == nullptr ? manager.children : sibling_ring->children;
+    for (auto c : children) {
+        if (c == nullptr) {
             continue;
         }
-        double stored_area = area(&r);
-        std::size_t s = 0;
-        double calculated_area = area_from_point(r.points, s);
-        if (!values_near_equal(stored_area, calculated_area)) {
-            throw std::runtime_error("Difference in stored area vs calculated area!");
+        if (std::find(new_rings.begin(), new_rings.end(), c) != new_rings.end()) {
+            continue;
+        }
+        if (poly2_contains_poly1(c, new_ring)) {
+            reassign_as_child(c, new_ring, manager);
         }
     }
-// LCOV_EXCL_END
-#endif
+}
 
-    for (auto& r : rings.rings) {
-        if (!r.points) {
+template <typename T>
+bool find_parent_in_tree(ring_ptr<T> r, ring_ptr<T> possible_parent, ring_manager<T>& manager) {
+    // Before starting this we are assuming that possible_parent
+    // and r have opposite signs of their areas
+
+    // First we must search all grandchildren
+    for (auto c : possible_parent->children) {
+        if (c == nullptr) {
             continue;
         }
-        fixup_out_polygon(r, rings);
+        for (auto gc : c->children) {
+            if (gc == nullptr) {
+                continue;
+            }
+            if (find_parent_in_tree(r, gc, manager)) {
+                return true;
+            }
+        }
+    }
+
+    if (poly2_contains_poly1(r, possible_parent)) {
+        reassign_as_child(r, possible_parent, manager);
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+void assign_new_ring_parents(ring_manager<T>& manager,
+                             ring_ptr<T> original_ring,
+                             ring_vector<T>& new_rings) {
+
+    // First lets remove any rings that have zero area
+    // or have no points
+    new_rings.erase(std::remove_if(new_rings.begin(), new_rings.end(),
+                                   [](ring_ptr<T> const& r) {
+                                       if (r->points == nullptr) {
+                                           return true;
+                                       }
+                                       return value_is_zero(r->area());
+                                   }),
+                    new_rings.end());
+
+    if (new_rings.empty()) {
+        // No new rings created simply return;
+        return;
+    }
+
+    // We should not have to re-assign the parent of the original ring
+    // because we always maintained the largest ring during splitting
+    // on repeated points.
+
+    double original_ring_area = original_ring->area();
+    bool original_positive = original_ring_area > 0.0;
+
+    // If there is only one new ring the logic is very simple and we
+    // do not have to check which ring contains, we only need to compare
+    // the areas of the original ring and that of the new ring.
+    if (new_rings.size() == 1) {
+        double new_ring_area = new_rings.front()->area();
+        bool new_positive = new_ring_area > 0.0;
+        if (original_positive == new_positive) {
+            // The rings should be siblings
+            assign_as_child(new_rings.front(), original_ring->parent, manager);
+            reassign_children_if_necessary(new_rings.front(), original_ring, manager, new_rings);
+        } else {
+            // The new ring is a child of original ring
+            // Check the
+            assign_as_child(new_rings.front(), original_ring, manager);
+            reassign_children_if_necessary(new_rings.front(), original_ring->parent, manager,
+                                           new_rings);
+        }
+        return;
+    }
+
+    // Now we want to sort rings from the largest in absolute area to the smallest
+    // as we will assign the rings with the largest areas first
+    std::stable_sort(new_rings.begin(), new_rings.end(),
+                     [](ring_ptr<T> const& r1, ring_ptr<T> const& r2) {
+                         return std::fabs(r1->area()) > std::fabs(r2->area());
+                     });
+
+    for (auto r_itr = new_rings.begin(); r_itr != new_rings.end(); ++r_itr) {
+        double new_ring_area = (*r_itr)->area();
+        bool new_positive = new_ring_area > 0.0;
+        bool same_orientation = new_positive == original_positive;
+        bool found = false;
+        // First lets check the trees of any new_rings that might have
+        // been assigned as siblings to the original ring.
+        for (auto s_itr = new_rings.begin(); s_itr != r_itr; ++s_itr) {
+            if ((*s_itr)->parent != original_ring->parent) {
+                continue;
+            }
+            if (same_orientation) {
+                for (auto s_child : (*s_itr)->children) {
+                    if (s_child == nullptr) {
+                        continue;
+                    }
+                    if (find_parent_in_tree(*r_itr, s_child, manager)) {
+                        reassign_children_if_necessary(*r_itr, original_ring, manager, new_rings);
+                        found = true;
+                        break;
+                    }
+                }
+            } else {
+                if (find_parent_in_tree(*r_itr, *s_itr, manager)) {
+                    reassign_children_if_necessary(*r_itr, original_ring->parent, manager,
+                                                   new_rings);
+                    found = true;
+                }
+            }
+            if (found) {
+                break;
+            }
+        }
+
+        if (found) {
+            continue;
+        }
+
+        // Next lets check the tree of the original_ring
+        if (same_orientation) {
+            for (auto o_child : original_ring->children) {
+                if (o_child == nullptr) {
+                    continue;
+                }
+                if (find_parent_in_tree(*r_itr, o_child, manager)) {
+                    reassign_children_if_necessary(*r_itr, original_ring, manager, new_rings);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                // If we didn't find any parent and the same orientation
+                // then it must be a sibling of the original ring
+                assign_as_child(*r_itr, original_ring->parent, manager);
+                reassign_children_if_necessary(*r_itr, original_ring, manager, new_rings);
+            }
+        } else {
+            if (find_parent_in_tree(*r_itr, original_ring, manager)) {
+                reassign_children_if_necessary(*r_itr, original_ring->parent, manager, new_rings);
+            } else {
+                throw std::runtime_error("Unable to find a proper parent ring");
+            }
+        }
+    }
+}
+
+template <typename T>
+bool correct_ring_self_intersections(ring_manager<T>& manager, ring_ptr<T> r, bool correct_tree) {
+
+    if (r->corrected || !r->points) {
+        return false;
+    }
+
+    ring_vector<T> new_rings;
+
+    find_and_correct_repeated_points(r, manager, new_rings);
+
+    if (correct_tree) {
+        assign_new_ring_parents(manager, r, new_rings);
+    }
+
+    r->corrected = true;
+    return true;
+}
+
+template <typename T>
+void process_single_intersection(
+    std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& connection_map,
+    point_ptr<T> op_j,
+    point_ptr<T> op_k,
+    ring_manager<T>& manager) {
+    ring_ptr<T> ring_j = op_j->ring;
+    ring_ptr<T> ring_k = op_k->ring;
+    if (ring_j == ring_k) {
+        return;
+    }
+
+    if (!ring_j->is_hole() && !ring_k->is_hole()) {
+        // Both are not holes, return nothing to do.
+        return;
+    }
+
+    ring_ptr<T> ring_origin;
+    ring_ptr<T> ring_search;
+    ring_ptr<T> ring_parent;
+    point_ptr<T> op_origin_1;
+    point_ptr<T> op_origin_2;
+    if (!ring_j->is_hole()) {
+        ring_origin = ring_j;
+        ring_parent = ring_origin;
+        ring_search = ring_k;
+        op_origin_1 = op_j;
+        op_origin_2 = op_k;
+    } else if (!ring_k->is_hole()) {
+        ring_origin = ring_k;
+        ring_parent = ring_origin;
+        ring_search = ring_j;
+        op_origin_1 = op_k;
+        op_origin_2 = op_j;
+
+    } else {
+        // both are holes
+        // Order doesn't matter
+        ring_origin = ring_j;
+        ring_parent = ring_origin->parent;
+        ring_search = ring_k;
+        op_origin_1 = op_j;
+        op_origin_2 = op_k;
+    }
+    if (ring_parent != ring_search->parent) {
+        // The two holes do not have the same parent, do not add them
+        // simply return!
+        return;
+    }
+    bool found = false;
+    std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> iList;
+    {
+        auto range = connection_map.equal_range(ring_search);
+        // Check for direct connection
+        for (auto& it = range.first; it != range.second;) {
+            if (!it->second.op1->ring) {
+                it = connection_map.erase(it);
+                continue;
+            }
+            if (!it->second.op2->ring) {
+                it = connection_map.erase(it);
+                continue;
+            }
+            ring_ptr<T> it_ring2 = it->second.op2->ring;
+            if (it_ring2 == ring_origin) {
+                found = true;
+                if (*op_origin_1 != *(it->second.op2)) {
+                    iList.emplace_back(ring_search, it->second);
+                    break;
+                }
+            }
+            ++it;
+        }
+    }
+    if (iList.empty()) {
+        auto range = connection_map.equal_range(ring_search);
+        std::set<ring_ptr<T>> visited;
+        visited.insert(ring_search);
+        // Check for connection through chain of other intersections
+        for (auto& it = range.first;
+             it != range.second && it != connection_map.end() && it->first == ring_search; ++it) {
+            ring_ptr<T> it_ring = it->second.op2->ring;
+            if (it_ring != ring_search && *op_origin_2 != *it->second.op2 && it_ring != nullptr &&
+                (ring_parent == it_ring || ring_parent == it_ring->parent) &&
+                !value_is_zero(it_ring->area()) &&
+                find_intersect_loop(connection_map, iList, ring_parent, ring_origin, it_ring,
+                                    visited, op_origin_2, it->second.op2, manager)) {
+                found = true;
+                iList.emplace_front(ring_search, it->second);
+                break;
+            }
+        }
+    }
+    if (!found) {
+        point_ptr_pair<T> intPt_origin = { op_origin_1, op_origin_2 };
+        point_ptr_pair<T> intPt_search = { op_origin_2, op_origin_1 };
+        connection_map.emplace(ring_origin, std::move(intPt_origin));
+        connection_map.emplace(ring_search, std::move(intPt_search));
+        return;
+    }
+
+    if (iList.empty()) {
+        // The situation where both origin and search are holes might have a missing
+        // search condition, we must check if a new pair must be added.
+        bool missing = true;
+        auto rng = connection_map.equal_range(ring_origin);
+        // Check for direct connection
+        for (auto& it = rng.first; it != rng.second; ++it) {
+            ring_ptr<T> it_ring2 = it->second.op2->ring;
+            if (it_ring2 == ring_search) {
+                missing = false;
+            }
+        }
+        if (missing) {
+            point_ptr_pair<T> intPt_origin = { op_origin_1, op_origin_2 };
+            connection_map.emplace(ring_origin, std::move(intPt_origin));
+        }
+        return;
+    }
+    if (ring_origin->is_hole()) {
+        for (auto& iRing : iList) {
+            ring_ptr<T> ring_itr = iRing.first;
+            if (!ring_itr->is_hole()) {
+                // Make the hole the origin!
+                point_ptr<T> op1 = op_origin_1;
+                op_origin_1 = iRing.second.op1;
+                iRing.second.op1 = op1;
+                point_ptr<T> op2 = op_origin_2;
+                op_origin_2 = iRing.second.op2;
+                iRing.second.op2 = op2;
+                iRing.first = ring_origin;
+                ring_origin = ring_itr;
+                ring_parent = ring_origin;
+                break;
+            }
+        }
+    }
+    bool origin_is_hole = ring_origin->is_hole();
+
+    // Switch
+    point_ptr<T> op_origin_1_next = op_origin_1->next;
+    point_ptr<T> op_origin_2_next = op_origin_2->next;
+    op_origin_1->next = op_origin_2_next;
+    op_origin_2->next = op_origin_1_next;
+    op_origin_1_next->prev = op_origin_2;
+    op_origin_2_next->prev = op_origin_1;
+
+    for (auto& iRing : iList) {
+        point_ptr<T> op_search_1 = iRing.second.op1;
+        point_ptr<T> op_search_2 = iRing.second.op2;
+        point_ptr<T> op_search_1_next = op_search_1->next;
+        point_ptr<T> op_search_2_next = op_search_2->next;
+        op_search_1->next = op_search_2_next;
+        op_search_2->next = op_search_1_next;
+        op_search_1_next->prev = op_search_2;
+        op_search_2_next->prev = op_search_1;
+    }
+
+    ring_ptr<T> ring_new = create_new_ring(manager);
+    ring_origin->corrected = false;
+    std::size_t size_1 = 0;
+    std::size_t size_2 = 0;
+    mapbox::geometry::box<T> box1({ 0, 0 }, { 0, 0 });
+    mapbox::geometry::box<T> box2({ 0, 0 }, { 0, 0 });
+    double area_1 = area_from_point(op_origin_1, size_1, box1);
+    double area_2 = area_from_point(op_origin_2, size_2, box2);
+    if (origin_is_hole && ((area_1 < 0.0))) {
+        ring_origin->points = op_origin_1;
+        ring_origin->set_stats(area_1, size_1, box1);
+        ring_new->points = op_origin_2;
+        ring_new->set_stats(area_2, size_2, box2);
+    } else {
+        ring_origin->points = op_origin_2;
+        ring_origin->set_stats(area_2, size_2, box2);
+        ring_new->points = op_origin_1;
+        ring_new->set_stats(area_1, size_1, box1);
+    }
+
+    update_points_ring(ring_origin);
+    update_points_ring(ring_new);
+
+    ring_origin->bottom_point = nullptr;
+
+    for (auto& iRing : iList) {
+        ring_ptr<T> ring_itr = iRing.first;
+        ring_itr->bottom_point = nullptr;
+        if (origin_is_hole) {
+            ring1_replaces_ring2(ring_origin, ring_itr, manager);
+        } else {
+            ring1_replaces_ring2(ring_origin->parent, ring_itr, manager);
+        }
+    }
+    if (origin_is_hole) {
+        assign_as_child(ring_new, ring_origin, manager);
+        // The parent ring in this situation might need to give up children
+        // to the new ring.
+        for (auto c : ring_parent->children) {
+            if (c == nullptr) {
+                continue;
+            }
+            if (poly2_contains_poly1(c, ring_new)) {
+                reassign_as_child(c, ring_new, manager);
+            }
+        }
+    } else {
+        // The new ring and the origin ring need to be siblings
+        // however some children ring from the ring origin might
+        // need to be re-assigned to the new ring
+        assign_as_sibling(ring_new, ring_origin, manager);
+        for (auto c : ring_origin->children) {
+            if (c == nullptr) {
+                continue;
+            }
+            if (poly2_contains_poly1(c, ring_new)) {
+                reassign_as_child(c, ring_new, manager);
+            }
+        }
+    }
+
+    std::list<std::pair<ring_ptr<T>, point_ptr_pair<T>>> move_list;
+
+    for (auto& iRing : iList) {
+        auto range_itr = connection_map.equal_range(iRing.first);
+        if (range_itr.first != range_itr.second) {
+            for (auto& it = range_itr.first; it != range_itr.second; ++it) {
+                ring_ptr<T> it_ring = it->second.op1->ring;
+                ring_ptr<T> it_ring2 = it->second.op2->ring;
+                if (it_ring == nullptr || it_ring2 == nullptr || it_ring == it_ring2) {
+                    continue;
+                }
+                if (it_ring->is_hole() || it_ring2->is_hole()) {
+                    move_list.emplace_back(it_ring, it->second);
+                }
+            }
+            connection_map.erase(iRing.first);
+        }
+    }
+
+    auto range_itr = connection_map.equal_range(ring_origin);
+    for (auto& it = range_itr.first; it != range_itr.second;) {
+        ring_ptr<T> it_ring = it->second.op1->ring;
+        ring_ptr<T> it_ring2 = it->second.op2->ring;
+        if (it_ring == nullptr || it_ring2 == nullptr || it_ring == it_ring2) {
+            it = connection_map.erase(it);
+            continue;
+        }
+        if (it_ring != ring_origin) {
+            if (it_ring->is_hole() || it_ring2->is_hole()) {
+                move_list.emplace_back(it_ring, it->second);
+            }
+            it = connection_map.erase(it);
+        } else {
+            if (it_ring->is_hole() || it_ring2->is_hole()) {
+                ++it;
+            } else {
+                it = connection_map.erase(it);
+            }
+        }
+    }
+
+    if (!move_list.empty()) {
+        connection_map.insert(move_list.begin(), move_list.end());
+    }
+
+    return;
+}
+
+template <typename T>
+void correct_chained_repeats(
+    ring_manager<T>& manager,
+    std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>>& connection_map,
+    point_vector_itr<T> const& begin,
+    point_vector_itr<T> const& end) {
+    for (auto itr1 = begin; itr1 != end; ++itr1) {
+        if ((*itr1)->ring == nullptr) {
+            continue;
+        }
+        for (auto itr2 = std::next(itr1); itr2 != end; ++itr2) {
+            if ((*itr2)->ring == nullptr) {
+                continue;
+            }
+            process_single_intersection(connection_map, *itr1, *itr2, manager);
+        }
+    }
+}
+
+template <typename T>
+void correct_chained_rings(ring_manager<T>& manager) {
+
+    if (manager.all_points.size() < 2) {
+        return;
+    }
+    // Setup connection map which is a map of rings and their
+    // connection point pairs with other rings.
+    std::unordered_multimap<ring_ptr<T>, point_ptr_pair<T>> connection_map;
+    connection_map.reserve(manager.rings.size());
+
+    // Now lets find and process any points
+    // that overlap -- we should have solved
+    // all situations where these points
+    // would be self intersections of a ring with
+    // earlier processing so this should just be
+    // points where different rings are touching.
+    std::size_t count = 0;
+    auto prev_itr = manager.all_points.begin();
+    auto itr = std::next(prev_itr);
+    while (itr != manager.all_points.end()) {
+        if (*(*prev_itr) == *(*(itr))) {
+            ++count;
+            ++prev_itr;
+            ++itr;
+            if (itr != manager.all_points.end()) {
+                continue;
+            } else {
+                ++prev_itr;
+            }
+        } else {
+            ++prev_itr;
+            ++itr;
+        }
+        if (count == 0) {
+            continue;
+        }
+        auto first = prev_itr;
+        std::advance(first, -(static_cast<int>(count) + 1));
+        correct_chained_repeats(manager, connection_map, first, prev_itr);
+        count = 0;
+    }
+}
+
+template <typename T>
+ring_vector<T> sort_rings_largest_to_smallest(ring_manager<T>& manager) {
+    ring_vector<T> sorted_rings;
+    sorted_rings.reserve(manager.rings.size());
+    for (auto& r : manager.rings) {
+        sorted_rings.push_back(&r);
+    }
+    std::stable_sort(sorted_rings.begin(), sorted_rings.end(),
+                     [](ring_ptr<T> const& r1, ring_ptr<T> const& r2) {
+                         if (!r1->points || !r2->points) {
+                             return r1->points != nullptr;
+                         }
+                         return std::fabs(r1->area()) > std::fabs(r2->area());
+                     });
+    return sorted_rings;
+}
+
+template <typename T>
+ring_vector<T> sort_rings_smallest_to_largest(ring_manager<T>& manager) {
+    ring_vector<T> sorted_rings;
+    sorted_rings.reserve(manager.rings.size());
+    for (auto& r : manager.rings) {
+        sorted_rings.push_back(&r);
+    }
+    std::stable_sort(sorted_rings.begin(), sorted_rings.end(),
+                     [](ring_ptr<T> const& r1, ring_ptr<T> const& r2) {
+                         if (!r1->points || !r2->points) {
+                             return r1->points != nullptr;
+                         }
+                         return std::fabs(r1->area()) < std::fabs(r2->area());
+                     });
+    return sorted_rings;
+}
+
+template <typename T>
+struct collinear_path {
+    // Collinear edges are in opposite directions
+    // such that start_1 is at the same position
+    // of end_2 and vise versa. Start to end is
+    // always forward (next) on path.
+    point_ptr<T> start_1;
+    point_ptr<T> end_1;
+    point_ptr<T> start_2;
+    point_ptr<T> end_2;
+};
+
+template <typename T>
+struct collinear_result {
+    point_ptr<T> pt1;
+    point_ptr<T> pt2;
+};
+
+template <typename T>
+collinear_result<T> fix_collinear_path(collinear_path<T>& path) {
+    // Left and right are just the opposite ends of the
+    // collinear path, they may not be actually left
+    // and right of each other.
+    // The left end is start_1 and end_2
+    // The right end is start_2 and end_1
+
+    // NOTE spike detection is checking that the
+    // pointers are the same values, not position!
+    // additionally duplicate points we will treat
+    // if they are a spike left.
+    bool spike_left = (path.start_1 == path.end_2);
+    bool spike_right = (path.start_2 == path.end_1);
+
+    if (spike_left && spike_right) {
+        // If both ends are spikes we should simply
+        // delete all the points. (they should be in a loop)
+        point_ptr<T> itr = path.start_1;
+        while (itr != nullptr) {
+            itr->prev->next = nullptr;
+            itr->prev = nullptr;
+            itr->ring = nullptr;
+            itr = itr->next;
+        }
+        return { nullptr, nullptr };
+    } else if (spike_left) {
+        point_ptr<T> prev = path.start_2->prev;
+        point_ptr<T> itr = path.start_2;
+        while (itr != path.end_1) {
+            itr->prev->next = nullptr;
+            itr->prev = nullptr;
+            itr->ring = nullptr;
+            itr = itr->next;
+        }
+        prev->next = path.end_1;
+        path.end_1->prev = prev;
+        return { path.end_1, nullptr };
+    } else if (spike_right) {
+        point_ptr<T> prev = path.start_1->prev;
+        point_ptr<T> itr = path.start_1;
+        while (itr != path.end_2) {
+            itr->prev->next = nullptr;
+            itr->prev = nullptr;
+            itr->ring = nullptr;
+            itr = itr->next;
+        }
+        prev->next = path.end_2;
+        path.end_2->prev = prev;
+        return { path.end_2, nullptr };
+    } else {
+        point_ptr<T> prev_1 = path.start_1->prev;
+        point_ptr<T> prev_2 = path.start_2->prev;
+        point_ptr<T> itr = path.start_1;
+        do {
+            itr->prev->next = nullptr;
+            itr->prev = nullptr;
+            itr->ring = nullptr;
+            itr = itr->next;
+        } while (itr != path.end_1 && itr != nullptr);
+        itr = path.start_2;
+        do {
+            itr->prev->next = nullptr;
+            itr->prev = nullptr;
+            itr->ring = nullptr;
+            itr = itr->next;
+        } while (itr != path.end_2 && itr != nullptr);
+        if (path.start_1 == path.end_1 && path.start_2 == path.end_2) {
+            return { nullptr, nullptr };
+        } else if (path.start_1 == path.end_1) {
+            prev_2->next = path.end_2;
+            path.end_2->prev = prev_2;
+            return { path.end_2, nullptr };
+        } else if (path.start_2 == path.end_2) {
+            prev_1->next = path.end_1;
+            path.end_1->prev = prev_1;
+            return { path.end_1, nullptr };
+        } else {
+            prev_1->next = path.end_2;
+            path.end_2->prev = prev_1;
+            prev_2->next = path.end_1;
+            path.end_1->prev = prev_2;
+            return { path.end_1, path.end_2 };
+        }
+    }
+}
+
+template <typename T>
+collinear_path<T> find_start_and_end_of_collinear_edges(point_ptr<T> pt_a, point_ptr<T> pt_b) {
+    // Search backward on A, forwards on B first
+    bool same_ring = pt_a->ring == pt_b->ring;
+    point_ptr<T> back = pt_a;
+    point_ptr<T> forward = pt_b;
+    bool first = true;
+    do {
+        while (*(back->prev) == *back && back != forward) {
+            back = back->prev;
+            if (back == pt_a) {
+                break;
+            }
+        }
+        if (back == forward) {
+            back = back->prev;
+            forward = forward->next;
+            break;
+        }
+        while (*(forward->next) == *forward && back != forward) {
+            forward = forward->next;
+            if (forward == pt_b) {
+                break;
+            }
+        }
+        if (!first && (back == pt_a || forward == pt_b)) {
+            break;
+        }
+        if (back == forward) {
+            back = back->prev;
+            forward = forward->next;
+            break;
+        }
+        back = back->prev;
+        forward = forward->next;
+        first = false;
+    } while (*back == *forward);
+    point_ptr<T> start_a = back->next;
+    // If there are repeated points at the diverge we want to select
+    // only the first of those repeated points.
+    while (!same_ring && *start_a == *start_a->next && start_a != pt_a) {
+        start_a = start_a->next;
+    }
+    point_ptr<T> end_b = forward->prev;
+    while (!same_ring && *end_b == *end_b->prev && end_b != pt_b) {
+        end_b = end_b->prev;
+    }
+    // Search backward on B, forwards on A next
+    back = pt_b;
+    forward = pt_a;
+    first = true;
+    do {
+        while (*(back->prev) == *back && back != forward) {
+            back = back->prev;
+            if (back == pt_b) {
+                break;
+            }
+        }
+        if (back == forward) {
+            back = back->prev;
+            forward = forward->next;
+            break;
+        }
+        while (*(forward->next) == *forward && back != forward) {
+            forward = forward->next;
+            if (forward == pt_a) {
+                break;
+            }
+        }
+        if (!first && (back == pt_b || forward == pt_a)) {
+            break;
+        }
+        if (back == forward || (!first && (back == end_b || forward == start_a))) {
+            back = back->prev;
+            forward = forward->next;
+            break;
+        }
+        back = back->prev;
+        forward = forward->next;
+        first = false;
+    } while (*back == *forward);
+    point_ptr<T> start_b = back->next;
+    while (!same_ring && *start_b == *start_b->next && start_b != pt_b) {
+        start_b = start_b->next;
+    }
+    point_ptr<T> end_a = forward->prev;
+    while (!same_ring && *end_a == *end_a->prev && end_a != pt_a) {
+        end_a = end_a->prev;
+    }
+    return { start_a, end_a, start_b, end_b };
+}
+
+template <typename T>
+bool has_collinear_edge(point_ptr<T> pt_a, point_ptr<T> pt_b) {
+    // It is assumed pt_a and pt_b are at the same location.
+    return (*pt_a->next == *pt_b->prev || *pt_b->next == *pt_a->prev);
+}
+
+template <typename T>
+void process_collinear_edges_same_ring(point_ptr<T> pt_a,
+                                       point_ptr<T> pt_b,
+                                       ring_manager<T>& manager) {
+    ring_ptr<T> original_ring = pt_a->ring;
+    // As they are the same ring that are forming a collinear edge
+    // we should expect the creation of two different rings.
+    auto path = find_start_and_end_of_collinear_edges(pt_a, pt_b);
+    auto results = fix_collinear_path(path);
+    if (results.pt1 == nullptr) {
+        // If pt1 is a nullptr, both values
+        // are nullptrs. This mean the ring was
+        // removed during this processing.
+        remove_ring(original_ring, manager, false);
+    } else if (results.pt2 == nullptr) {
+        // If a single point is only returned, we simply removed a spike.
+        // In this case, we don't need to worry about parent or children
+        // and we simply need to set the points and clear the area
+        original_ring->points = results.pt1;
+        original_ring->recalculate_stats();
+    } else {
+        // If we have two seperate points, the ring has split into
+        // two different rings.
+        ring_ptr<T> ring_new = create_new_ring(manager);
+        ring_new->points = results.pt2;
+        ring_new->recalculate_stats();
+        update_points_ring(ring_new);
+        original_ring->points = results.pt1;
+        original_ring->recalculate_stats();
+    }
+}
+
+template <typename T>
+void process_collinear_edges_different_rings(point_ptr<T> pt_a,
+                                             point_ptr<T> pt_b,
+                                             ring_manager<T>& manager) {
+    ring_ptr<T> ring_a = pt_a->ring;
+    ring_ptr<T> ring_b = pt_b->ring;
+    bool ring_a_larger = std::fabs(ring_a->area()) > std::fabs(ring_b->area());
+    auto path = find_start_and_end_of_collinear_edges(pt_a, pt_b);
+    // This should result in two rings becoming one.
+    auto results = fix_collinear_path(path);
+    if (results.pt1 == nullptr) {
+        remove_ring(ring_a, manager, false);
+        remove_ring(ring_b, manager, false);
+        return;
+    }
+    // Rings should merge into a single ring of the same orientation.
+    // Therefore, we we will need to replace one ring with the other
+    ring_ptr<T> merged_ring = ring_a_larger ? ring_a : ring_b;
+    ring_ptr<T> deleted_ring = ring_a_larger ? ring_b : ring_a;
+
+    merged_ring->points = results.pt1;
+    update_points_ring(merged_ring);
+    merged_ring->recalculate_stats();
+    if (merged_ring->size() < 3) {
+        remove_ring_and_points(merged_ring, manager, false);
+    }
+    remove_ring(deleted_ring, manager, false);
+}
+
+template <typename T>
+bool remove_duplicate_points(point_ptr<T> pt_a, point_ptr<T> pt_b, ring_manager<T>& manager) {
+    if (pt_a->ring == pt_b->ring) {
+        if (pt_a->next == pt_b) {
+            pt_a->next = pt_b->next;
+            pt_a->next->prev = pt_a;
+            pt_b->next = nullptr;
+            pt_b->prev = nullptr;
+            pt_b->ring = nullptr;
+            if (pt_a->ring->points == pt_b) {
+                pt_a->ring->points = pt_a;
+            }
+            return true;
+        } else if (pt_b->next == pt_a) {
+            pt_a->prev = pt_b->prev;
+            pt_a->prev->next = pt_a;
+            pt_b->next = nullptr;
+            pt_b->prev = nullptr;
+            pt_b->ring = nullptr;
+            if (pt_a->ring->points == pt_b) {
+                pt_a->ring->points = pt_a;
+            }
+            return true;
+        }
+    }
+    while (*pt_a->next == *pt_a && pt_a->next != pt_a) {
+        point_ptr<T> remove = pt_a->next;
+        pt_a->next = remove->next;
+        pt_a->next->prev = pt_a;
+        remove->next = nullptr;
+        remove->prev = nullptr;
+        remove->ring = nullptr;
+        if (pt_a->ring->points == remove) {
+            pt_a->ring->points = pt_a;
+        }
+    }
+    while (*pt_a->prev == *pt_a && pt_a->prev != pt_a) {
+        point_ptr<T> remove = pt_a->prev;
+        pt_a->prev = remove->prev;
+        pt_a->prev->next = pt_a;
+        remove->next = nullptr;
+        remove->prev = nullptr;
+        remove->ring = nullptr;
+        if (pt_a->ring->points == remove) {
+            pt_a->ring->points = pt_a;
+        }
+    }
+    if (pt_a->next == pt_a) {
+        remove_ring_and_points(pt_a->ring, manager, false);
+        return true;
+    }
+    if (pt_b->ring == nullptr) {
+        return true;
+    }
+    while (*pt_b->next == *pt_b && pt_b->next != pt_b) {
+        point_ptr<T> remove = pt_b->next;
+        pt_b->next = remove->next;
+        pt_b->next->prev = pt_b;
+        remove->next = nullptr;
+        remove->prev = nullptr;
+        remove->ring = nullptr;
+        if (pt_b->ring->points == remove) {
+            pt_b->ring->points = pt_b;
+        }
+    }
+    while (*pt_b->prev == *pt_b && pt_b->prev != pt_b) {
+        point_ptr<T> remove = pt_b->prev;
+        pt_b->prev = remove->prev;
+        pt_b->prev->next = pt_b;
+        remove->next = nullptr;
+        remove->prev = nullptr;
+        remove->ring = nullptr;
+        if (pt_b->ring->points == remove) {
+            pt_b->ring->points = pt_b;
+        }
+    }
+    if (pt_b->next == pt_b) {
+        remove_ring_and_points(pt_b->ring, manager, false);
+        return true;
+    }
+    if (pt_a->ring == nullptr) {
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+bool process_collinear_edges(point_ptr<T> pt_a, point_ptr<T> pt_b, ring_manager<T>& manager) {
+    // Neither point assigned to a ring (deleted points)
+    if (!pt_a->ring || !pt_b->ring) {
+        return false;
+    }
+
+    if (remove_duplicate_points(pt_a, pt_b, manager)) {
+        return true;
+    }
+
+    if (!has_collinear_edge(pt_a, pt_b)) {
+        if (pt_a->ring == pt_b->ring) {
+            correct_self_intersection(pt_a, pt_b, manager);
+            return true;
+        }
+        return false;
+    }
+
+    if (pt_a->ring == pt_b->ring) {
+        process_collinear_edges_same_ring(pt_a, pt_b, manager);
+    } else {
+        process_collinear_edges_different_rings(pt_a, pt_b, manager);
+    }
+    return true;
+}
+
+template <typename T>
+void correct_collinear_repeats(ring_manager<T>& manager,
+                               point_vector_itr<T> const& begin,
+                               point_vector_itr<T> const& end) {
+    for (auto itr1 = begin; itr1 != end; ++itr1) {
+        if ((*itr1)->ring == nullptr) {
+            continue;
+        }
+        for (auto itr2 = begin; itr2 != end;) {
+            if ((*itr1)->ring == nullptr) {
+                break;
+            }
+            if ((*itr2)->ring == nullptr || *itr2 == *itr1) {
+                ++itr2;
+                continue;
+            }
+            if (process_collinear_edges(*itr1, *itr2, manager)) {
+                itr2 = begin;
+            } else {
+                ++itr2;
+            }
+        }
+    }
+}
+
+template <typename T>
+void correct_collinear_edges(ring_manager<T>& manager) {
+
+    if (manager.all_points.size() < 2) {
+        return;
+    }
+    std::size_t count = 0;
+    auto prev_itr = manager.all_points.begin();
+    auto itr = std::next(prev_itr);
+    while (itr != manager.all_points.end()) {
+        if (*(*prev_itr) == *(*(itr))) {
+            ++count;
+            ++prev_itr;
+            ++itr;
+            if (itr != manager.all_points.end()) {
+                continue;
+            } else {
+                ++prev_itr;
+            }
+        } else {
+            ++prev_itr;
+            ++itr;
+        }
+        if (count == 0) {
+            continue;
+        }
+        auto first = prev_itr;
+        std::advance(first, -(static_cast<int>(count) + 1));
+        correct_collinear_repeats(manager, first, prev_itr);
+        count = 0;
+    }
+}
+
+template <typename T>
+void correct_tree(ring_manager<T>& manager) {
+
+    // It is possible that vatti resulted in some parent child
+    // relationships that are not quite right, therefore, we
+    // need to just rebuild the entire tree of rings
+
+    // First lets process the rings in order of size from largest
+    // area to smallest, we know right away that no smaller ring could ever
+    // contain a larger ring so we can use this to our advantage
+    // as we iterate over the rings.
+    using rev_itr = typename ring_vector<T>::reverse_iterator;
+    ring_vector<T> sorted_rings = sort_rings_largest_to_smallest(manager);
+    for (auto itr = sorted_rings.begin(); itr != sorted_rings.end(); ++itr) {
+        if ((*itr)->points == nullptr) {
+            continue;
+        }
+        if ((*itr)->size() < 3 || value_is_zero((*itr)->area())) {
+            remove_ring_and_points(*itr, manager, false);
+            continue;
+        }
+        (*itr)->corrected = true;
+        bool found = false;
+        // Search in reverse from the current iterator back to the begining
+        // to see if any of those rings might be its parent.
+        for (auto r_itr = rev_itr(itr); r_itr != sorted_rings.rend(); ++r_itr) {
+            // If orientations are not different, this can't be its parent.
+            if ((*r_itr)->is_hole() == (*itr)->is_hole()) {
+                continue;
+            }
+            if (poly2_contains_poly1(*itr, *r_itr)) {
+                reassign_as_child(*itr, *r_itr, manager);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            if ((*itr)->is_hole()) {
+                throw std::runtime_error("Could not properly place hole to a parent.");
+            } else {
+                // Assign to base of tree by passing nullptr
+                reassign_as_child(*itr, static_cast<ring_ptr<T>>(nullptr), manager);
+            }
+        }
+    }
+}
+
+template <typename T>
+bool correct_self_intersections(ring_manager<T>& manager, bool correct_tree) {
+    bool fixed_intersections = false;
+    auto sorted_rings = sort_rings_smallest_to_largest(manager);
+    for (auto const& r : sorted_rings) {
+        if (correct_ring_self_intersections(manager, r, correct_tree)) {
+            fixed_intersections = true;
+        }
+    }
+    return fixed_intersections;
+}
+
+template <typename T>
+void correct_topology(ring_manager<T>& manager) {
+
+    // Sort all the points, this will be used for the locating of chained rings
+    // and the collinear edges and only needs to be done once.
+    std::stable_sort(manager.all_points.begin(), manager.all_points.end(), point_ptr_cmp<T>());
+
+    // Initially the orientations of the rings
+    // could be incorrect, we need to adjust them
+    correct_orientations(manager);
+
+    // We should only have to fix collinear edges once.
+    // During this we also correct self intersections
+    correct_collinear_edges(manager);
+
+    correct_self_intersections(manager, false);
+
+    correct_tree(manager);
+
+    bool fixed_intersections = true;
+    while (fixed_intersections) {
+        correct_chained_rings(manager);
+        fixed_intersections = correct_self_intersections(manager, true);
     }
 }
 }

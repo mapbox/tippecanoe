@@ -1,3 +1,7 @@
+## 1.31.0
+
+* Upgrade Wagyu to version 0.4.3
+
 ## 1.30.6
 
 * Take cluster distance into account when guessing a maxzoom
