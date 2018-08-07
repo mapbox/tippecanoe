@@ -1,3 +1,7 @@
+## 1.31.1
+
+* Add --exclude-all to tile-join
+
 ## 1.31.0
 
 * Upgrade Wagyu to version 0.4.3

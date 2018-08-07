@@ -45,6 +45,7 @@ int quiet = false;
 int maxzoom = 32;
 int minzoom = 0;
 std::map<std::string, std::string> renames;
+bool exclude_all = false;
 
 struct stats {
 	int minzoom;
@@ -217,7 +218,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					continue;
 				}
 
-				if (exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
+				if (!exclude_all && exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
 					type_and_string tas;
 					tas.type = type;
 					tas.string = value;
@@ -250,7 +251,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
+							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
@@ -825,7 +826,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 }
 
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-X] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
 }
 
@@ -868,6 +869,7 @@ int main(int argc, char **argv) {
 		{"prevent", required_argument, 0, 'p'},
 		{"csv", required_argument, 0, 'c'},
 		{"exclude", required_argument, 0, 'x'},
+		{"exclude-all", no_argument, 0, 'X'},
 		{"layer", required_argument, 0, 'l'},
 		{"exclude-layer", required_argument, 0, 'L'},
 		{"quiet", no_argument, 0, 'q'},
@@ -976,6 +978,10 @@ int main(int argc, char **argv) {
 
 		case 'x':
 			exclude.insert(std::string(optarg));
+			break;
+
+		case 'X':
+			exclude_all = true;
 			break;
 
 		case 'l':
