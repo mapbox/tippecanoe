@@ -99,7 +99,7 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 				}
 				found_geometries++;
 
-				jfa->add_feature(j, NULL, NULL, NULL, j);
+				jfa->add_feature(j, false, NULL, NULL, NULL, NULL);
 				json_free(j);
 				continue;
 			}
@@ -140,12 +140,9 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 
 		json_object *geometries = json_hash_get(geometry, "geometries");
 		if (geometries != NULL && geometries->type == JSON_ARRAY) {
-			size_t g;
-			for (g = 0; g < geometries->length; g++) {
-				jfa->add_feature(geometries->array[g], properties, id, tippecanoe, j);
-			}
+			jfa->add_feature(geometries, true, properties, id, tippecanoe, j);
 		} else {
-			jfa->add_feature(geometry, properties, id, tippecanoe, j);
+			jfa->add_feature(geometry, false, properties, id, tippecanoe, j);
 		}
 
 		json_free(j);

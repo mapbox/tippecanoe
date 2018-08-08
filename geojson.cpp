@@ -233,8 +233,16 @@ struct json_serialize_action : json_feature_action {
 	int layer;
 	std::string layername;
 
-	int add_feature(json_object *geometry, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
-		return serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, feature, layername);
+	int add_feature(json_object *geometry, bool geometrycollection, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
+		if (geometrycollection) {
+			int ret = 1;
+			for (size_t g = 0; g < geometry->length; g++) {
+				ret &= serialize_geojson_feature(sst, geometry->array[g], properties, id, layer, tippecanoe, feature, layername);
+			}
+			return ret;
+		} else {
+			return serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, feature, layername);
+		}
 	}
 
 	void check_crs(json_object *j) {

@@ -10,6 +10,7 @@
 #include "jsonpull/jsonpull.h"
 #include "csv.hpp"
 #include "text.hpp"
+#include "geojson-loop.hpp"
 
 int fail = EXIT_SUCCESS;
 bool wrap = false;
@@ -362,70 +363,34 @@ void join_csv(json_object *j) {
 	}
 }
 
+struct json_join_action : json_feature_action {
+	int add_feature(json_object *geometry, bool geometrycollection, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
+		if (feature != NULL) {
+			if (csvfile != NULL) {
+				join_csv(feature);
+			}
+
+			char *s = json_stringify(feature);
+			out(s, 1, json_hash_get(feature, "properties"));
+			free(s);
+		} else {
+			char *s = json_stringify(geometry);
+			out(s, 2, NULL);
+			free(s);
+		}
+
+		return 1;
+	}
+
+	void check_crs(json_object *j) {
+	}
+};
+
 void process(FILE *fp, const char *fname) {
 	json_pull *jp = json_begin_file(fp);
 
-	while (1) {
-		json_object *j = json_read(jp);
-		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
-			}
-
-			json_free(jp->root);
-			break;
-		}
-
-		json_object *type = json_hash_get(j, "type");
-		if (type == NULL || type->type != JSON_STRING) {
-			continue;
-		}
-
-		if (strcmp(type->string, "Feature") == 0) {
-			if (csvfile != NULL) {
-				join_csv(j);
-			}
-
-			char *s = json_stringify(j);
-			out(s, 1, json_hash_get(j, "properties"));
-			free(s);
-			json_free(j);
-		} else if (strcmp(type->string, "Point") == 0 ||
-			   strcmp(type->string, "MultiPoint") == 0 ||
-			   strcmp(type->string, "LineString") == 0 ||
-			   strcmp(type->string, "MultiLineString") == 0 ||
-			   strcmp(type->string, "MultiPolygon") == 0) {
-			int is_geometry = 1;
-
-			if (j->parent != NULL) {
-				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
-					if (j->parent->parent->type == JSON_HASH) {
-						json_object *geometries = json_hash_get(j->parent->parent, "geometries");
-						if (geometries != NULL) {
-							// Parent of Parent must be a GeometryCollection
-							is_geometry = 0;
-						}
-					}
-				} else if (j->parent->type == JSON_HASH) {
-					json_object *geometry = json_hash_get(j->parent, "geometry");
-					if (geometry != NULL) {
-						// Parent must be a Feature
-						is_geometry = 0;
-					}
-				}
-			}
-
-			if (is_geometry) {
-				char *s = json_stringify(j);
-				out(s, 2, NULL);
-				free(s);
-				json_free(j);
-			}
-		} else if (strcmp(type->string, "FeatureCollection") == 0) {
-			json_free(j);
-		}
-	}
-
+	json_join_action jja;
+	parse_json(&jja, jp);
 	json_end(jp);
 }
 
