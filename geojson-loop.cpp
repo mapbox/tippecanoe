@@ -113,7 +113,7 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 				}
 				found_geometries++;
 
-				jfa->add_feature(j, false, NULL, NULL, NULL, NULL);
+				jfa->add_feature(j, false, NULL, NULL, NULL, j);
 				json_free(j);
 				continue;
 			}

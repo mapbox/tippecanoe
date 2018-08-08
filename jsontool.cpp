@@ -365,7 +365,7 @@ void join_csv(json_object *j) {
 
 struct json_join_action : json_feature_action {
 	int add_feature(json_object *geometry, bool, json_object *, json_object *, json_object *, json_object *feature) {
-		if (feature != NULL) {
+		if (feature != geometry) {  // a real feature, not a bare geometry
 			if (csvfile != NULL) {
 				join_csv(feature);
 			}
