@@ -1270,6 +1270,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				".geobuf",
 				".mbtiles",
 				".csv",
+				".shp",
 				".gz",
 			};
 
@@ -1424,7 +1425,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			continue;
 		}
 
-		if (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".shp")) {
+		if (sources[source].format == "shp" || (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".shp"))) {
 			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
 			size_t dist_counts[CPUS];
@@ -1473,6 +1474,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			checkdisk(&readers);
 			continue;
 		}
+
 		if (sources[source].format == "csv" || (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".csv"))) {
 			std::atomic<long long> layer_seq[CPUS];
 			double dist_sums[CPUS];
