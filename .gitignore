@@ -34,10 +34,11 @@ tippecanoe
 tile-join
 tippecanoe-decode
 tippecanoe-enumerate
+tippecanoe-json-tool
 unit
 
 # Vim
 *.swp
 
-# Mac 
+# Mac
 .DS_Store

@@ -1,0 +1,6 @@
+ignore:
+  - "test"
+
+coverage:
+  status:
+    patch: off

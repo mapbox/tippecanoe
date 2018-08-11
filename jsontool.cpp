@@ -9,6 +9,8 @@
 #include <vector>
 #include "jsonpull/jsonpull.h"
 #include "csv.hpp"
+#include "text.hpp"
+#include "geojson-loop.hpp"
 
 int fail = EXIT_SUCCESS;
 bool wrap = false;
@@ -17,6 +19,7 @@ const char *extract = NULL;
 FILE *csvfile = NULL;
 std::vector<std::string> header;
 std::vector<std::string> fields;
+int pe = false;
 
 std::string buffered;
 int buffered_type = -1;
@@ -208,6 +211,12 @@ void join_csv(json_object *j) {
 			exit(EXIT_FAILURE);
 		}
 
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s\n", err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
@@ -264,6 +273,12 @@ void join_csv(json_object *j) {
 				break;
 			}
 
+			std::string err = check_utf8(s);
+			if (err != "") {
+				fprintf(stderr, "%s\n", err.c_str());
+				exit(EXIT_FAILURE);
+			}
+
 			fields = csv_split(s.c_str());
 
 			for (size_t i = 0; i < fields.size(); i++) {
@@ -305,7 +320,11 @@ void join_csv(json_object *j) {
 				} else if (is_number(v)) {
 					attr_type = JSON_NUMBER;
 				}
+			} else if (pe) {
+				attr_type = JSON_NULL;
+			}
 
+			if (attr_type != JSON_NULL) {
 				// This knows more about the structure of JSON objects than it ought to
 
 				json_object *ko = (json_object *) malloc(sizeof(json_object));
@@ -344,70 +363,35 @@ void join_csv(json_object *j) {
 	}
 }
 
+struct json_join_action : json_feature_action {
+	int add_feature(json_object *geometry, bool, json_object *, json_object *, json_object *, json_object *feature) {
+		if (feature != geometry) {  // a real feature, not a bare geometry
+			if (csvfile != NULL) {
+				join_csv(feature);
+			}
+
+			char *s = json_stringify(feature);
+			out(s, 1, json_hash_get(feature, "properties"));
+			free(s);
+		} else {
+			char *s = json_stringify(geometry);
+			out(s, 2, NULL);
+			free(s);
+		}
+
+		return 1;
+	}
+
+	void check_crs(json_object *) {
+	}
+};
+
 void process(FILE *fp, const char *fname) {
 	json_pull *jp = json_begin_file(fp);
 
-	while (1) {
-		json_object *j = json_read(jp);
-		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", fname, jp->line, jp->error);
-			}
-
-			json_free(jp->root);
-			break;
-		}
-
-		json_object *type = json_hash_get(j, "type");
-		if (type == NULL || type->type != JSON_STRING) {
-			continue;
-		}
-
-		if (strcmp(type->string, "Feature") == 0) {
-			if (csvfile != NULL) {
-				join_csv(j);
-			}
-
-			char *s = json_stringify(j);
-			out(s, 1, json_hash_get(j, "properties"));
-			free(s);
-			json_free(j);
-		} else if (strcmp(type->string, "Point") == 0 ||
-			   strcmp(type->string, "MultiPoint") == 0 ||
-			   strcmp(type->string, "LineString") == 0 ||
-			   strcmp(type->string, "MultiLineString") == 0 ||
-			   strcmp(type->string, "MultiPolygon") == 0) {
-			int is_geometry = 1;
-
-			if (j->parent != NULL) {
-				if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
-					if (j->parent->parent->type == JSON_HASH) {
-						json_object *geometries = json_hash_get(j->parent->parent, "geometries");
-						if (geometries != NULL) {
-							// Parent of Parent must be a GeometryCollection
-							is_geometry = 0;
-						}
-					}
-				} else if (j->parent->type == JSON_HASH) {
-					json_object *geometry = json_hash_get(j->parent, "geometry");
-					if (geometry != NULL) {
-						// Parent must be a Feature
-						is_geometry = 0;
-					}
-				}
-			}
-
-			if (is_geometry) {
-				char *s = json_stringify(j);
-				out(s, 2, NULL);
-				free(s);
-				json_free(j);
-			}
-		} else if (strcmp(type->string, "FeatureCollection") == 0) {
-			json_free(j);
-		}
-	}
-
+	json_join_action jja;
+	jja.fname = fname;
+	parse_json(&jja, jp);
 	json_end(jp);
 }
 
@@ -418,6 +402,8 @@ int main(int argc, char **argv) {
 		{"wrap", no_argument, 0, 'w'},
 		{"extract", required_argument, 0, 'e'},
 		{"csv", required_argument, 0, 'c'},
+		{"empty-csv-columns-are-null", no_argument, &pe, 1},
+		{"prevent", required_argument, 0, 'p'},
 
 		{0, 0, 0, 0},
 	};
@@ -438,6 +424,9 @@ int main(int argc, char **argv) {
 
 	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
+		case 0:
+			break;
+
 		case 'w':
 			wrap = true;
 			break;
@@ -448,6 +437,15 @@ int main(int argc, char **argv) {
 
 		case 'c':
 			csv = optarg;
+			break;
+
+		case 'p':
+			if (strcmp(optarg, "e") == 0) {
+				pe = true;
+			} else {
+				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		default:

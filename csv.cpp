@@ -1,4 +1,5 @@
 #include "csv.hpp"
+#include "text.hpp"
 
 std::vector<std::string> csv_split(const char *s) {
 	std::vector<std::string> ret;
@@ -25,6 +26,11 @@ std::vector<std::string> csv_split(const char *s) {
 
 			while (*s && isspace(*s)) {
 				s++;
+			}
+
+			if (*s == '\0' || *s == '\r' || *s == '\n') {
+				ret.push_back(std::string(""));
+				break;
 			}
 		}
 	}
@@ -67,6 +73,12 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 
 	std::string s;
 	if ((s = csv_getline(f)).size() > 0) {
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s: %s\n", fn, err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		header = csv_split(s.c_str());
 
 		for (size_t i = 0; i < header.size(); i++) {
@@ -74,6 +86,12 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 		}
 	}
 	while ((s = csv_getline(f)).size() > 0) {
+		std::string err = check_utf8(s);
+		if (err != "") {
+			fprintf(stderr, "%s: %s\n", fn, err.c_str());
+			exit(EXIT_FAILURE);
+		}
+
 		std::vector<std::string> line = csv_split(s.c_str());
 		if (line.size() > 0) {
 			line[0] = csv_dequote(line[0]);
@@ -144,7 +162,12 @@ bool is_number(std::string const &s) {
 			}
 		}
 
-		return true;
+		if (*cp == '\0') {
+			return true;
+		} else {
+			// Something non-numeric at the end
+			return false;
+		}
 	}
 
 	return false;

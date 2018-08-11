@@ -1,0 +1,22 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-122.238615,0.000000,0.000000,38.926337",
+"center": "0.000000,0.000000,0",
+"description": "tests/nonascii/out/-z0.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"unknown0\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} }, { \"id\": \"堤防\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 2,\"layers\": [{\"layer\": \"unknown0\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"堤防\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/nonascii/out/-z0.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "unknown0", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -77.080078, 38.959409 ], [ 0.000000, 0.000000 ] ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "堤防", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.255859, 37.788081 ], [ 0.000000, 0.000000 ] ] } }
+] }
+] }
+] }

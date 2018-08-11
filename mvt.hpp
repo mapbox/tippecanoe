@@ -48,6 +48,7 @@ struct mvt_feature {
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;
+	bool dropped = false;
 
 	mvt_feature() {
 		has_id = false;
@@ -76,6 +77,7 @@ struct mvt_value {
 		unsigned long long uint_value;
 		long long sint_value;
 		bool bool_value;
+		int null_value;
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;

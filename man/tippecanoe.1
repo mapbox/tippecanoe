@@ -1,10 +1,12 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or Shapefile \[la]https://en.wikipedia.org/wiki/Shapefile\[ra] features,
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], Shapefile \[la]https://en.wikipedia.org/wiki/Shapefile\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
+[Mapbox Tippecanoe](\[la]https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG\[ra])
+.PP
 [Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
-[Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github) \[la]https://coveralls.io/github/mapbox/tippecanoe?branch=master\[ra]
+[Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg) \[la]https://codecov.io/gh/mapbox/tippecanoe\[ra]
 .SH Intent
 .PP
 The goal of Tippecanoe is to enable making a scale\-independent view of your data,
@@ -33,11 +35,26 @@ The easiest way to install tippecanoe on OSX is with Homebrew \[la]http://brew.s
 $ brew install tippecanoe
 .fi
 .RE
+.PP
+On Ubuntu it will usually be easiest to build from the source repository:
+.PP
+.RS
+.nf
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make \-j
+$ make install
+.fi
+.RE
+.PP
+See Development \[la]#development\[ra] below for how to upgrade your
+C++ compiler or install prerequisite packages if you get
+compiler errors.
 .SH Usage
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [options] [file.json file.geobuf ...]
+$ tippecanoe \-o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
 .fi
 .RE
 .PP
@@ -132,15 +149,29 @@ or if metadata fields can't be set. You probably don't want to use this.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json\fR or \fIname\fP\fB\fC\&.geojson\fR: Read the named GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
-\fIname\fP\fB\fC\&.geobuf\fR or \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+\fIname\fP\fB\fC\&.json.gz\fR or \fIname\fP\fB\fC\&.geojson.gz\fR: Read the named gzipped GeoJSON input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.shp\fR or \fIname\fP\fB\fC\&.shp\fR: Read the named Shapefile input file into a layer called \fIname\fP\&. Note that \fIname\fP\fB\fC\&.dbf\fR must also exist.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.csv\fR: Read the named CSV input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fB\fC\-l\fR \fIname\fP or \fB\fC\-\-layer=\fR\fIname\fP: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
 specified, the files are all merged into the single named layer, even if they try to specify individual names with \fB\fC\-L\fR\&.
 .IP \(bu 2
 \fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
+.IP \(bu 2
+\fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. (If the \fB\fC"file"\fR key is an empty string, it means to read from the standard input stream.) It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata, and/or a \fB\fC"format"\fR field to specify \fB\fCcsv\fR or \fB\fCgeobuf\fR file format if it is not obvious from the \fB\fCname\fR\&. Example:
 .RE
+.PP
+.RS
+.nf
+tippecanoe \-z5 \-o world.mbtiles \-L'{"file":"ne_10m_admin_0_countries.json", "layer":"countries", "description":"Natural Earth countries"}'
+.fi
+.RE
+.PP
+CSV input files currently support only Point geometries, from columns named \fB\fClatitude\fR, \fB\fClongitude\fR, \fB\fClat\fR, \fB\fClon\fR, \fB\fClong\fR, \fB\fClng\fR, \fB\fCx\fR, or \fB\fCy\fR\&.
 .SS Parallel processing of input
 .RS
 .IP \(bu 2
@@ -174,6 +205,9 @@ Parallel processing will also be automatic if the input file is in Geobuf format
 \fB\fC\-ae\fR or \fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: Increase the maxzoom if features are still being dropped at that zoom level.
 The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
 specified maximum zoom and to any levels added beyond that.
+.IP \(bu 2
+\fB\fC\-R\fR \fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP or \fB\fC\-\-one\-tile=\fR\fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP: Set the minzoom and maxzoom to \fIzoom\fP and produce only
+the single specified tile at that zoom level.
 .RE
 .SS Tile resolution
 .RS
@@ -191,11 +225,14 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .SS Filtering feature attributes
 .RS
 .IP \(bu 2
-\fB\fC\-x\fR \fIname\fP or \fB\fC\-\-exclude=\fR\fIname\fP: Exclude the named properties from all features
+\fB\fC\-x\fR \fIname\fP or \fB\fC\-\-exclude=\fR\fIname\fP: Exclude the named attributes from all features
 .IP \(bu 2
-\fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named properties in all features, excluding all those not explicitly named
+\fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named attributes in all features, excluding all those not explicitly named
 .IP \(bu 2
-\fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Exclude all properties and encode only geometries
+\fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Exclude all attributes and encode only geometries
+.RE
+.SS Modifying feature attributes
+.RS
 .IP \(bu 2
 \fB\fC\-T\fR\fIattribute\fP\fB\fC:\fR\fItype\fP or \fB\fC\-\-attribute\-type=\fR\fIattribute\fP\fB\fC:\fR\fItype\fP: Coerce the named feature \fIattribute\fP to be of the specified \fItype\fP\&.
 The \fItype\fP may be \fB\fCstring\fR, \fB\fCfloat\fR, \fB\fCint\fR, or \fB\fCbool\fR\&.
@@ -203,7 +240,19 @@ If the type is \fB\fCbool\fR, then original attributes of \fB\fC0\fR (or, if num
 If the type is \fB\fCfloat\fR or \fB\fCint\fR and the original attribute was non\-numeric, it becomes \fB\fC0\fR\&.
 If the type is \fB\fCint\fR and the original attribute was floating\-point, it is rounded to the nearest integer.
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
+\fB\fC\-Y\fR\fIattribute\fP\fB\fC:\fR\fIdescription\fP or \fB\fC\-\-attribute\-description=\fR\fIattribute\fP\fB\fC:\fR\fIdescription\fP: Set the \fB\fCdescription\fR for the specified attribute in the tileset metadata to \fIdescription\fP instead of the usual \fB\fCString\fR, \fB\fCNumber\fR, or \fB\fCBoolean\fR\&.
+.IP \(bu 2
+\fB\fC\-E\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP or \fB\fC\-\-accumulate\-attribute=\fR\fIattribute\fP\fB\fC:\fR\fIoperation\fP: Preserve the named \fIattribute\fP from features
+that are dropped, coalesced\-as\-needed, or clustered. The \fIoperation\fP may be
+\fB\fCsum\fR, \fB\fCproduct\fR, \fB\fCmean\fR, \fB\fCmax\fR, \fB\fCmin\fR, \fB\fCconcat\fR, or \fB\fCcomma\fR
+to specify how the named \fIattribute\fP is accumulated onto the attribute of the same name in a feature that does survive.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
+.RE
+.SS Filtering features by attributes
+.RS
+.IP \(bu 2
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers. The special variable \fB\fC$zoom\fR refers to the current zoom level.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
@@ -215,6 +264,27 @@ Example: to find the Natural Earth countries with low \fB\fCscalerank\fR but hig
 tippecanoe \-z5 \-o filtered.mbtiles \-j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 .fi
 .RE
+.PP
+Example: to retain only major TIGER roads at low zoom levels:
+.PP
+.RS
+.nf
+tippecanoe \-o roads.mbtiles \-j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
+.fi
+.RE
+.PP
+Tippecanoe also accepts expressions of the form \fB\fC[ "attribute\-filter", name, expression ]\fR, to filter individual feature attributes
+instead of entire features. For example, you can exclude the road names at low zoom levels by doing
+.PP
+.RS
+.nf
+tippecanoe \-o roads.mbtiles \-j '{ "*": [ "attribute\-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }' tl_2015_06001_roads.json
+.fi
+.RE
+.PP
+An \fB\fCattribute\-filter\fR expression itself is always considered to evaluate to \fB\fCtrue\fR (in other words, to retain the feature instead
+of dropping it). If you want to use multiple \fB\fCattribute\-filter\fR expressions, or to use other expressions to remove features from
+the same layer, enclose them in an \fB\fCall\fR expression so they will all be evaluated.
 .SS Dropping a fixed fraction of features by zoom level
 .RS
 .IP \(bu 2
@@ -231,6 +301,8 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 \fB\fC\-al\fR or \fB\fC\-\-drop\-lines\fR: Let "dot" dropping at lower zooms apply to lines too
 .IP \(bu 2
 \fB\fC\-ap\fR or \fB\fC\-\-drop\-polygons\fR: Let "dot" dropping at lower zooms apply to polygons too
+.IP \(bu 2
+\fB\fC\-K\fR \fIdistance\fP or \fB\fC\-\-cluster\-distance=\fR\fIdistance\fP: Cluster points (as with \fB\fC\-\-cluster\-densest\-as\-needed\fR, but without the experimental discovery process) that are approximately within \fIdistance\fP of each other. The units are tile coordinates within a nominally 256\-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 10 are probably appropriate for typical marker sizes. See \fB\fC\-\-cluster\-densest\-as\-needed\fR below for behavior.
 .RE
 .SS Dropping a fraction of features to keep under tile size limits
 .RS
@@ -243,7 +315,13 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
 .IP \(bu 2
+\fB\fC\-aD\fR or \fB\fC\-\-coalesce\-densest\-as\-needed\fR: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
+.IP \(bu 2
+\fB\fC\-aS\fR or \fB\fC\-\-coalesce\-fraction\-as\-needed\fR: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
+.IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
+.IP \(bu 2
+\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster, a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it, and a \fB\fC"sqrt_point_count"\fR attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
 .RE
 .SS Dropping tightly overlapping features
 .RS
@@ -285,9 +363,9 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pi\fR or \fB\fC\-\-preserve\-input\-order\fR: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \fB\fC\-ao\fR).
 .IP \(bu 2
-\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably don't want to use this.
+\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same attributes in sequence, to try to get them to coalesce. You probably want to use this if you use \fB\fC\-\-coalesce\fR\&.
 .IP \(bu 2
-\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
+\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
 .IP \(bu 2
 \fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 .RE
@@ -295,16 +373,24 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .RS
 .IP \(bu 2
 \fB\fC\-ag\fR or \fB\fC\-\-calculate\-feature\-density\fR: Add a new attribute, \fB\fCtippecanoe_feature_density\fR, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+.IP \(bu 2
+\fB\fC\-ai\fR or \fB\fC\-\-generate\-ids\fR: Add an \fB\fCid\fR (a feature ID, not an attribute named \fB\fCid\fR) to each feature that does not already have one. There is currently no guarantee that the \fB\fCid\fR added will be stable between runs or that it will not conflict with manually\-assigned feature IDs. Future versions of Tippecanoe may change the mechanism for allocating IDs.
 .RE
 .SS Trying to correct bad source geometry
 .RS
 .IP \(bu 2
 \fB\fC\-aw\fR or \fB\fC\-\-detect\-longitude\-wraparound\fR: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+.IP \(bu 2
+\fB\fC\-pw\fR or \fB\fC\-\-use\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
+.IP \(bu 2
+\fB\fC\-pW\fR or \fB\fC\-\-reverse\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
 .RE
 .SS Setting or disabling tile size limits
 .RS
 .IP \(bu 2
 \fB\fC\-M\fR \fIbytes\fP or \fB\fC\-\-maximum\-tile\-bytes=\fR\fIbytes\fP: Use the specified number of \fIbytes\fP as the maximum compressed tile size instead of 500K.
+.IP \(bu 2
+\fB\fC\-O\fR \fIfeatures\fP or \fB\fC\-\-maximum\-tile\-features=\fR\fIfeatures\fP: Use the specified number of \fIfeatures\fP as the maximum in a tile instead of 200,000.
 .IP \(bu 2
 \fB\fC\-pf\fR or \fB\fC\-\-no\-feature\-limit\fR: Don't limit tiles to 200,000 features
 .IP \(bu 2
@@ -326,6 +412,8 @@ If you don't specify, it will use \fB\fC/tmp\fR\&.
 \fB\fC\-q\fR or \fB\fC\-\-quiet\fR: Work quietly instead of reporting progress or warning messages
 .IP \(bu 2
 \fB\fC\-Q\fR or \fB\fC\-\-no\-progress\-indicator\fR: Don't report progress, but still give warnings
+.IP \(bu 2
+\fB\fC\-U\fR \fIseconds\fP or \fB\fC\-\-progress\-interval=\fR\fIseconds\fP: Don't report progress more often than the specified number of \fIseconds\fP\&.
 .IP \(bu 2
 \fB\fC\-v\fR or \fB\fC\-\-version\fR: Report Tippecanoe's version number
 .RE
@@ -351,7 +439,7 @@ The postfilter receives the features at tile resolution, after simplification, c
 .PP
 The layer name is provided as part of the \fB\fCtippecanoe\fR element of the feature and must be passed through
 to keep the feature in its correct layer. In the case of the prefilter, the \fB\fCtippecanoe\fR element may also
-contain \fB\fCindex\fR, \fB\fCsequence\fR, and \fB\fCextent\fR elements, which must be passed through for internal operations like
+contain \fB\fCindex\fR, \fB\fCsequence\fR, \fB\fCextent\fR, and \fB\fCdropped\fR, elements, which must be passed through for internal operations like
 \fB\fC\-\-drop\-densest\-as\-needed\fR, \fB\fC\-\-drop\-smallest\-as\-needed\fR, and \fB\fC\-\-preserve\-input\-order\fR to work.
 .SS Examples:
 .RS
@@ -460,7 +548,7 @@ all of them should have had together.
 .PP
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry if you use \fB\fC\-\-coalesce\fR\&. You are strongly encouraged to use \-x to exclude
-any unnecessary properties to reduce wasted file size.
+any unnecessary attributes to reduce wasted file size.
 .PP
 If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
@@ -588,11 +676,15 @@ The options are:
 .IP \(bu 2
 \fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
 .IP \(bu 2
+\fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Remove all attributes from the output.
+.IP \(bu 2
 \fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
 .IP \(bu 2
 \fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .RE
 .SS Setting or disabling tile size limits
 .RS
@@ -728,7 +820,7 @@ tippecanoe\-decode file.vector.pbf zoom x y
 .fi
 .RE
 .PP
-If you decode an entire file, you get a nested \fB\fCFeatureCollection\fR identifying each
+Unless you use \fB\fC\-c\fR, the output is a set of nested FeatureCollections identifying each
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.
@@ -781,7 +873,9 @@ something better.
 The formatting makes excessive use of \fB\fC\\u\fR quoting so that it follows JSON string rules but will still
 be sorted correctly by tools that just do ASCII comparisons.
 .IP \(bu 2
-\fB\fC\-c\fR \fIfile.csv\fP or \fB\fC\-\-csv=\fR\fIfile.csv\fP: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+\fB\fC\-c\fR \fIfile.csv\fP or \fB\fC\-\-csv=\fR\fIfile.csv\fP: Join attributes from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+.IP \(bu 2
+\fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .RE
 .SS Example
 .PP
@@ -816,7 +910,7 @@ $ tippecanoe\-json\-tool \-e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C so
 .fi
 .RE
 .PP
-Join block geometries to employment properties:
+Join block geometries to employment attributes:
 .PP
 .RS
 .nf

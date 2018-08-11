@@ -51,8 +51,9 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
+	json_writer state(fp);
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson(fp, (*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, 0, 0, 0, true);
+		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state);
 	}
 
 	if (fclose(fp) != 0) {
@@ -258,7 +259,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				std::string s;
 
 				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
-				if (tp >= 0) {
+
+				// Nulls can be excluded here because this is the postfilter
+				// and it is nearly time to create the vector representation
+
+				if (tp >= 0 && tp != mvt_null) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
@@ -392,7 +397,6 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.bbox[0] = sf.bbox[1] = LLONG_MAX;
 			sf.bbox[2] = sf.bbox[3] = LLONG_MIN;
 			sf.extent = 0;
-			sf.m = 0;
 			sf.metapos = 0;
 			sf.has_id = false;
 
@@ -417,6 +421,11 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				json_object *extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && sequence->type == JSON_NUMBER) {
 					sf.extent = extent->number;
+				}
+
+				json_object *dropped = json_hash_get(tippecanoe, "dropped");
+				if (dropped != NULL && dropped->type == JSON_TRUE) {
+					sf.dropped = true;
 				}
 			}
 
@@ -488,7 +497,10 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
 
-				if (v.type >= 0) {
+				// Nulls can be excluded here because the expression evaluation filter
+				// would have already run before prefiltering
+
+				if (v.type >= 0 && v.type != mvt_null) {
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));
 					sf.full_values.push_back(v);
 

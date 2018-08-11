@@ -350,7 +350,6 @@ void parse_shapefile(std::vector<struct serialization_state> &sst, std::string f
 			sf.t = type;
 			sf.full_keys = full_keys;
 			sf.full_values = full_values;
-			sf.m = sf.full_values.size();
 
 			serialize_feature(&sst[0], sf);
 		}

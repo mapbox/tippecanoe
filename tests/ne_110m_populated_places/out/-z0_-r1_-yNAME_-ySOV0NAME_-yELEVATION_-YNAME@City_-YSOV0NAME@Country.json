@@ -1,0 +1,502 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-175.220564,-41.299973,179.216647,64.150023",
+"center": "0.000000,0.000000,0",
+"description": "tests/ne_110m_populated_places/out/-z0_-r1_-yNAME_-ySOV0NAME_-yELEVATION_-YNAME@City_-YSOV0NAME@Country.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"ELEVATION\": \"Number\", \"NAME\": \"City\", \"SOV0NAME\": \"Country\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 243,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"ELEVATION\",\"count\": 19,\"type\": \"number\",\"values\": [0,10,1317,16,171,179,187,2,2320,284,308,320,5,7,70,74,850,89,920],\"min\": 0,\"max\": 2320},{\"attribute\": \"NAME\",\"count\": 243,\"type\": \"string\",\"values\": [\"Abidjan\",\"Abu Dhabi\",\"Abuja\",\"Accra\",\"Addis Ababa\",\"Algiers\",\"Amman\",\"Amsterdam\",\"Andorra\",\"Ankara\",\"Antananarivo\",\"Apia\",\"Ashgabat\",\"Asmara\",\"Astana\",\"Asuncion\",\"Athens\",\"Atlanta\",\"Auckland\",\"Baghdad\",\"Baguio City\",\"Baku\",\"Bamako\",\"Bandar Seri Begawan\",\"Bangalore\",\"Bangkok\",\"Bangui\",\"Banjul\",\"Basseterre\",\"Beijing\",\"Beirut\",\"Belgrade\",\"Belmopan\",\"Berlin\",\"Bern\",\"Bir Lehlou\",\"Bishkek\",\"Bissau\",\"Bloemfontein\",\"Bogota\",\"Brasilia\",\"Bratislava\",\"Brazzaville\",\"Bridgetown\",\"Brussels\",\"Bucharest\",\"Budapest\",\"Buenos Aires\",\"Bujumbura\",\"Cairo\",\"Canberra\",\"Cape Town\",\"Caracas\",\"Casablanca\",\"Castries\",\"Chengdu\",\"Chicago\",\"Chisinau\",\"Colombo\",\"Conakry\",\"Cotonou\",\"Dakar\",\"Damascus\",\"Dar es Salaam\",\"Denver\",\"Dhaka\",\"Dili\",\"Djibouti\",\"Dodoma\",\"Doha\",\"Dubai\",\"Dublin\",\"Dushanbe\",\"Freetown\",\"Funafuti\",\"Gaborone\",\"Geneva\",\"Georgetown\",\"Guatemala\",\"Hanoi\",\"Harare\",\"Hargeysa\",\"Havana\",\"Helsinki\",\"Hong Kong\",\"Honiara\",\"Houston\",\"Islamabad\",\"Istanbul\",\"Jakarta\",\"Jerusalem\",\"Johannesburg\",\"Juba\",\"Kabul\",\"Kampala\",\"Kathmandu\",\"Khartoum\",\"Kiev\",\"Kigali\",\"Kingston\"]},{\"attribute\": \"SOV0NAME\",\"count\": 197,\"type\": \"string\",\"values\": [\"Afghanistan\",\"Albania\",\"Algeria\",\"Andorra\",\"Angola\",\"Antigua and Barbuda\",\"Argentina\",\"Armenia\",\"Australia\",\"Austria\",\"Azerbaijan\",\"Bahamas, The\",\"Bahrain\",\"Bangladesh\",\"Barbados\",\"Belarus\",\"Belgium\",\"Belize\",\"Benin\",\"Bhutan\",\"Bolivia\",\"Bosnia and Herzegovina\",\"Botswana\",\"Brazil\",\"Brunei\",\"Bulgaria\",\"Burkina Faso\",\"Burundi\",\"Cambodia\",\"Cameroon\",\"Canada\",\"Cape Verde\",\"Central African Republic\",\"Chad\",\"Chile\",\"China\",\"Colombia\",\"Comoros\",\"Congo (Brazzaville)\",\"Congo (Kinshasa)\",\"Costa Rica\",\"Croatia\",\"Cuba\",\"Cyprus\",\"Czech Republic\",\"Denmark\",\"Djibouti\",\"Dominica\",\"Dominican Republic\",\"East Timor\",\"Ecuador\",\"Egypt\",\"El Salvador\",\"Equatorial Guinea\",\"Eritrea\",\"Estonia\",\"Ethiopia\",\"Federated States of Micronesia\",\"Fiji\",\"Finland\",\"French Republic\",\"Gabon\",\"Gambia, The\",\"Georgia\",\"Germany\",\"Ghana\",\"Greece\",\"Grenada\",\"Guatemala\",\"Guinea\",\"Guinea Bissau\",\"Guyana\",\"Haiti\",\"Honduras\",\"Hungary\",\"Iceland\",\"India\",\"Indonesia\",\"Iran\",\"Iraq\",\"Ireland\",\"Israel\",\"Italy\",\"Ivory Coast\",\"Jamaica\",\"Japan\",\"Jordan\",\"Kazakhstan\",\"Kenya\",\"Kingdom of Norway\",\"Kingdom of Spain\",\"Kingdom of the Netherlands\",\"Kiribati\",\"Korea, North\",\"Korea, South\",\"Kosovo\",\"Kuwait\",\"Kyrgyzstan\",\"Laos\",\"Latvia\"]}]}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/ne_110m_populated_places/out/-z0_-r1_-yNAME_-ySOV0NAME_-yELEVATION_-YNAME@City_-YSOV0NAME@Country.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "NAME": "Vancouver", "SOV0NAME": "Canada", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -123.134766, 49.325122 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "San Francisco", "SOV0NAME": "United States", "ELEVATION": 16 }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Los Angeles", "SOV0NAME": "United States", "ELEVATION": 89 }, "geometry": { "type": "Point", "coordinates": [ -118.212891, 34.016242 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Denver", "SOV0NAME": "United States", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -105.029297, 39.774769 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Monterrey", "SOV0NAME": "Mexico", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -100.371094, 25.720735 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Houston", "SOV0NAME": "United States", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -95.361328, 29.840644 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Mexico City", "SOV0NAME": "Mexico", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -99.140625, 19.476950 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Guatemala", "SOV0NAME": "Guatemala", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -90.615234, 14.689881 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Chicago", "SOV0NAME": "United States", "ELEVATION": 179 }, "geometry": { "type": "Point", "coordinates": [ -87.802734, 41.836828 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Toronto", "SOV0NAME": "Canada", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -79.453125, 43.707594 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ottawa", "SOV0NAME": "Canada", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -75.761719, 45.460131 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Atlanta", "SOV0NAME": "United States", "ELEVATION": 320 }, "geometry": { "type": "Point", "coordinates": [ -84.462891, 33.870416 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Havana", "SOV0NAME": "Cuba", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -82.441406, 23.160563 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Miami", "SOV0NAME": "United States", "ELEVATION": 2 }, "geometry": { "type": "Point", "coordinates": [ -80.244141, 25.799891 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Washington, D.C.", "SOV0NAME": "United States", "ELEVATION": 7 }, "geometry": { "type": "Point", "coordinates": [ -77.080078, 38.959409 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "New York", "SOV0NAME": "United States", "ELEVATION": 10 }, "geometry": { "type": "Point", "coordinates": [ -74.003906, 40.780541 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Nassau", "SOV0NAME": "Bahamas, The", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -77.431641, 25.085599 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Belmopan", "SOV0NAME": "Belize", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -88.769531, 17.308688 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tegucigalpa", "SOV0NAME": "Honduras", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -87.275391, 14.179186 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "San Salvador", "SOV0NAME": "El Salvador", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -89.208984, 13.752725 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Managua", "SOV0NAME": "Nicaragua", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -86.308594, 12.211180 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "San Jose", "SOV0NAME": "Costa Rica", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -84.111328, 9.968851 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Panama City", "SOV0NAME": "Panama", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -79.541016, 9.015302 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kingston", "SOV0NAME": "Jamaica", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -76.816406, 17.978733 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Port-au-Prince", "SOV0NAME": "Haiti", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -72.421875, 18.562947 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Santo Domingo", "SOV0NAME": "Dominican Republic", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -69.960938, 18.479609 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bogota", "SOV0NAME": "Colombia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -74.091797, 4.653080 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Basseterre", "SOV0NAME": "Saint Kitts and Nevis", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -62.753906, 17.308688 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Saint John's", "SOV0NAME": "Antigua and Barbuda", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -61.875000, 17.140790 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Roseau", "SOV0NAME": "Dominica", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -61.435547, 15.368950 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Castries", "SOV0NAME": "Saint Lucia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -61.083984, 14.008696 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kingstown", "SOV0NAME": "Saint Vincent and the Grenadines", "ELEVATION": 5 }, "geometry": { "type": "Point", "coordinates": [ -61.259766, 13.154376 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Saint George's", "SOV0NAME": "Grenada", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -61.787109, 12.125264 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bridgetown", "SOV0NAME": "Barbados", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -59.677734, 13.154376 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Caracas", "SOV0NAME": "Venezuela", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -66.972656, 10.574222 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Port-of-Spain", "SOV0NAME": "Trinidad and Tobago", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -61.523438, 10.660608 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Georgetown", "SOV0NAME": "Guyana", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -58.183594, 6.839170 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Paramaribo", "SOV0NAME": "Suriname", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -55.195312, 5.878332 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Reykjavík", "SOV0NAME": "Iceland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -21.972656, 64.168107 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dublin", "SOV0NAME": "Ireland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -6.328125, 53.383328 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "London", "SOV0NAME": "United Kingdom", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -0.175781, 51.508742 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Praia", "SOV0NAME": "Cape Verde", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -23.554688, 14.944785 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Laayoune", "SOV0NAME": "Morocco", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -13.271484, 27.215556 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lisbon", "SOV0NAME": "Portugal", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -9.228516, 38.754083 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Casablanca", "SOV0NAME": "Morocco", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -7.646484, 33.651208 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Rabat", "SOV0NAME": "Morocco", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -6.855469, 34.089061 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Madrid", "SOV0NAME": "Kingdom of Spain", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -3.691406, 40.446947 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bir Lehlou", "SOV0NAME": "Western Sahara", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -9.667969, 26.194877 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dakar", "SOV0NAME": "Senegal", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -17.490234, 14.774883 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Nouakchott", "SOV0NAME": "Mauritania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -15.996094, 18.145852 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Banjul", "SOV0NAME": "Gambia, The", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -16.611328, 13.496473 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bissau", "SOV0NAME": "Guinea Bissau", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -15.644531, 11.867351 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Conakry", "SOV0NAME": "Guinea", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -13.710938, 9.535749 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Freetown", "SOV0NAME": "Sierra Leone", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -13.271484, 8.494105 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bamako", "SOV0NAME": "Mali", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -8.085938, 12.726084 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ouagadougou", "SOV0NAME": "Burkina Faso", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -1.582031, 12.382928 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Monrovia", "SOV0NAME": "Liberia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -10.810547, 6.315299 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Yamoussoukro", "SOV0NAME": "Ivory Coast", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -5.361328, 6.839170 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Abidjan", "SOV0NAME": "Ivory Coast", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -4.042969, 5.353521 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Accra", "SOV0NAME": "Ghana", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -0.263672, 5.615986 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Nukualofa", "SOV0NAME": "Tonga", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ -175.253906, -21.125498 ], [ 184.746094, -21.125498 ] ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Apia", "SOV0NAME": "Samoa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -171.826172, -13.838080 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Quito", "SOV0NAME": "Ecuador", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -78.574219, -0.175781 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lima", "SOV0NAME": "Peru", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -77.080078, -12.039321 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "La Paz", "SOV0NAME": "Bolivia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -68.203125, -16.467695 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Valparaiso", "SOV0NAME": "Chile", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -71.630859, -32.990236 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Santiago", "SOV0NAME": "Chile", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -70.751953, -33.431441 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sucre", "SOV0NAME": "Bolivia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -65.302734, -18.979026 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Brasilia", "SOV0NAME": "Brazil", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -47.988281, -15.707663 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Asuncion", "SOV0NAME": "Paraguay", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -57.656250, -25.244696 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Buenos Aires", "SOV0NAME": "Argentina", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -58.447266, -34.597042 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sao Paulo", "SOV0NAME": "Brazil", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -46.669922, -23.483401 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Montevideo", "SOV0NAME": "Uruguay", "ELEVATION": 284 }, "geometry": { "type": "Point", "coordinates": [ -56.250000, -34.813803 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Rio de Janeiro", "SOV0NAME": "Brazil", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -43.242188, -22.917923 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Oslo", "SOV0NAME": "Kingdom of Norway", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 10.722656, 59.933000 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Stockholm", "SOV0NAME": "Sweden", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 18.017578, 59.355596 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "The Hague", "SOV0NAME": "Kingdom of the Netherlands", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 4.218750, 52.106505 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Amsterdam", "SOV0NAME": "Kingdom of the Netherlands", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 4.833984, 52.375599 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Brussels", "SOV0NAME": "Belgium", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 4.306641, 50.847573 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Luxembourg", "SOV0NAME": "Luxembourg", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 6.064453, 49.667628 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Paris", "SOV0NAME": "French Republic", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 2.285156, 48.922499 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Andorra", "SOV0NAME": "Andorra", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 1.494141, 42.553080 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Geneva", "SOV0NAME": "Switzerland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 6.064453, 46.255847 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bern", "SOV0NAME": "Switzerland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 7.382812, 46.920255 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Vaduz", "SOV0NAME": "Liechtenstein", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 9.492188, 47.159840 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Monaco", "SOV0NAME": "Monaco", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 7.382812, 43.771094 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "København", "SOV0NAME": "Denmark", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 12.480469, 55.727110 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Berlin", "SOV0NAME": "Germany", "ELEVATION": 74 }, "geometry": { "type": "Point", "coordinates": [ 13.359375, 52.536273 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Prague", "SOV0NAME": "Czech Republic", "ELEVATION": 308 }, "geometry": { "type": "Point", "coordinates": [ 14.414062, 50.120578 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Warsaw", "SOV0NAME": "Poland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 20.917969, 52.268157 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Vienna", "SOV0NAME": "Austria", "ELEVATION": 171 }, "geometry": { "type": "Point", "coordinates": [ 16.347656, 48.224673 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ljubljana", "SOV0NAME": "Slovenia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 14.501953, 46.073231 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Zagreb", "SOV0NAME": "Croatia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 15.996094, 45.828799 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "San Marino", "SOV0NAME": "San Marino", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 12.392578, 43.961191 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Vatican City", "SOV0NAME": "Vatican (Holy Sea)", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 12.392578, 41.967659 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Rome", "SOV0NAME": "Italy", "ELEVATION": 187 }, "geometry": { "type": "Point", "coordinates": [ 12.480469, 41.902277 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bratislava", "SOV0NAME": "Slovakia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 17.050781, 48.166085 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Budapest", "SOV0NAME": "Hungary", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 19.072266, 47.517201 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sarajevo", "SOV0NAME": "Bosnia and Herzegovina", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 18.369141, 43.897892 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Podgorica", "SOV0NAME": "Montenegro", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 19.248047, 42.488302 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Belgrade", "SOV0NAME": "Republic of Serbia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 20.390625, 44.840291 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tirana", "SOV0NAME": "Albania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 19.775391, 41.376809 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Pristina", "SOV0NAME": "Kosovo", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 21.093750, 42.682435 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Skopje", "SOV0NAME": "Macedonia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 21.357422, 42.032974 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Helsinki", "SOV0NAME": "Finland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 24.873047, 60.196156 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tallinn", "SOV0NAME": "Estonia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 24.697266, 59.445075 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Riga", "SOV0NAME": "Latvia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 24.082031, 56.992883 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Vilnius", "SOV0NAME": "Lithuania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 25.312500, 54.724620 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Minsk", "SOV0NAME": "Belarus", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 27.509766, 53.904338 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kiev", "SOV0NAME": "Ukraine", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 30.498047, 50.457504 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sofia", "SOV0NAME": "Bulgaria", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 23.291016, 42.747012 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bucharest", "SOV0NAME": "Romania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 26.015625, 44.465151 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Chisinau", "SOV0NAME": "Moldova", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 28.828125, 47.040182 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Istanbul", "SOV0NAME": "Turkey", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 29.003906, 41.112469 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Moscow", "SOV0NAME": "Russia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 37.529297, 55.776573 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tbilisi", "SOV0NAME": "Georgia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 44.736328, 41.771312 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Algiers", "SOV0NAME": "Algeria", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 2.988281, 36.809285 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tunis", "SOV0NAME": "Tunisia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 10.107422, 36.809285 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tripoli", "SOV0NAME": "Libya", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 13.095703, 32.916485 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Valletta", "SOV0NAME": "Malta", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 14.501953, 35.960223 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Niamey", "SOV0NAME": "Niger", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 2.109375, 13.581921 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lome", "SOV0NAME": "Togo", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 1.142578, 6.140555 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Cotonou", "SOV0NAME": "Benin", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 2.460938, 6.402648 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Porto-Novo", "SOV0NAME": "Benin", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 2.548828, 6.489983 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lagos", "SOV0NAME": "Nigeria", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 3.339844, 6.489983 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Abuja", "SOV0NAME": "Nigeria", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 7.470703, 9.102097 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sao Tome", "SOV0NAME": "Sao Tome and Principe", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 6.679688, 0.351560 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Malabo", "SOV0NAME": "Equatorial Guinea", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 8.701172, 3.776559 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Libreville", "SOV0NAME": "Gabon", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 9.404297, 0.439449 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ndjamena", "SOV0NAME": "Chad", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 15.029297, 12.125264 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Yaounde", "SOV0NAME": "Cameroon", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 11.513672, 3.951941 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bangui", "SOV0NAME": "Central African Republic", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 18.544922, 4.390229 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Athens", "SOV0NAME": "Greece", "ELEVATION": 70 }, "geometry": { "type": "Point", "coordinates": [ 23.730469, 37.996163 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ankara", "SOV0NAME": "Turkey", "ELEVATION": 850 }, "geometry": { "type": "Point", "coordinates": [ 32.783203, 39.977120 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Nicosia", "SOV0NAME": "Cyprus", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 33.310547, 35.173808 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Cairo", "SOV0NAME": "Egypt", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 31.201172, 30.069094 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tel Aviv-Yafo", "SOV0NAME": "Israel", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 34.716797, 32.101190 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Beirut", "SOV0NAME": "Lebanon", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 35.419922, 33.943360 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Damascus", "SOV0NAME": "Syria", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 36.210938, 33.504759 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Yerevan", "SOV0NAME": "Armenia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 44.472656, 40.245992 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Baghdad", "SOV0NAME": "Iraq", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 44.384766, 33.358062 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Jerusalem", "SOV0NAME": "Israel", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 35.156250, 31.802893 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Amman", "SOV0NAME": "Jordan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 35.859375, 31.952162 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Khartoum", "SOV0NAME": "Sudan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 32.519531, 15.623037 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Juba", "SOV0NAME": "South Sudan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 31.552734, 4.915833 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kampala", "SOV0NAME": "Uganda", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 32.519531, 0.351560 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Asmara", "SOV0NAME": "Eritrea", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 38.847656, 15.368950 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sanaa", "SOV0NAME": "Yemen", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 44.121094, 15.368950 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Djibouti", "SOV0NAME": "Djibouti", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 43.066406, 11.609193 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Addis Ababa", "SOV0NAME": "Ethiopia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 38.671875, 9.102097 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Hargeysa", "SOV0NAME": "Somaliland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 44.033203, 9.622414 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Astana", "SOV0NAME": "Kazakhstan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 71.367188, 51.234407 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tashkent", "SOV0NAME": "Uzbekistan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 69.257812, 41.376809 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bishkek", "SOV0NAME": "Kyrgyzstan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 74.531250, 42.875964 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Urumqi", "SOV0NAME": "China", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 87.539062, 43.834527 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Baku", "SOV0NAME": "Azerbaijan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 49.833984, 40.446947 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tehran", "SOV0NAME": "Iran", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 51.416016, 35.675147 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kuwait", "SOV0NAME": "Kuwait", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 47.900391, 29.382175 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Riyadh", "SOV0NAME": "Saudi Arabia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 46.757812, 24.686952 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Manama", "SOV0NAME": "Bahrain", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 50.537109, 26.273714 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Doha", "SOV0NAME": "Qatar", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 51.503906, 25.324167 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dubai", "SOV0NAME": "United Arab Emirates", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 55.195312, 25.244696 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Abu Dhabi", "SOV0NAME": "United Arab Emirates", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 54.316406, 24.527135 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ashgabat", "SOV0NAME": "Turkmenistan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 58.359375, 37.996163 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Muscat", "SOV0NAME": "Oman", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 58.535156, 23.644524 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Mogadishu", "SOV0NAME": "Somalia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 45.351562, 2.108899 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dushanbe", "SOV0NAME": "Tajikistan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 68.730469, 38.616870 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kabul", "SOV0NAME": "Afghanistan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 69.169922, 34.524661 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Islamabad", "SOV0NAME": "Pakistan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 73.125000, 33.724340 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "New Delhi", "SOV0NAME": "India", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 77.167969, 28.613459 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kathmandu", "SOV0NAME": "Nepal", "ELEVATION": 1317 }, "geometry": { "type": "Point", "coordinates": [ 85.253906, 27.761330 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Thimphu", "SOV0NAME": "Bhutan", "ELEVATION": 2320 }, "geometry": { "type": "Point", "coordinates": [ 89.560547, 27.527758 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kolkata", "SOV0NAME": "India", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 88.242188, 22.512557 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Mumbai", "SOV0NAME": "India", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 72.773438, 19.062118 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bangalore", "SOV0NAME": "India", "ELEVATION": 920 }, "geometry": { "type": "Point", "coordinates": [ 77.519531, 12.983148 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Male", "SOV0NAME": "Maldives", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 73.476562, 4.214943 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Colombo", "SOV0NAME": "Sri Lanka", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 79.804688, 7.013668 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sri Jawewardenepura Kotte", "SOV0NAME": "Sri Lanka", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 79.892578, 6.926427 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Ulaanbaatar", "SOV0NAME": "Mongolia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 106.875000, 47.931066 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dhaka", "SOV0NAME": "Bangladesh", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 90.351562, 23.725012 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Chengdu", "SOV0NAME": "China", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 104.062500, 30.675715 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Naypyidaw", "SOV0NAME": "Myanmar", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 96.064453, 19.808054 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Rangoon", "SOV0NAME": "Myanmar", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 96.152344, 16.804541 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bangkok", "SOV0NAME": "Thailand", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 100.458984, 13.752725 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Vientiane", "SOV0NAME": "Laos", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 102.568359, 17.978733 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Hanoi", "SOV0NAME": "Vietnam", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 105.820312, 21.043491 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Phnom Penh", "SOV0NAME": "Cambodia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 104.853516, 11.609193 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kuala Lumpur", "SOV0NAME": "Malaysia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 101.689453, 3.250209 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Putrajaya", "SOV0NAME": "Malaysia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 101.689453, 2.986927 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Singapore", "SOV0NAME": "Singapore", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 103.798828, 1.318243 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Beijing", "SOV0NAME": "China", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 116.367188, 39.977120 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Hong Kong", "SOV0NAME": "China", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 114.169922, 22.350076 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Shanghai", "SOV0NAME": "China", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 121.376953, 31.278551 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Taipei", "SOV0NAME": "Taiwan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 121.552734, 25.085599 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Pyongyang", "SOV0NAME": "Korea, North", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 125.683594, 39.027719 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Seoul", "SOV0NAME": "Korea, South", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 126.914062, 37.579413 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Baguio City", "SOV0NAME": "Philippines", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 120.498047, 16.467695 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Manila", "SOV0NAME": "Philippines", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 120.937500, 14.689881 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bandar Seri Begawan", "SOV0NAME": "Brunei", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 114.873047, 4.915833 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Melekeok", "SOV0NAME": "Palau", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 134.560547, 7.536764 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Osaka", "SOV0NAME": "Japan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 135.439453, 34.813803 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kyoto", "SOV0NAME": "Japan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 135.703125, 35.101934 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tokyo", "SOV0NAME": "Japan", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 139.746094, 35.746512 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Palikir", "SOV0NAME": "Federated States of Micronesia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 158.115234, 6.926427 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Majuro", "SOV0NAME": "Marshall Islands", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 171.298828, 7.188101 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Tarawa", "SOV0NAME": "Kiribati", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 172.968750, 1.406109 ], [ -187.031250, 1.406109 ] ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Brazzaville", "SOV0NAME": "Congo (Brazzaville)", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 15.205078, -4.214943 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kinshasa", "SOV0NAME": "Congo (Kinshasa)", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 15.292969, -4.302591 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Luanda", "SOV0NAME": "Angola", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 13.183594, -8.754795 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Windhoek", "SOV0NAME": "Namibia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 17.050781, -22.512557 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Cape Town", "SOV0NAME": "South Africa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 18.369141, -33.870416 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Kigali", "SOV0NAME": "Rwanda", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 29.970703, -1.933227 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bujumbura", "SOV0NAME": "Burundi", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 29.355469, -3.337954 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lusaka", "SOV0NAME": "Zambia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 28.212891, -15.368950 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Harare", "SOV0NAME": "Zimbabwe", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 31.025391, -17.811456 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Nairobi", "SOV0NAME": "Kenya", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 36.738281, -1.230374 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dodoma", "SOV0NAME": "United Republic of Tanzania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 35.683594, -6.140555 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dar es Salaam", "SOV0NAME": "United Republic of Tanzania", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 39.199219, -6.751896 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lilongwe", "SOV0NAME": "Malawi", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 33.750000, -13.923404 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Moroni", "SOV0NAME": "Comoros", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 43.154297, -11.695273 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Gaborone", "SOV0NAME": "Botswana", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 25.839844, -24.607069 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Johannesburg", "SOV0NAME": "South Africa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 27.949219, -26.115986 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Bloemfontein", "SOV0NAME": "South Africa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 26.191406, -29.075375 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Maseru", "SOV0NAME": "Lesotho", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 27.421875, -29.305561 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Pretoria", "SOV0NAME": "South Africa", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 28.212891, -25.641526 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Mbabane", "SOV0NAME": "Swaziland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 31.113281, -26.273714 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Lobamba", "SOV0NAME": "Swaziland", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 31.113281, -26.431228 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Maputo", "SOV0NAME": "Mozambique", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 32.519531, -25.878994 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Victoria", "SOV0NAME": "Seychelles", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 55.371094, -4.565474 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Antananarivo", "SOV0NAME": "Madagascar", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 47.460938, -18.895893 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Port Louis", "SOV0NAME": "Mauritius", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 57.480469, -20.138470 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Jakarta", "SOV0NAME": "Indonesia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 106.787109, -6.140555 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Dili", "SOV0NAME": "East Timor", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 125.507812, -8.494105 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Port Moresby", "SOV0NAME": "Papua New Guinea", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 147.128906, -9.449062 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Melbourne", "SOV0NAME": "Australia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 144.931641, -37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Sydney", "SOV0NAME": "Australia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 151.171875, -33.870416 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Canberra", "SOV0NAME": "Australia", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 149.062500, -35.245619 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Honiara", "SOV0NAME": "Solomon Islands", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 159.873047, -9.362353 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Port Vila", "SOV0NAME": "Vanuatu", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ 168.310547, -17.727759 ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Funafuti", "SOV0NAME": "Tuvalu", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 179.208984, -8.494105 ], [ -180.791016, -8.494105 ] ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Suva", "SOV0NAME": "Fiji", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 178.417969, -18.062312 ], [ -181.582031, -18.062312 ] ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Auckland", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 174.726562, -36.809285 ], [ -185.273438, -36.809285 ] ] } }
+,
+{ "type": "Feature", "properties": { "NAME": "Wellington", "SOV0NAME": "New Zealand", "ELEVATION": 0 }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 174.726562, -41.244772 ], [ -185.273438, -41.244772 ] ] } }
+] }
+] }
+] }

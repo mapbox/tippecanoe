@@ -1,0 +1,20 @@
+{ "*": [
+	"all",
+	[
+		"attribute-filter",
+		"NAMEALT",
+		[ ">=", "$zoom", 2 ]
+	],
+	[
+		"any",
+		[ "all", [ "==", "SCALERANK", 0 ], [ ">=", "$zoom", 0 ] ],
+		[ "all", [ "==", "SCALERANK", 1 ], [ ">=", "$zoom", 1 ] ],
+		[ "all", [ "==", "SCALERANK", 2 ], [ ">=", "$zoom", 2 ] ],
+		[ "all", [ "==", "SCALERANK", 3 ], [ ">=", "$zoom", 3 ] ],
+		[ "all", [ "==", "SCALERANK", 4 ], [ ">=", "$zoom", 4 ] ],
+		[ "all", [ "==", "SCALERANK", 5 ], [ ">=", "$zoom", 5 ] ],
+		[ "all", [ "==", "SCALERANK", 6 ], [ ">=", "$zoom", 6 ] ],
+		[ "all", [ "==", "SCALERANK", 7 ], [ ">=", "$zoom", 7 ] ],
+		[ "all", [ ">=", "SCALERANK", 8 ], [ ">=", "$zoom", 8 ] ]
+	]
+] }

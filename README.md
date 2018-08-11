@@ -1,11 +1,13 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [Shapefile](https://en.wikipedia.org/wiki/Shapefile) features,
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), [Shapefile](https://en.wikipedia.org/wiki/Shapefile), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
 [like these](MADE_WITH.md).
 
+![Mapbox Tippecanoe](https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG)
+
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
-[![Coverage Status](https://coveralls.io/repos/mapbox/tippecanoe/badge.svg?branch=master&service=github)](https://coveralls.io/github/mapbox/tippecanoe?branch=master)
+[![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
 
 Intent
 ------
@@ -33,15 +35,28 @@ Installation
 
 The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
 
-```js
+```sh
 $ brew install tippecanoe
 ```
+
+On Ubuntu it will usually be easiest to build from the source repository:
+
+```sh
+$ git clone git@github.com:mapbox/tippecanoe.git
+$ cd tippecanoe
+$ make -j
+$ make install
+```
+
+See [Development](#development) below for how to upgrade your
+C++ compiler or install prerequisite packages if you get
+compiler errors.
 
 Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [options] [file.json file.geobuf ...]
+$ tippecanoe -o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -127,11 +142,20 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 ### Input files and layer names
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
- * _name_`.geobuf` or _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
+ * _name_`.json.gz` or _name_`.geojson.gz`: Read the named gzipped GeoJSON input file into a layer called _name_.
+ * _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
  * _name_`.shp` or _name_`.shp`: Read the named Shapefile input file into a layer called _name_. Note that _name_`.dbf` must also exist.
+ * _name_`.csv`: Read the named CSV input file into a layer called _name_.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
+ * `-L{`_layer-json_`}` or `--named-layer={`_layer-json_`}`: Specify an input file and layer options by a JSON object. The JSON object must contain a `"file"` key to specify the filename to read from. (If the `"file"` key is an empty string, it means to read from the standard input stream.) It may also contain a `"layer"` field to specify the name of the layer, and/or a `"description"` field to specify the layer's description in the tileset metadata, and/or a `"format"` field to specify `csv` or `geobuf` file format if it is not obvious from the `name`. Example:
+
+```
+tippecanoe -z5 -o world.mbtiles -L'{"file":"ne_10m_admin_0_countries.json", "layer":"countries", "description":"Natural Earth countries"}'
+```
+
+CSV input files currently support only Point geometries, from columns named `latitude`, `longitude`, `lat`, `lon`, `long`, `lng`, `x`, or `y`.
 
 ### Parallel processing of input
 
@@ -160,6 +184,8 @@ Parallel processing will also be automatic if the input file is in Geobuf format
  * `-ae` or `--extend-zooms-if-still-dropping`: Increase the maxzoom if features are still being dropped at that zoom level.
    The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
    specified maximum zoom and to any levels added beyond that.
+ * `-R` _zoom_`/`_x_`/`_y_ or `--one-tile=`_zoom_`/`_x_`/`_y_: Set the minzoom and maxzoom to _zoom_ and produce only
+   the single specified tile at that zoom level.
 
 ### Tile resolution
 
@@ -173,15 +199,27 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filtering feature attributes
 
- * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
- * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
- * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
+ * `-x` _name_ or `--exclude=`_name_: Exclude the named attributes from all features
+ * `-y` _name_ or `--include=`_name_: Include the named attributes in all features, excluding all those not explicitly named
+ * `-X` or `--exclude-all`: Exclude all attributes and encode only geometries
+
+### Modifying feature attributes
+
  * `-T`_attribute_`:`_type_ or `--attribute-type=`_attribute_`:`_type_: Coerce the named feature _attribute_ to be of the specified _type_.
    The _type_ may be `string`, `float`, `int`, or `bool`.
    If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
- * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
+ * `-Y`_attribute_`:`_description_ or `--attribute-description=`_attribute_`:`_description_: Set the `description` for the specified attribute in the tileset metadata to _description_ instead of the usual `String`, `Number`, or `Boolean`.
+ * `-E`_attribute_`:`_operation_ or `--accumulate-attribute=`_attribute_`:`_operation_: Preserve the named _attribute_ from features
+   that are dropped, coalesced-as-needed, or clustered. The _operation_ may be
+   `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`
+   to specify how the named _attribute_ is accumulated onto the attribute of the same name in a feature that does survive.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
+
+### Filtering features by attributes
+
+ * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers. The special variable `$zoom` refers to the current zoom level.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
 
 Example: to find the Natural Earth countries with low `scalerank` but high `LABELRANK`:
@@ -189,6 +227,23 @@ Example: to find the Natural Earth countries with low `scalerank` but high `LABE
 ```
 tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ "<", "scalerank", 3 ], [ ">", "LABELRANK", 5 ] ] }' ne_10m_admin_0_countries.geojson
 ```
+
+Example: to retain only major TIGER roads at low zoom levels:
+
+```
+tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
+```
+
+Tippecanoe also accepts expressions of the form `[ "attribute-filter", name, expression ]`, to filter individual feature attributes
+instead of entire features. For example, you can exclude the road names at low zoom levels by doing
+
+```
+tippecanoe -o roads.mbtiles -j '{ "*": [ "attribute-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }' tl_2015_06001_roads.json
+```
+
+An `attribute-filter` expression itself is always considered to evaluate to `true` (in other words, to retain the feature instead
+of dropping it). If you want to use multiple `attribute-filter` expressions, or to use other expressions to remove features from
+the same layer, enclose them in an `all` expression so they will all be evaluated.
 
 ### Dropping a fixed fraction of features by zoom level
 
@@ -202,6 +257,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
    compensate for the larger marker, or `-Bf`*number* to allow at most *number* features in the densest tile.
  * `-al` or `--drop-lines`: Let "dot" dropping at lower zooms apply to lines too
  * `-ap` or `--drop-polygons`: Let "dot" dropping at lower zooms apply to polygons too
+ * `-K` _distance_ or `--cluster-distance=`_distance_: Cluster points (as with `--cluster-densest-as-needed`, but without the experimental discovery process) that are approximately within _distance_ of each other. The units are tile coordinates within a nominally 256-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 10 are probably appropriate for typical marker sizes. See `--cluster-densest-as-needed` below for behavior.
 
 ### Dropping a fraction of features to keep under tile size limits
 
@@ -209,7 +265,10 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
  * `-ad` or `--drop-fraction-as-needed`: Dynamically drop some fraction of features from each zoom level to keep large tiles under the 500K size limit. (This is like `-pd` but applies to the entire zoom level, not to each tile.)
  * `-an` or `--drop-smallest-as-needed`: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
  * `-aN` or `--coalesce-smallest-as-needed`: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are *not* preserved into the combined features, only their geometry.
+ * `-aD` or `--coalesce-densest-as-needed`: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
+ * `-aS` or `--coalesce-fraction-as-needed`: Dynamically combine a fraction of features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
  * `-pd` or `--force-feature-limit`: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like `-ad` but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
+ * `-aC` or `--cluster-densest-as-needed`: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a `"cluster": true` attribute to indicate that it represents a cluster, a `"point_count"` attribute to indicate the number of features that were clustered into it, and a `"sqrt_point_count"` attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
 
 ### Dropping tightly overlapping features
 
@@ -238,21 +297,25 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 ### Reordering features within each tile
 
  * `-pi` or `--preserve-input-order`: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes `-ao`).
- * `-ao` or `--reorder`: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably don't want to use this.
- * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same properties. You probably don't want to use this.
+ * `-ao` or `--reorder`: Reorder features to put ones with the same attributes in sequence, to try to get them to coalesce. You probably want to use this if you use `--coalesce`.
+ * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
  * `-ar` or `--reverse`: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 
 ### Adding calculated attributes
 
  * `-ag` or `--calculate-feature-density`: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+ * `-ai` or `--generate-ids`: Add an `id` (a feature ID, not an attribute named `id`) to each feature that does not already have one. There is currently no guarantee that the `id` added will be stable between runs or that it will not conflict with manually-assigned feature IDs. Future versions of Tippecanoe may change the mechanism for allocating IDs.
 
 ### Trying to correct bad source geometry
 
  * `-aw` or `--detect-longitude-wraparound`: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+ * `-pw` or `--use-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
+ * `-pW` or `--reverse-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
 
 ### Setting or disabling tile size limits
 
  * `-M` _bytes_ or `--maximum-tile-bytes=`_bytes_: Use the specified number of _bytes_ as the maximum compressed tile size instead of 500K.
+ * `-O` _features_ or `--maximum-tile-features=`_features_: Use the specified number of _features_ as the maximum in a tile instead of 200,000.
  * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
  * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
@@ -267,6 +330,7 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 
  * `-q` or `--quiet`: Work quietly instead of reporting progress or warning messages
  * `-Q` or `--no-progress-indicator`: Don't report progress, but still give warnings
+ * `-U` _seconds_ or `--progress-interval=`_seconds_: Don't report progress more often than the specified number of _seconds_.
  * `-v` or `--version`: Report Tippecanoe's version number
 
 ### Filters
@@ -288,7 +352,7 @@ The postfilter receives the features at tile resolution, after simplification, c
 
 The layer name is provided as part of the `tippecanoe` element of the feature and must be passed through
 to keep the feature in its correct layer. In the case of the prefilter, the `tippecanoe` element may also
-contain `index`, `sequence`, and `extent` elements, which must be passed through for internal operations like
+contain `index`, `sequence`, `extent`, and `dropped`, elements, which must be passed through for internal operations like
 `--drop-densest-as-needed`, `--drop-smallest-as-needed`, and `--preserve-input-order` to work.
 
 #### Examples:
@@ -388,7 +452,7 @@ all of them should have had together.
 
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry if you use `--coalesce`. You are strongly encouraged to use -x to exclude
-any unnecessary properties to reduce wasted file size.
+any unnecessary attributes to reduce wasted file size.
 
 If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
@@ -497,9 +561,11 @@ The options are:
 ### Filtering features and feature attributes
 
  * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * `-X` or `--exclude-all`: Remove all attributes from the output.
  * `-i` or `--if-matched`: Only include features that matched the CSV.
  * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
 
 ### Setting or disabling tile size limits
 
@@ -613,7 +679,7 @@ or on an individual tile:
     tippecanoe-decode file.mbtiles zoom x y
     tippecanoe-decode file.vector.pbf zoom x y
 
-If you decode an entire file, you get a nested `FeatureCollection` identifying each
+Unless you use `-c`, the output is a set of nested FeatureCollections identifying each
 tile and layer separately. Note that the same features generally appear at all zooms,
 so the output for the file will have many copies of the same features at different
 resolutions.
@@ -655,7 +721,8 @@ something better.
  * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
    The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
    be sorted correctly by tools that just do ASCII comparisons.
- * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+ * `-c` *file.csv* or `--csv=`*file.csv*: Join attributes from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
 
 ### Example
 
@@ -684,7 +751,7 @@ Sort GeoJSON block geometry so it is ordered by block ID. If you don't do this, 
 $ tippecanoe-json-tool -e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C sort > tl_2010_18157_tabblock10.sort.json
 ```
 
-Join block geometries to employment properties:
+Join block geometries to employment attributes:
 
 ```
 $ tippecanoe-json-tool -c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks-wac.json

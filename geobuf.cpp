@@ -13,6 +13,7 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 #include "jsonpull/jsonpull.h"
+#include "text.hpp"
 
 #define POINT 0
 #define MULTIPOINT 1
@@ -387,7 +388,6 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 		sf.t = dv[i].type;
 		sf.full_keys = full_keys;
 		sf.full_values = full_values;
-		sf.m = sf.full_values.size();
 
 		auto tip = other.find("tippecanoe");
 		if (tip != other.end()) {
@@ -398,13 +398,13 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 				json_object *min = json_hash_get(o, "minzoom");
 				if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_minzoom = true;
-					sf.tippecanoe_minzoom = atoi(min->string);
+					sf.tippecanoe_minzoom = integer_zoom(sst->fname, min->string);
 				}
 
 				json_object *max = json_hash_get(o, "maxzoom");
 				if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
 					sf.has_tippecanoe_maxzoom = true;
-					sf.tippecanoe_maxzoom = atoi(max->string);
+					sf.tippecanoe_maxzoom = integer_zoom(sst->fname, max->string);
 				}
 
 				json_object *tlayer = json_hash_get(o, "layer");
@@ -476,7 +476,9 @@ void runQueue() {
 		}
 	}
 
-	*((*(feature_queue[0].sst))[0].layer_seq) = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
+	// Lack of atomicity is OK, since we are single-threaded again here
+	long long was = *((*(feature_queue[0].sst))[CPUS - 1].layer_seq);
+	*((*(feature_queue[0].sst))[0].layer_seq) = was;
 	feature_queue.clear();
 }
 
@@ -510,7 +512,6 @@ void outBareGeometry(drawvec const &dv, int type, struct serialization_state *ss
 	sf.seq = (*sst->layer_seq);
 	sf.geometry = dv;
 	sf.t = type;
-	sf.m = 0;
 
 	serialize_feature(sst, sf);
 }

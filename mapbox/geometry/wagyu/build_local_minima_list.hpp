@@ -9,26 +9,13 @@ namespace mapbox {
 namespace geometry {
 namespace wagyu {
 
-template <typename T>
-bool add_line_string(mapbox::geometry::line_string<T> const& path_geometry,
-                     local_minimum_list<T>& minima_list) {
-    bool is_flat = true;
-    edge_list<T> new_edges;
-    new_edges.reserve(path_geometry.size());
-    if (!build_edge_list(path_geometry, new_edges, is_flat) || new_edges.empty()) {
-        return false;
-    }
-    add_line_to_local_minima_list(new_edges, minima_list, polygon_type_subject);
-    return true;
-}
-
-template <typename T>
-bool add_linear_ring(mapbox::geometry::linear_ring<T> const& path_geometry,
-                     local_minimum_list<T>& minima_list,
+template <typename T1, typename T2>
+bool add_linear_ring(mapbox::geometry::linear_ring<T2> const& path_geometry,
+                     local_minimum_list<T1>& minima_list,
                      polygon_type p_type) {
-    edge_list<T> new_edges;
+    edge_list<T1> new_edges;
     new_edges.reserve(path_geometry.size());
-    if (!build_edge_list(path_geometry, new_edges) || new_edges.empty()) {
+    if (!build_edge_list<T1, T2>(path_geometry, new_edges) || new_edges.empty()) {
         return false;
     }
     add_ring_to_local_minima_list(new_edges, minima_list, p_type);
