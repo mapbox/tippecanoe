@@ -1465,6 +1465,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 			parse_shapefile(sst, sources[source].file, layer, sources[layer].layer);
 
+			for (size_t i = 0; i < CPUS; i++) {
+				dist_sum += dist_sums[i];
+				dist_count += dist_counts[i];
+			}
+
 			if (close(fd) != 0) {
 				perror("close");
 				exit(EXIT_FAILURE);
@@ -1514,6 +1519,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			parse_geocsv(sst, sources[source].file, layer, sources[layer].layer);
+
+			for (size_t i = 0; i < CPUS; i++) {
+				dist_sum += dist_sums[i];
+				dist_count += dist_counts[i];
+			}
 
 			if (close(fd) != 0) {
 				perror("close");
