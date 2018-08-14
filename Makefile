@@ -82,7 +82,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test layer-json-test join-test-object
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test layer-json-test join-object-test
 	./unit
 
 suffixes = json json.gz
@@ -305,7 +305,7 @@ csv-test:
 	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
 	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
 
-join-test-object:
+join-object-test:
 	./tippecanoe -z0 -f -o tests/object/out/before.mbtiles tests/object/in.json
 	./tile-join -f -o tests/object/out/after.mbtiles tests/object/out/before.mbtiles
 	./tippecanoe-decode -x generator tests/object/out/before.mbtiles | grep -v '"bounds"' > tests/object/out/before.mbtiles.jsontmp

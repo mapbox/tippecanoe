@@ -13,6 +13,7 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
+#include "jsonpull/jsonpull.h"
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
@@ -546,6 +547,55 @@ size_t mvt_layer::tag_key(std::string const &key) {
 	return ko;
 }
 
+size_t tag_object(mvt_layer &layer, json_object *j) {
+	mvt_value tv;
+
+	if (j->type == JSON_NUMBER) {
+		long long v;
+		if (is_integer(j->string, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			tv.type = mvt_double;
+			tv.numeric_value.double_value = atof(j->string);
+		}
+	} else if (j->type == JSON_TRUE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 1;
+	} else if (j->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 0;
+	} else if (j->type == JSON_STRING) {
+		tv.type = mvt_string;
+		tv.string_value = std::string(j->string);
+	} else if (j->type == JSON_NULL) {
+		tv.type = mvt_null;
+		tv.numeric_value.null_value = 0;
+	} else if (j->type == JSON_HASH) {
+		tv.type = mvt_hash;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(layer.tag_key(std::string(j->keys[i]->string)));
+			tv.list_value.push_back(tag_object(layer, j->values[i]));
+		}
+	} else if (j->type == JSON_ARRAY) {
+		tv.type = mvt_list;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(tag_object(layer, j->array[i]));
+		}
+	}
+
+	return layer.tag_value(tv);
+}
+
 size_t mvt_layer::tag_value(mvt_value const &value) {
 	size_t vo;
 
@@ -563,8 +613,23 @@ size_t mvt_layer::tag_value(mvt_value const &value) {
 }
 
 void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
-	feature.tags.push_back(tag_key(key));
-	feature.tags.push_back(tag_value(value));
+	if (value.type == mvt_hash) {
+		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+		json_object *jo = json_read_tree(jp);
+		if (jo == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			exit(EXIT_FAILURE);
+		}
+		size_t ko = tag_key(key);
+		size_t vo = tag_object(*this, jo);
+		feature.tags.push_back(ko);
+		feature.tags.push_back(vo);
+		json_free(jo);
+		json_end(jp);
+	} else {
+		feature.tags.push_back(tag_key(key));
+		feature.tags.push_back(tag_value(value));
+	}
 }
 
 bool is_integer(const char *s, long long *v) {
