@@ -2277,11 +2277,25 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				feature.has_id = layer_features[x].has_id;
 
 				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
+
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
 
-					if (v.type != mvt_null) {
+					if (v.type == mvt_hash) {
+						json_pull *jp = json_begin_string((char *) v.string_value.c_str());
+						json_object *jo = json_read_tree(jp);
+						if (jo == NULL) {
+							fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", v.string_value.c_str());
+							exit(EXIT_FAILURE);
+						}
+						size_t ko = layer.tag_key(layer_features[x].full_keys[a]);
+						size_t vo = tag_object(layer, jo);
+						feature.tags.push_back(ko);
+						feature.tags.push_back(vo);
+						json_free(jo);
+						json_end(jp);
+					} else if (v.type != mvt_null) {
 						layer.tag(feature, layer_features[x].full_keys[a], v);
 					}
 				}
