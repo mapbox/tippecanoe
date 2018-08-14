@@ -371,6 +371,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .RS
 .IP \(bu 2
 \fB\fC\-ag\fR or \fB\fC\-\-calculate\-feature\-density\fR: Add a new attribute, \fB\fCtippecanoe_feature_density\fR, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+.IP \(bu 2
+\fB\fC\-ai\fR or \fB\fC\-\-generate\-ids\fR: Add an \fB\fCid\fR (a feature ID, not an attribute named \fB\fCid\fR) to each feature that does not already have one. There is currently no guarantee that the \fB\fCid\fR added will be stable between runs or that it will not conflict with manually\-assigned feature IDs. Future versions of Tippecanoe may change the mechanism for allocating IDs.
 .RE
 .SS Trying to correct bad source geometry
 .RS
@@ -671,6 +673,8 @@ The options are:
 .RS
 .IP \(bu 2
 \fB\fC\-x\fR \fIkey\fP or \fB\fC\-\-exclude=\fR\fIkey\fP: Remove attributes of type \fIkey\fP from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+.IP \(bu 2
+\fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Remove all attributes from the output.
 .IP \(bu 2
 \fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
 .IP \(bu 2

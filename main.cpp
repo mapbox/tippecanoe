@@ -1268,6 +1268,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				".geojson",
 				".geobuf",
 				".mbtiles",
+				".csv",
 				".gz",
 			};
 
@@ -1975,12 +1976,29 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			if (maxzoom < 0) {
 				maxzoom = 0;
 			}
-			if (maxzoom > MAX_ZOOM) {
-				maxzoom = MAX_ZOOM;
+			if (maxzoom > 32 - full_detail) {
+				maxzoom = 32 - full_detail;
+			}
+			if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
+				maxzoom = 33 - low_detail;
 			}
 
 			if (!quiet) {
 				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet (%d meters) apart\n", maxzoom, (int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
+			}
+
+			bool changed = false;
+			while (maxzoom < 32 - full_detail && maxzoom < 33 - low_detail && cluster_distance > 0) {
+				unsigned long long zoom_mingap = ((1LL << (32 - maxzoom)) / 256 * cluster_distance) * ((1LL << (32 - maxzoom)) / 256 * cluster_distance);
+				if (avg > zoom_mingap) {
+					break;
+				}
+
+				maxzoom++;
+				changed = true;
+			}
+			if (changed) {
+				printf("Choosing a maxzoom of -z%d to keep most features distinct with cluster distance %d\n", maxzoom, cluster_distance);
 			}
 		}
 
@@ -1991,8 +2009,11 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			if (mz < 0) {
 				mz = 0;
 			}
-			if (mz > MAX_ZOOM) {
-				mz = MAX_ZOOM;
+			if (mz > 32 - full_detail) {
+				mz = 32 - full_detail;
+			}
+			if (mz > 33 - low_detail) {  // that is, mz - 1 > 32 - low_detail
+				mz = 33 - low_detail;
 			}
 
 			if (mz > maxzoom || count <= 0) {
@@ -2568,6 +2589,7 @@ int main(int argc, char **argv) {
 
 		{"Adding calculated attributes", 0, 0, 0},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
+		{"generate-ids", no_argument, &additional[A_GENERATE_IDS], 1},
 
 		{"Trying to correct bad source geometry", 0, 0, 0},
 		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
@@ -3008,6 +3030,10 @@ int main(int argc, char **argv) {
 		if (maxzoom > 32 - full_detail) {
 			maxzoom = 32 - full_detail;
 			fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
+		}
+		if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
+			maxzoom = 33 - low_detail;
+			fprintf(stderr, "Highest supported zoom with low detail %d is %d\n", low_detail, maxzoom);
 		}
 	}
 	if (maxzoom > MAX_ZOOM) {

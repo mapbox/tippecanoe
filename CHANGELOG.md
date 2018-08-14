@@ -1,3 +1,33 @@
+## 1.31.2
+
+* Don't accept anything inside another JSON object's properties as a
+  feature or geometry of its own.
+
+## 1.31.1
+
+* Add --exclude-all to tile-join
+
+## 1.31.0
+
+* Upgrade Wagyu to version 0.4.3
+
+## 1.30.6
+
+* Take cluster distance into account when guessing a maxzoom
+
+## 1.30.4
+
+* Features within the z0 tile buffer of the antimeridian (not only
+  those that cross it) are duplicated on both sides.
+
+## 1.30.3
+
+* Add an option to automatically assign ids to features
+
+## 1.30.2
+
+* Don't guess a higher maxzoom than is allowed for manual selection
+
 ## 1.30.1
 
 * Ensure that per-feature minzoom and maxzoom are integers

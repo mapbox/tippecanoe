@@ -37,6 +37,7 @@
 #include "text.hpp"
 #include "read_json.hpp"
 #include "mvt.hpp"
+#include "geojson-loop.hpp"
 
 int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
@@ -227,127 +228,35 @@ void check_crs(json_object *j, const char *reading) {
 	}
 }
 
-void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
-	long long found_hashes = 0;
-	long long found_features = 0;
-	long long found_geometries = 0;
+struct json_serialize_action : json_feature_action {
+	serialization_state *sst;
+	int layer;
+	std::string layername;
 
-	while (1) {
-		json_object *j = json_read(jp);
-		if (j == NULL) {
-			if (jp->error != NULL) {
-				fprintf(stderr, "%s:%d: %s\n", sst->fname, jp->line, jp->error);
-				if (jp->root != NULL) {
-					json_context(jp->root);
-				}
+	int add_feature(json_object *geometry, bool geometrycollection, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
+		if (geometrycollection) {
+			int ret = 1;
+			for (size_t g = 0; g < geometry->length; g++) {
+				ret &= serialize_geojson_feature(sst, geometry->array[g], properties, id, layer, tippecanoe, feature, layername);
 			}
-
-			json_free(jp->root);
-			break;
-		}
-
-		if (j->type == JSON_HASH) {
-			found_hashes++;
-
-			if (found_hashes == 50 && found_features == 0 && found_geometries == 0) {
-				fprintf(stderr, "%s:%d: Warning: not finding any GeoJSON features or geometries in input yet after 50 objects.\n", sst->fname, jp->line);
-			}
-		}
-
-		json_object *type = json_hash_get(j, "type");
-		if (type == NULL || type->type != JSON_STRING) {
-			continue;
-		}
-
-		if (found_features == 0) {
-			int i;
-			int is_geometry = 0;
-			for (i = 0; i < GEOM_TYPES; i++) {
-				if (strcmp(type->string, geometry_names[i]) == 0) {
-					is_geometry = 1;
-					break;
-				}
-			}
-
-			if (is_geometry) {
-				if (j->parent != NULL) {
-					if (j->parent->type == JSON_ARRAY && j->parent->parent != NULL) {
-						if (j->parent->parent->type == JSON_HASH) {
-							json_object *geometries = json_hash_get(j->parent->parent, "geometries");
-							if (geometries != NULL) {
-								// Parent of Parent must be a GeometryCollection
-								is_geometry = 0;
-							}
-						}
-					} else if (j->parent->type == JSON_HASH) {
-						json_object *geometry = json_hash_get(j->parent, "geometry");
-						if (geometry != NULL) {
-							// Parent must be a Feature
-							is_geometry = 0;
-						}
-					}
-				}
-			}
-
-			if (is_geometry) {
-				if (found_features != 0 && found_geometries == 0) {
-					fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
-				}
-				found_geometries++;
-
-				serialize_geojson_feature(sst, j, NULL, NULL, layer, NULL, j, layername);
-				json_free(j);
-				continue;
-			}
-		}
-
-		if (strcmp(type->string, "Feature") != 0) {
-			if (strcmp(type->string, "FeatureCollection") == 0) {
-				check_crs(j, sst->fname);
-				json_free(j);
-			}
-
-			continue;
-		}
-
-		if (found_features == 0 && found_geometries != 0) {
-			fprintf(stderr, "%s:%d: Warning: found a mixture of features and bare geometries\n", sst->fname, jp->line);
-		}
-		found_features++;
-
-		json_object *geometry = json_hash_get(j, "geometry");
-		if (geometry == NULL) {
-			fprintf(stderr, "%s:%d: feature with no geometry\n", sst->fname, jp->line);
-			json_context(j);
-			json_free(j);
-			continue;
-		}
-
-		json_object *properties = json_hash_get(j, "properties");
-		if (properties == NULL || (properties->type != JSON_HASH && properties->type != JSON_NULL)) {
-			fprintf(stderr, "%s:%d: feature without properties hash\n", sst->fname, jp->line);
-			json_context(j);
-			json_free(j);
-			continue;
-		}
-
-		json_object *tippecanoe = json_hash_get(j, "tippecanoe");
-		json_object *id = json_hash_get(j, "id");
-
-		json_object *geometries = json_hash_get(geometry, "geometries");
-		if (geometries != NULL && geometries->type == JSON_ARRAY) {
-			size_t g;
-			for (g = 0; g < geometries->length; g++) {
-				serialize_geojson_feature(sst, geometries->array[g], properties, id, layer, tippecanoe, j, layername);
-			}
+			return ret;
 		} else {
-			serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, j, layername);
+			return serialize_geojson_feature(sst, geometry, properties, id, layer, tippecanoe, feature, layername);
 		}
-
-		json_free(j);
-
-		/* XXX check for any non-features in the outer object */
 	}
+
+	void check_crs(json_object *j) {
+		::check_crs(j, fname.c_str());
+	}
+};
+
+void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
+	json_serialize_action jsa;
+	jsa.sst = sst;
+	jsa.layer = layer;
+	jsa.layername = layername;
+
+	parse_json(&jsa, jp);
 }
 
 void *run_parse_json(void *v) {

@@ -25,8 +25,8 @@ bool point_2_is_between_point_1_and_point_3(mapbox::geometry::point<T> const& pt
     }
 }
 
-template <typename T>
-bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge_list<T>& edges) {
+template <typename T1, typename T2>
+bool build_edge_list(mapbox::geometry::linear_ring<T2> const& path_geometry, edge_list<T1>& edges) {
 
     if (path_geometry.size() < 3) {
         return false;
@@ -37,8 +37,8 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
 
     auto itr_rev = path_geometry.rbegin();
     auto itr = path_geometry.begin();
-    mapbox::geometry::point<T> pt1 = *itr_rev;
-    mapbox::geometry::point<T> pt2 = *itr;
+    mapbox::geometry::point<T2> pt1 = *itr_rev;
+    mapbox::geometry::point<T2> pt2 = *itr;
 
     // Find next non repeated point going backwards from
     // end for pt1
@@ -50,10 +50,10 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
         pt1 = *itr_rev;
     }
     ++itr;
-    mapbox::geometry::point<T> pt3 = *itr;
+    mapbox::geometry::point<T2> pt3 = *itr;
     auto itr_last = itr_rev.base();
-    mapbox::geometry::point<T> front_pt;
-    mapbox::geometry::point<T> back_pt;
+    mapbox::geometry::point<T2> front_pt;
+    mapbox::geometry::point<T2> back_pt;
     while (true) {
         if (pt3 == pt2) {
             // Duplicate point advance itr, but do not
@@ -84,10 +84,15 @@ bool build_edge_list(mapbox::geometry::linear_ring<T> const& path_geometry, edge
                 edges.pop_back(); // remove previous edge (pt1)
             }
             if (!edges.empty()) {
-                if (back_pt == edges.back().top) {
-                    pt1 = edges.back().bot;
+                auto const& back_top = edges.back().top;
+                if (static_cast<T1>(back_pt.x) == back_top.x &&
+                    static_cast<T1>(back_pt.y) == back_top.y) {
+                    auto const& back_bot = edges.back().bot;
+                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_bot.x),
+                                                      static_cast<T2>(back_bot.y));
                 } else {
-                    pt1 = edges.back().top;
+                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_top.x),
+                                                      static_cast<T2>(back_top.y));
                 }
                 back_pt = pt1;
             } else {
