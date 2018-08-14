@@ -693,7 +693,7 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	}
 }
 
-void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
+size_t mvt_layer::tag_v3_key(std::string key) {
 	std::map<std::string, size_t>::iterator ki = key_map.find(key);
 	size_t ko;
 
@@ -705,6 +705,10 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 		ko = ki->second;
 	}
 
+	return ko;
+}
+
+size_t mvt_layer::tag_v3_value(mvt_value value) {
 	std::map<mvt_value, unsigned long>::iterator vi = property_map.find(value);
 	unsigned long vo;
 
@@ -760,6 +764,13 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 	} else {
 		vo = vi->second;
 	}
+
+	return vo;
+}
+
+void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
+	size_t ko = tag_v3_key(key);
+	size_t vo = tag_v3_value(value);
 
 	feature.properties.push_back(ko);
 	feature.properties.push_back(vo);
