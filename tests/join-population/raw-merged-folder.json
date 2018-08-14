@@ -33,28 +33,6 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 5, "x": 5, "y": 12, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "LINEARID": "1104486392881", "FULLNAME": "W Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.255859, 37.822802 ], [ -122.272339, 37.829311 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1102638069562", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.242126, 37.807614 ], [ -122.239380, 37.807614 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.297058, 37.833649 ], [ -122.291565, 37.827141 ], [ -122.258606, 37.822802 ], [ -122.250366, 37.811954 ], [ -122.231140, 37.801104 ], [ -122.211914, 37.796763 ], [ -122.195435, 37.785911 ], [ -122.178955, 37.783740 ], [ -122.159729, 37.772886 ], [ -122.148743, 37.759859 ], [ -122.151489, 37.751172 ], [ -122.140503, 37.738141 ], [ -122.132263, 37.714245 ], [ -122.104797, 37.696861 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1104474748623", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.104797, 37.696861 ], [ -122.132263, 37.716418 ], [ -122.143250, 37.738141 ], [ -122.154236, 37.751172 ], [ -122.148743, 37.762030 ], [ -122.159729, 37.775057 ], [ -122.250366, 37.811954 ], [ -122.261353, 37.822802 ], [ -122.294312, 37.831480 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1103690483032", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.184448, 37.777228 ], [ -122.181702, 37.775057 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1103690483026", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.178955, 37.772886 ], [ -122.176208, 37.772886 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1102954918511", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.173462, 37.770715 ], [ -122.162476, 37.757687 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1103690383700", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.162476, 37.753344 ], [ -122.159729, 37.751172 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1103690474249", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.159729, 37.751172 ], [ -122.159729, 37.749001 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1103690474250", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.143250, 37.740313 ], [ -122.159729, 37.749001 ] ] } }
-] }
-,
 { "type": "FeatureCollection", "properties": { "layer": "tabblock_06001420", "version": 2, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "STATEFP10": "06", "COUNTYFP10": "001", "TRACTCE10": "420300", "BLOCKCE10": "3008", "GEOID10": "060014203003008", "NAME10": "Block 3008", "MTFCC10": "G5040", "UR10": "R", "FUNCSTAT10": "S", "ALAND10": 0, "AWATER10": 1111196, "INTPTLAT10": "+37.892891", "INTPTLON10": "-122.320295" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -122.313538, 37.898698 ], [ -122.310791, 37.894363 ], [ -122.310791, 37.890028 ], [ -122.316284, 37.894363 ], [ -122.335510, 37.890028 ], [ -122.335510, 37.894363 ], [ -122.313538, 37.898698 ] ] ] } }
 ,
@@ -93,6 +71,28 @@
 { "type": "Feature", "properties": { "STATEFP10": "06", "COUNTYFP10": "001", "TRACTCE10": "420600", "BLOCKCE10": "1014", "GEOID10": "060014206001014", "NAME10": "Block 1014", "MTFCC10": "G5040", "UR10": "U", "UACE10": "78904", "UATYP10": "U", "FUNCSTAT10": "S", "ALAND10": 22296, "AWATER10": 0, "INTPTLAT10": "+37.888027", "INTPTLON10": "-122.283424" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -122.283325, 37.890028 ], [ -122.283325, 37.885693 ], [ -122.288818, 37.885693 ], [ -122.288818, 37.890028 ], [ -122.283325, 37.890028 ] ] ] } }
 ,
 { "type": "Feature", "properties": { "STATEFP10": "06", "COUNTYFP10": "001", "TRACTCE10": "420600", "BLOCKCE10": "1029", "GEOID10": "060014206001029", "NAME10": "Block 1029", "MTFCC10": "G5040", "UR10": "U", "UACE10": "78904", "UATYP10": "U", "FUNCSTAT10": "S", "ALAND10": 16994, "AWATER10": 0, "INTPTLAT10": "+37.885308", "INTPTLON10": "-122.283651" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -122.283325, 37.887860 ], [ -122.283325, 37.883525 ], [ -122.288818, 37.883525 ], [ -122.288818, 37.887860 ], [ -122.283325, 37.887860 ] ] ] } }
+] }
+,
+{ "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "LINEARID": "1104486392881", "FULLNAME": "W Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.255859, 37.822802 ], [ -122.272339, 37.829311 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1102638069562", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.242126, 37.807614 ], [ -122.239380, 37.807614 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.297058, 37.833649 ], [ -122.291565, 37.827141 ], [ -122.258606, 37.822802 ], [ -122.250366, 37.811954 ], [ -122.231140, 37.801104 ], [ -122.211914, 37.796763 ], [ -122.195435, 37.785911 ], [ -122.178955, 37.783740 ], [ -122.159729, 37.772886 ], [ -122.148743, 37.759859 ], [ -122.151489, 37.751172 ], [ -122.140503, 37.738141 ], [ -122.132263, 37.714245 ], [ -122.104797, 37.696861 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104474748623", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.104797, 37.696861 ], [ -122.132263, 37.716418 ], [ -122.143250, 37.738141 ], [ -122.154236, 37.751172 ], [ -122.148743, 37.762030 ], [ -122.159729, 37.775057 ], [ -122.250366, 37.811954 ], [ -122.261353, 37.822802 ], [ -122.294312, 37.831480 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1103690483032", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.184448, 37.777228 ], [ -122.181702, 37.775057 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1103690483026", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.178955, 37.772886 ], [ -122.176208, 37.772886 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1102954918511", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.173462, 37.770715 ], [ -122.162476, 37.757687 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1103690383700", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.162476, 37.753344 ], [ -122.159729, 37.751172 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1103690474249", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.159729, 37.751172 ], [ -122.159729, 37.749001 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1103690474250", "FULLNAME": "Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.143250, 37.740313 ], [ -122.159729, 37.749001 ] ] } }
 ] }
 ] }
 ,
@@ -1090,13 +1090,13 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 9, "x": 82, "y": 198, "compressed": false }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.138615, 37.729453 ], [ -122.137928, 37.725379 ], [ -122.137413, 37.724293 ], [ -122.134666, 37.720763 ], [ -122.133465, 37.718590 ], [ -122.131405, 37.714381 ], [ -122.129860, 37.712751 ], [ -122.127972, 37.711665 ], [ -122.125397, 37.710307 ], [ -122.121105, 37.707183 ], [ -122.117157, 37.705418 ], [ -122.109432, 37.700664 ], [ -122.104454, 37.695503 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1104474748623", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.104111, 37.695503 ], [ -122.109089, 37.700664 ], [ -122.115784, 37.704874 ], [ -122.121105, 37.707319 ], [ -122.125053, 37.710307 ], [ -122.129173, 37.712615 ], [ -122.130890, 37.714245 ], [ -122.133121, 37.718590 ], [ -122.137413, 37.724972 ], [ -122.138443, 37.729453 ] ] } }
-,
 { "type": "Feature", "properties": { "LINEARID": "1102406970094", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
 ,
 { "type": "Feature", "properties": { "LINEARID": "1102406970095", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.138615, 37.729453 ], [ -122.137928, 37.725379 ], [ -122.137413, 37.724293 ], [ -122.134666, 37.720763 ], [ -122.133465, 37.718590 ], [ -122.131405, 37.714381 ], [ -122.129860, 37.712751 ], [ -122.127972, 37.711665 ], [ -122.125397, 37.710307 ], [ -122.121105, 37.707183 ], [ -122.117157, 37.705418 ], [ -122.109432, 37.700664 ], [ -122.104454, 37.695503 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1104474748623", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.104111, 37.695503 ], [ -122.109089, 37.700664 ], [ -122.115784, 37.704874 ], [ -122.121105, 37.707319 ], [ -122.125053, 37.710307 ], [ -122.129173, 37.712615 ], [ -122.130890, 37.714245 ], [ -122.133121, 37.718590 ], [ -122.137413, 37.724972 ], [ -122.138443, 37.729453 ] ] } }
 ] }
 ] }
 ,
