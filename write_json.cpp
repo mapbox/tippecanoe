@@ -13,6 +13,7 @@
 #include "geometry.hpp"
 #include "mvt.hpp"
 #include "write_json.hpp"
+#include "text.hpp"
 #include "milo/dtoa_milo.h"
 
 void json_writer::json_adjust() {
@@ -278,6 +279,87 @@ void write_kv(json_writer &state, const char *key, mvt_value const &val) {
 	}
 }
 
+void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo, json_writer &state) {
+	std::string s;
+	stringify_val(s, feature, layer, val, vo);
+	state.json_write_stringified(s);
+}
+
+static void quote(std::string &buf, std::string const &s) {
+	buf.push_back('"');
+	for (size_t i = 0; i < s.size(); i++) {
+		unsigned char ch = s[i];
+
+		if (ch == '\\' || ch == '\"') {
+			buf.push_back('\\');
+			buf.push_back(ch);
+		} else if (ch < ' ') {
+			char tmp[7];
+			sprintf(tmp, "\\u%04x", ch);
+			buf.append(std::string(tmp));
+		} else {
+			buf.push_back(ch);
+		}
+	}
+	buf.push_back('"');
+}
+
+void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
+	if (val.type == mvt_string) {
+		quote(out, val.string_value);
+	} else if (val.type == mvt_int) {
+		out.append(std::to_string(val.numeric_value.int_value));
+	} else if (val.type == mvt_double) {
+		double v = val.numeric_value.double_value;
+		out.append(milo::dtoa_milo(v));
+	} else if (val.type == mvt_float) {
+		double v = val.numeric_value.float_value;
+		out.append(milo::dtoa_milo(v));
+	} else if (val.type == mvt_sint) {
+		out.append(std::to_string(val.numeric_value.sint_value));
+	} else if (val.type == mvt_uint) {
+		out.append(std::to_string(val.numeric_value.uint_value));
+	} else if (val.type == mvt_bool) {
+		out.append(val.numeric_value.bool_value ? "true" : "false");
+	} else if (val.type == mvt_list) {
+		out.push_back('[');
+		for (size_t i = 0; i < val.list_value.size(); i++) {
+			if (i != 0) {
+				out.push_back(',');
+			}
+			if (val.list_value[i] >= vo || val.list_value[i] >= layer.values.size()) {
+				fprintf(stderr, "Invalid value reference in list (%lu from %lu within %lu)\n", val.list_value[i], vo,
+					layer.values.size());
+				exit(EXIT_FAILURE);
+			}
+			stringify_val(out, feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
+		}
+		out.push_back(']');
+	} else if (val.type == mvt_hash) {
+		out.push_back('{');
+		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
+			if (i != 0) {
+				out.push_back(',');
+			}
+			if (val.list_value[i] >= layer.keys.size()) {
+				fprintf(stderr, "Invalid key reference in hash (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.keys.size());
+				exit(EXIT_FAILURE);
+			}
+			if (val.list_value[i + 1] >= vo || val.list_value[i + 1] >= layer.values.size()) {
+				fprintf(stderr, "Invalid value reference in hash (%lu from %lu within %lu)\n", val.list_value[i + 1],
+					vo, layer.values.size());
+				exit(EXIT_FAILURE);
+			}
+			quote(out, layer.keys[val.list_value[i]]);
+			out.push_back(':');
+			stringify_val(out, feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
+		}
+		out.push_back('}');
+	} else if (val.type == mvt_null) {
+		out.append("null");
+	}
+}
+
 void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
@@ -347,14 +429,16 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			const char *key = layer.keys[feat.tags[t]].c_str();
 			mvt_value const &val = layer.values[feat.tags[t + 1]];
 
-			write_kv(state, key, val);
+			state.json_write_string(key);
+			print_val(feat, layer, val, feat.tags[t + 1], state);
 		}
 
 		for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
 			const char *key = layer.keys[feat.properties[t]].c_str();
 			mvt_value const &val = layer.decode_property(feat.properties[t + 1]);
 
-			write_kv(state, key, val);
+			state.json_write_string(key);
+			print_val(feat, layer, val, feat.tags[t + 1], state);
 		}
 
 		state.json_end_hash();

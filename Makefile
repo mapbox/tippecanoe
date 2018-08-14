@@ -82,7 +82,7 @@ indent:
 TESTS = $(wildcard tests/*/out/*.json)
 SPACE = $(NULL) $(NULL)
 
-test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test layer-json-test
+test: tippecanoe tippecanoe-decode $(addsuffix .check,$(TESTS)) raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit json-tool-test allow-existing-test csv-test layer-json-test join-test-object
 	./unit
 
 suffixes = json json.gz
@@ -95,7 +95,8 @@ suffixes = json json.gz
 	rm $@.out $@.mbtiles
 
 # Don't test overflow with geobuf, because it fails (https://github.com/mapbox/geobuf/issues/87)
-geobuf-test: tippecanoe-json-tool $(addsuffix .checkbuf,$(filter-out tests/overflow/out/-z0.json,$(TESTS)))
+nogeobuf = tests/overflow/out/-z0.json
+geobuf-test: tippecanoe-json-tool $(addsuffix .checkbuf,$(filter-out $(nogeobuf),$(TESTS)))
 
 # For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
 fewer-tests: tippecanoe tippecanoe-decode geobuf-test raw-tiles-test parallel-test pbf-test join-test enumerate-test decode-test join-filter-test unit
@@ -303,6 +304,14 @@ csv-test:
 	./tippecanoe-decode -x generator tests/csv/out.mbtiles > tests/csv/out.mbtiles.json.check
 	cmp tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles.json
 	rm -f tests/csv/out.mbtiles.json.check tests/csv/out.mbtiles
+
+join-test-object:
+	./tippecanoe -z0 -f -o tests/object/out/before.mbtiles tests/object/in.json
+	./tile-join -f -o tests/object/out/after.mbtiles tests/object/out/before.mbtiles
+	./tippecanoe-decode -x generator tests/object/out/before.mbtiles | grep -v '"bounds"' > tests/object/out/before.mbtiles.jsontmp
+	./tippecanoe-decode -x generator tests/object/out/after.mbtiles | grep -v '"bounds"' > tests/object/out/after.mbtiles.jsontmp
+	cmp tests/object/out/before.mbtiles.jsontmp tests/object/out/after.mbtiles.jsontmp
+	rm -f tests/object/out/before.mbtiles.jsontmp tests/object/out/after.mbtiles.jsontmp tests/object/out/before.mbtiles tests/object/out/after.mbtiles
 
 layer-json-test:
 	# GeoJSON with description and named layer

@@ -27,6 +27,8 @@
 #include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "dirtiles.hpp"
+#include "write_json.hpp"
+#include "text.hpp"
 #include "evaluator.hpp"
 #include "csv.hpp"
 #include <fstream>
@@ -54,19 +56,36 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void aprintf(std::string *buf, const char *format, ...) {
-	va_list ap;
-	char *tmp;
+size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outlayer) {
+	mvt_value tv;
 
-	va_start(ap, format);
-	if (vasprintf(&tmp, format, ap) < 0) {
-		fprintf(stderr, "memory allocation failure\n");
-		exit(EXIT_FAILURE);
+	if (val.type == mvt_hash) {
+		tv.type = mvt_hash;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
+			tv.list_value.push_back(outlayer.tag_key(layer.keys[val.list_value[i]]));
+			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i + 1]], outlayer));
+		}
+	} else if (val.type == mvt_list) {
+		tv.type = mvt_list;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < val.list_value.size(); i++) {
+			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i]], outlayer));
+		}
+	} else {
+		tv = val;
 	}
-	va_end(ap);
 
-	buf->append(tmp, strlen(tmp));
-	free(tmp);
+	return outlayer.tag_value(tv);
+}
+
+void copy_nested(mvt_layer &layer, mvt_feature &, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
+	size_t ko = outlayer.tag_key(key);
+	size_t vo = tag_object(layer, val, outlayer);
+	outfeature.tags.push_back(ko);
+	outfeature.tags.push_back(vo);
 }
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
@@ -234,6 +253,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				} else if (val.type == mvt_uint) {
 					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
 					type = mvt_double;
+				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
+					type = mvt_hash;
+					stringify_val(value, feat, layer, val, feat.tags[t + 1]);
 				} else {
 					continue;
 				}
@@ -318,11 +340,17 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					auto fa = attributes.find(k);
 
 					if (fa != attributes.end()) {
-						if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
-							outlayer.tag_v3(outfeature, k, fa->second.first);
+						if (fa->second.first.type == mvt_hash) {
+							// XXX blake tag
+							copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
 						} else {
-							outlayer.tag(outfeature, k, fa->second.first);
+							if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
+								outlayer.tag_v3(outfeature, k, fa->second.first);
+							} else {
+								outlayer.tag(outfeature, k, fa->second.first);
+							}
 						}
+
 						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
 						attributes.erase(fa);
 					}
