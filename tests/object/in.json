@@ -9,6 +9,8 @@
 		"array": [
 			"string", 10, null, true, false, [ 1, 2, 3 ], { "this": "that" }
 		],
+		"emptylist": [],
+		"emptyhash": {},
 		"nest": { "something": "else" }
 	}
 }, "geometry": { "type": "Point", "coordinates": [ 0,0 ]} }
