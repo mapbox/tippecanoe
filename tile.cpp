@@ -199,55 +199,6 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-size_t tag_object(mvt_layer &layer, json_object *j) {
-	mvt_value tv;
-
-	if (j->type == JSON_NUMBER) {
-		long long v;
-		if (is_integer(j->string, &v)) {
-			if (v >= 0) {
-				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
-			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
-			}
-		} else {
-			tv.type = mvt_double;
-			tv.numeric_value.double_value = atof(j->string);
-		}
-	} else if (j->type == JSON_TRUE) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = 1;
-	} else if (j->type == JSON_FALSE) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = 0;
-	} else if (j->type == JSON_STRING) {
-		tv.type = mvt_string;
-		tv.string_value = std::string(j->string);
-	} else if (j->type == JSON_NULL) {
-		tv.type = mvt_null;
-		tv.numeric_value.null_value = 0;
-	} else if (j->type == JSON_HASH) {
-		tv.type = mvt_hash;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i < j->length; i++) {
-			tv.list_value.push_back(layer.tag_key(std::string(j->keys[i]->string)));
-			tv.list_value.push_back(tag_object(layer, j->values[i]));
-		}
-	} else if (j->type == JSON_ARRAY) {
-		tv.type = mvt_list;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i < j->length; i++) {
-			tv.list_value.push_back(tag_object(layer, j->array[i]));
-		}
-	}
-
-	return layer.tag_value(tv);
-}
-
 void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature, bool suppress_null) {
 	size_t i;
 	for (i = 0; i < metakeys.size(); i++) {
@@ -255,27 +206,11 @@ void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> 
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		if (value.type == mvt_hash) {
-			json_pull *jp = json_begin_string((char *) value.string_value.c_str());
-			json_object *j = json_read_tree(jp);
-			if (j == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
-				exit(EXIT_FAILURE);
-			}
-			// XXX blake tag
-			size_t ko = layer.tag_key(key.string_value);
-			size_t vo = tag_object(layer, j);
-			feature.tags.push_back(ko);
-			feature.tags.push_back(vo);
-			json_free(j);
-			json_end(jp);
-		} else {
-			if (!suppress_null || value.type != mvt_null) {
-				if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
-					layer.tag_v3(feature, key.string_value, value);
-				} else {
-					layer.tag(feature, key.string_value, value);
-				}
+		if (!suppress_null || value.type != mvt_null) {
+			if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
+				layer.tag_v3(feature, key.string_value, value);
+			} else {
+				layer.tag(feature, key.string_value, value);
 			}
 		}
 	}
@@ -2282,6 +2217,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				feature.has_id = layer_features[x].has_id;
 
 				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
+
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
