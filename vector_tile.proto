@@ -32,7 +32,10 @@ message tile {
                 // Each element refers to the nth value in the layer's values list
                 repeated uint32 list_value = 9 [ packed = true ];
 
-                extensions 10 to max;
+                // 0 signifies an empty hash, 1 signifies an empty list
+                optional uint64 empty_value = 10;
+
+                extensions 11 to max;
         }
 
         message feature {

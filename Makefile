@@ -308,10 +308,10 @@ csv-test:
 join-test-object:
 	./tippecanoe -z0 -f -o tests/object/out/before.mbtiles tests/object/in.json
 	./tile-join -f -o tests/object/out/after.mbtiles tests/object/out/before.mbtiles
-	./tippecanoe-decode -x generator tests/object/out/before.mbtiles | grep -v '"bounds"' > tests/object/out/before.mbtiles.json
-	./tippecanoe-decode -x generator tests/object/out/after.mbtiles | grep -v '"bounds"' > tests/object/out/after.mbtiles.json
-	cmp tests/object/out/before.mbtiles.json tests/object/out/after.mbtiles.json
-	rm -f tests/object/out/before.mbtiles.json tests/object/out/after.mbtiles.json tests/object/out/before.mbtiles tests/object/out/after.mbtiles
+	./tippecanoe-decode -x generator tests/object/out/before.mbtiles | grep -v '"bounds"' > tests/object/out/before.mbtiles.jsontmp
+	./tippecanoe-decode -x generator tests/object/out/after.mbtiles | grep -v '"bounds"' > tests/object/out/after.mbtiles.jsontmp
+	cmp tests/object/out/before.mbtiles.jsontmp tests/object/out/after.mbtiles.jsontmp
+	rm -f tests/object/out/before.mbtiles.jsontmp tests/object/out/after.mbtiles.jsontmp tests/object/out/before.mbtiles tests/object/out/after.mbtiles
 
 layer-json-test:
 	# GeoJSON with description and named layer

@@ -208,6 +208,18 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							}
 							break;
 
+						case 10: /* empty */
+						{
+							unsigned type = value_reader.get_uint64();
+							if (type == 0) {
+								value.type = mvt_hash;
+								value.list_value.clear();
+							} else if (type == 1) {
+								value.type = mvt_list;
+								value.list_value.clear();
+							}
+						} break;
+
 						default:
 							value_reader.skip();
 							break;
@@ -353,9 +365,17 @@ std::string mvt_tile::encode() {
 			} else if (pbv.type == mvt_bool) {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
 			} else if (pbv.type == mvt_hash) {
-				value_writer.add_packed_uint32(8, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				if (pbv.list_value.size() > 0) {
+					value_writer.add_packed_uint32(8, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				} else {
+					value_writer.add_uint64(10, 0);
+				}
 			} else if (pbv.type == mvt_list) {
-				value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				if (pbv.list_value.size() > 0) {
+					value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				} else {
+					value_writer.add_uint64(10, 1);
+				}
 			} else if (pbv.type == mvt_null) {
 				// empty value represents null
 			} else {
