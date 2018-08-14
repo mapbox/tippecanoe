@@ -438,7 +438,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			mvt_value const &val = layer.decode_property(feat.properties[t + 1]);
 
 			state.json_write_string(key);
-			print_val(feat, layer, val, feat.tags[t + 1], state);
+			print_val(feat, layer, val, feat.properties[t + 1], state);
 		}
 
 		state.json_end_hash();
