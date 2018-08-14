@@ -38,13 +38,16 @@ struct edge {
         return *this;
     }
 
-    edge(mapbox::geometry::point<T> const& current,
-         mapbox::geometry::point<T> const& next_pt) noexcept
-        : bot(current), top(current), dx(0.0) {
+    template <typename T2>
+    edge(mapbox::geometry::point<T2> const& current,
+         mapbox::geometry::point<T2> const& next_pt) noexcept
+        : bot(static_cast<T>(current.x), static_cast<T>(current.y)),
+          top(static_cast<T>(current.x), static_cast<T>(current.y)),
+          dx(0.0) {
         if (current.y >= next_pt.y) {
-            top = next_pt;
+            top = mapbox::geometry::point<T>(static_cast<T>(next_pt.x), static_cast<T>(next_pt.y));
         } else {
-            bot = next_pt;
+            bot = mapbox::geometry::point<T>(static_cast<T>(next_pt.x), static_cast<T>(next_pt.y));
         }
         double dy = static_cast<double>(top.y - bot.y);
         if (value_is_zero(dy)) {

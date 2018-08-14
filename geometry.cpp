@@ -19,11 +19,12 @@
 #include "projection.hpp"
 #include "serial.hpp"
 #include "main.hpp"
+#include "options.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
-drawvec decode_geometry(FILE *meta, long long *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
+drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
 
 	bbox[0] = LLONG_MAX;
@@ -912,8 +913,21 @@ drawvec fix_polygon(drawvec &geom) {
 			// Reverse ring if winding order doesn't match
 			// inner/outer expectation
 
-			double area = get_area(ring, 0, ring.size());
-			if ((area > 0) != outer) {
+			bool reverse_ring = false;
+			if (prevent[P_USE_SOURCE_POLYGON_WINDING]) {
+				// GeoJSON winding is reversed from vector winding
+				reverse_ring = true;
+			} else if (prevent[P_REVERSE_SOURCE_POLYGON_WINDING]) {
+				// GeoJSON winding is reversed from vector winding
+				reverse_ring = false;
+			} else {
+				double area = get_area(ring, 0, ring.size());
+				if ((area > 0) != outer) {
+					reverse_ring = true;
+				}
+			}
+
+			if (reverse_ring) {
 				drawvec tmp;
 				for (int a = ring.size() - 1; a >= 0; a--) {
 					tmp.push_back(ring[a]);

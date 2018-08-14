@@ -18,23 +18,23 @@ mapbox::geometry::point<T> intersect(mapbox::geometry::point<T> a,
     switch (edge) {
     case 0:
         return mapbox::geometry::point<T>(
-            static_cast<T>(a.x + static_cast<double>(b.x - a.x) * (box.min.y - a.y) / (b.y - a.y)),
+            mapbox::geometry::wagyu::wround<T>(static_cast<double>(a.x) + static_cast<double>(b.x - a.x) * static_cast<double>(box.min.y - a.y) / static_cast<double>(b.y - a.y)),
             box.min.y);
 
     case 1:
         return mapbox::geometry::point<T>(
             box.max.x,
-            static_cast<T>(a.y + static_cast<double>(b.y - a.y) * (box.max.x - a.x) / (b.x - a.x)));
+            mapbox::geometry::wagyu::wround<T>(static_cast<double>(a.y) + static_cast<double>(b.y - a.y) * static_cast<double>(box.max.x - a.x) / static_cast<double>(b.x - a.x)));
 
     case 2:
         return mapbox::geometry::point<T>(
-            static_cast<T>(a.x + static_cast<double>(b.x - a.x) * (box.max.y - a.y) / (b.y - a.y)),
+            mapbox::geometry::wagyu::wround<T>(static_cast<double>(a.x) + static_cast<double>(b.x - a.x) * static_cast<double>(box.max.y - a.y) / static_cast<double>(b.y - a.y)),
             box.max.y);
 
     default: // case 3
         return mapbox::geometry::point<T>(
             box.min.x,
-            static_cast<T>(a.y + static_cast<double>(b.y - a.y) * (box.min.x - a.x) / (b.x - a.x)));
+            mapbox::geometry::wagyu::wround<T>(static_cast<double>(a.y) + static_cast<double>(b.y - a.y) * static_cast<double>(box.min.x - a.x) / static_cast<double>(b.x - a.x)));
     }
 }
 
@@ -57,7 +57,7 @@ bool inside(mapbox::geometry::point<T> p, size_t edge, mapbox::geometry::box<T> 
 
 template <typename T>
 mapbox::geometry::linear_ring<T> quick_lr_clip(mapbox::geometry::linear_ring<T> const& ring,
-                                      mapbox::geometry::box<T> const& b) {
+                                               mapbox::geometry::box<T> const& b) {
     mapbox::geometry::linear_ring<T> out = ring;
 
     for (size_t edge = 0; edge < 4; edge++) {

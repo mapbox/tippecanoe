@@ -3,6 +3,8 @@
 #include <mapbox/geometry/wagyu/edge.hpp>
 #include <mapbox/geometry/wagyu/local_minimum.hpp>
 
+#include <algorithm>
+
 #ifdef DEBUG
 #include <stdexcept>
 #endif
@@ -102,7 +104,7 @@ bound<T> create_bound_towards_minimum(edge_list<T>& edges) {
     if (next_edge == edges.end()) {
         std::swap(edges, bnd.edges);
     } else {
-        bnd.edges.reserve(std::distance(edges.begin(), next_edge));
+        bnd.edges.reserve(static_cast<std::size_t>(std::distance(edges.begin(), next_edge)));
         std::move(edges.begin(), next_edge, std::back_inserter(bnd.edges));
         edges.erase(edges.begin(), next_edge);
     }
@@ -147,7 +149,7 @@ bound<T> create_bound_towards_maximum(edge_list<T>& edges) {
     if (next_edge == edges.end()) {
         std::swap(bnd.edges, edges);
     } else {
-        bnd.edges.reserve(std::distance(edges.begin(), next_edge));
+        bnd.edges.reserve(static_cast<std::size_t>(std::distance(edges.begin(), next_edge)));
         std::move(edges.begin(), next_edge, std::back_inserter(bnd.edges));
         edges.erase(edges.begin(), next_edge);
     }
@@ -234,12 +236,12 @@ void add_ring_to_local_minima_list(edge_list<T>& edges,
             lm_minimum_has_horizontal = true;
             ++to_min_first_non_horizontal;
         }
-#ifdef DEBUG
+
         if (to_max_first_non_horizontal == to_maximum.edges.end() ||
             to_min_first_non_horizontal == to_minimum.edges.end()) {
             throw std::runtime_error("should not have a horizontal only bound for a ring");
         }
-#endif
+
         if (lm_minimum_has_horizontal) {
             if (to_max_first_non_horizontal->bot.x > to_min_first_non_horizontal->bot.x) {
                 minimum_is_left = true;

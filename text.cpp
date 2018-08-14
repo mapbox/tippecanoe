@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <math.h>
+#include <stdlib.h>
 
 /**
  * Returns an empty string if `s` is valid utf8;
@@ -144,4 +146,13 @@ void aprintf(std::string *buf, const char *format, ...) {
 
 	buf->append(tmp, strlen(tmp));
 	free(tmp);
+}
+
+int integer_zoom(std::string where, std::string text) {
+	double d = atof(text.c_str());
+	if (!isnormal(d) || d != floor(d) || d < 0 || d > 32) {
+		fprintf(stderr, "%s: Expected integer zoom level in \"tippecanoe\" GeoJSON extension, not %s\n", where.c_str(), text.c_str());
+		exit(EXIT_FAILURE);
+	}
+	return d;
 }

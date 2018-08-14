@@ -74,7 +74,7 @@
 ,
 { "type": "Feature", "properties": { "NAME": "Maputo" }, "geometry": { "type": "Point", "coordinates": [ 32.519531, -25.878994 ] } }
 ,
-{ "type": "Feature", "properties": { "NAME": "Auckland" }, "geometry": { "type": "Point", "coordinates": [ 174.726562, -36.809285 ] } }
+{ "type": "Feature", "properties": { "NAME": "Auckland" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 174.726562, -36.809285 ], [ -185.273438, -36.809285 ] ] } }
 ] }
 ] }
 ,

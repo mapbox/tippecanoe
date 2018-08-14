@@ -69,7 +69,7 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 	exit(EXIT_FAILURE);
 }
 
-bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
+bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::set<std::string> &exclude_attributes) {
 	if (f == NULL || f->type != JSON_ARRAY) {
 		fprintf(stderr, "Filter is not an array: %s\n", json_stringify(f));
 		exit(EXIT_FAILURE);
@@ -191,7 +191,7 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 		}
 
 		for (size_t i = 1; i < f->length; i++) {
-			bool out = eval(feature, f->array[i]);
+			bool out = eval(feature, f->array[i], exclude_attributes);
 
 			if (strcmp(f->array[0]->string, "all") == 0) {
 				v = v && out;
@@ -269,11 +269,30 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f) {
 		}
 	}
 
+	if (strcmp(f->array[0]->string, "attribute-filter") == 0) {
+		if (f->length != 3) {
+			fprintf(stderr, "Wrong number of array elements in filter: %s\n", json_stringify(f));
+			exit(EXIT_FAILURE);
+		}
+
+		if (f->array[1]->type != JSON_STRING) {
+			fprintf(stderr, "\"attribute-filter\" key is not a string: %s\n", json_stringify(f));
+			exit(EXIT_FAILURE);
+		}
+
+		bool ok = eval(feature, f->array[2], exclude_attributes);
+		if (!ok) {
+			exclude_attributes.insert(f->array[1]->string);
+		}
+
+		return true;
+	}
+
 	fprintf(stderr, "Unknown filter %s\n", json_stringify(f));
 	exit(EXIT_FAILURE);
 }
 
-bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const &layer, json_object *filter) {
+bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const &layer, json_object *filter, std::set<std::string> &exclude_attributes) {
 	if (filter == NULL || filter->type != JSON_HASH) {
 		fprintf(stderr, "Error: filter is not a hash: %s\n", json_stringify(filter));
 		exit(EXIT_FAILURE);
@@ -284,12 +303,12 @@ bool evaluate(std::map<std::string, mvt_value> const &feature, std::string const
 
 	f = json_hash_get(filter, layer.c_str());
 	if (ok && f != NULL) {
-		ok = eval(feature, f);
+		ok = eval(feature, f, exclude_attributes);
 	}
 
 	f = json_hash_get(filter, "*");
 	if (ok && f != NULL) {
-		ok = eval(feature, f);
+		ok = eval(feature, f, exclude_attributes);
 	}
 
 	return ok;

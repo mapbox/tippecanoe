@@ -27,6 +27,11 @@ std::vector<std::string> csv_split(const char *s) {
 			while (*s && isspace(*s)) {
 				s++;
 			}
+
+			if (*s == '\0' || *s == '\r' || *s == '\n') {
+				ret.push_back(std::string(""));
+				break;
+			}
 		}
 	}
 

@@ -56,7 +56,7 @@ Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [options] [file.json file.geobuf ...]
+$ tippecanoe -o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -142,11 +142,17 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 ### Input files and layer names
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
+ * _name_`.json.gz` or _name_`.geojson.gz`: Read the named gzipped GeoJSON input file into a layer called _name_.
  * _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
  * _name_`.csv`: Read the named CSV input file into a layer called _name_.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
  * `-L` _name_`:`_file.json_ or `--named-layer=`_name_`:`_file.json_: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like `-L` _name_`:<(cat dir/*.json)` to specify a layer name for the output of streamed input.
+ * `-L{`_layer-json_`}` or `--named-layer={`_layer-json_`}`: Specify an input file and layer options by a JSON object. The JSON object must contain a `"file"` key to specify the filename to read from. (If the `"file"` key is an empty string, it means to read from the standard input stream.) It may also contain a `"layer"` field to specify the name of the layer, and/or a `"description"` field to specify the layer's description in the tileset metadata, and/or a `"format"` field to specify `csv` or `geobuf` file format if it is not obvious from the `name`. Example:
+
+```
+tippecanoe -z5 -o world.mbtiles -L'{"file":"ne_10m_admin_0_countries.json", "layer":"countries", "description":"Natural Earth countries"}'
+```
 
 CSV input files currently support only Point geometries, from columns named `latitude`, `longitude`, `lat`, `lon`, `long`, `lng`, `x`, or `y`.
 
@@ -192,9 +198,9 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filtering feature attributes
 
- * `-x` _name_ or `--exclude=`_name_: Exclude the named properties from all features
- * `-y` _name_ or `--include=`_name_: Include the named properties in all features, excluding all those not explicitly named
- * `-X` or `--exclude-all`: Exclude all properties and encode only geometries
+ * `-x` _name_ or `--exclude=`_name_: Exclude the named attributes from all features
+ * `-y` _name_ or `--include=`_name_: Include the named attributes in all features, excluding all those not explicitly named
+ * `-X` or `--exclude-all`: Exclude all attributes and encode only geometries
 
 ### Modifying feature attributes
 
@@ -203,10 +209,12 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
    If the type is `bool`, then original attributes of `0` (or, if numeric, `0.0`, etc.), `false`, `null`, or the empty string become `false`, and otherwise become `true`.
    If the type is `float` or `int` and the original attribute was non-numeric, it becomes `0`.
    If the type is `int` and the original attribute was floating-point, it is rounded to the nearest integer.
+ * `-Y`_attribute_`:`_description_ or `--attribute-description=`_attribute_`:`_description_: Set the `description` for the specified attribute in the tileset metadata to _description_ instead of the usual `String`, `Number`, or `Boolean`.
  * `-E`_attribute_`:`_operation_ or `--accumulate-attribute=`_attribute_`:`_operation_: Preserve the named _attribute_ from features
    that are dropped, coalesced-as-needed, or clustered. The _operation_ may be
    `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`
    to specify how the named _attribute_ is accumulated onto the attribute of the same name in a feature that does survive.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
 
 ### Filtering features by attributes
 
@@ -222,8 +230,19 @@ tippecanoe -z5 -o filtered.mbtiles -j '{ "ne_10m_admin_0_countries": [ "all", [ 
 Example: to retain only major TIGER roads at low zoom levels:
 
 ```
-./tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
+tippecanoe -o roads.mbtiles -j '{ "*": [ "any", [ ">=", "$zoom", 11 ], [ "in", "MTFCC", "S1100", "S1200" ] ] }' tl_2015_06001_roads.json
 ```
+
+Tippecanoe also accepts expressions of the form `[ "attribute-filter", name, expression ]`, to filter individual feature attributes
+instead of entire features. For example, you can exclude the road names at low zoom levels by doing
+
+```
+tippecanoe -o roads.mbtiles -j '{ "*": [ "attribute-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }' tl_2015_06001_roads.json
+```
+
+An `attribute-filter` expression itself is always considered to evaluate to `true` (in other words, to retain the feature instead
+of dropping it). If you want to use multiple `attribute-filter` expressions, or to use other expressions to remove features from
+the same layer, enclose them in an `all` expression so they will all be evaluated.
 
 ### Dropping a fixed fraction of features by zoom level
 
@@ -277,17 +296,20 @@ Example: to retain only major TIGER roads at low zoom levels:
 ### Reordering features within each tile
 
  * `-pi` or `--preserve-input-order`: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot-dropping is still geographic, which means it also undoes `-ao`).
- * `-ao` or `--reorder`: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably want to use this if you use `--coalesce`.
- * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same properties. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
+ * `-ao` or `--reorder`: Reorder features to put ones with the same attributes in sequence, to try to get them to coalesce. You probably want to use this if you use `--coalesce`.
+ * `-ac` or `--coalesce`: Coalesce adjacent line and polygon features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
  * `-ar` or `--reverse`: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 
 ### Adding calculated attributes
 
  * `-ag` or `--calculate-feature-density`: Add a new attribute, `tippecanoe_feature_density`, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+ * `-ai` or `--generate-ids`: Add an `id` (a feature ID, not an attribute named `id`) to each feature that does not already have one. There is currently no guarantee that the `id` added will be stable between runs or that it will not conflict with manually-assigned feature IDs. Future versions of Tippecanoe may change the mechanism for allocating IDs.
 
 ### Trying to correct bad source geometry
 
  * `-aw` or `--detect-longitude-wraparound`: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+ * `-pw` or `--use-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
+ * `-pW` or `--reverse-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
 
 ### Setting or disabling tile size limits
 
@@ -429,7 +451,7 @@ all of them should have had together.
 
 Features in the same tile that share the same type and attributes are coalesced
 together into a single geometry if you use `--coalesce`. You are strongly encouraged to use -x to exclude
-any unnecessary properties to reduce wasted file size.
+any unnecessary attributes to reduce wasted file size.
 
 If a tile is larger than 500K, it will try encoding that tile at progressively
 lower resolutions before failing if it still doesn't fit.
@@ -538,9 +560,11 @@ The options are:
 ### Filtering features and feature attributes
 
  * `-x` *key* or `--exclude=`*key*: Remove attributes of type *key* from the output. You can use this to remove the field you are matching against if you no longer need it after joining, or to remove any other attributes you don't want.
+ * `-X` or `--exclude-all`: Remove all attributes from the output.
  * `-i` or `--if-matched`: Only include features that matched the CSV.
  * `-j` *filter* or `--feature-filter`=*filter*: Check features against a per-layer filter (as defined in the [Mapbox GL Style Specification](https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter)) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer `"*"` apply to all layers.
  * `-J` *filter-file* or `--feature-filter-file`=*filter-file*: Like `-j`, but read the filter from a file.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
 
 ### Setting or disabling tile size limits
 
@@ -665,7 +689,8 @@ something better.
  * `-e` *attribute* or `--extract=`*attribute*: Extract the named attribute as a prefix to each feature.
    The formatting makes excessive use of `\u` quoting so that it follows JSON string rules but will still
    be sorted correctly by tools that just do ASCII comparisons.
- * `-c` *file.csv* or `--csv=`*file.csv*: Join properties from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+ * `-c` *file.csv* or `--csv=`*file.csv*: Join attributes from the named sorted CSV file, using its first column as the join key. Geometries will be passed through even if they do not match the CSV; CSV lines that do not match a geometry will be discarded.
+ * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
 
 ### Example
 
@@ -694,7 +719,7 @@ Sort GeoJSON block geometry so it is ordered by block ID. If you don't do this, 
 $ tippecanoe-json-tool -e GEOID10 tl_2010_18157_tabblock10.json | LC_ALL=C sort > tl_2010_18157_tabblock10.sort.json
 ```
 
-Join block geometries to employment properties:
+Join block geometries to employment attributes:
 
 ```
 $ tippecanoe-json-tool -c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks-wac.json

@@ -1,3 +1,87 @@
+## 1.31.2
+
+* Don't accept anything inside another JSON object's properties as a
+  feature or geometry of its own.
+
+## 1.31.1
+
+* Add --exclude-all to tile-join
+
+## 1.31.0
+
+* Upgrade Wagyu to version 0.4.3
+
+## 1.30.6
+
+* Take cluster distance into account when guessing a maxzoom
+
+## 1.30.4
+
+* Features within the z0 tile buffer of the antimeridian (not only
+  those that cross it) are duplicated on both sides.
+
+## 1.30.3
+
+* Add an option to automatically assign ids to features
+
+## 1.30.2
+
+* Don't guess a higher maxzoom than is allowed for manual selection
+
+## 1.30.1
+
+* Ensure that per-feature minzoom and maxzoom are integers
+* Report compression errors in tippecanoe-decode
+* Add the ability to specify the file format with -L{"format":"…"}
+* Add an option to treat empty CSV columns as nulls, not empty strings
+
+## 1.30.0
+
+* Add a filter extension to allow filtering individual attributes
+
+## 1.29.3
+
+* Include a generator field in tileset metadata with the Tippecanoe version
+
+## 1.29.2
+
+* Be careful to remove null attributes from prefilter/postfilter output
+
+## 1.29.1
+
+* Add --use-source-polygon-winding and --reverse-source-polygon-winding
+
+## 1.29.0
+
+* Add the option to specify layer file, name, and description as JSON
+* Add the option to specify the description for attributes in the
+  tileset metadata
+* In CSV input, a trailing comma now counts as a trailing empty field
+* In tippecanoe-json-tool, an empty CSV field is now an empty string,
+  not null (for consistency with tile-join)
+
+## 1.28.1
+
+* Explicitly check for infinite and not-a-number input coordinates
+
+## 1.28.0
+
+* Directly support gzipped GeoJSON as input files
+
+## 1.27.16
+
+* Fix thread safety issues related to the out-of-disk-space checker
+
+## 1.27.15
+
+* --extend-zooms-if-still-dropping now also extends zooms if features
+  are dropped by --force-feature-limit
+
+## 1.27.14
+
+* Use an exit status of 100 if some zoom levels were successfully
+  written but not all zoom levels could be tiled.
+
 ## 1.27.13
 
 * Allow filtering features by zoom level in conditional expressions
