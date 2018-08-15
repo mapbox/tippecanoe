@@ -159,9 +159,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
 
-				for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
+				for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
 					std::string key = layer.keys[feat.properties[t]];
-					mvt_value val = layer.decode_property(feat.properties[t + 1]);
+					t++;
+					mvt_value val = layer.decode_property(feat.properties, t);
 
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
@@ -217,7 +218,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 			for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
 				const char *key = layer.keys[feat.properties[t]].c_str();
-				mvt_value val = layer.decode_property(feat.properties[t + 1]);
+				t++;
+				mvt_value val = layer.decode_property(feat.properties, t);
 
 				todo.push_back(std::pair<std::string, mvt_value>(key, val));
 			}

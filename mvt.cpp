@@ -902,31 +902,31 @@ void mvt_layer::reorder_values() {
 	}
 }
 
-mvt_value mvt_layer::decode_property(unsigned long property) const {
-	int type = property & 0x0F;
+mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off) const {
+	int type = property[off] & 0x0F;
 	mvt_value ret;
 
 	switch (type) {
 	case 0: /* signed integer */
 		ret.type = mvt_sint;
-		ret.numeric_value.sint_value = protozero::decode_zigzag64(property >> 4);
+		ret.numeric_value.sint_value = protozero::decode_zigzag64(property[off] >> 4);
 		return ret;
 
 	case 1: /* unsigned integer */
 		ret.type = mvt_uint;
-		ret.numeric_value.uint_value = property >> 4;
+		ret.numeric_value.uint_value = property[off] >> 4;
 		return ret;
 
 	case 2: /* boolean */
 		ret.type = mvt_bool;
-		ret.numeric_value.bool_value = property >> 4;
+		ret.numeric_value.bool_value = property[off] >> 4;
 		return ret;
 
 	case 3: /* float reference */
 		ret.type = mvt_float;
 		if (mvt_format == mvt_blake_float) {
 			unsigned char buf[sizeof(float)];
-			unsigned long val = property >> 4;
+			unsigned long val = property[off] >> 4;
 			for (size_t i = 0; i < sizeof(float); i++) {
 				buf[i] = val >> (i * 8);
 			}
@@ -934,48 +934,99 @@ mvt_value mvt_layer::decode_property(unsigned long property) const {
 			memcpy(&f, buf, sizeof(float));
 			ret.numeric_value.float_value = f;
 		} else {
-			if (property >> 4 >= float_values.size()) {
-				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property >> 4, float_values.size());
+			if (property[off] >> 4 >= float_values.size()) {
+				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property[off] >> 4, float_values.size());
 				exit(EXIT_FAILURE);
 			}
-			ret.numeric_value.float_value = float_values[property >> 4];
+			ret.numeric_value.float_value = float_values[property[off] >> 4];
 		}
 		return ret;
 
 	case 4: /* double reference */
 		ret.type = mvt_double;
-		if (property >> 4 >= double_values.size()) {
-			fprintf(stderr, "Out of bounds double reference: %lu vs %zu\n", property >> 4, double_values.size());
+		if (property[off] >> 4 >= double_values.size()) {
+			fprintf(stderr, "Out of bounds double reference: %lu vs %zu\n", property[off] >> 4, double_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.double_value = double_values[property >> 4];
+		ret.numeric_value.double_value = double_values[property[off] >> 4];
 		return ret;
 
 	case 5: /* string reference */
 		ret.type = mvt_string;
-		if (property >> 4 >= string_values.size()) {
-			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property >> 4, string_values.size());
+		if (property[off] >> 4 >= string_values.size()) {
+			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property[off] >> 4, string_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.string_value = string_values[property >> 4];
+		ret.string_value = string_values[property[off] >> 4];
 		return ret;
 
 	case 6: /* signed int reference */
 		ret.type = mvt_sint;
-		if (property >> 4 >= sint64_values.size()) {
-			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property >> 4, sint64_values.size());
+		if (property[off] >> 4 >= sint64_values.size()) {
+			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property[off] >> 4, sint64_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.sint_value = sint64_values[property >> 4];
+		ret.numeric_value.sint_value = sint64_values[property[off] >> 4];
 		return ret;
 
 	case 7: /* unsigned int reference */
 		ret.type = mvt_uint;
-		if (property >> 4 >= uint64_values.size()) {
-			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property >> 4, uint64_values.size());
+		if (property[off] >> 4 >= uint64_values.size()) {
+			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property[off] >> 4, uint64_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.uint_value = uint64_values[property >> 4];
+		ret.numeric_value.uint_value = uint64_values[property[off] >> 4];
+		return ret;
+
+	case 8: /* hash or list */
+		if (((property[off] >> 4) & 1) == 0) {
+			ret.type = mvt_hash;
+			size_t len = property[off] >> 5;
+			fprintf(stderr, "hash %zu\n", len);
+			off++;
+
+			ret.string_value = "{";
+
+			for (size_t i = 0; i < len; i++) {
+				mvt_value v1 = decode_property(property, off);
+				off++;
+
+				mvt_value v2 = decode_property(property, off);
+				off++;
+
+				ret.string_value.append(v1.toString());
+				ret.string_value.append(":");
+				ret.string_value.append(v2.toString());
+
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
+			}
+
+			ret.string_value.append("}");
+			off--;  // so caller can increment
+		} else {
+			ret.type = mvt_list;
+			size_t len = property[off] >> 5;
+			fprintf(stderr, "array %zu\n", len);
+			off++;
+
+			ret.string_value = "[";
+
+			for (size_t i = 0; i < len; i++) {
+				mvt_value v1 = decode_property(property, off);
+				off++;
+
+				ret.string_value.append(v1.toString());
+
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
+			}
+
+			ret.string_value.append("]");
+			off--;  // so caller can increment
+		}
 		return ret;
 
 	default:

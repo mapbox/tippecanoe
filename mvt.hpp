@@ -129,7 +129,7 @@ struct mvt_layer {
 	std::map<mvt_value, size_t> value_map{};
 	std::map<mvt_value, unsigned long> property_map{};
 
-	mvt_value decode_property(unsigned long property) const;
+	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off) const;
 	void reorder_values();
 };
 
