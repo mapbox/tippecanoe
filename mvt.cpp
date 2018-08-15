@@ -744,9 +744,28 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 		tv.numeric_value.null_value = 0;
 		layer.tag_v3_value(tv, onto);
 	} else if (j->type == JSON_HASH) {
-		// XXX
+		unsigned long vo = 8 | (0 << 4) | (j->length << 5);
+		onto.push_back(vo);
+
+		for (size_t i = 0; i < j->length; i++) {
+			if (j->keys[i]->type != JSON_STRING) {
+				fprintf(stderr, "Internal error: hash key is not a string\n");
+				exit(EXIT_FAILURE);
+			}
+
+			tv.type = mvt_string;
+			tv.string_value = j->keys[i]->string;
+
+			layer.tag_v3_value(tv, onto);
+			tag_object_v3(layer, j->values[i], onto);
+		}
 	} else if (j->type == JSON_ARRAY) {
-		// XXX
+		unsigned long vo = 8 | (1 << 4) | (j->length << 5);
+		onto.push_back(vo);
+
+		for (size_t i = 0; i < j->length; i++) {
+			tag_object_v3(layer, j->array[i], onto);
+		}
 	} else {
 		fprintf(stderr, "Internal error: unknown JSON type\n");
 		exit(EXIT_FAILURE);
