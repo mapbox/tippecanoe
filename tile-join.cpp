@@ -262,7 +262,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					type = mvt_double;
 				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
 					type = mvt_hash;
-					stringify_val(value, feat, layer, val, feat.tags[t + 1]);
+					if (val.string_value.size() > 0) {
+						value = val.string_value;
+					} else {
+						// XXX catching reference loops disabled
+						stringify_val(value, feat, layer, val, layer.values.size());
+					}
 				} else {
 					continue;
 				}
@@ -348,8 +353,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 					if (fa != attributes.end()) {
 						if (fa->second.first.type == mvt_hash) {
-							// XXX blake tag
-							copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
+							if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
+								outlayer.tag_v3(outfeature, k, fa->second.first);
+							} else {
+								copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
+							}
 						} else {
 							if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
 								outlayer.tag_v3(outfeature, k, fa->second.first);
