@@ -708,7 +708,52 @@ size_t mvt_layer::tag_v3_key(std::string key) {
 	return ko;
 }
 
-size_t mvt_layer::tag_v3_value(mvt_value value) {
+void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> &onto) {
+	mvt_value tv;
+
+	if (j->type == JSON_NUMBER) {
+		long long v;
+		if (is_integer(j->string, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			tv.type = mvt_double;
+			tv.numeric_value.double_value = atof(j->string);
+		}
+
+		layer.tag_v3_value(tv, onto);
+	} else if (j->type == JSON_TRUE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 1;
+		layer.tag_v3_value(tv, onto);
+	} else if (j->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 0;
+		layer.tag_v3_value(tv, onto);
+	} else if (j->type == JSON_STRING) {
+		tv.type = mvt_string;
+		tv.string_value = std::string(j->string);
+		layer.tag_v3_value(tv, onto);
+	} else if (j->type == JSON_NULL) {
+		tv.type = mvt_null;
+		tv.numeric_value.null_value = 0;
+		layer.tag_v3_value(tv, onto);
+	} else if (j->type == JSON_HASH) {
+		// XXX
+	} else if (j->type == JSON_ARRAY) {
+		// XXX
+	} else {
+		fprintf(stderr, "Internal error: unknown JSON type\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) {
 	std::map<mvt_value, unsigned long>::iterator vi = property_map.find(value);
 	unsigned long vo;
 
@@ -716,6 +761,7 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 		if (value.type == mvt_string) {
 			vo = (string_values.size() << 4) | 5;
 			string_values.push_back(value.string_value);
+			onto.push_back(vo);
 		} else if (value.type == mvt_float) {
 			if (mvt_format == mvt_blake_float) {
 				unsigned char buf[sizeof(float)];
@@ -729,9 +775,11 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 				vo = (float_values.size() << 4) | 3;
 				float_values.push_back(value.numeric_value.float_value);
 			}
+			onto.push_back(vo);
 		} else if (value.type == mvt_double) {
 			vo = (double_values.size() << 4) | 4;
 			double_values.push_back(value.numeric_value.double_value);
+			onto.push_back(vo);
 		} else if (value.type == mvt_int) {
 			if (value.numeric_value.int_value >= -(1L << 60) + 1 && value.numeric_value.int_value <= (1L << 60) - 1) {
 				vo = (protozero::encode_zigzag64(value.numeric_value.int_value) << 4) | 0;
@@ -739,6 +787,7 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 				vo = (sint64_values.size() << 4) | 6;
 				sint64_values.push_back(value.numeric_value.int_value);
 			}
+			onto.push_back(vo);
 		} else if (value.type == mvt_sint) {
 			if (value.numeric_value.sint_value >= -(1L << 60) + 1 && value.numeric_value.sint_value <= (1L << 60) - 1) {
 				vo = (protozero::encode_zigzag64(value.numeric_value.sint_value) << 4) | 0;
@@ -746,6 +795,7 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 				vo = (sint64_values.size() << 4) | 6;
 				sint64_values.push_back(value.numeric_value.sint_value);
 			}
+			onto.push_back(vo);
 		} else if (value.type == mvt_uint) {
 			if (value.numeric_value.uint_value <= (1L << 61) - 1) {
 				vo = (value.numeric_value.uint_value << 4) | 1;
@@ -753,8 +803,10 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 				vo = (uint64_values.size() << 4) | 7;
 				uint64_values.push_back(value.numeric_value.uint_value);
 			}
+			onto.push_back(vo);
 		} else if (value.type == mvt_bool) {
 			vo = (value.numeric_value.bool_value << 4) | 2;
+			onto.push_back(vo);
 		} else {
 			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
 			exit(EXIT_FAILURE);
@@ -763,17 +815,27 @@ size_t mvt_layer::tag_v3_value(mvt_value value) {
 		property_map.insert(std::pair<mvt_value, size_t>(value, vo));
 	} else {
 		vo = vi->second;
+		onto.push_back(vo);
 	}
-
-	return vo;
 }
 
 void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 	size_t ko = tag_v3_key(key);
-	size_t vo = tag_v3_value(value);
-
 	feature.properties.push_back(ko);
-	feature.properties.push_back(vo);
+
+	if (value.type == mvt_hash) {
+		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+		json_object *jo = json_read_tree(jp);
+		if (jo == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			exit(EXIT_FAILURE);
+		}
+		tag_object_v3(*this, jo, feature.properties);
+		json_free(jo);
+		json_end(jp);
+	} else {
+		tag_v3_value(value, feature.properties);
+	}
 }
 
 void mvt_layer::reorder_values() {

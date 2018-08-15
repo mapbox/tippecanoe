@@ -122,7 +122,7 @@ struct mvt_layer {
 	size_t tag_value(mvt_value const &value);
 	size_t tag_key(std::string const &key);
 	size_t tag_v3_key(std::string key);
-	size_t tag_v3_value(mvt_value value);
+	void tag_v3_value(mvt_value value, std::vector<unsigned long> &onto);
 
 	// For tracking the key-value constants already used in this layer
 	std::map<std::string, size_t> key_map{};
