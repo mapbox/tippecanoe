@@ -562,7 +562,7 @@ static std::string quote(std::string const &s) {
 
 std::string mvt_value::toString() const {
 	if (type == mvt_string) {
-		return quote(string_value);
+		return std::string("\"") + quote(string_value) + "\"";
 	} else if (type == mvt_int) {
 		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
@@ -585,6 +585,8 @@ std::string mvt_value::toString() const {
 		return std::to_string(numeric_value.uint_value);
 	} else if (type == mvt_bool) {
 		return numeric_value.bool_value ? "true" : "false";
+	} else if ((type == mvt_list || type == mvt_hash) && string_value.size() > 0) {
+		return string_value;
 	} else if (type == mvt_null) {
 		return "null";
 	} else {
@@ -982,7 +984,6 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		if (((property[off] >> 4) & 1) == 0) {
 			ret.type = mvt_hash;
 			size_t len = property[off] >> 5;
-			fprintf(stderr, "hash %zu\n", len);
 			off++;
 
 			ret.string_value = "{";
@@ -1008,7 +1009,6 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		} else {
 			ret.type = mvt_list;
 			size_t len = property[off] >> 5;
-			fprintf(stderr, "array %zu\n", len);
 			off++;
 
 			ret.string_value = "[";

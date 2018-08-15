@@ -322,39 +322,47 @@ void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const
 	} else if (val.type == mvt_bool) {
 		out.append(val.numeric_value.bool_value ? "true" : "false");
 	} else if (val.type == mvt_list) {
-		out.push_back('[');
-		for (size_t i = 0; i < val.list_value.size(); i++) {
-			if (i != 0) {
-				out.push_back(',');
+		if (val.string_value.size() != 0) {
+			out.append(val.string_value);
+		} else {
+			out.push_back('[');
+			for (size_t i = 0; i < val.list_value.size(); i++) {
+				if (i != 0) {
+					out.push_back(',');
+				}
+				if (val.list_value[i] >= vo || val.list_value[i] >= layer.values.size()) {
+					fprintf(stderr, "Invalid value reference in list (%lu from %lu within %lu)\n", val.list_value[i], vo,
+						layer.values.size());
+					exit(EXIT_FAILURE);
+				}
+				stringify_val(out, feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
 			}
-			if (val.list_value[i] >= vo || val.list_value[i] >= layer.values.size()) {
-				fprintf(stderr, "Invalid value reference in list (%lu from %lu within %lu)\n", val.list_value[i], vo,
-					layer.values.size());
-				exit(EXIT_FAILURE);
-			}
-			stringify_val(out, feature, layer, layer.values[val.list_value[i]], val.list_value[i]);
+			out.push_back(']');
 		}
-		out.push_back(']');
 	} else if (val.type == mvt_hash) {
-		out.push_back('{');
-		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
-			if (i != 0) {
-				out.push_back(',');
+		if (val.string_value.size() != 0) {
+			out.append(val.string_value);
+		} else {
+			out.push_back('{');
+			for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
+				if (i != 0) {
+					out.push_back(',');
+				}
+				if (val.list_value[i] >= layer.keys.size()) {
+					fprintf(stderr, "Invalid key reference in hash (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.keys.size());
+					exit(EXIT_FAILURE);
+				}
+				if (val.list_value[i + 1] >= vo || val.list_value[i + 1] >= layer.values.size()) {
+					fprintf(stderr, "Invalid value reference in hash (%lu from %lu within %lu)\n", val.list_value[i + 1],
+						vo, layer.values.size());
+					exit(EXIT_FAILURE);
+				}
+				quote(out, layer.keys[val.list_value[i]]);
+				out.push_back(':');
+				stringify_val(out, feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
 			}
-			if (val.list_value[i] >= layer.keys.size()) {
-				fprintf(stderr, "Invalid key reference in hash (%lu from %lu within %lu)\n", val.list_value[i], vo, layer.keys.size());
-				exit(EXIT_FAILURE);
-			}
-			if (val.list_value[i + 1] >= vo || val.list_value[i + 1] >= layer.values.size()) {
-				fprintf(stderr, "Invalid value reference in hash (%lu from %lu within %lu)\n", val.list_value[i + 1],
-					vo, layer.values.size());
-				exit(EXIT_FAILURE);
-			}
-			quote(out, layer.keys[val.list_value[i]]);
-			out.push_back(':');
-			stringify_val(out, feature, layer, layer.values[val.list_value[i + 1]], val.list_value[i + 1]);
+			out.push_back('}');
 		}
-		out.push_back('}');
 	} else if (val.type == mvt_null) {
 		out.append("null");
 	}
