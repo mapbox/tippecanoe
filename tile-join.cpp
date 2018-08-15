@@ -210,14 +210,19 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			std::vector<std::pair<std::string, mvt_value>> todo;
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
-				const char *key = layer.keys[feat.tags[t]].c_str();
+				std::string key = layer.keys[feat.tags[t]];
 				mvt_value &val = layer.values[feat.tags[t + 1]];
 
 				todo.push_back(std::pair<std::string, mvt_value>(key, val));
 			}
 
-			for (size_t t = 0; t + 1 < feat.properties.size(); t += 2) {
-				const char *key = layer.keys[feat.properties[t]].c_str();
+			for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
+				if (feat.properties[t] > layer.keys.size()) {
+					fprintf(stderr, "Internal error: out of bounds property key\n");
+					exit(EXIT_FAILURE);
+				}
+
+				std::string key = layer.keys[feat.properties[t]];
 				t++;
 				mvt_value val = layer.decode_property(feat.properties, t);
 
