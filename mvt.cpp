@@ -828,6 +828,9 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 		} else if (value.type == mvt_bool) {
 			vo = (value.numeric_value.bool_value << 4) | 2;
 			onto.push_back(vo);
+		} else if (value.type == mvt_null) {
+			vo = (2 << 4) | 2;
+			onto.push_back(vo);
 		} else {
 			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
 			exit(EXIT_FAILURE);
@@ -920,8 +923,13 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		return ret;
 
 	case 2: /* boolean */
-		ret.type = mvt_bool;
-		ret.numeric_value.bool_value = property[off] >> 4;
+		if ((property[off] >> 4) == 2) {
+			ret.type = mvt_null;
+			ret.numeric_value.null_value = 0;
+		} else {
+			ret.type = mvt_bool;
+			ret.numeric_value.bool_value = property[off] >> 4;
+		}
 		return ret;
 
 	case 3: /* float reference */
