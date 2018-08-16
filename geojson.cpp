@@ -252,6 +252,7 @@ struct json_serialize_action : json_feature_action {
 
 void parse_json(struct serialization_state *sst, json_pull *jp, int layer, std::string layername) {
 	json_serialize_action jsa;
+	jsa.fname = sst->fname;
 	jsa.sst = sst;
 	jsa.layer = layer;
 	jsa.layername = layername;
