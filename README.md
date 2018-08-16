@@ -101,6 +101,143 @@ with a custom layer name and description, and leaving out the `LINEARID` and `RT
 $ cat tiger/tl_2014_*_roads.json | tippecanoe -o tiger.mbtiles -l roads -n "All TIGER roads, one zoom" -z12 -Z12 -d14 -x LINEARID -x RTTYP
 ```
 
+Cookbook
+--------
+
+### Linear features (world railroads), visible at all zoom levels
+
+```
+curl -L -O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_railroads.zip
+unzip ne_10m_railroads.zip
+ogr2ogr -f GeoJSON ne_10m_railroads.geojson ne_10m_railroads.shp
+
+tippecanoe -zg -o ne_10m_railroads.mbtiles --drop-densest-as-needed --extend-zooms-if-still-dropping ne_10m_railroads.geojson
+```
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--drop-densest-as-needed`: If the tiles are too big at low zoom levels, drop the least-visible features to allow tiles to be created with those features that remain
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Discontinuous polygon features (buildings of Rhode Island), visible at all zoom levels
+
+```
+curl -L -O https://usbuildingdata.blob.core.windows.net/usbuildings-v1-1/RhodeIsland.zip
+unzip RhodeIsland.zip
+
+tippecanoe -zg -o RhodeIsland.mbtiles --drop-densest-as-needed --extend-zooms-if-still-dropping RhodeIsland.geojson
+```
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--drop-densest-as-needed`: If the tiles are too big at low or medium zoom levels, drop the least-visible features to allow tiles to be created with those features that remain
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Continuous polygon features (states and provinces), visible at all zoom levels
+
+```
+curl -L -O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_1_states_provinces.zip
+unzip -o ne_10m_admin_1_states_provinces.zip
+ogr2ogr -f GeoJSON ne_10m_admin_1_states_provinces.geojson ne_10m_admin_1_states_provinces.shp
+
+tippecanoe -zg -o ne_10m_admin_1_states_provinces.mbtiles --coalesce-densest-as-needed --extend-zooms-if-still-dropping ne_10m_admin_1_states_provinces.geojson
+```
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--coalesce-densest-as-needed`: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Large point dataset (GPS bus locations), for visualization at all zoom levels
+
+```
+curl -L -O ftp://avl-data.sfmta.com/avl_data/avl_raw/sfmtaAVLRawData01012013.csv
+sed 's/PREDICTABLE.*/PREDICTABLE/' sfmtaAVLRawData01012013.csv > sfmta.csv
+tippecanoe -zg -o sfmta.mbtiles --drop-densest-as-needed --extend-zooms-if-still-dropping sfmta.csv
+```
+
+(The `sed` line is to clean the corrupt CSV header, which contains the wrong number of fields.)
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--drop-densest-as-needed`: If the tiles are too big at low or medium zoom levels, drop the least-visible features to allow tiles to be created with those features that remain
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Clustered points (world cities), summing the clustered population, visible at all zoom levels
+
+```
+curl -L -O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places.zip
+unzip -o ne_10m_populated_places.zip
+ogr2ogr -f GeoJSON ne_10m_populated_places.geojson ne_10m_populated_places.shp
+
+tippecanoe -zg -o ne_10m_populated_places.mbtiles -r1 --cluster-distance=10 --accumulate-attribute=POP_MAX:sum ne_10m_populated_places.geojson
+```
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `-r1`: Do not automatically drop a fraction of points at low zoom levels, since clustering will be used instead
+* `--cluster-distance=10`: Cluster together features that are closer than about 10 pixels from each other
+* `--accumulate-attribute=POP_MAX:sum`: Sum the `POP_MAX` (population) attribute in features that are clustered together. Other attributes will be arbitrarily taken from the first feature in the cluster.
+
+### Show countries at low zoom levels but states at higher zoom levels
+
+```
+curl -L -O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip
+unzip ne_10m_admin_0_countries.zip
+ogr2ogr -f GeoJSON ne_10m_admin_0_countries.geojson ne_10m_admin_0_countries.shp
+
+curl -L -O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_1_states_provinces.zip
+unzip -o ne_10m_admin_1_states_provinces.zip
+ogr2ogr -f GeoJSON ne_10m_admin_1_states_provinces.geojson ne_10m_admin_1_states_provinces.shp
+
+tippecanoe -z3 -o countries-z3.mbtiles --coalesce-densest-as-needed ne_10m_admin_0_countries.geojson
+tippecanoe -zg -Z4 -o states-Z4.mbtiles --coalesce-densest-as-needed --extend-zooms-if-still-dropping ne_10m_admin_1_states_provinces.geojson
+tile-join -o states-countries.mbtiles countries-z3.mbtiles states-Z4.mbtiles
+```
+
+Countries:
+
+* `-z3`: Only generate zoom levels 0 through 3
+* `--coalesce-densest-as-needed`: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+
+States and Provinces:
+
+* `-Z4`: Only generate zoom levels 4 and beyond
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--coalesce-densest-as-needed`: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Represent multiple sources (Illinois and Indiana counties) as separate layers
+
+```
+curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_17_county10.zip
+unzip tl_2010_17_county10.zip
+ogr2ogr -f GeoJSON tl_2010_17_county10.geojson tl_2010_17_county10.shp
+
+curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_18_county10.zip
+unzip tl_2010_18_county10.zip
+ogr2ogr -f GeoJSON tl_2010_18_county10.geojson tl_2010_18_county10.shp
+
+tippecanoe -zg -o counties-separate.mbtiles --coalesce-densest-as-needed --extend-zooms-if-still-dropping tl_2010_17_county10.geojson tl_2010_18_county10.geojson
+```
+
+* `-zg`: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+* `--coalesce-densest-as-needed`: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+* `--extend-zooms-if-still-dropping`: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+
+### Merge multiple sources (Illinois and Indiana counties) into the same layer
+
+```
+curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_17_county10.zip
+unzip tl_2010_17_county10.zip
+ogr2ogr -f GeoJSON tl_2010_17_county10.geojson tl_2010_17_county10.shp
+
+curl -L -O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_18_county10.zip
+unzip tl_2010_18_county10.zip
+ogr2ogr -f GeoJSON tl_2010_18_county10.geojson tl_2010_18_county10.shp
+
+tippecanoe -zg -o counties-merged.mbtiles -l counties --coalesce-densest-as-needed --extend-zooms-if-still-dropping tl_2010_17_county10.geojson tl_2010_18_county10.geojson
+```
+
+As above, but
+
+* `-l counties`: Specify the layer name instead of letting it be derived from the source file names
+
 Options
 -------
 
