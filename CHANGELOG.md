@@ -1,3 +1,7 @@
+## 1.31.3
+
+* Fix the missing filename in JSON parsing warning messages
+
 ## 1.31.2
 
 * Don't accept anything inside another JSON object's properties as a
