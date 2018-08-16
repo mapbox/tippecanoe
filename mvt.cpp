@@ -261,7 +261,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 				case 10: /* signed integers */
 				{
-					auto pi = layer_reader.get_packed_sint64();
+					auto pi = layer_reader.get_packed_sfixed64();
 					for (auto it = pi.first; it != pi.second; ++it) {
 						layer.sint64_values.push_back(*it);
 					}
@@ -270,7 +270,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 				case 11: /* unsigned integers */
 				{
-					auto pi = layer_reader.get_packed_uint64();
+					auto pi = layer_reader.get_packed_fixed64();
 					for (auto it = pi.first; it != pi.second; ++it) {
 						layer.uint64_values.push_back(*it);
 					}
@@ -444,8 +444,8 @@ std::string mvt_tile::encode() {
 
 		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
 		layer_writer.add_packed_float(9, std::begin(layers[i].float_values), std::end(layers[i].float_values));
-		layer_writer.add_packed_sint64(10, std::begin(layers[i].sint64_values), std::end(layers[i].sint64_values));
-		layer_writer.add_packed_uint64(11, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
+		layer_writer.add_packed_sfixed64(10, std::begin(layers[i].sint64_values), std::end(layers[i].sint64_values));
+		layer_writer.add_packed_fixed64(11, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
 
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
