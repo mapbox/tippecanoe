@@ -153,6 +153,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				std::map<std::string, mvt_value> attributes;
 
 				for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
+					if (feat.tags[t] >= layer.keys.size() || feat.tags[t + 1] >= layer.values.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
 					std::string key = layer.keys[feat.tags[t]];
 					mvt_value &val = layer.values[feat.tags[t + 1]];
 
@@ -160,7 +164,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
-					std::string key = layer.keys[feat.properties[t]];
+					if (feat.properties[t] >= layer.attribute_pool.keys.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
+					std::string key = layer.attribute_pool.keys[feat.properties[t]];
 					t++;
 					mvt_value val = layer.decode_property(feat.properties, t);
 
@@ -210,6 +218,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			std::vector<std::pair<std::string, mvt_value>> todo;
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
+				if (feat.tags[t] >= layer.keys.size() || feat.tags[t + 1] >= layer.values.size()) {
+					fprintf(stderr, "Out of bounds attribute reference\n");
+					exit(EXIT_FAILURE);
+				}
 				std::string key = layer.keys[feat.tags[t]];
 				mvt_value &val = layer.values[feat.tags[t + 1]];
 
