@@ -139,13 +139,13 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 9, "x": 82, "y": 198 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "LINEARID": "1102406970094", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
-,
-{ "type": "Feature", "properties": { "LINEARID": "1102406970095", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
-,
 { "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.138615, 37.729453 ], [ -122.137928, 37.725379 ], [ -122.137413, 37.724293 ], [ -122.134666, 37.720763 ], [ -122.133465, 37.718590 ], [ -122.131405, 37.714381 ], [ -122.129860, 37.712751 ], [ -122.127972, 37.711665 ], [ -122.125397, 37.710307 ], [ -122.121105, 37.707183 ], [ -122.117157, 37.705418 ], [ -122.109432, 37.700664 ], [ -122.104454, 37.695503 ] ] } }
 ,
 { "type": "Feature", "properties": { "LINEARID": "1104474748623", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.104111, 37.695503 ], [ -122.109089, 37.700664 ], [ -122.115784, 37.704874 ], [ -122.121105, 37.707319 ], [ -122.125053, 37.710307 ], [ -122.129173, 37.712615 ], [ -122.130890, 37.714245 ], [ -122.133121, 37.718590 ], [ -122.137413, 37.724972 ], [ -122.138443, 37.729453 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1102406970094", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
+,
+{ "type": "Feature", "properties": { "LINEARID": "1102406970095", "FULLNAME": "Macarthur Blvd", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.139130, 37.729453 ], [ -122.139130, 37.728910 ] ] } }
 ] }
 ] }
 ,
