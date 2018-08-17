@@ -14,7 +14,6 @@ enum mvt_fmt {
 	mvt_blake,
 	mvt_original,
 	mvt_reordered,
-	mvt_blake_float,
 };
 
 extern int mvt_format;

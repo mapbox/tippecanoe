@@ -353,13 +353,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 					if (fa != attributes.end()) {
 						if (fa->second.first.type == mvt_hash) {
-							if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
+							if (mvt_format == mvt_blake) {
 								outlayer.tag_v3(outfeature, k, fa->second.first);
 							} else {
 								copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
 							}
 						} else {
-							if (mvt_format == mvt_blake || mvt_format == mvt_blake_float) {
+							if (mvt_format == mvt_blake) {
 								outlayer.tag_v3(outfeature, k, fa->second.first);
 							} else {
 								outlayer.tag(outfeature, k, fa->second.first);
@@ -988,8 +988,6 @@ int main(int argc, char **argv) {
 		case 'V':
 			if (strcmp(optarg, "blake") == 0) {
 				mvt_format = mvt_blake;
-			} else if (strcmp(optarg, "blake_float") == 0) {
-				mvt_format = mvt_blake_float;
 			} else if (strcmp(optarg, "original") == 0) {
 				mvt_format = mvt_original;
 			} else if (strcmp(optarg, "reordered") == 0) {

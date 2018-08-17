@@ -2674,8 +2674,6 @@ int main(int argc, char **argv) {
 		case 'V':
 			if (strcmp(optarg, "blake") == 0) {
 				mvt_format = mvt_blake;
-			} else if (strcmp(optarg, "blake_float") == 0) {
-				mvt_format = mvt_blake_float;
 			} else if (strcmp(optarg, "original") == 0) {
 				mvt_format = mvt_original;
 			} else if (strcmp(optarg, "reordered") == 0) {

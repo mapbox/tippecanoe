@@ -812,18 +812,8 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 			attribute_pool.string_values.push_back(value.string_value);
 			onto.push_back(vo);
 		} else if (value.type == mvt_float) {
-			if (mvt_format == mvt_blake_float) {
-				unsigned char buf[sizeof(float)];
-				memcpy(buf, &value.numeric_value.float_value, sizeof(float));
-				unsigned long val = 0;
-				for (size_t i = 0; i < sizeof(float); i++) {
-					val |= buf[i] << (i * 8);
-				}
-				vo = (val << 4) | 3;
-			} else {
-				vo = (attribute_pool.float_values.size() << 4) | 1;
-				attribute_pool.float_values.push_back(value.numeric_value.float_value);
-			}
+			vo = (attribute_pool.float_values.size() << 4) | 1;
+			attribute_pool.float_values.push_back(value.numeric_value.float_value);
 			onto.push_back(vo);
 		} else if (value.type == mvt_double) {
 			vo = (attribute_pool.double_values.size() << 4) | 2;
@@ -951,22 +941,11 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 
 	case 1: /* float reference */
 		ret.type = mvt_float;
-		if (mvt_format == mvt_blake_float) {
-			unsigned char buf[sizeof(float)];
-			unsigned long val = property[off] >> 4;
-			for (size_t i = 0; i < sizeof(float); i++) {
-				buf[i] = val >> (i * 8);
-			}
-			float f;
-			memcpy(&f, buf, sizeof(float));
-			ret.numeric_value.float_value = f;
-		} else {
-			if (property[off] >> 4 >= attribute_pool.float_values.size()) {
-				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.float_values.size());
-				exit(EXIT_FAILURE);
-			}
-			ret.numeric_value.float_value = attribute_pool.float_values[property[off] >> 4];
+		if (property[off] >> 4 >= attribute_pool.float_values.size()) {
+			fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.float_values.size());
+			exit(EXIT_FAILURE);
 		}
+		ret.numeric_value.float_value = attribute_pool.float_values[property[off] >> 4];
 		return ret;
 
 	case 2: /* double reference */
