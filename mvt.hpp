@@ -103,17 +103,22 @@ struct mvt_value {
 	}
 };
 
+struct mvt_attribute_pool {
+	std::vector<std::string> keys{};
+	std::vector<std::string> string_values{};
+	std::vector<double> double_values{};
+	std::vector<float> float_values{};
+	std::vector<long> sint64_values{};
+	std::vector<unsigned long> uint64_values{};
+};
+
 struct mvt_layer {
 	int version = 0;
 	std::string name = "";
 	std::vector<mvt_feature> features{};
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
-	std::vector<std::string> string_values{};
-	std::vector<double> double_values{};
-	std::vector<float> float_values{};
-	std::vector<long> sint64_values{};
-	std::vector<unsigned long> uint64_values{};
+	mvt_attribute_pool attribute_pool;
 	long long extent = 0;
 
 	// Add a key-value pair to a feature, using this layer's constant pool

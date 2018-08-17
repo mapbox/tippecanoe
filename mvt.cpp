@@ -237,43 +237,62 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					layer.extent = layer_reader.get_uint32();
 					break;
 
-				case 7: /* string */
-					layer.string_values.push_back(layer_reader.get_string());
-					break;
-
-				case 8: /* doubles */
+				case 7: /* attribute_pool */
 				{
-					auto pi = layer_reader.get_packed_double();
-					for (auto it = pi.first; it != pi.second; ++it) {
-						layer.double_values.push_back(*it);
-					}
-					break;
-				}
+					protozero::pbf_reader attribute_pool_reader(layer_reader.get_message());
 
-				case 9: /* floats */
-				{
-					auto pi = layer_reader.get_packed_float();
-					for (auto it = pi.first; it != pi.second; ++it) {
-						layer.float_values.push_back(*it);
-					}
-					break;
-				}
+					while (attribute_pool_reader.next()) {
+						switch (attribute_pool_reader.tag()) {
+						case 1: /* keys*/
+							layer.attribute_pool.keys.push_back(attribute_pool_reader.get_string());
+							break;
 
-				case 10: /* signed integers */
-				{
-					auto pi = layer_reader.get_packed_sfixed64();
-					for (auto it = pi.first; it != pi.second; ++it) {
-						layer.sint64_values.push_back(*it);
-					}
-					break;
-				}
+						case 2: /* string */
+							layer.attribute_pool.string_values.push_back(attribute_pool_reader.get_string());
+							break;
 
-				case 11: /* unsigned integers */
-				{
-					auto pi = layer_reader.get_packed_fixed64();
-					for (auto it = pi.first; it != pi.second; ++it) {
-						layer.uint64_values.push_back(*it);
+						case 3: /* floats */
+						{
+							auto pi = attribute_pool_reader.get_packed_float();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								layer.attribute_pool.float_values.push_back(*it);
+							}
+							break;
+						}
+
+						case 4: /* doubles */
+						{
+							auto pi = attribute_pool_reader.get_packed_double();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								layer.attribute_pool.double_values.push_back(*it);
+							}
+							break;
+						}
+
+						case 5: /* signed integers */
+						{
+							auto pi = attribute_pool_reader.get_packed_sfixed64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								layer.attribute_pool.sint64_values.push_back(*it);
+							}
+							break;
+						}
+
+						case 6: /* unsigned integers */
+						{
+							auto pi = attribute_pool_reader.get_packed_fixed64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								layer.attribute_pool.uint64_values.push_back(*it);
+							}
+							break;
+						}
+
+						default:
+							attribute_pool_reader.skip();
+							break;
+						}
 					}
+
 					break;
 				}
 
@@ -438,14 +457,23 @@ std::string mvt_tile::encode() {
 			layer_writer.add_message(4, value_string);
 		}
 
-		for (size_t v = 0; v < layers[i].string_values.size(); v++) {
-			layer_writer.add_string(7, layers[i].string_values[v]);
+		std::string attribute_pool_string;
+		protozero::pbf_writer attribute_pool_writer(attribute_pool_string);
+
+		for (size_t v = 0; v < layers[i].attribute_pool.keys.size(); v++) {
+			attribute_pool_writer.add_string(1, layers[i].attribute_pool.keys[v]);
 		}
 
-		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
-		layer_writer.add_packed_float(9, std::begin(layers[i].float_values), std::end(layers[i].float_values));
-		layer_writer.add_packed_sfixed64(10, std::begin(layers[i].sint64_values), std::end(layers[i].sint64_values));
-		layer_writer.add_packed_fixed64(11, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
+		for (size_t v = 0; v < layers[i].attribute_pool.string_values.size(); v++) {
+			attribute_pool_writer.add_string(2, layers[i].attribute_pool.string_values[v]);
+		}
+
+		attribute_pool_writer.add_packed_float(3, std::begin(layers[i].attribute_pool.float_values), std::end(layers[i].attribute_pool.float_values));
+		attribute_pool_writer.add_packed_double(4, std::begin(layers[i].attribute_pool.double_values), std::end(layers[i].attribute_pool.double_values));
+		attribute_pool_writer.add_packed_sfixed64(5, std::begin(layers[i].attribute_pool.sint64_values), std::end(layers[i].attribute_pool.sint64_values));
+		attribute_pool_writer.add_packed_fixed64(6, std::begin(layers[i].attribute_pool.uint64_values), std::end(layers[i].attribute_pool.uint64_values));
+
+		layer_writer.add_message(7, attribute_pool_string);
 
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
@@ -700,8 +728,8 @@ size_t mvt_layer::tag_v3_key(std::string key) {
 	size_t ko;
 
 	if (ki == key_map.end()) {
-		ko = keys.size();
-		keys.push_back(key);
+		ko = attribute_pool.keys.size();
+		attribute_pool.keys.push_back(key);
 		key_map.insert(std::pair<std::string, size_t>(key, ko));
 	} else {
 		ko = ki->second;
@@ -746,7 +774,7 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 		tv.numeric_value.null_value = 0;
 		layer.tag_v3_value(tv, onto);
 	} else if (j->type == JSON_HASH) {
-		unsigned long vo = 8 | (0 << 4) | (j->length << 5);
+		unsigned long vo = 9 | (j->length << 4);
 		onto.push_back(vo);
 
 		for (size_t i = 0; i < j->length; i++) {
@@ -762,7 +790,7 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 			tag_object_v3(layer, j->values[i], onto);
 		}
 	} else if (j->type == JSON_ARRAY) {
-		unsigned long vo = 8 | (1 << 4) | (j->length << 5);
+		unsigned long vo = 8 | (j->length << 4);
 		onto.push_back(vo);
 
 		for (size_t i = 0; i < j->length; i++) {
@@ -780,8 +808,8 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 
 	if (vi == property_map.end()) {
 		if (value.type == mvt_string) {
-			vo = (string_values.size() << 4) | 5;
-			string_values.push_back(value.string_value);
+			vo = (attribute_pool.string_values.size() << 4) | 0;
+			attribute_pool.string_values.push_back(value.string_value);
 			onto.push_back(vo);
 		} else if (value.type == mvt_float) {
 			if (mvt_format == mvt_blake_float) {
@@ -793,43 +821,43 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 				}
 				vo = (val << 4) | 3;
 			} else {
-				vo = (float_values.size() << 4) | 3;
-				float_values.push_back(value.numeric_value.float_value);
+				vo = (attribute_pool.float_values.size() << 4) | 1;
+				attribute_pool.float_values.push_back(value.numeric_value.float_value);
 			}
 			onto.push_back(vo);
 		} else if (value.type == mvt_double) {
-			vo = (double_values.size() << 4) | 4;
-			double_values.push_back(value.numeric_value.double_value);
+			vo = (attribute_pool.double_values.size() << 4) | 2;
+			attribute_pool.double_values.push_back(value.numeric_value.double_value);
 			onto.push_back(vo);
 		} else if (value.type == mvt_int) {
 			if (value.numeric_value.int_value >= -(1L << 60) + 1 && value.numeric_value.int_value <= (1L << 60) - 1) {
-				vo = (protozero::encode_zigzag64(value.numeric_value.int_value) << 4) | 0;
+				vo = (protozero::encode_zigzag64(value.numeric_value.int_value) << 4) | 3;
 			} else {
-				vo = (sint64_values.size() << 4) | 6;
-				sint64_values.push_back(value.numeric_value.int_value);
+				vo = (attribute_pool.sint64_values.size() << 4) | 6;
+				attribute_pool.sint64_values.push_back(value.numeric_value.int_value);
 			}
 			onto.push_back(vo);
 		} else if (value.type == mvt_sint) {
 			if (value.numeric_value.sint_value >= -(1L << 60) + 1 && value.numeric_value.sint_value <= (1L << 60) - 1) {
-				vo = (protozero::encode_zigzag64(value.numeric_value.sint_value) << 4) | 0;
+				vo = (protozero::encode_zigzag64(value.numeric_value.sint_value) << 4) | 3;
 			} else {
-				vo = (sint64_values.size() << 4) | 6;
-				sint64_values.push_back(value.numeric_value.sint_value);
+				vo = (attribute_pool.sint64_values.size() << 4) | 6;
+				attribute_pool.sint64_values.push_back(value.numeric_value.sint_value);
 			}
 			onto.push_back(vo);
 		} else if (value.type == mvt_uint) {
 			if (value.numeric_value.uint_value <= (1L << 61) - 1) {
-				vo = (value.numeric_value.uint_value << 4) | 1;
+				vo = (value.numeric_value.uint_value << 4) | 4;
 			} else {
-				vo = (uint64_values.size() << 4) | 7;
-				uint64_values.push_back(value.numeric_value.uint_value);
+				vo = (attribute_pool.uint64_values.size() << 4) | 5;
+				attribute_pool.uint64_values.push_back(value.numeric_value.uint_value);
 			}
 			onto.push_back(vo);
 		} else if (value.type == mvt_bool) {
-			vo = (value.numeric_value.bool_value << 4) | 2;
+			vo = (value.numeric_value.bool_value << 4) | 7;
 			onto.push_back(vo);
 		} else if (value.type == mvt_null) {
-			vo = (2 << 4) | 2;
+			vo = (2 << 4) | 7;
 			onto.push_back(vo);
 		} else {
 			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
@@ -912,27 +940,16 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 	mvt_value ret;
 
 	switch (type) {
-	case 0: /* signed integer */
-		ret.type = mvt_sint;
-		ret.numeric_value.sint_value = protozero::decode_zigzag64(property[off] >> 4);
-		return ret;
-
-	case 1: /* unsigned integer */
-		ret.type = mvt_uint;
-		ret.numeric_value.uint_value = property[off] >> 4;
-		return ret;
-
-	case 2: /* boolean */
-		if ((property[off] >> 4) == 2) {
-			ret.type = mvt_null;
-			ret.numeric_value.null_value = 0;
-		} else {
-			ret.type = mvt_bool;
-			ret.numeric_value.bool_value = property[off] >> 4;
+	case 0: /* string reference */
+		ret.type = mvt_string;
+		if (property[off] >> 4 >= attribute_pool.string_values.size()) {
+			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.string_values.size());
+			exit(EXIT_FAILURE);
 		}
+		ret.string_value = attribute_pool.string_values[property[off] >> 4];
 		return ret;
 
-	case 3: /* float reference */
+	case 1: /* float reference */
 		ret.type = mvt_float;
 		if (mvt_format == mvt_blake_float) {
 			unsigned char buf[sizeof(float)];
@@ -944,102 +961,118 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 			memcpy(&f, buf, sizeof(float));
 			ret.numeric_value.float_value = f;
 		} else {
-			if (property[off] >> 4 >= float_values.size()) {
-				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property[off] >> 4, float_values.size());
+			if (property[off] >> 4 >= attribute_pool.float_values.size()) {
+				fprintf(stderr, "Out of bounds float reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.float_values.size());
 				exit(EXIT_FAILURE);
 			}
-			ret.numeric_value.float_value = float_values[property[off] >> 4];
+			ret.numeric_value.float_value = attribute_pool.float_values[property[off] >> 4];
 		}
 		return ret;
 
-	case 4: /* double reference */
+	case 2: /* double reference */
 		ret.type = mvt_double;
-		if (property[off] >> 4 >= double_values.size()) {
-			fprintf(stderr, "Out of bounds double reference: %lu vs %zu\n", property[off] >> 4, double_values.size());
+		if (property[off] >> 4 >= attribute_pool.double_values.size()) {
+			fprintf(stderr, "Out of bounds double reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.double_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.double_value = double_values[property[off] >> 4];
+		ret.numeric_value.double_value = attribute_pool.double_values[property[off] >> 4];
 		return ret;
 
-	case 5: /* string reference */
-		ret.type = mvt_string;
-		if (property[off] >> 4 >= string_values.size()) {
-			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property[off] >> 4, string_values.size());
+	case 3: /* signed integer */
+		ret.type = mvt_sint;
+		ret.numeric_value.sint_value = protozero::decode_zigzag64(property[off] >> 4);
+		return ret;
+
+	case 4: /* unsigned integer */
+		ret.type = mvt_uint;
+		ret.numeric_value.uint_value = property[off] >> 4;
+		return ret;
+
+	case 5: /* unsigned int reference */
+		ret.type = mvt_uint;
+		if (property[off] >> 4 >= attribute_pool.uint64_values.size()) {
+			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.uint64_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.string_value = string_values[property[off] >> 4];
+		ret.numeric_value.uint_value = attribute_pool.uint64_values[property[off] >> 4];
 		return ret;
 
 	case 6: /* signed int reference */
 		ret.type = mvt_sint;
-		if (property[off] >> 4 >= sint64_values.size()) {
-			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property[off] >> 4, sint64_values.size());
+		if (property[off] >> 4 >= attribute_pool.sint64_values.size()) {
+			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.sint64_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.sint_value = sint64_values[property[off] >> 4];
+		ret.numeric_value.sint_value = attribute_pool.sint64_values[property[off] >> 4];
 		return ret;
 
-	case 7: /* unsigned int reference */
-		ret.type = mvt_uint;
-		if (property[off] >> 4 >= uint64_values.size()) {
-			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property[off] >> 4, uint64_values.size());
-			exit(EXIT_FAILURE);
-		}
-		ret.numeric_value.uint_value = uint64_values[property[off] >> 4];
-		return ret;
-
-	case 8: /* hash or list */
-		if (((property[off] >> 4) & 1) == 0) {
-			ret.type = mvt_hash;
-			size_t len = property[off] >> 5;
-			off++;
-
-			ret.string_value = "{";
-
-			for (size_t i = 0; i < len; i++) {
-				mvt_value v1 = decode_property(property, off);
-				off++;
-
-				mvt_value v2 = decode_property(property, off);
-				off++;
-
-				ret.string_value.append(v1.toString());
-				ret.string_value.append(":");
-				ret.string_value.append(v2.toString());
-
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
-			}
-
-			ret.string_value.append("}");
-			off--;  // so caller can increment
+	case 7: /* boolean */
+		if ((property[off] >> 4) == 2) {
+			ret.type = mvt_null;
+			ret.numeric_value.null_value = 0;
 		} else {
-			ret.type = mvt_list;
-			size_t len = property[off] >> 5;
+			ret.type = mvt_bool;
+			ret.numeric_value.bool_value = property[off] >> 4;
+		}
+		return ret;
+
+	case 8: /* list */
+	{
+		ret.type = mvt_list;
+		size_t len = property[off] >> 4;
+		off++;
+
+		ret.string_value = "[";
+
+		for (size_t i = 0; i < len; i++) {
+			mvt_value v1 = decode_property(property, off);
 			off++;
 
-			ret.string_value = "[";
+			ret.string_value.append(v1.toString());
 
-			for (size_t i = 0; i < len; i++) {
-				mvt_value v1 = decode_property(property, off);
-				off++;
-
-				ret.string_value.append(v1.toString());
-
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
+			if (i + 1 < len) {
+				ret.string_value.push_back(',');
 			}
-
-			ret.string_value.append("]");
-			off--;  // so caller can increment
 		}
+
+		ret.string_value.append("]");
+		off--;  // so caller can increment
+	}
+		return ret;
+
+	case 9: /* hash */
+	{
+		ret.type = mvt_hash;
+		size_t len = property[off] >> 4;
+		off++;
+
+		ret.string_value = "{";
+
+		for (size_t i = 0; i < len; i++) {
+			mvt_value v1 = decode_property(property, off);
+			off++;
+
+			mvt_value v2 = decode_property(property, off);
+			off++;
+
+			ret.string_value.append(v1.toString());
+			ret.string_value.append(":");
+			ret.string_value.append(v2.toString());
+
+			if (i + 1 < len) {
+				ret.string_value.push_back(',');
+			}
+		}
+
+		ret.string_value.append("}");
+		off--;  // so caller can increment
+	}
 		return ret;
 
 	default:
-		fprintf(stderr, "Unknown attribute type %d\n", type);
-		exit(EXIT_FAILURE);
+		ret.type = mvt_string;
+		ret.string_value = std::to_string(property[off]);
+		return ret;
 	}
 }
 

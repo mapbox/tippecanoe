@@ -442,7 +442,11 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		}
 
 		for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
-			const char *key = layer.keys[feat.properties[t]].c_str();
+			if (feat.properties[t] >= layer.attribute_pool.keys.size()) {
+				fprintf(stderr, "Out of bounds attribute reference %lu into %zu\n", feat.properties[t], layer.attribute_pool.keys.size());
+				exit(EXIT_FAILURE);
+			}
+			const char *key = layer.attribute_pool.keys[feat.properties[t]].c_str();
 
 			t++;
 			mvt_value const &val = layer.decode_property(feat.properties, t);
