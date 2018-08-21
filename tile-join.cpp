@@ -773,7 +773,10 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 					if (name.size() == 0) {
 						name = std::string((char *) s);
 					} else {
-						name += " + " + std::string((char *) s);
+						std::string proposed = name + " + " + std::string((char *) s);
+						if (proposed.size() < 255) {
+							name = proposed;
+						}
 					}
 				}
 			}
