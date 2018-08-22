@@ -22,7 +22,7 @@
 #include "options.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
+static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1);
 
 drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
@@ -661,16 +661,35 @@ drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area);
+			bool changed0 = false, changed1 = false;
+			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area, &changed0, &changed1);
 
 			if (c > 1) {  // clipped
-				out.push_back(draw(VT_MOVETO, x1, y1));
-				out.push_back(draw(VT_LINETO, x2, y2));
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				if (changed0) {
+					out.push_back(draw(VT_MOVETO, x1, y1));
+				} else {
+					draw d = geom[i - 1];
+					d.op = VT_MOVETO;
+					out.push_back(d);
+				}
+
+				if (changed1) {
+					out.push_back(draw(VT_LINETO, x2, y2));
+				} else {
+					draw d = geom[i];
+					d.op = VT_LINETO;
+					out.push_back(d);
+				}
+
+				draw d = geom[i];
+				d.op = VT_MOVETO;
+				out.push_back(d);
 			} else if (c == 1) {  // unchanged
 				out.push_back(geom[i]);
 			} else {  // clipped away entirely
-				out.push_back(draw(VT_MOVETO, geom[i].x, geom[i].y));
+				draw d = geom[i];
+				d.op = VT_MOVETO;
+				out.push_back(d);
 			}
 		} else {
 			out.push_back(geom[i]);
@@ -774,14 +793,15 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
+			bool changed0 = false, changed1 = false;
+			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent, &changed0, &changed1);
 
 			if (c > 1) {  // clipped
-				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
+				if (changed0) {
 					out.push_back(draw(VT_LINETO, x1, y1));
 					out[out.size() - 1].necessary = 1;
 				}
-				if (x2 != geom[i - 0].x || y2 != geom[i - 0].y) {
+				if (changed1) {
 					out.push_back(draw(VT_LINETO, x2, y2));
 					out[out.size() - 1].necessary = 1;
 				}
@@ -1063,7 +1083,7 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 	return code;
 }
 
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
+static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1) {
 	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
 	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
 	int accept = 0;
@@ -1105,11 +1125,13 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 				*x0 = x;
 				*y0 = y;
 				outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
+				*changed0 = 1;
 				changed = 1;
 			} else {
 				*x1 = x;
 				*y1 = y;
 				outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
+				*changed1 = 1;
 				changed = 1;
 			}
 		}
