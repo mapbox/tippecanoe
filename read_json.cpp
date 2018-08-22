@@ -81,7 +81,22 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			}
 
 			draw d(op, x, y);
-			out.push_back(draw(op, x, y));
+
+			size_t maybe_attr = 3;
+			if (j->length > 2 && j->array[2]->type == JSON_NUMBER) {
+				d.elevation = j->array[2]->number;
+				maybe_attr = 4;
+			}
+
+			if (j->length > maybe_attr) {
+				if (j->array[maybe_attr]->type == JSON_HASH) {
+					char *s = json_stringify(j->array[maybe_attr]);
+					d.attributes = std::string(s);
+					free(s);  // stringify
+				}
+			}
+
+			out.push_back(d);
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 			json_context(j);

@@ -294,7 +294,10 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 		drawvec geom2;
 		for (size_t i = 0; i < geom.size(); i++) {
-			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
+			draw d = geom[i];
+			d.x = (geom[i].x + sx) >> geometry_scale;
+			d.y = (geom[i].y + sy) >> geometry_scale;
+			geom2.push_back(d);
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -1237,13 +1240,17 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 
 			if (sf.bbox[0] <= (1LL << 32) * buffer / 256) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
+					draw d = sf.geometry[i];
+					d.x += 1LL << 32;
+					sf.geometry.push_back(d);
 				}
 			}
 
 			if (sf.bbox[2] >= (1LL << 32) - ((1LL << 32) * buffer / 256)) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
+					draw d = sf.geometry[i];
+					d.x -= 1LL << 32;
+					sf.geometry.push_back(d);
 				}
 			}
 
