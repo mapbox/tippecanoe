@@ -37,6 +37,10 @@ tippecanoe-enumerate
 tippecanoe-json-tool
 unit
 
+# Tests
+tests/**/*.mbtiles
+tests/**/*.check
+
 # Vim
 *.swp
 
