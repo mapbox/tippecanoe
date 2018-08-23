@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -238,13 +239,15 @@ struct lonlat {
 	double lat;
 	long long x;
 	long long y;
+	double elevation;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny, double nelevation)
 	    : op(nop),
 	      lon(nlon),
 	      lat(nlat),
 	      x(nx),
-	      y(ny) {
+	      y(ny), 
+	      elevation(nelevation) {
 	}
 };
 
@@ -475,9 +478,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
-				ops.push_back(lonlat(op, lon, lat, px, py));
+				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevation));
 			} else {
-				ops.push_back(lonlat(op, 0, 0, 0, 0));
+				ops.push_back(lonlat(op, 0, 0, 0, 0, NAN));
 			}
 		}
 
@@ -491,6 +494,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 				state.json_write_float(ops[0].lon);
 				state.json_write_float(ops[0].lat);
+				if (!isnan(ops[0].elevation)) {
+					state.json_write_float(ops[0].elevation);
+				}
 				state.json_end_array();
 			} else {
 				state.json_write_string("type");
@@ -503,6 +509,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					state.json_write_array();
 					state.json_write_float(ops[i].lon);
 					state.json_write_float(ops[i].lat);
+					if (!isnan(ops[i].elevation)) {
+						state.json_write_float(ops[i].elevation);
+					}
 					state.json_end_array();
 				}
 
@@ -527,6 +536,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					state.json_write_array();
 					state.json_write_float(ops[i].lon);
 					state.json_write_float(ops[i].lat);
+					if (!isnan(ops[i].elevation)) {
+						state.json_write_float(ops[i].elevation);
+					}
 					state.json_end_array();
 				}
 
@@ -546,6 +558,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 							state.json_write_array();
 							state.json_write_float(ops[i].lon);
 							state.json_write_float(ops[i].lat);
+							if (!isnan(ops[i].elevation)) {
+								state.json_write_float(ops[i].elevation);
+							}
 							state.json_end_array();
 
 							sstate = 1;
@@ -556,6 +571,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 							state.json_write_array();
 							state.json_write_float(ops[i].lon);
 							state.json_write_float(ops[i].lat);
+							if (!isnan(ops[i].elevation)) {
+								state.json_write_float(ops[i].elevation);
+							}
 							state.json_end_array();
 
 							sstate = 1;
@@ -564,6 +582,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 						state.json_write_array();
 						state.json_write_float(ops[i].lon);
 						state.json_write_float(ops[i].lat);
+						if (!isnan(ops[i].elevation)) {
+							state.json_write_float(ops[i].elevation);
+						}
 						state.json_end_array();
 					}
 				}

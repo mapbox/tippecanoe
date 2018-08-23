@@ -313,6 +313,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
+					std::vector<double> elevations;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -352,12 +353,22 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 6: /* elevations */
+						{
+							auto pi = feature_reader.get_packed_double();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								elevations.push_back(*it);
+							}
+							break;
+						}
+
 						default:
 							feature_reader.skip();
 							break;
 						}
 					}
 
+					size_t elevation_index = 0;
 					long long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
@@ -370,7 +381,12 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 								py += protozero::decode_zigzag32(geoms[g + 2]);
 								g += 2;
 
-								feature.geometry.push_back(mvt_geometry(op, px, py));
+								mvt_geometry decoded = mvt_geometry(op, px, py);
+								if (elevation_index < elevations.size()) {
+									decoded.elevation = elevations[elevation_index];
+									elevation_index++;
+								}
+								feature.geometry.push_back(decoded);
 							}
 						} else {
 							feature.geometry.push_back(mvt_geometry(op, 0, 0));
@@ -560,7 +576,7 @@ std::string mvt_tile::encode() {
 					}
 				}
 
-				feature_writer.add_packed_double(5, std::begin(elevations), std::end(elevations));
+				feature_writer.add_packed_double(6, std::begin(elevations), std::end(elevations));
 			}
 
 			layer_writer.add_message(2, feature_string);
