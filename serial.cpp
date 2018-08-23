@@ -30,6 +30,11 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 	return w;
 }
 
+void serialize_double(FILE *out, double n, std::atomic<long long> *fpos, const char *fname) {
+	fwrite_check(&n, sizeof(double), 1, out, fname);
+	*fpos += sizeof(double);
+}
+
 void serialize_int(FILE *out, int n, std::atomic<long long> *fpos, const char *fname) {
 	serialize_long_long(out, n, fpos, fname);
 }
@@ -72,6 +77,12 @@ void serialize_uint(FILE *out, unsigned n, std::atomic<long long> *fpos, const c
 	*fpos += sizeof(unsigned);
 }
 
+void serialize_string(FILE *out, std::string const &s, std::atomic<long long> *fpos, const char *fname) {
+	serialize_ulong_long(out, s.size(), fpos, fname);
+	fwrite_check(s.c_str(), sizeof(char), s.size(), out, fname);
+	*fpos += s.size();
+}
+
 void deserialize_int(char **f, int *n) {
 	long long ll;
 	deserialize_long_long(f, &ll);
@@ -110,6 +121,27 @@ void deserialize_uint(char **f, unsigned *n) {
 void deserialize_byte(char **f, signed char *n) {
 	memcpy(n, *f, sizeof(signed char));
 	*f += sizeof(signed char);
+}
+
+int deserialize_double_io(FILE *f, double *n, std::atomic<long long> *geompos) {
+	if (fread(n, sizeof(double), 1, f) == 1) {
+		*geompos += sizeof(double);
+		return 1;
+	}
+	return 0;
+}
+
+int deserialize_string_io(FILE *f, std::string &s, std::atomic<long long> *geompos) {
+	unsigned long long len;
+	if (deserialize_ulong_long_io(f, &len, geompos)) {
+		char tmp[len];
+		if (fread(tmp, sizeof(char), len, f) == len) {
+			*geompos += len;
+			s = std::string(tmp, len);
+			return 1;
+		}
+	}
+	return 0;
 }
 
 int deserialize_long_long_io(FILE *f, long long *n, std::atomic<long long> *geompos) {
@@ -171,9 +203,25 @@ int deserialize_byte_io(FILE *f, signed char *n, std::atomic<long long> *geompos
 static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE *out, const char *fname, long long wx, long long wy) {
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
-			serialize_byte(out, dv[i].op, fpos, fname);
+			int op = dv[i].op;
+			if (!isnan(dv[i].elevation)) {
+				op |= VT_NODE_3D;
+			}
+			if (dv[i].attributes.size() != 0) {
+				op |= VT_NODE_ATTRIB;
+			}
+
+			serialize_byte(out, op, fpos, fname);
 			serialize_long_long(out, dv[i].x - wx, fpos, fname);
 			serialize_long_long(out, dv[i].y - wy, fpos, fname);
+
+			if (op & VT_NODE_3D) {
+				serialize_double(out, dv[i].elevation, fpos, fname);
+			}
+			if (op & VT_NODE_ATTRIB) {
+				serialize_string(out, dv[i].attributes, fpos, fname);
+			}
+
 			wx = dv[i].x;
 			wy = dv[i].y;
 		} else {

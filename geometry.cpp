@@ -37,10 +37,12 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 	while (1) {
 		draw d;
 
-		if (!deserialize_byte_io(meta, &d.op, geompos)) {
+		signed char op;
+		if (!deserialize_byte_io(meta, &op, geompos)) {
 			fprintf(stderr, "Internal error: Unexpected end of file in geometry\n");
 			exit(EXIT_FAILURE);
 		}
+		d.op = op & VT_CLOSEPATH;
 		if (d.op == VT_END) {
 			break;
 		}
@@ -77,6 +79,13 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 
 			d.x = wwx;
 			d.y = wwy;
+
+			if (op & VT_NODE_3D) {
+				deserialize_double_io(meta, &d.elevation, geompos);
+			}
+			if (op & VT_NODE_ATTRIB) {
+				deserialize_string_io(meta, d.attributes, geompos);
+			}
 		}
 
 		out.push_back(d);
