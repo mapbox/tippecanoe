@@ -62,7 +62,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom) {
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
+		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y, geom[i].elevation));
 	}
 
 	return out;

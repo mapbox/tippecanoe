@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <math.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
@@ -21,6 +22,13 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
+}
+
+mvt_geometry::mvt_geometry(int nop, long long nx, long long ny, double nelevation) {
+	this->op = nop;
+	this->x = nx;
+	this->y = ny;
+	this->elevation = nelevation;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -478,6 +486,7 @@ std::string mvt_tile::encode() {
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
+			bool has_elevation = false;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
@@ -523,6 +532,10 @@ std::string mvt_tile::encode() {
 					px = wwx;
 					py = wwy;
 					length++;
+
+					if (!isnan(geom[g].elevation)) {
+						has_elevation = true;
+					}
 				} else if (op == mvt_closepath) {
 					length++;
 				} else {
@@ -536,6 +549,20 @@ std::string mvt_tile::encode() {
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
+
+			if (has_elevation) {
+				std::vector<double> elevations;
+
+				for (size_t g = 0; g < geom.size(); g++) {
+					int op = geom[g].op;
+					if (op == mvt_moveto || op == mvt_lineto) {
+						elevations.push_back(geom[g].elevation);
+					}
+				}
+
+				feature_writer.add_packed_double(5, std::begin(elevations), std::end(elevations));
+			}
+
 			layer_writer.add_message(2, feature_string);
 		}
 

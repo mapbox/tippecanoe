@@ -28,8 +28,11 @@ struct mvt_geometry {
 	long long x = 0;
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
+	double elevation = 0;
+	std::vector<unsigned long> attributes;
 
 	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(int op, long long x, long long y, double elevation);
 
 	bool operator<(mvt_geometry const &s) const {
 		if (y < s.y || (y == s.y && x < s.x)) {
