@@ -1877,10 +1877,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					    sf.geometry.size() == 1) {
 						double x = (double) partials[which_partial].geoms[0][0].x * partials[which_partial].clustered;
 						double y = (double) partials[which_partial].geoms[0][0].y * partials[which_partial].clustered;
+						double e = (double) partials[which_partial].geoms[0][0].elevation * partials[which_partial].clustered;
 						x += sf.geometry[0].x;
 						y += sf.geometry[0].y;
+						e += sf.geometry[0].elevation;
 						partials[which_partial].geoms[0][0].x = x / (partials[which_partial].clustered + 1);
 						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
+						partials[which_partial].geoms[0][0].elevation = e / (partials[which_partial].clustered + 1);
 					}
 
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);

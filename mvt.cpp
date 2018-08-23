@@ -385,6 +385,8 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 								if (elevation_index < elevations.size()) {
 									decoded.elevation = elevations[elevation_index];
 									elevation_index++;
+								} else {
+									decoded.elevation = NAN;
 								}
 								feature.geometry.push_back(decoded);
 							}
