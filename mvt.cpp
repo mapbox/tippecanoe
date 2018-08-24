@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <math.h>
+#include <cmath>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
@@ -551,7 +552,7 @@ std::string mvt_tile::encode() {
 					py = wwy;
 					length++;
 
-					if (!isnan(geom[g].elevation)) {
+					if (!std::isnan(geom[g].elevation)) {
 						has_elevation = true;
 					}
 				} else if (op == mvt_closepath) {
