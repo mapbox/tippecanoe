@@ -10,6 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <limits.h>
+#include <cmath>
 #include "protozero/varint.hpp"
 #include "geometry.hpp"
 #include "mbtiles.hpp"
@@ -205,7 +206,7 @@ static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			int op = dv[i].op;
-			if (!isnan(dv[i].elevation)) {
+			if (!std::isnan(dv[i].elevation)) {
 				op |= VT_NODE_3D;
 			}
 			if (dv[i].attributes.size() != 0) {

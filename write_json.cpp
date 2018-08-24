@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cmath>
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "mvt.hpp"
@@ -494,7 +495,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 				state.json_write_float(ops[0].lon);
 				state.json_write_float(ops[0].lat);
-				if (!isnan(ops[0].elevation)) {
+				if (!std::isnan(ops[0].elevation)) {
 					state.json_write_float(ops[0].elevation);
 				}
 				state.json_end_array();
@@ -509,7 +510,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					state.json_write_array();
 					state.json_write_float(ops[i].lon);
 					state.json_write_float(ops[i].lat);
-					if (!isnan(ops[i].elevation)) {
+					if (!std::isnan(ops[i].elevation)) {
 						state.json_write_float(ops[i].elevation);
 					}
 					state.json_end_array();
@@ -536,7 +537,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					state.json_write_array();
 					state.json_write_float(ops[i].lon);
 					state.json_write_float(ops[i].lat);
-					if (!isnan(ops[i].elevation)) {
+					if (!std::isnan(ops[i].elevation)) {
 						state.json_write_float(ops[i].elevation);
 					}
 					state.json_end_array();
@@ -558,7 +559,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 							state.json_write_array();
 							state.json_write_float(ops[i].lon);
 							state.json_write_float(ops[i].lat);
-							if (!isnan(ops[i].elevation)) {
+							if (!std::isnan(ops[i].elevation)) {
 								state.json_write_float(ops[i].elevation);
 							}
 							state.json_end_array();
@@ -571,7 +572,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 							state.json_write_array();
 							state.json_write_float(ops[i].lon);
 							state.json_write_float(ops[i].lat);
-							if (!isnan(ops[i].elevation)) {
+							if (!std::isnan(ops[i].elevation)) {
 								state.json_write_float(ops[i].elevation);
 							}
 							state.json_end_array();
@@ -582,7 +583,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 						state.json_write_array();
 						state.json_write_float(ops[i].lon);
 						state.json_write_float(ops[i].lat);
-						if (!isnan(ops[i].elevation)) {
+						if (!std::isnan(ops[i].elevation)) {
 							state.json_write_float(ops[i].elevation);
 						}
 						state.json_end_array();
