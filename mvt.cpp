@@ -314,7 +314,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
-					size_t dimensions = 2;
+					size_t dimensions = 0;
 					std::vector<double> elevations;
 
 					while (feature_reader.next()) {
@@ -391,7 +391,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 								mvt_geometry decoded = mvt_geometry(op, px, py);
 
-								for (size_t i = 2; i < dimensions; i++) {
+								for (size_t i = 0; i < dimensions; i++) {
 									if (elevation_index < elevations.size()) {
 										decoded.elevations.push_back(elevations[elevation_index]);
 										elevation_index++;
@@ -515,7 +515,7 @@ std::string mvt_tile::encode() {
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
-			size_t dimensions = 2;
+			size_t dimensions = 0;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
@@ -562,7 +562,7 @@ std::string mvt_tile::encode() {
 					py = wwy;
 					length++;
 
-					if (geom[g].elevations.size() + 2 > dimensions) {
+					if (geom[g].elevations.size() > dimensions) {
 						dimensions = geom[g].elevations.size();
 					}
 				} else if (op == mvt_closepath) {
@@ -579,7 +579,7 @@ std::string mvt_tile::encode() {
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
 
-			if (dimensions > 2) {
+			if (dimensions > 0) {
 				std::vector<double> elevations;
 
 				for (size_t g = 0; g < geom.size(); g++) {

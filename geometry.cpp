@@ -1145,6 +1145,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 				y = *y0 + (*y1 - *y0) * (xmax - *x0) / (*x1 - *x0);
 				x = xmax;
 
+				e.resize(0);
 				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
 					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (xmax - *x0) / (*x1 - *x0));
 				}
@@ -1152,6 +1153,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 				y = *y0 + (*y1 - *y0) * (xmin - *x0) / (*x1 - *x0);
 				x = xmin;
 
+				e.resize(0);
 				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
 					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (xmin - *x0) / (*x1 - *x0));
 				}
