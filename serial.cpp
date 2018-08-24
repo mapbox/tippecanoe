@@ -206,7 +206,7 @@ static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE
 	for (size_t i = 0; i < dv.size(); i++) {
 		if (dv[i].op == VT_MOVETO || dv[i].op == VT_LINETO) {
 			int op = dv[i].op;
-			if (!std::isnan(dv[i].elevation)) {
+			if (dv[i].elevations.size() != 0) {
 				op |= VT_NODE_3D;
 			}
 			if (dv[i].attributes.size() != 0) {
@@ -218,7 +218,10 @@ static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE
 			serialize_long_long(out, dv[i].y - wy, fpos, fname);
 
 			if (op & VT_NODE_3D) {
-				serialize_double(out, dv[i].elevation, fpos, fname);
+				serialize_ulong_long(out, dv[i].elevations.size(), fpos, fname);
+				for (size_t j = 0; j < dv[i].elevations.size(); j++) {
+					serialize_double(out, dv[i].elevations[j], fpos, fname);
+				}
 			}
 			if (op & VT_NODE_ATTRIB) {
 				serialize_string(out, dv[i].attributes, fpos, fname);

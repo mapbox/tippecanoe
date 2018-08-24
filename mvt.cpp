@@ -25,11 +25,11 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->y = ny;
 }
 
-mvt_geometry::mvt_geometry(int nop, long long nx, long long ny, double nelevation) {
+mvt_geometry::mvt_geometry(int nop, long long nx, long long ny, std::vector<double> nelevations) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
-	this->elevation = nelevation;
+	this->elevations = nelevations;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
@@ -314,6 +314,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
+					size_t dimensions = 2;
 					std::vector<double> elevations;
 
 					while (feature_reader.next()) {
@@ -363,6 +364,12 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 7: /* dimensions */
+						{
+							dimensions = feature_reader.get_uint64();
+							break;
+						}
+
 						default:
 							feature_reader.skip();
 							break;
@@ -383,11 +390,14 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 								g += 2;
 
 								mvt_geometry decoded = mvt_geometry(op, px, py);
-								if (elevation_index < elevations.size()) {
-									decoded.elevation = elevations[elevation_index];
-									elevation_index++;
-								} else {
-									decoded.elevation = NAN;
+
+								for (size_t i = 2; i < dimensions; i++) {
+									if (elevation_index < elevations.size()) {
+										decoded.elevations.push_back(elevations[elevation_index]);
+										elevation_index++;
+									} else {
+										decoded.elevations.push_back(NAN);
+									}
 								}
 								feature.geometry.push_back(decoded);
 							}
@@ -505,7 +515,7 @@ std::string mvt_tile::encode() {
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
-			bool has_elevation = false;
+			size_t dimensions = 2;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
@@ -552,8 +562,8 @@ std::string mvt_tile::encode() {
 					py = wwy;
 					length++;
 
-					if (!std::isnan(geom[g].elevation)) {
-						has_elevation = true;
+					if (geom[g].elevations.size() + 2 > dimensions) {
+						dimensions = geom[g].elevations.size();
 					}
 				} else if (op == mvt_closepath) {
 					length++;
@@ -569,17 +579,20 @@ std::string mvt_tile::encode() {
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
 
-			if (has_elevation) {
+			if (dimensions > 2) {
 				std::vector<double> elevations;
 
 				for (size_t g = 0; g < geom.size(); g++) {
 					int op = geom[g].op;
 					if (op == mvt_moveto || op == mvt_lineto) {
-						elevations.push_back(geom[g].elevation);
+						for (size_t e = 0; e < geom[g].elevations.size(); e++) {
+							elevations.push_back(geom[g].elevations[e]);
+						}
 					}
 				}
 
 				feature_writer.add_packed_double(6, std::begin(elevations), std::end(elevations));
+				feature_writer.add_uint64(7, dimensions);
 			}
 
 			layer_writer.add_message(2, feature_string);

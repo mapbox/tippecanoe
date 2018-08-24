@@ -25,7 +25,7 @@ struct draw {
 	long long x : 40;
 	signed char op;
 	long long y : 40;
-	double elevation;
+	std::vector<double> elevations;
 	std::string attributes;
 	signed char necessary;
 
@@ -33,15 +33,14 @@ struct draw {
 	    : x(nx),
 	      op(nop),
 	      y(ny),
-	      elevation(NAN),
 	      necessary(0) {
 	}
 
-	draw(int nop, long long nx, long long ny, double nel)
+	draw(int nop, long long nx, long long ny, std::vector<double> nel)
 	    : x(nx),
 	      op(nop),
 	      y(ny),
-	      elevation(nel),
+	      elevations(nel),
 	      necessary(0) {
 	}
 
@@ -49,7 +48,6 @@ struct draw {
 	    : x(0),
 	      op(0),
 	      y(0),
-	      elevation(NAN),
 	      necessary(0) {
 	}
 

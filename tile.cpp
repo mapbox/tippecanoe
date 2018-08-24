@@ -62,7 +62,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer) {
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevation);
+		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevations);
 
 		if (geom[i].attributes.size() != 0) {
 			json_pull *jp = json_begin_string(geom[i].attributes.c_str());
@@ -1891,13 +1891,22 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					    sf.geometry.size() == 1) {
 						double x = (double) partials[which_partial].geoms[0][0].x * partials[which_partial].clustered;
 						double y = (double) partials[which_partial].geoms[0][0].y * partials[which_partial].clustered;
-						double e = (double) partials[which_partial].geoms[0][0].elevation * partials[which_partial].clustered;
+
 						x += sf.geometry[0].x;
 						y += sf.geometry[0].y;
-						e += sf.geometry[0].elevation;
+
 						partials[which_partial].geoms[0][0].x = x / (partials[which_partial].clustered + 1);
 						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
-						partials[which_partial].geoms[0][0].elevation = e / (partials[which_partial].clustered + 1);
+
+						std::vector<double> e;
+						for (size_t i = 0; i < partials[which_partial].geoms[0][0].elevations.size() && 
+                                                                   i < sf.geometry[0].elevations.size(); i++) {
+							e.push_back(partials[which_partial].geoms[0][0].elevations[i] * partials[which_partial].clustered);
+							e[i] += sf.geometry[0].elevations[i];
+							e[i] /= (partials[which_partial].clustered + 1);
+						}
+
+						partials[which_partial].geoms[0][0].elevations = e;
 					}
 
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);

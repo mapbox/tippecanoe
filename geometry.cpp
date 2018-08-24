@@ -22,7 +22,7 @@
 #include "options.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1, double *el0, double *el1);
+static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1, std::vector<double> *el0, std::vector<double> *el1);
 
 drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
 	drawvec out;
@@ -81,7 +81,13 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 			d.y = wwy;
 
 			if (op & VT_NODE_3D) {
-				deserialize_double_io(meta, &d.elevation, geompos);
+				unsigned long long n;
+				deserialize_ulong_long_io(meta, &n, geompos);
+
+				d.elevations.resize(n);
+				for (size_t i = 0; i < n; i++) {
+					deserialize_double_io(meta, &d.elevations[i], geompos);
+				}
 			}
 			if (op & VT_NODE_ATTRIB) {
 				deserialize_string_io(meta, d.attributes, geompos);
@@ -666,11 +672,11 @@ drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
-			double e1 = geom[i - 1].elevation;
+			std::vector<double> e1 = geom[i - 1].elevations;
 
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
-			double e2 = geom[i - 0].elevation;
+			std::vector<double> e2 = geom[i - 0].elevations;
 
 			bool changed0 = false, changed1 = false;
 			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area, &changed0, &changed1, &e1, &e2);
@@ -800,11 +806,11 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 		if (i > 0 && geom[i].op == VT_LINETO && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO)) {
 			double x1 = geom[i - 1].x;
 			double y1 = geom[i - 1].y;
-			double e1 = geom[i - 1].elevation;
+			std::vector<double> e1 = geom[i - 1].elevations;
 
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
-			double e2 = geom[i - 0].elevation;
+			std::vector<double> e2 = geom[i - 0].elevations;
 
 			bool changed0 = false, changed1 = false;
 			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent, &changed0, &changed1, &e1, &e2);
@@ -1096,7 +1102,7 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 	return code;
 }
 
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1, double *e0, double *e1) {
+static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax, bool *changed0, bool *changed1, std::vector<double> *e0, std::vector<double> *e1) {
 	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
 	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
 	int accept = 0;
@@ -1111,7 +1117,8 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 		} else {
 			// failed both tests, so calculate the line segment to clip
 			// from an outside point to an intersection with clip edge
-			double x = *x0, y = *y0, e = *e0;
+			double x = *x0, y = *y0;
+			std::vector<double> e = *e0;
 
 			// At least one endpoint is outside the clip rectangle; pick it.
 			int outcodeOut = outcode0 ? outcode0 : outcode1;
@@ -1120,20 +1127,34 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
 			if (outcodeOut & TOP) {  // point is above the clip rectangle
 				x = *x0 + (*x1 - *x0) * (ymax - *y0) / (*y1 - *y0);
-				e = *e0 + (*e1 - *e0) * (ymax - *y0) / (*y1 - *y0);
 				y = ymax;
+
+				e.resize(0);
+				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
+					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (ymax - *y0) / (*y1 - *y0));
+				}
 			} else if (outcodeOut & BOTTOM) {  // point is below the clip rectangle
 				x = *x0 + (*x1 - *x0) * (ymin - *y0) / (*y1 - *y0);
-				e = *e0 + (*e1 - *e0) * (ymin - *y0) / (*y1 - *y0);
 				y = ymin;
+
+				e.resize(0);
+				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
+					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (ymin - *y0) / (*y1 - *y0));
+				}
 			} else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
 				y = *y0 + (*y1 - *y0) * (xmax - *x0) / (*x1 - *x0);
-				e = *e0 + (*e1 - *e0) * (xmax - *x0) / (*x1 - *x0);
 				x = xmax;
+
+				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
+					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (xmax - *x0) / (*x1 - *x0));
+				}
 			} else if (outcodeOut & LEFT) {  // point is to the left of clip rectangle
 				y = *y0 + (*y1 - *y0) * (xmin - *x0) / (*x1 - *x0);
-				e = *e0 + (*e1 - *e0) * (xmin - *x0) / (*x1 - *x0);
 				x = xmin;
+
+				for (size_t i = 0; i < e0->size() && i < e1->size(); i++) {
+					e.push_back((*e0)[i] + ((*e1)[i] - (*e0)[i]) * (xmin - *x0) / (*x1 - *x0));
+				}
 			}
 
 			// Now we move outside point to intersection point to clip
