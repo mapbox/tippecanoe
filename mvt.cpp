@@ -585,8 +585,12 @@ std::string mvt_tile::encode() {
 				for (size_t g = 0; g < geom.size(); g++) {
 					int op = geom[g].op;
 					if (op == mvt_moveto || op == mvt_lineto) {
-						for (size_t e = 0; e < geom[g].elevations.size(); e++) {
-							elevations.push_back(geom[g].elevations[e]);
+						for (size_t e = 0; e < dimensions; e++) {
+							if (e < geom[g].elevations.size()) {
+								elevations.push_back(geom[g].elevations[e]);
+							} else {
+								elevations.push_back(NAN);
+							}
 						}
 					}
 				}
