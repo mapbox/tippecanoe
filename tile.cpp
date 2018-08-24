@@ -58,11 +58,25 @@ extern "C" {
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
-std::vector<mvt_geometry> to_feature(drawvec &geom) {
+std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer) {
 	std::vector<mvt_geometry> out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y, geom[i].elevation));
+		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevation);
+
+		if (geom[i].attributes.size() != 0) {
+			json_pull *jp = json_begin_string(geom[i].attributes.c_str());
+			json_object *jo = json_read_tree(jp);
+			if (jo == NULL) {
+				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", geom[i].attributes.c_str());
+				exit(EXIT_FAILURE);
+			}
+			tag_object_v3(layer, jo, g.attributes);
+			json_free(jo);
+			json_end(jp);
+		}
+
+		out.push_back(g);
 	}
 
 	return out;
@@ -1506,7 +1520,7 @@ void *run_prefilter(void *v) {
 
 		mvt_feature tmp_feature;
 		tmp_feature.type = sf.t;
-		tmp_feature.geometry = to_feature(sf.geometry);
+		tmp_feature.geometry = to_feature(sf.geometry, tmp_layer);
 		tmp_feature.id = sf.id;
 		tmp_feature.has_id = sf.has_id;
 		tmp_feature.dropped = sf.dropped;
@@ -2219,7 +2233,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 
 				feature.type = layer_features[x].type;
-				feature.geometry = to_feature(layer_features[x].geom);
+				feature.geometry = to_feature(layer_features[x].geom, layer);
 				count += layer_features[x].geom.size();
 				layer_features[x].geom.clear();
 

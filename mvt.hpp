@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <jsonpull/jsonpull.h>
 
 struct mvt_value;
 struct mvt_layer;
@@ -151,6 +152,7 @@ bool is_compressed(std::string const &data);
 int decompress(std::string const &input, std::string &output);
 int compress(std::string const &input, std::string &output);
 int dezig(unsigned n);
+void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> &onto);
 
 mvt_value stringified_to_mvt_value(int type, const char *s);
 
