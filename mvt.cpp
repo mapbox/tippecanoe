@@ -316,6 +316,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					std::vector<uint32_t> geoms;
 					size_t dimensions = 0;
 					std::vector<double> elevations;
+					std::vector<unsigned long> node_attributes;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -370,6 +371,15 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 8: /* node attributes */
+						{
+							auto pi = feature_reader.get_packed_uint64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								node_attributes.push_back(*it);
+							}
+							break;
+						}
+
 						default:
 							feature_reader.skip();
 							break;
@@ -399,6 +409,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 										decoded.elevations.push_back(NAN);
 									}
 								}
+
 								feature.geometry.push_back(decoded);
 							}
 						} else {
@@ -988,7 +999,7 @@ void mvt_layer::reorder_values() {
 	}
 }
 
-mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off) const {
+mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off, bool keep_list) const {
 	int type = property[off] & 0x0F;
 	mvt_value ret;
 
@@ -1064,23 +1075,32 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		ret.string_value = "[";
+		if (!keep_list) {
+			ret.string_value = "[";
+		}
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off);
+			mvt_value v1 = decode_property(property, off, keep_list);
 			off++;
 
-			ret.string_value.append(v1.toString());
+			if (keep_list) {
+				ret.subvalues.push_back(v1);
+			} else {
+				ret.string_value.append(v1.toString());
 
-			if (i + 1 < len) {
-				ret.string_value.push_back(',');
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
 			}
 		}
 
-		ret.string_value.append("]");
+		if (!keep_list) {
+			ret.string_value.append("]");
+		}
+
 		off--;  // so caller can increment
-	}
 		return ret;
+	}
 
 	case 9: /* hash */
 	{
@@ -1088,28 +1108,38 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		ret.string_value = "{";
+		if (!keep_list) {
+			ret.string_value = "{";
+		}
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off);
+			mvt_value v1 = decode_property(property, off, keep_list);
 			off++;
 
-			mvt_value v2 = decode_property(property, off);
+			mvt_value v2 = decode_property(property, off, keep_list);
 			off++;
 
-			ret.string_value.append(v1.toString());
-			ret.string_value.append(":");
-			ret.string_value.append(v2.toString());
+			if (keep_list) {
+				ret.subvalues.push_back(v1);
+				ret.subvalues.push_back(v2);
+			} else {
+				ret.string_value.append(v1.toString());
+				ret.string_value.append(":");
+				ret.string_value.append(v2.toString());
 
-			if (i + 1 < len) {
-				ret.string_value.push_back(',');
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
 			}
 		}
 
-		ret.string_value.append("}");
+		if (!keep_list) {
+			ret.string_value.append("}");
+		}
+
 		off--;  // so caller can increment
-	}
 		return ret;
+	}
 
 	default:
 		ret.type = mvt_string;

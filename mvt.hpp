@@ -82,6 +82,8 @@ enum mvt_value_type {
 	mvt_null,
 };
 
+struct mvt_value;
+
 struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
@@ -95,6 +97,7 @@ struct mvt_value {
 		bool bool_value;
 		int null_value;
 	} numeric_value;
+	std::vector<mvt_value> subvalues;
 
 	bool operator<(const mvt_value &o) const;
 	std::string toString() const;
@@ -137,7 +140,7 @@ struct mvt_layer {
 	std::map<mvt_value, size_t> value_map{};
 	std::map<mvt_value, unsigned long> property_map{};
 
-	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off) const;
+	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off, bool keep_list) const;
 	void reorder_values();
 };
 
