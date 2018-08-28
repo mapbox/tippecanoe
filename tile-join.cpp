@@ -170,7 +170,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					}
 					std::string key = layer.attribute_pool.keys[feat.properties[t]];
 					t++;
-					mvt_value val = layer.decode_property(feat.properties, t, false);
+					mvt_value val = layer.decode_property(feat.properties, t);
 
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
@@ -236,7 +236,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				std::string key = layer.attribute_pool.keys[feat.properties[t]];
 				t++;
-				mvt_value val = layer.decode_property(feat.properties, t, false);
+				mvt_value val = layer.decode_property(feat.properties, t);
 
 				todo.push_back(std::pair<std::string, mvt_value>(key, val));
 			}

@@ -441,12 +441,17 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				std::vector<unsigned long> &attr = layer.features[i].node_attributes;
 				size_t off = 0;
 
-				for (size_t j = 0; j < geom.size(); j++) {
-					if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
-						if (off < attr.size()) {
-							mvt_value v = layer.decode_property(attr, off, false);
-							if (v.type == mvt_hash || v.type == mvt_list) {
-								geom[j].attribute = v.string_value;
+				if (attr.size() != 0) {
+					for (size_t j = 0; j < geom.size(); j++) {
+						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
+							if (off < attr.size()) {
+								mvt_value v = layer.decode_property(attr, off);
+								if (v.type == mvt_hash || v.type == mvt_list) {
+									geom[j].attribute = v.string_value;
+								}
+							} else {
+								fprintf(stderr, "Ran out of node attributes\n");
+								exit(EXIT_FAILURE);
 							}
 						}
 					}
@@ -1043,7 +1048,7 @@ void mvt_layer::reorder_values() {
 	}
 }
 
-mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off, bool keep_list) const {
+mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off) const {
 	int type = property[off] & 0x0F;
 	mvt_value ret;
 
@@ -1119,28 +1124,20 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		if (!keep_list) {
-			ret.string_value = "[";
-		}
+		ret.string_value = "[";
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off, keep_list);
+			mvt_value v1 = decode_property(property, off);
 			off++;
 
-			if (keep_list) {
-				ret.subvalues.push_back(v1);
-			} else {
-				ret.string_value.append(v1.toString());
+			ret.string_value.append(v1.toString());
 
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
+			if (i + 1 < len) {
+				ret.string_value.push_back(',');
 			}
 		}
 
-		if (!keep_list) {
-			ret.string_value.append("]");
-		}
+		ret.string_value.append("]");
 
 		off--;  // so caller can increment
 		return ret;
@@ -1152,34 +1149,25 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		if (!keep_list) {
-			ret.string_value = "{";
-		}
+		ret.string_value = "{";
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off, keep_list);
+			mvt_value v1 = decode_property(property, off);
 			off++;
 
-			mvt_value v2 = decode_property(property, off, keep_list);
+			mvt_value v2 = decode_property(property, off);
 			off++;
 
-			if (keep_list) {
-				ret.subvalues.push_back(v1);
-				ret.subvalues.push_back(v2);
-			} else {
-				ret.string_value.append(v1.toString());
-				ret.string_value.append(":");
-				ret.string_value.append(v2.toString());
+			ret.string_value.append(v1.toString());
+			ret.string_value.append(":");
+			ret.string_value.append(v2.toString());
 
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
+			if (i + 1 < len) {
+				ret.string_value.push_back(',');
 			}
 		}
 
-		if (!keep_list) {
-			ret.string_value.append("}");
-		}
+		ret.string_value.append("}");
 
 		off--;  // so caller can increment
 		return ret;

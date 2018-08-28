@@ -10,7 +10,6 @@
 
 struct mvt_value;
 struct mvt_layer;
-struct mvt_geometry;
 
 enum mvt_fmt {
 	mvt_blake,
@@ -24,6 +23,30 @@ enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
 	mvt_closepath = 7
+};
+
+struct mvt_geometry {
+	long long x = 0;
+	long long y = 0;
+	int /* mvt_operation */ op = 0;
+	std::vector<double> elevations;
+	std::vector<unsigned long> attributes;
+	std::string attribute;
+
+	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);
+
+	bool operator<(mvt_geometry const &s) const {
+		if (y < s.y || (y == s.y && x < s.x)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool operator==(mvt_geometry const &s) const {
+		return y == s.y && x == s.x;
+	}
 };
 
 enum mvt_geometry_type {
@@ -76,7 +99,6 @@ struct mvt_value {
 		bool bool_value;
 		int null_value;
 	} numeric_value;
-	std::vector<mvt_value> subvalues;
 
 	bool operator<(const mvt_value &o) const;
 	std::string toString() const;
@@ -85,30 +107,6 @@ struct mvt_value {
 		this->type = mvt_double;
 		this->string_value = "";
 		this->numeric_value.double_value = 0;
-	}
-};
-
-struct mvt_geometry {
-	long long x = 0;
-	long long y = 0;
-	int /* mvt_operation */ op = 0;
-	std::vector<double> elevations;
-	std::vector<unsigned long> attributes;
-	std::string attribute;
-
-	mvt_geometry(int op, long long x, long long y);
-	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);
-
-	bool operator<(mvt_geometry const &s) const {
-		if (y < s.y || (y == s.y && x < s.x)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	bool operator==(mvt_geometry const &s) const {
-		return y == s.y && x == s.x;
 	}
 };
 
@@ -143,7 +141,7 @@ struct mvt_layer {
 	std::map<mvt_value, size_t> value_map{};
 	std::map<mvt_value, unsigned long> property_map{};
 
-	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off, bool keep_list) const;
+	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off) const;
 	void reorder_values();
 };
 
