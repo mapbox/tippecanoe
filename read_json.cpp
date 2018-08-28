@@ -86,17 +86,14 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 				if (j->array[i]->type == JSON_NUMBER) {
 					d.elevations.push_back(j->array[i]->number);
 				}
-			}
 
-#if 0
-			if (j->length > maybe_attr) {
-				if (j->array[maybe_attr]->type == JSON_HASH) {
-					char *s = json_stringify(j->array[maybe_attr]);
+				// XXX Reconcile with GeoJSON
+				if (j->array[i]->type == JSON_HASH) {
+					char *s = json_stringify(j->array[i]);
 					d.attributes = std::string(s);
 					free(s);  // stringify
 				}
 			}
-#endif
 
 			out.push_back(d);
 		} else {

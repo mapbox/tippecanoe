@@ -638,7 +638,7 @@ std::string mvt_tile::encode() {
 					}
 				}
 
-				feature_writer.add_packed_uint64(6, std::begin(attributes), std::end(attributes));
+				feature_writer.add_packed_uint64(8, std::begin(attributes), std::end(attributes));
 			}
 
 			layer_writer.add_message(2, feature_string);
