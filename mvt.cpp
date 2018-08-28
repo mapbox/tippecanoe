@@ -535,6 +535,7 @@ std::string mvt_tile::encode() {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
 			size_t dimensions = 0;
+			bool has_attributes = false;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
@@ -584,6 +585,9 @@ std::string mvt_tile::encode() {
 					if (geom[g].elevations.size() > dimensions) {
 						dimensions = geom[g].elevations.size();
 					}
+					if (geom[g].attributes.size() > 0) {
+						has_attributes = true;
+					}
 				} else if (op == mvt_closepath) {
 					length++;
 				} else {
@@ -616,6 +620,25 @@ std::string mvt_tile::encode() {
 
 				feature_writer.add_packed_double(6, std::begin(elevations), std::end(elevations));
 				feature_writer.add_uint64(7, dimensions);
+			}
+
+			if (has_attributes > 0) {
+				std::vector<unsigned long> attributes;
+
+				for (size_t g = 0; g < geom.size(); g++) {
+					int op = geom[g].op;
+					if (op == mvt_moveto || op == mvt_lineto) {
+						if (geom[g].attributes.size() > 0) {
+							for (size_t e = 0; e < geom[g].attributes.size(); e++) {
+								attributes.push_back(geom[g].attributes[e]);
+							}
+						} else {
+							attributes.push_back((2 << 4) | 7); // null
+						}
+					}
+				}
+
+				feature_writer.add_packed_uint64(6, std::begin(attributes), std::end(attributes));
 			}
 
 			layer_writer.add_message(2, feature_string);
