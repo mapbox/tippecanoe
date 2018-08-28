@@ -316,7 +316,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					std::vector<uint32_t> geoms;
 					size_t dimensions = 0;
 					std::vector<double> elevations;
-					std::vector<unsigned long> node_attributes;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -375,7 +374,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						{
 							auto pi = feature_reader.get_packed_uint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
-								node_attributes.push_back(*it);
+								feature.node_attributes.push_back(*it);
 							}
 							break;
 						}
@@ -387,7 +386,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					}
 
 					size_t elevation_index = 0;
-					size_t attribute_index = 0;
 					long long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
@@ -408,13 +406,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 										elevation_index++;
 									} else {
 										decoded.elevations.push_back(NAN);
-									}
-
-									if (attribute_index < node_attributes.size()) {
-										decoded.attribute = layer.decode_property(node_attributes, attribute_index, true);
-									} else {
-										decoded.attribute.type = mvt_null;
-										decoded.attribute.numeric_value.null_value = 0;
 									}
 								}
 
@@ -440,6 +431,28 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 			}
 			for (size_t i = 0; i < layer.values.size(); i++) {
 				layer.value_map.insert(std::pair<mvt_value, size_t>(layer.values[i], i));
+			}
+
+			// This has to wait until the layer is decoded because we might not know
+			// the values until after the features.
+
+			for (size_t i = 0; i < layer.features.size(); i++) {
+				std::vector<mvt_geometry> &geom = layer.features[i].geometry;
+				std::vector<unsigned long> &attr = layer.features[i].node_attributes;
+				size_t off = 0;
+
+				for (size_t j = 0; j < geom.size(); j++) {
+					if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
+						if (off < attr.size()) {
+							mvt_value v = layer.decode_property(attr, off, false);
+							if (v.type == mvt_hash || v.type == mvt_list) {
+								geom[j].attribute = v.string_value;
+							}
+						}
+					}
+				}
+
+				attr.clear();
 			}
 
 			layers.push_back(layer);

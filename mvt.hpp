@@ -41,6 +41,9 @@ struct mvt_feature {
 	bool has_id = false;
 	bool dropped = false;
 
+	// For use during decoding
+	std::vector<unsigned long> node_attributes{};
+
 	mvt_feature() {
 		has_id = false;
 		id = 0;
@@ -91,7 +94,7 @@ struct mvt_geometry {
 	int /* mvt_operation */ op = 0;
 	std::vector<double> elevations;
 	std::vector<unsigned long> attributes;
-	mvt_value attribute;
+	std::string attribute;
 
 	mvt_geometry(int op, long long x, long long y);
 	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);

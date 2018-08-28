@@ -241,14 +241,16 @@ struct lonlat {
 	long long x;
 	long long y;
 	std::vector<double> elevations;
+	std::string attribute;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny, std::vector<double> nelevations)
+	lonlat(int nop, double nlon, double nlat, long long nx, long long ny, std::vector<double> nelevations, std::string nattribute)
 	    : op(nop),
 	      lon(nlon),
 	      lat(nlat),
 	      x(nx),
 	      y(ny), 
-	      elevations(nelevations) {
+	      elevations(nelevations),
+	      attribute(nattribute) {
 	}
 };
 
@@ -382,6 +384,10 @@ void write_coordinates(json_writer &state, lonlat const &p) {
 		state.json_write_float(p.elevations[i]);
 	}
 
+	if (p.attribute.size() != 0) {
+		state.json_write_stringified(p.attribute);
+	}
+
 	state.json_end_array();
 }
 
@@ -492,9 +498,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
-				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations));
+				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, feat.geometry[g].attribute));
 			} else {
-				ops.push_back(lonlat(op, 0, 0, 0, 0, std::vector<double>()));
+				ops.push_back(lonlat(op, 0, 0, 0, 0, std::vector<double>(), ""));
 			}
 		}
 
