@@ -10,6 +10,7 @@
 
 struct mvt_value;
 struct mvt_layer;
+struct mvt_geometry;
 
 enum mvt_fmt {
 	mvt_blake,
@@ -23,29 +24,6 @@ enum mvt_operation {
 	mvt_moveto = 1,
 	mvt_lineto = 2,
 	mvt_closepath = 7
-};
-
-struct mvt_geometry {
-	long long x = 0;
-	long long y = 0;
-	int /* mvt_operation */ op = 0;
-	std::vector<double> elevations;
-	std::vector<unsigned long> attributes;
-
-	mvt_geometry(int op, long long x, long long y);
-	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);
-
-	bool operator<(mvt_geometry const &s) const {
-		if (y < s.y || (y == s.y && x < s.x)) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	bool operator==(mvt_geometry const &s) const {
-		return y == s.y && x == s.x;
-	}
 };
 
 enum mvt_geometry_type {
@@ -82,8 +60,6 @@ enum mvt_value_type {
 	mvt_null,
 };
 
-struct mvt_value;
-
 struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
@@ -106,6 +82,30 @@ struct mvt_value {
 		this->type = mvt_double;
 		this->string_value = "";
 		this->numeric_value.double_value = 0;
+	}
+};
+
+struct mvt_geometry {
+	long long x = 0;
+	long long y = 0;
+	int /* mvt_operation */ op = 0;
+	std::vector<double> elevations;
+	std::vector<unsigned long> attributes;
+	mvt_value attribute;
+
+	mvt_geometry(int op, long long x, long long y);
+	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);
+
+	bool operator<(mvt_geometry const &s) const {
+		if (y < s.y || (y == s.y && x < s.x)) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	bool operator==(mvt_geometry const &s) const {
+		return y == s.y && x == s.x;
 	}
 };
 

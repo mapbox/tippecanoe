@@ -387,6 +387,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					}
 
 					size_t elevation_index = 0;
+					size_t attribute_index = 0;
 					long long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
@@ -407,6 +408,13 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 										elevation_index++;
 									} else {
 										decoded.elevations.push_back(NAN);
+									}
+
+									if (attribute_index < node_attributes.size()) {
+										decoded.attribute = layer.decode_property(node_attributes, attribute_index, true);
+									} else {
+										decoded.attribute.type = mvt_null;
+										decoded.attribute.numeric_value.null_value = 0;
 									}
 								}
 
