@@ -446,8 +446,15 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
 							if (off < attr.size()) {
 								mvt_value v = layer.decode_property(attr, off);
+								off++;
 								if (v.type == mvt_hash || v.type == mvt_list) {
 									geom[j].attribute = v.string_value;
+								} else if (v.type == mvt_null) {
+									;
+								} else {
+									std::string s = v.toString();
+									fprintf(stderr, "Found unexpected node attribute %s\n", s.c_str());
+									exit(EXIT_FAILURE);
 								}
 							} else {
 								fprintf(stderr, "Ran out of node attributes\n");
