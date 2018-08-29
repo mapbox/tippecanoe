@@ -384,12 +384,22 @@ void write_coordinates(json_writer &state, lonlat const &p) {
 		state.json_write_float(p.elevations[i]);
 	}
 
-	if (p.attribute.size() != 0) {
-		state.json_write_stringified(p.attribute);
-	}
-
 	state.json_end_array();
 }
+
+void write_attributes(json_writer &state, lonlat const &p) {
+	if (p.attribute.size() != 0) {
+		state.json_write_stringified(p.attribute);
+	} else {
+		state.json_write_hash();
+		state.json_end_hash();
+	}
+}
+
+struct coordinate_writer {
+	std::string tag;
+	void (*function)(json_writer &state, lonlat const &p);
+};
 
 void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
@@ -484,6 +494,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		state.json_write_hash();
 
 		std::vector<lonlat> ops;
+		bool has_attributes = false;
 
 		for (size_t g = 0; g < feat.geometry.size(); g++) {
 			int op = feat.geometry[g].op;
@@ -499,30 +510,52 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
 				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, feat.geometry[g].attribute));
+				if (feat.geometry[g].attribute.size() != 0) {
+					has_attributes = true;
+				}
 			} else {
 				ops.push_back(lonlat(op, 0, 0, 0, 0, std::vector<double>(), ""));
 			}
 		}
 
+		std::vector<coordinate_writer> coordinate_writers;
+		{
+			coordinate_writer coord_writer;
+			coord_writer.tag = "coordinates";
+			coord_writer.function = write_coordinates;
+			coordinate_writers.push_back(coord_writer);
+
+			if (has_attributes) {
+				coordinate_writer attrib_writer;
+				attrib_writer.tag = "attributes";
+				attrib_writer.function = write_attributes;
+				coordinate_writers.push_back(attrib_writer);
+			}
+		}
+		
 		if (feat.type == VT_POINT) {
 			if (ops.size() == 1) {
 				state.json_write_string("type");
 				state.json_write_string("Point");
 
-				state.json_write_string("coordinates");
-				write_coordinates(state, ops[0]);
+				for (auto c : coordinate_writers) {
+					state.json_write_string(c.tag);
+					c.function(state, ops[0]);
+				}
 			} else {
 				state.json_write_string("type");
 				state.json_write_string("MultiPoint");
 
-				state.json_write_string("coordinates");
-				state.json_write_array();
+				for (auto c : coordinate_writers) {
+					state.json_write_string(c.tag);
+					state.json_write_array();
 
-				for (size_t i = 0; i < ops.size(); i++) {
-					write_coordinates(state, ops[i]);
+					for (size_t i = 0; i < ops.size(); i++) {
+						c.function(state, ops[i]);
+					}
+
+					state.json_end_array();
 				}
-
-				state.json_end_array();
 			}
 		} else if (feat.type == VT_LINE) {
 			int movetos = 0;
@@ -536,44 +569,48 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_string("type");
 				state.json_write_string("LineString");
 
-				state.json_write_string("coordinates");
-				state.json_write_array();
+				for (auto c : coordinate_writers) {
+					state.json_write_string(c.tag);
+					state.json_write_array();
 
-				for (size_t i = 0; i < ops.size(); i++) {
-					write_coordinates(state, ops[i]);
+					for (size_t i = 0; i < ops.size(); i++) {
+						c.function(state, ops[i]);
+					}
+
+					state.json_end_array();
 				}
-
-				state.json_end_array();
 			} else {
 				state.json_write_string("type");
 				state.json_write_string("MultiLineString");
 
-				state.json_write_string("coordinates");
-				state.json_write_array();
-				state.json_write_array();
+				for (auto c : coordinate_writers) {
+					state.json_write_string(c.tag);
+					state.json_write_array();
+					state.json_write_array();
 
-				int sstate = 0;
-				for (size_t i = 0; i < ops.size(); i++) {
-					if (ops[i].op == VT_MOVETO) {
-						if (sstate == 0) {
-							write_coordinates(state, ops[i]);
+					int sstate = 0;
+					for (size_t i = 0; i < ops.size(); i++) {
+						if (ops[i].op == VT_MOVETO) {
+							if (sstate == 0) {
+								c.function(state, ops[i]);
 
-							sstate = 1;
+								sstate = 1;
+							} else {
+								state.json_end_array();
+								state.json_write_array();
+
+								c.function(state, ops[i]);
+
+								sstate = 1;
+							}
 						} else {
-							state.json_end_array();
-							state.json_write_array();
-
-							write_coordinates(state, ops[i]);
-
-							sstate = 1;
+							c.function(state, ops[i]);
 						}
-					} else {
-						write_coordinates(state, ops[i]);
 					}
-				}
 
-				state.json_end_array();
-				state.json_end_array();
+					state.json_end_array();
+					state.json_end_array();
+				}
 			}
 		} else if (feat.type == VT_POLYGON) {
 			std::vector<std::vector<lonlat> > rings;
