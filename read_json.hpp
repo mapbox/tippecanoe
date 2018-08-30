@@ -12,5 +12,6 @@ extern int mb_geometry[GEOM_TYPES];
 
 void json_context(json_object *j);
 void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature, bool doing_attributes);
+void merge_node_attributes(drawvec &geom, drawvec &attributes);
 
 void stringify_value(json_object *value, int &type, std::string &stringified, const char *reading, int line, json_object *feature);

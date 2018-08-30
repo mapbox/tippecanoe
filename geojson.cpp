@@ -185,20 +185,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	if (attributes != NULL) {
 		drawvec dv2;
 		parse_geometry(t, attributes, dv2, VT_MOVETO, sst->fname, sst->line, feature, true);
-
-		if (dv2.size() != dv.size()) {
-			fprintf(stderr, "Geometry attributes don't match coordinates\n");
-			exit(EXIT_FAILURE);
-		}
-
-		for (size_t i = 0; i < dv2.size(); i++) {
-			if (dv[i].op != dv2[i].op) {
-				fprintf(stderr, "Geometry attributes don't match coordinates\n");
-				exit(EXIT_FAILURE);
-			}
-
-			dv[i].attributes = dv2[i].attributes;
-		}
+		merge_node_attributes(dv, dv2);
 	}
 
 	serial_feature sf;

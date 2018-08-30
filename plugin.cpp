@@ -152,6 +152,10 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
+		json_object *attributes = json_hash_get(geometry, "attributes");
+		if (attributes == NULL || attributes ->type != JSON_ARRAY) {
+			attributes = NULL;
+		}
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
@@ -187,7 +191,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		drawvec dv;
 		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
-		// XXX do node attributes
+		if (attributes != NULL) {
+			drawvec dv2;
+			parse_geometry(t, attributes, dv, VT_MOVETO, "Filter output", jp->line, j, true);
+			merge_node_attributes(dv, dv2);
+		}
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}
@@ -363,6 +371,10 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
+		json_object *attributes = json_hash_get(geometry, "attributes");
+		if (attributes == NULL || attributes->type != JSON_ARRAY) {
+			attributes = NULL;
+		}
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
@@ -378,7 +390,11 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		drawvec dv;
 		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
-		// XXX do node attributes
+		if (attributes != NULL) {
+			drawvec dv2;
+			parse_geometry(t, attributes, dv, VT_MOVETO, "Filter output", jp->line, j, true);
+			merge_node_attributes(dv, dv2);
+		}
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}

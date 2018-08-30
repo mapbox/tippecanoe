@@ -130,6 +130,22 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 	}
 }
 
+void merge_node_attributes(drawvec &geom, drawvec &attributes) {
+	if (attributes.size() != geom.size()) {
+		fprintf(stderr, "Geometry attributes don't match coordinates\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (size_t i = 0; i < attributes.size(); i++) {
+		if (geom[i].op != attributes[i].op) {
+			fprintf(stderr, "Geometry attributes don't match coordinates\n");
+			exit(EXIT_FAILURE);
+		}
+
+		geom[i].attributes = attributes[i].attributes;
+	}
+}
+
 void canonicalize(json_object *o) {
 	if (o->type == JSON_NUMBER) {
 		std::string s;
