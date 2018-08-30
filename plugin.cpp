@@ -186,7 +186,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		auto l = ret.find(layername);
 
 		drawvec dv;
-		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
+		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
+		// XXX do node attributes
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}
@@ -376,7 +377,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		}
 
 		drawvec dv;
-		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
+		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
+		// XXX do node attributes
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}

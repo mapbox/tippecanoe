@@ -65,6 +65,11 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		return 0;
 	}
 
+	json_object *attributes = json_hash_get(geometry, "attributes");
+	if (attributes != NULL && attributes->type != JSON_ARRAY) {
+		attributes = NULL;
+	}
+
 	int t;
 	for (t = 0; t < GEOM_TYPES; t++) {
 		if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
@@ -175,7 +180,26 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	}
 
 	drawvec dv;
-	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature);
+	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature, false);
+
+	if (attributes != NULL) {
+		drawvec dv2;
+		parse_geometry(t, attributes, dv2, VT_MOVETO, sst->fname, sst->line, feature, true);
+
+		if (dv2.size() != dv.size()) {
+			fprintf(stderr, "Geometry attributes don't match coordinates\n");
+			exit(EXIT_FAILURE);
+		}
+
+		for (size_t i = 0; i < dv2.size(); i++) {
+			if (dv[i].op != dv2[i].op) {
+				fprintf(stderr, "Geometry attributes don't match coordinates\n");
+				exit(EXIT_FAILURE);
+			}
+
+			dv[i].attributes = dv2[i].attributes;
+		}
+	}
 
 	serial_feature sf;
 	sf.layer = layer;
