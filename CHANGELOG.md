@@ -1,3 +1,7 @@
+## 1.31.5
+
+* Add options to change the tilestats limits
+
 ## 1.31.4
 
 * Keep tile-join from generating a tileset name longer than 255 characters
