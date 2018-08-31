@@ -156,8 +156,8 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 		state.json_write_string(geomtype);
 
 		size_t attrib_count = layer.second.file_keys.size();
-		if (attrib_count > max_tilestats_sample_values) {
-			attrib_count = max_tilestats_sample_values;
+		if (attrib_count > max_tilestats_attributes) {
+			attrib_count = max_tilestats_attributes;
 		}
 
 		state.nospace = true;
