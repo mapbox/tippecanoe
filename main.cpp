@@ -2606,7 +2606,7 @@ int main(int argc, char **argv) {
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 		{"no-tile-stats", no_argument, &prevent[P_TILE_STATS], 1},
-		{"tile-stats-attribute-limit", required_argument, 0, '~'},
+		{"tile-stats-attributes-limit", required_argument, 0, '~'},
 		{"tile-stats-sample-values-limit", required_argument, 0, '~'},
 		{"tile-stats-values-limit", required_argument, 0, '~'},
 
@@ -2676,7 +2676,7 @@ int main(int argc, char **argv) {
 
 		case '~': {
 			const char *opt = long_options[option_index].name;
-			if (strcmp(opt, "tile-stats-attribute-limit") == 0) {
+			if (strcmp(opt, "tile-stats-attributes-limit") == 0) {
 				max_tilestats_attributes = atoi(optarg);
 			} else if (strcmp(opt, "tile-stats-sample-values-limit") == 0) {
 				max_tilestats_sample_values = atoi(optarg);
