@@ -58,30 +58,6 @@ extern "C" {
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
 
-std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer) {
-	std::vector<mvt_geometry> out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevations);
-
-		if (geom[i].attributes.size() != 0) {
-			json_pull *jp = json_begin_string(geom[i].attributes.c_str());
-			json_object *jo = json_read_tree(jp);
-			if (jo == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", geom[i].attributes.c_str());
-				exit(EXIT_FAILURE);
-			}
-			tag_object_v3(layer, jo, g.attributes);
-			json_free(jo);
-			json_end(jp);
-		}
-
-		out.push_back(g);
-	}
-
-	return out;
-}
-
 bool draws_something(drawvec &geom) {
 	for (size_t i = 1; i < geom.size(); i++) {
 		if (geom[i].op == VT_LINETO && (geom[i].x != geom[i - 1].x || geom[i].y != geom[i - 1].y)) {

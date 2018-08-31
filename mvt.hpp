@@ -7,6 +7,7 @@
 #include <set>
 #include <vector>
 #include <jsonpull/jsonpull.h>
+#include "geometry.hpp"
 
 struct mvt_value;
 struct mvt_layer;
@@ -162,4 +163,5 @@ mvt_value stringified_to_mvt_value(int type, const char *s);
 
 bool is_integer(const char *s, long long *v);
 bool is_unsigned_integer(const char *s, unsigned long long *v);
+std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer);
 #endif

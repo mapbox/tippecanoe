@@ -72,17 +72,6 @@ void *run_writer(void *a) {
 	return NULL;
 }
 
-// XXX deduplicate
-static std::vector<mvt_geometry> to_feature(drawvec &geom) {
-	std::vector<mvt_geometry> out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y, geom[i].elevations));
-	}
-
-	return out;
-}
-
 // Reads from the postfilter
 std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	std::map<std::string, mvt_layer> ret;
@@ -221,7 +210,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (dv.size() > 0) {
 			mvt_feature feature;
 			feature.type = mb_geometry[t];
-			feature.geometry = to_feature(dv);
+			feature.geometry = to_feature(dv, l->second);
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
