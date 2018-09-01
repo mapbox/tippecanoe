@@ -101,6 +101,184 @@ with a custom layer name and description, and leaving out the \fB\fCLINEARID\fR 
 $ cat tiger/tl_2014_*_roads.json | tippecanoe \-o tiger.mbtiles \-l roads \-n "All TIGER roads, one zoom" \-z12 \-Z12 \-d14 \-x LINEARID \-x RTTYP
 .fi
 .RE
+.SH Cookbook
+.SS Linear features (world railroads), visible at all zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_railroads.zip
+unzip ne_10m_railroads.zip
+ogr2ogr \-f GeoJSON ne_10m_railroads.geojson ne_10m_railroads.shp
+
+tippecanoe \-zg \-o ne_10m_railroads.mbtiles \-\-drop\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping ne_10m_railroads.geojson
+.fi
+.RE
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-drop\-densest\-as\-needed\fR: If the tiles are too big at low zoom levels, drop the least\-visible features to allow tiles to be created with those features that remain
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Discontinuous polygon features (buildings of Rhode Island), visible at all zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O https://usbuildingdata.blob.core.windows.net/usbuildings\-v1\-1/RhodeIsland.zip
+unzip RhodeIsland.zip
+
+tippecanoe \-zg \-o RhodeIsland.mbtiles \-\-drop\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping RhodeIsland.geojson
+.fi
+.RE
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-drop\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, drop the least\-visible features to allow tiles to be created with those features that remain
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Continuous polygon features (states and provinces), visible at all zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_1_states_provinces.zip
+unzip \-o ne_10m_admin_1_states_provinces.zip
+ogr2ogr \-f GeoJSON ne_10m_admin_1_states_provinces.geojson ne_10m_admin_1_states_provinces.shp
+
+tippecanoe \-zg \-o ne_10m_admin_1_states_provinces.mbtiles \-\-coalesce\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping ne_10m_admin_1_states_provinces.geojson
+.fi
+.RE
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-coalesce\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Large point dataset (GPS bus locations), for visualization at all zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O ftp://avl\-data.sfmta.com/avl_data/avl_raw/sfmtaAVLRawData01012013.csv
+sed 's/PREDICTABLE.*/PREDICTABLE/' sfmtaAVLRawData01012013.csv > sfmta.csv
+tippecanoe \-zg \-o sfmta.mbtiles \-\-drop\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping sfmta.csv
+.fi
+.RE
+.PP
+(The \fB\fCsed\fR line is to clean the corrupt CSV header, which contains the wrong number of fields.)
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-drop\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, drop the least\-visible features to allow tiles to be created with those features that remain
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Clustered points (world cities), summing the clustered population, visible at all zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places.zip
+unzip \-o ne_10m_populated_places.zip
+ogr2ogr \-f GeoJSON ne_10m_populated_places.geojson ne_10m_populated_places.shp
+
+tippecanoe \-zg \-o ne_10m_populated_places.mbtiles \-r1 \-\-cluster\-distance=10 \-\-accumulate\-attribute=POP_MAX:sum ne_10m_populated_places.geojson
+.fi
+.RE
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-r1\fR: Do not automatically drop a fraction of points at low zoom levels, since clustering will be used instead
+.IP \(bu 2
+\fB\fC\-\-cluster\-distance=10\fR: Cluster together features that are closer than about 10 pixels from each other
+.IP \(bu 2
+\fB\fC\-\-accumulate\-attribute=POP_MAX:sum\fR: Sum the \fB\fCPOP_MAX\fR (population) attribute in features that are clustered together. Other attributes will be arbitrarily taken from the first feature in the cluster.
+.RE
+.SS Show countries at low zoom levels but states at higher zoom levels
+.PP
+.RS
+.nf
+curl \-L \-O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_0_countries.zip
+unzip ne_10m_admin_0_countries.zip
+ogr2ogr \-f GeoJSON ne_10m_admin_0_countries.geojson ne_10m_admin_0_countries.shp
+
+curl \-L \-O https://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_admin_1_states_provinces.zip
+unzip \-o ne_10m_admin_1_states_provinces.zip
+ogr2ogr \-f GeoJSON ne_10m_admin_1_states_provinces.geojson ne_10m_admin_1_states_provinces.shp
+
+tippecanoe \-z3 \-o countries\-z3.mbtiles \-\-coalesce\-densest\-as\-needed ne_10m_admin_0_countries.geojson
+tippecanoe \-zg \-Z4 \-o states\-Z4.mbtiles \-\-coalesce\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping ne_10m_admin_1_states_provinces.geojson
+tile\-join \-o states\-countries.mbtiles countries\-z3.mbtiles states\-Z4.mbtiles
+.fi
+.RE
+.PP
+Countries:
+.RS
+.IP \(bu 2
+\fB\fC\-z3\fR: Only generate zoom levels 0 through 3
+.IP \(bu 2
+\fB\fC\-\-coalesce\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+.RE
+.PP
+States and Provinces:
+.RS
+.IP \(bu 2
+\fB\fC\-Z4\fR: Only generate zoom levels 4 and beyond
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-coalesce\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Represent multiple sources (Illinois and Indiana counties) as separate layers
+.PP
+.RS
+.nf
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_17_county10.zip
+unzip tl_2010_17_county10.zip
+ogr2ogr \-f GeoJSON tl_2010_17_county10.geojson tl_2010_17_county10.shp
+
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_18_county10.zip
+unzip tl_2010_18_county10.zip
+ogr2ogr \-f GeoJSON tl_2010_18_county10.geojson tl_2010_18_county10.shp
+
+tippecanoe \-zg \-o counties\-separate.mbtiles \-\-coalesce\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping tl_2010_17_county10.geojson tl_2010_18_county10.geojson
+.fi
+.RE
+.RS
+.IP \(bu 2
+\fB\fC\-zg\fR: Automatically choose a maxzoom that should be sufficient to clearly distinguish the features and the detail within each feature
+.IP \(bu 2
+\fB\fC\-\-coalesce\-densest\-as\-needed\fR: If the tiles are too big at low or medium zoom levels, merge as many features together as are necessary to allow tiles to be created with those features that are still distinguished
+.IP \(bu 2
+\fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: If even the tiles at high zoom levels are too big, keep adding zoom levels until one is reached that can represent all the features
+.RE
+.SS Merge multiple sources (Illinois and Indiana counties) into the same layer
+.PP
+.RS
+.nf
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_17_county10.zip
+unzip tl_2010_17_county10.zip
+ogr2ogr \-f GeoJSON tl_2010_17_county10.geojson tl_2010_17_county10.shp
+
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/COUNTY/2010/tl_2010_18_county10.zip
+unzip tl_2010_18_county10.zip
+ogr2ogr \-f GeoJSON tl_2010_18_county10.geojson tl_2010_18_county10.shp
+
+tippecanoe \-zg \-o counties\-merged.mbtiles \-l counties \-\-coalesce\-densest\-as\-needed \-\-extend\-zooms\-if\-still\-dropping tl_2010_17_county10.geojson tl_2010_18_county10.geojson
+.fi
+.RE
+.PP
+As above, but
+.RS
+.IP \(bu 2
+\fB\fC\-l counties\fR: Specify the layer name instead of letting it be derived from the source file names
+.RE
 .SH Options
 .PP
 There are a lot of options. A lot of the time you won't want to use any of them
@@ -397,6 +575,12 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
 .IP \(bu 2
 \fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
+.IP \(bu 2
+\fB\fC\-\-tile\-stats\-attributes\-limit=\fR\fIcount\fP: Include \fB\fCtilestats\fR information about at most \fIcount\fP attributes instead of the default 1000.
+.IP \(bu 2
+\fB\fC\-\-tile\-stats\-sample\-values\-limit=\fR\fIcount\fP: Calculate \fB\fCtilestats\fR attribute statistics based on \fIcount\fP values instead of the default 1000.
+.IP \(bu 2
+\fB\fC\-\-tile\-stats\-values\-limit=\fR\fIcount\fP: Report \fIcount\fP unique attribute values in \fB\fCtilestats\fR instead of the default 100.
 .RE
 .SS Temporary storage
 .RS
