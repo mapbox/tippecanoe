@@ -164,11 +164,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
-					if (feat.properties[t] >= layer.attribute_pool.keys.size()) {
+					if (feat.properties[t] >= layer.keys.size()) {
 						fprintf(stderr, "Out of bounds attribute reference\n");
 						exit(EXIT_FAILURE);
 					}
-					std::string key = layer.attribute_pool.keys[feat.properties[t]];
+					std::string key = layer.keys[feat.properties[t]];
 					t++;
 					mvt_value val = layer.decode_property(feat.properties, t);
 
@@ -229,12 +229,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
-				if (feat.properties[t] > layer.attribute_pool.keys.size()) {
+				if (feat.properties[t] > layer.keys.size()) {
 					fprintf(stderr, "Internal error: out of bounds property key\n");
 					exit(EXIT_FAILURE);
 				}
 
-				std::string key = layer.attribute_pool.keys[feat.properties[t]];
+				std::string key = layer.keys[feat.properties[t]];
 				t++;
 				mvt_value val = layer.decode_property(feat.properties, t);
 

@@ -1875,8 +1875,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
 
 						std::vector<double> e;
-						for (size_t i = 0; i < partials[which_partial].geoms[0][0].elevations.size() && 
-                                                                   i < sf.geometry[0].elevations.size(); i++) {
+						for (size_t i = 0; i < partials[which_partial].geoms[0][0].elevations.size() &&
+								   i < sf.geometry[0].elevations.size();
+						     i++) {
 							e.push_back(partials[which_partial].geoms[0][0].elevations[i] * partials[which_partial].clustered);
 							e[i] += sf.geometry[0].elevations[i];
 							e[i] /= (partials[which_partial].clustered + 1);

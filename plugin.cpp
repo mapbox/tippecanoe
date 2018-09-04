@@ -142,7 +142,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 		json_object *attributes = json_hash_get(geometry, "attributes");
-		if (attributes == NULL || attributes ->type != JSON_ARRAY) {
+		if (attributes == NULL || attributes->type != JSON_ARRAY) {
 			attributes = NULL;
 		}
 
