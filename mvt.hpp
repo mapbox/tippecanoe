@@ -116,7 +116,6 @@ struct mvt_attribute_pool {
 	std::vector<std::string> string_values{};
 	std::vector<double> double_values{};
 	std::vector<float> float_values{};
-	std::vector<long> sint64_values{};
 	std::vector<unsigned long> uint64_values{};
 };
 

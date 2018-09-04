@@ -278,15 +278,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
-						case 5: /* signed integers */
-						{
-							auto pi = attribute_pool_reader.get_packed_sfixed64();
-							for (auto it = pi.first; it != pi.second; ++it) {
-								layer.attribute_pool.sint64_values.push_back(*it);
-							}
-							break;
-						}
-
 						case 6: /* unsigned integers */
 						{
 							auto pi = attribute_pool_reader.get_packed_fixed64();
@@ -551,7 +542,6 @@ std::string mvt_tile::encode() {
 
 		attribute_pool_writer.add_packed_float(3, std::begin(layers[i].attribute_pool.float_values), std::end(layers[i].attribute_pool.float_values));
 		attribute_pool_writer.add_packed_double(4, std::begin(layers[i].attribute_pool.double_values), std::end(layers[i].attribute_pool.double_values));
-		attribute_pool_writer.add_packed_sfixed64(5, std::begin(layers[i].attribute_pool.sint64_values), std::end(layers[i].attribute_pool.sint64_values));
 		attribute_pool_writer.add_packed_fixed64(6, std::begin(layers[i].attribute_pool.uint64_values), std::end(layers[i].attribute_pool.uint64_values));
 
 		layer_writer.add_message(7, attribute_pool_string);
@@ -949,28 +939,27 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 			vo = (attribute_pool.double_values.size() << 4) | 2;
 			attribute_pool.double_values.push_back(value.numeric_value.double_value);
 			onto.push_back(vo);
-		} else if (value.type == mvt_int) {
-			if (value.numeric_value.int_value >= -(1L << 60) + 1 && value.numeric_value.int_value <= (1L << 60) - 1) {
-				vo = (protozero::encode_zigzag64(value.numeric_value.int_value) << 4) | 3;
-			} else {
-				vo = (attribute_pool.sint64_values.size() << 4) | 6;
-				attribute_pool.sint64_values.push_back(value.numeric_value.int_value);
-			}
-			onto.push_back(vo);
-		} else if (value.type == mvt_sint) {
-			if (value.numeric_value.sint_value >= -(1L << 60) + 1 && value.numeric_value.sint_value <= (1L << 60) - 1) {
-				vo = (protozero::encode_zigzag64(value.numeric_value.sint_value) << 4) | 3;
-			} else {
-				vo = (attribute_pool.sint64_values.size() << 4) | 6;
-				attribute_pool.sint64_values.push_back(value.numeric_value.sint_value);
-			}
-			onto.push_back(vo);
 		} else if (value.type == mvt_uint) {
 			if (value.numeric_value.uint_value <= (1L << 61) - 1) {
-				vo = (value.numeric_value.uint_value << 4) | 4;
+				vo = (value.numeric_value.uint_value << 4) | 5;
 			} else {
-				vo = (attribute_pool.uint64_values.size() << 4) | 5;
+				vo = (attribute_pool.uint64_values.size() << 4) | 3;
 				attribute_pool.uint64_values.push_back(value.numeric_value.uint_value);
+			}
+			onto.push_back(vo);
+		} else if (value.type == mvt_int || value.type == mvt_sint) {
+			long val;
+			if (value.type == mvt_int) {
+				val = value.numeric_value.int_value;
+			} else {
+				val = value.numeric_value.sint_value;
+			}
+
+			if (val >= -(1L << 60) + 1 && val <= (1L << 60) - 1) {
+				vo = (protozero::encode_zigzag64(val) << 4) | 6;
+			} else {
+				vo = (attribute_pool.uint64_values.size() << 4) | 4;
+				attribute_pool.uint64_values.push_back(protozero::encode_zigzag64(val));
 			}
 			onto.push_back(vo);
 		} else if (value.type == mvt_bool) {
@@ -1087,17 +1076,7 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		ret.numeric_value.double_value = attribute_pool.double_values[property[off] >> 4];
 		return ret;
 
-	case 3: /* signed integer */
-		ret.type = mvt_sint;
-		ret.numeric_value.sint_value = protozero::decode_zigzag64(property[off] >> 4);
-		return ret;
-
-	case 4: /* unsigned integer */
-		ret.type = mvt_uint;
-		ret.numeric_value.uint_value = property[off] >> 4;
-		return ret;
-
-	case 5: /* unsigned int reference */
+	case 3: /* unsigned int reference */
 		ret.type = mvt_uint;
 		if (property[off] >> 4 >= attribute_pool.uint64_values.size()) {
 			fprintf(stderr, "Out of bounds uint reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.uint64_values.size());
@@ -1106,13 +1085,23 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		ret.numeric_value.uint_value = attribute_pool.uint64_values[property[off] >> 4];
 		return ret;
 
-	case 6: /* signed int reference */
+	case 4: /* signed int reference */
 		ret.type = mvt_sint;
-		if (property[off] >> 4 >= attribute_pool.sint64_values.size()) {
-			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.sint64_values.size());
+		if (property[off] >> 4 >= attribute_pool.uint64_values.size()) {
+			fprintf(stderr, "Out of bounds sint reference: %lu vs %zu\n", property[off] >> 4, attribute_pool.uint64_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.numeric_value.sint_value = attribute_pool.sint64_values[property[off] >> 4];
+		ret.numeric_value.sint_value = protozero::decode_zigzag64(attribute_pool.uint64_values[property[off] >> 4]);
+		return ret;
+
+	case 5: /* unsigned integer */
+		ret.type = mvt_uint;
+		ret.numeric_value.uint_value = property[off] >> 4;
+		return ret;
+
+	case 6: /* signed integer */
+		ret.type = mvt_sint;
+		ret.numeric_value.sint_value = protozero::decode_zigzag64(property[off] >> 4);
 		return ret;
 
 	case 7: /* boolean */
