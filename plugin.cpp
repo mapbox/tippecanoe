@@ -214,8 +214,22 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				feature.id = atoll(id->string);
-				feature.has_id = true;
+				if (id->type == JSON_NUMBER) {
+					feature.id = atoll(id->string);
+					feature.has_id = true;
+				} else if (id->type == JSON_STRING) {
+					mvt_value val;
+					val.type = mvt_string;
+					val.string_value = id->string;
+
+					std::vector<unsigned long> onto;
+					l->second.tag_v3_value(val, onto);
+					if (onto.size() != 1) {
+						fprintf(stderr, "Internal error: tagging a string value didn't have a length of 1\n");
+						exit(EXIT_FAILURE);
+					}
+					feature.string_id = onto[0];
+				}
 			}
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
@@ -411,6 +425,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			sf.extent = 0;
 			sf.metapos = 0;
 			sf.has_id = false;
+			sf.has_string_id = false;
 
 			std::string layername = "unknown";
 			json_object *tippecanoe = json_hash_get(j, "tippecanoe");
@@ -460,8 +475,13 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				sf.id = atoll(id->string);
-				sf.has_id = true;
+				if (id->type == JSON_NUMBER) {
+					sf.id = atoll(id->string);
+					sf.has_id = true;
+				} else if (id->type == JSON_STRING) {
+					sf.string_id = id->string;
+					sf.has_string_id = true;
+				}
 			}
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];

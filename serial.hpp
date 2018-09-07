@@ -51,6 +51,8 @@ struct serial_feature {
 
 	bool has_id = false;
 	unsigned long long id = 0;
+	bool has_string_id = false;
+	std::string string_id = "";
 
 	bool has_tippecanoe_minzoom = false;
 	int tippecanoe_minzoom = 0;

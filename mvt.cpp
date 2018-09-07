@@ -303,6 +303,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					std::vector<uint32_t> geoms;
 					size_t dimensions = 0;
 					std::vector<double> elevations;
+					ssize_t string_id = -1;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -363,6 +364,12 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.node_attributes.push_back(*it);
 							}
+							break;
+						}
+
+						case 10: /* string id */
+						{
+							string_id = feature_reader.get_uint32();
 							break;
 						}
 
@@ -550,6 +557,9 @@ std::string mvt_tile::encode() {
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
+			}
+			if (layers[i].features[f].string_id >= 0) {
+				feature_writer.add_uint32(10, layers[i].features[f].string_id);
 			}
 
 			std::vector<uint32_t> geometry;

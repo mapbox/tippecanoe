@@ -413,6 +413,14 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			state.json_write_string("id");
 			state.json_write_unsigned(feat.id);
 		}
+		if (feat.string_id >= 0) {
+			state.json_write_string("id");
+			if (feat.string_id >= (ssize_t) layer.string_values.string_values.size()) {
+				fprintf(stderr, "Internal error: out of bounds string ID reference\n");
+				exit(EXIT_FAILURE);
+			}
+			state.json_write_string(layer.string_values.string_values[feat.string_id]);
+		}
 
 		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
 			state.json_write_string("tippecanoe");

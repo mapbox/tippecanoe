@@ -239,7 +239,8 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
 	long long layer = 0;
-	layer |= sf->layer << 6;
+	layer |= sf->layer << 7;
+	layer |= (sf->has_string_id << 6);
 	layer |= (sf->seq != 0) << 5;
 	layer |= (sf->index != 0) << 4;
 	layer |= (sf->extent != 0) << 3;
@@ -259,6 +260,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long
 	}
 	if (sf->has_id) {
 		serialize_ulong_long(geomfile, sf->id, geompos, fname);
+	}
+	if (sf->has_string_id) {
+		serialize_string(geomfile, sf->string_id, geompos, fname);
 	}
 
 	serialize_int(geomfile, sf->segment, geompos, fname);
@@ -307,6 +311,7 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 	sf.tippecanoe_maxzoom = -1;
 	sf.id = 0;
 	sf.has_id = false;
+	sf.has_string_id = false;
 	if (sf.layer & (1 << 1)) {
 		deserialize_int_io(geoms, &sf.tippecanoe_minzoom, geompos_in);
 	}
@@ -316,6 +321,10 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 	if (sf.layer & (1 << 2)) {
 		sf.has_id = true;
 		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
+	}
+	if (sf.layer & (1 << 6)) {
+		sf.has_string_id = true;
+		deserialize_string_io(geoms, sf.string_id, geompos_in);
 	}
 
 	deserialize_int_io(geoms, &sf.segment, geompos_in);
@@ -331,7 +340,7 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
 	}
 
-	sf.layer >>= 6;
+	sf.layer >>= 7;
 
 	sf.metapos = 0;
 	deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
@@ -440,7 +449,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.geometry = fix_polygon(sf.geometry);
 	}
 
-	if (!sf.has_id) {
+	if (!sf.has_id && !sf.has_string_id) {
 		if (additional[A_GENERATE_IDS]) {
 			sf.has_id = true;
 			sf.id = sf.seq + 1;
