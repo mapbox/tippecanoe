@@ -14,6 +14,10 @@
 #include "write_json.hpp"
 #include "version.hpp"
 
+size_t max_tilestats_attributes = 1000;
+size_t max_tilestats_sample_values = 1000;
+size_t max_tilestats_values = 100;
+
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	sqlite3 *outdb;
 
@@ -147,8 +151,8 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 		state.json_write_string(geomtype);
 
 		size_t attrib_count = layer.second.file_keys.size();
-		if (attrib_count > 1000) {
-			attrib_count = 1000;
+		if (attrib_count > max_tilestats_attributes) {
+			attrib_count = max_tilestats_attributes;
 		}
 
 		state.nospace = true;
@@ -175,8 +179,8 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 			state.json_write_string(attribute.first);
 
 			size_t val_count = attribute.second.sample_values.size();
-			if (val_count > 1000) {
-				val_count = 1000;
+			if (val_count > max_tilestats_sample_values) {
+				val_count = max_tilestats_sample_values;
 			}
 
 			state.nospace = true;
@@ -378,7 +382,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	sqlite3_free(sql);
 
 	if (vector) {
-		size_t elements = 100;
+		size_t elements = max_tilestats_values;
 		std::string buf;
 
 		{
@@ -586,7 +590,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 						if (pt == fk2->second.sample_values.end() || *pt != val) {  // not found
 							fk2->second.sample_values.insert(pt, val);
 
-							if (fk2->second.sample_values.size() > 1000) {
+							if (fk2->second.sample_values.size() > max_tilestats_sample_values) {
 								fk2->second.sample_values.pop_back();
 							}
 						}
@@ -650,7 +654,7 @@ void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, s
 	if (pt == fka->second.sample_values.end() || *pt != val) {  // not found
 		fka->second.sample_values.insert(pt, val);
 
-		if (fka->second.sample_values.size() > 1000) {
+		if (fka->second.sample_values.size() > max_tilestats_sample_values) {
 			fka->second.sample_values.pop_back();
 		}
 	}

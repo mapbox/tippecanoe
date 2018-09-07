@@ -5,6 +5,10 @@
 #include <map>
 #include "mvt.hpp"
 
+extern size_t max_tilestats_attributes;
+extern size_t max_tilestats_sample_values;
+extern size_t max_tilestats_values;
+
 struct type_and_string {
 	int type = 0;
 	std::string string = "";

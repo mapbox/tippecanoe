@@ -2607,6 +2607,9 @@ int main(int argc, char **argv) {
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 		{"no-tile-stats", no_argument, &prevent[P_TILE_STATS], 1},
+		{"tile-stats-attributes-limit", required_argument, 0, '~'},
+		{"tile-stats-sample-values-limit", required_argument, 0, '~'},
+		{"tile-stats-values-limit", required_argument, 0, '~'},
 
 		{"Temporary storage", 0, 0, 0},
 		{"temporary-directory", required_argument, 0, 't'},
@@ -2666,7 +2669,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	while ((i = getopt_long(argc, argv, getopt_str, long_options, NULL)) != -1) {
+	int option_index = 0;
+	while ((i = getopt_long(argc, argv, getopt_str, long_options, &option_index)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -2683,6 +2687,18 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 			break;
+
+		case '~': {
+			const char *opt = long_options[option_index].name;
+			if (strcmp(opt, "tile-stats-attributes-limit") == 0) {
+				max_tilestats_attributes = atoi(optarg);
+			} else if (strcmp(opt, "tile-stats-sample-values-limit") == 0) {
+				max_tilestats_sample_values = atoi(optarg);
+			} else if (strcmp(opt, "tile-stats-values-limit") == 0) {
+				max_tilestats_values = atoi(optarg);
+			}
+			break;
+		}
 
 		case 'n':
 			name = optarg;
@@ -2999,6 +3015,10 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 		}
+	}
+
+	if (max_tilestats_sample_values < max_tilestats_values) {
+		max_tilestats_sample_values = max_tilestats_values;
 	}
 
 	signal(SIGPIPE, SIG_IGN);
