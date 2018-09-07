@@ -1,3 +1,7 @@
+## 1.31.6
+
+* Issue an error message in tile-join if minzoom is greater than maxzoom
+
 ## 1.31.5
 
 * Add options to change the tilestats limits

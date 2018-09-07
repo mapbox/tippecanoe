@@ -1030,6 +1030,11 @@ int main(int argc, char **argv) {
 		usage(argv);
 	}
 
+	if (minzoom > maxzoom) {
+		fprintf(stderr, "%s: Minimum zoom -Z%d cannot be greater than maxzoom -z%d\n", argv[0], minzoom, maxzoom);
+		exit(EXIT_FAILURE);
+	}
+
 	if (out_mbtiles != NULL) {
 		if (force) {
 			unlink(out_mbtiles);
