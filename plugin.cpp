@@ -228,7 +228,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 						fprintf(stderr, "Internal error: tagging a string value didn't have a length of 1\n");
 						exit(EXIT_FAILURE);
 					}
-					feature.string_id = onto[0];
+					feature.string_id = onto[0] >> 4;
 				}
 			}
 

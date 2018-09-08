@@ -303,7 +303,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					std::vector<uint32_t> geoms;
 					size_t dimensions = 0;
 					std::vector<double> elevations;
-					ssize_t string_id = -1;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -369,7 +368,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 10: /* string id */
 						{
-							string_id = feature_reader.get_uint32();
+							feature.string_id = feature_reader.get_uint32();
 							break;
 						}
 

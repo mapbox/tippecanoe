@@ -243,7 +243,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					exit(EXIT_FAILURE);
 				}
 
-				outfeature.string_id = onto[0];
+				outfeature.string_id = onto[0] >> 4;
 			}
 
 			std::vector<std::pair<std::string, mvt_value>> todo;

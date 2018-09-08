@@ -416,7 +416,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		if (feat.string_id >= 0) {
 			state.json_write_string("id");
 			if (feat.string_id >= (ssize_t) layer.string_values.string_values.size()) {
-				fprintf(stderr, "Internal error: out of bounds string ID reference\n");
+				fprintf(stderr, "Internal error: out of bounds string ID reference %zd\n", feat.string_id);
 				exit(EXIT_FAILURE);
 			}
 			state.json_write_string(layer.string_values.string_values[feat.string_id]);

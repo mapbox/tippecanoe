@@ -1538,7 +1538,7 @@ void *run_prefilter(void *v) {
 				exit(EXIT_FAILURE);
 			}
 
-			tmp_feature.string_id = onto[0];
+			tmp_feature.string_id = onto[0] >> 4;
 		}
 
 		// Offset from tile coordinates back to world coordinates
@@ -2283,7 +2283,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 						exit(EXIT_FAILURE);
 					}
 
-					feature.string_id = onto[0];
+					feature.string_id = onto[0] >> 4;
 				}
 
 				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
