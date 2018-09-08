@@ -506,7 +506,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "layer": "notlayer827905613", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "rule": "not \"id\": \"1234\", [\"==\", \"$id\", 1234]" }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": "1234", "properties": { "rule": "not \"id\": \"1234\", [\"==\", \"$id\", 1234]" }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "id": 1234, "rule": "not \"properties\": {\"id\": 1234}, [\"==\", \"$id\", 1234]" }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ] }
