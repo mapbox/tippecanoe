@@ -368,7 +368,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 10: /* string id */
 						{
-							feature.string_id = feature_reader.get_uint32();
+							feature.string_id = feature_reader.get_string();
 							break;
 						}
 
@@ -557,8 +557,8 @@ std::string mvt_tile::encode() {
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
 			}
-			if (layers[i].features[f].string_id >= 0) {
-				feature_writer.add_uint32(10, layers[i].features[f].string_id);
+			if (layers[i].features[f].string_id.size() != 0) {
+				feature_writer.add_string(10, layers[i].features[f].string_id);
 			}
 
 			std::vector<uint32_t> geometry;

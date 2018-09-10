@@ -63,7 +63,7 @@ struct mvt_feature {
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;
-	ssize_t string_id = -1;
+	std::string string_id = "";
 	bool dropped = false;
 
 	// For use during decoding

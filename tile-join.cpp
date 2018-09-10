@@ -181,15 +181,10 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					v.numeric_value.uint_value = feat.id;
 
 					attributes.insert(std::pair<std::string, mvt_value>("$id", v));
-				} else if (feat.string_id >= 0) {
-					if (feat.string_id >= (ssize_t) layer.string_values.string_values.size()) {
-						fprintf(stderr, "Internal error: Out of bounds string ID reference\n");
-						exit(EXIT_FAILURE);
-					}
-
+				} else if (feat.string_id.size() != 0) {
 					mvt_value v;
 					v.type = mvt_string;
-					v.string_value = layer.string_values.string_values[feat.string_id];
+					v.string_value = feat.string_id;
 
 					attributes.insert(std::pair<std::string, mvt_value>("$id", v));
 				}
@@ -225,25 +220,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.has_id = true;
 				outfeature.id = feat.id;
 			}
-			if (feat.string_id >= 0) {
-				if (feat.string_id >= (ssize_t) layer.string_values.string_values.size()) {
-					fprintf(stderr, "Internal error: Out of bounds string ID reference\n");
-					exit(EXIT_FAILURE);
-				}
-
-				mvt_value v;
-				v.type = mvt_string;
-				v.string_value = layer.string_values.string_values[feat.string_id];
-
-				std::vector<unsigned long> onto;
-				outlayer.tag_v3_value(v, onto);
-
-				if (onto.size() != 1) {
-					fprintf(stderr, "Internal error: tagging string value didn't have size of 1\n");
-					exit(EXIT_FAILURE);
-				}
-
-				outfeature.string_id = onto[0] >> 4;
+			if (feat.string_id.size() != 0) {
+				outfeature.string_id = feat.string_id;
 			}
 
 			std::vector<std::pair<std::string, mvt_value>> todo;

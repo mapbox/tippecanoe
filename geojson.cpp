@@ -105,7 +105,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	bool has_id = false;
 	unsigned long long id_value = 0;
-	bool has_string_id = false;
 	std::string string_id_value;
 	if (id != NULL) {
 		if (id->type == JSON_NUMBER) {
@@ -132,7 +131,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 				}
 			}
 		} else if (id->type == JSON_STRING) {
-			has_string_id = true;
 			string_id_value = id->string;
 		} else {
 			static bool warned_nan = false;
@@ -199,7 +197,6 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	sf.t = mb_geometry[t];
 	sf.has_id = has_id;
 	sf.id = id_value;
-	sf.has_string_id = has_string_id;
 	sf.string_id = string_id_value;
 	sf.has_tippecanoe_minzoom = (tippecanoe_minzoom != -1);
 	sf.tippecanoe_minzoom = tippecanoe_minzoom;

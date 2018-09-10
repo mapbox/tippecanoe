@@ -85,7 +85,6 @@ struct coalesce {
 	double spacing = 0;
 	bool has_id = false;
 	unsigned long long id = 0;
-	bool has_string_id = false;
 	std::string string_id;
 
 	bool operator<(const coalesce &o) const {
@@ -116,10 +115,6 @@ int coalcmp(const void *v1, const void *v2) {
 	if (c1->has_id != c2->has_id) {
 		return (int) c1->has_id - (int) c2->has_id;
 	}
-	if (c1->has_string_id != c2->has_string_id) {
-		return (int) c1->has_string_id - (int) c2->has_string_id;
-	}
-
 	if (c1->has_id && c2->has_id) {
 		if (c1->id < c2->id) {
 			return -1;
@@ -128,13 +123,12 @@ int coalcmp(const void *v1, const void *v2) {
 			return 1;
 		}
 	}
-	if (c1->has_string_id && c2->has_string_id) {
-		if (c1->string_id < c2->string_id) {
-			return -1;
-		}
-		if (c1->string_id > c2->string_id) {
-			return 1;
-		}
+
+	if (c1->string_id < c2->string_id) {
+		return -1;
+	}
+	if (c1->string_id > c2->string_id) {
+		return 1;
 	}
 
 	cmp = metacmp(c1->keys, c1->values, c1->stringpool, c2->keys, c2->values, c2->stringpool);
@@ -257,7 +251,7 @@ static int metacmp(const std::vector<long long> &keys1, const std::vector<long l
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, std::atomic<long long> *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, bool has_string_id, std::string string_id, unsigned long long index, long long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, std::atomic<long long> *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, std::string string_id, unsigned long long index, long long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -343,7 +337,6 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.t = t;
 					sf.has_id = has_id;
 					sf.id = id;
-					sf.has_string_id = has_string_id;
 					sf.string_id = string_id;
 					sf.has_tippecanoe_minzoom = tippecanoe_minzoom != -1;
 					sf.tippecanoe_minzoom = tippecanoe_minzoom;
@@ -390,7 +383,6 @@ struct partial {
 	unsigned long long id = 0;
 	std::string string_id;
 	bool has_id = 0;
-	bool has_string_id = 0;
 	ssize_t renamed = 0;
 	long long extent = 0;
 	long long clustered = 0;
@@ -1357,7 +1349,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.has_string_id, sf.string_id, sf.index, sf.extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.string_id, sf.index, sf.extent);
 			}
 		}
 
@@ -1402,7 +1394,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 				attributes.insert(std::pair<std::string, mvt_value>("$id", v));
 			}
-			if (sf.has_string_id) {
+			if (sf.string_id.size() != 0) {
 				mvt_value v;
 				v.type = mvt_string;
 				v.string_value = sf.string_id;
@@ -1525,20 +1517,8 @@ void *run_prefilter(void *v) {
 		tmp_feature.has_id = sf.has_id;
 		tmp_feature.dropped = sf.dropped;
 
-		if (sf.has_string_id) {
-			mvt_value sv;
-			sv.type = mvt_string;
-			sv.string_value = sf.string_id;
-
-			std::vector<unsigned long> onto;
-			tmp_layer.tag_v3_value(sv, onto);
-
-			if (onto.size() != 1) {
-				fprintf(stderr, "Internal error: Expected 1 element from tagging string\n");
-				exit(EXIT_FAILURE);
-			}
-
-			tmp_feature.string_id = onto[0] >> 4;
+		if (sf.string_id.size() != 0) {
+			tmp_feature.string_id = sf.string_id;
 		}
 
 		// Offset from tile coordinates back to world coordinates
@@ -2010,7 +1990,6 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.id = sf.id;
 				p.has_id = sf.has_id;
 				p.string_id = sf.string_id;
-				p.has_string_id = sf.has_string_id;
 				p.index = sf.index;
 				p.renamed = -1;
 				p.extent = sf.extent;
@@ -2151,7 +2130,6 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
 					c.string_id = partials[i].string_id;
-					c.has_string_id = partials[i].has_string_id;
 
 					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
 
@@ -2270,20 +2248,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				feature.id = layer_features[x].id;
 				feature.has_id = layer_features[x].has_id;
 
-				if (layer_features[x].has_string_id) {
-					mvt_value sv;
-					sv.type = mvt_string;
-					sv.string_value = layer_features[x].string_id;
-
-					std::vector<unsigned long> onto;
-					layer.tag_v3_value(sv, onto);
-
-					if (onto.size() != 1) {
-						fprintf(stderr, "Internal error: Expected 1 element from tagging string\n");
-						exit(EXIT_FAILURE);
-					}
-
-					feature.string_id = onto[0] >> 4;
+				if (layer_features[x].string_id.size() != 0) {
+					feature.string_id = layer_features[x].string_id;
 				}
 
 				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
