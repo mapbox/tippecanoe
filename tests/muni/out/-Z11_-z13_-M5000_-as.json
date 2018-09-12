@@ -468,9 +468,11 @@
 ,
 { "type": "Feature", "properties": { "name": "Mission St & 18th St" }, "geometry": { "type": "Point", "coordinates": [ -122.419367, 37.762641 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "16th St & Harrison St" }, "geometry": { "type": "Point", "coordinates": [ -122.413015, 37.765524 ] } }
+{ "type": "Feature", "properties": { "name": "Bryant St & Division St" }, "geometry": { "type": "Point", "coordinates": [ -122.410913, 37.769120 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Mission St & 21st St" }, "geometry": { "type": "Point", "coordinates": [ -122.418981, 37.756601 ] } }
+{ "type": "Feature", "properties": { "name": "Mission St & 19th St" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.760673 ] } }
+,
+{ "type": "Feature", "properties": { "name": "South Van Ness & 22nd St" }, "geometry": { "type": "Point", "coordinates": [ -122.416706, 37.755753 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Folsom St & 22nd St" }, "geometry": { "type": "Point", "coordinates": [ -122.414346, 37.755957 ] } }
 ,
@@ -796,7 +798,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Geary Blvd & 36th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.496421, 37.779687 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "33rd Ave & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.493396, 37.779823 ] } }
+{ "type": "Feature", "properties": { "name": "Geary Blvd & 33rd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.493460, 37.779806 ] } }
 ,
 { "type": "Feature", "properties": { "name": "California St & 28th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.488074, 37.783808 ] } }
 ,
@@ -1060,7 +1062,7 @@
 ,
 { "type": "Feature", "properties": { "name": "Eddy St & Pierce St" }, "geometry": { "type": "Point", "coordinates": [ -122.435524, 37.781095 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Eddy St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.432241, 37.781502 ] } }
+{ "type": "Feature", "properties": { "name": "Fillmore St & Eddy St" }, "geometry": { "type": "Point", "coordinates": [ -122.432413, 37.781535 ] } }
 ,
 { "type": "Feature", "properties": { "name": "McAllister St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.438593, 37.777821 ] } }
 ,
@@ -1274,7 +1276,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Silver Ave & Alemany Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.433186, 37.729605 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Ocean Ave & Otsego Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.441254, 37.723275 ] } }
+{ "type": "Feature", "properties": { "name": "San Jose Ave & San Juan Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.441211, 37.727161 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Ocean Ave & Cayuga Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.438550, 37.723580 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mission St & Onondaga Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.437499, 37.721289 ] } }
 ,
@@ -2036,19 +2040,19 @@
 ,
 { "type": "Feature", "properties": { "name": "The Embarcadero & Green St" }, "geometry": { "type": "Point", "coordinates": [ -122.399390, 37.801273 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Broadway & Battery St" }, "geometry": { "type": "Point", "coordinates": [ -122.400742, 37.798543 ] } }
+{ "type": "Feature", "properties": { "name": "Sansome St & Pacific Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.402029, 37.797781 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Powell St & Sacramento St" }, "geometry": { "type": "Point", "coordinates": [ -122.409453, 37.792965 ] } }
+{ "type": "Feature", "properties": { "name": "Pacific Ave & Stockton St" }, "geometry": { "type": "Point", "coordinates": [ -122.408595, 37.796746 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "California St & Grant Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.405977, 37.792507 ] } }
+{ "type": "Feature", "properties": { "name": "Columbus Ave & Jackson St" }, "geometry": { "type": "Point", "coordinates": [ -122.404325, 37.796068 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Powell St & Post St" }, "geometry": { "type": "Point", "coordinates": [ -122.408316, 37.788200 ] } }
+{ "type": "Feature", "properties": { "name": "Powell St & Bush St" }, "geometry": { "type": "Point", "coordinates": [ -122.408724, 37.790167 ] } }
 ,
 { "type": "Feature", "properties": { "name": "POST & GRANT" }, "geometry": { "type": "Point", "coordinates": [ -122.405419, 37.788590 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Clay St & Front St" }, "geometry": { "type": "Point", "coordinates": [ -122.399025, 37.795102 ] } }
+{ "type": "Feature", "properties": { "name": "California St & Montgomery St" }, "geometry": { "type": "Point", "coordinates": [ -122.402630, 37.792931 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Kearny St & Geary Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.403467, 37.788217 ] } }
+{ "type": "Feature", "properties": { "name": "California St & Front St" }, "geometry": { "type": "Point", "coordinates": [ -122.398939, 37.793270 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Broadway & Davis St" }, "geometry": { "type": "Point", "coordinates": [ -122.398596, 37.798984 ] } }
 ,

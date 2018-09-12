@@ -1,9 +1,9 @@
 [
-{ "zoom": 11, "x": 326, "y": 791, "bytes": 369, "compressed": true, "layers": { "muni": { "points": 14, "lines": 0, "polygons": 0, "extent": 4096 } } }
+{ "zoom": 11, "x": 326, "y": 791, "bytes": 366, "compressed": true, "layers": { "muni": { "points": 14, "lines": 0, "polygons": 0, "extent": 4096 } } }
 ,
-{ "zoom": 11, "x": 327, "y": 792, "bytes": 6205, "compressed": true, "layers": { "muni": { "points": 528, "lines": 0, "polygons": 0, "extent": 4096 } } }
+{ "zoom": 11, "x": 327, "y": 792, "bytes": 6207, "compressed": true, "layers": { "muni": { "points": 528, "lines": 0, "polygons": 0, "extent": 4096 } } }
 ,
-{ "zoom": 11, "x": 327, "y": 791, "bytes": 43275, "compressed": true, "layers": { "muni": { "points": 4285, "lines": 0, "polygons": 0, "extent": 4096 }, "subway": { "points": 19, "lines": 0, "polygons": 0, "extent": 4096 } } }
+{ "zoom": 11, "x": 327, "y": 791, "bytes": 43268, "compressed": true, "layers": { "muni": { "points": 4285, "lines": 0, "polygons": 0, "extent": 4096 }, "subway": { "points": 19, "lines": 0, "polygons": 0, "extent": 4096 } } }
 ,
-{ "zoom": 11, "x": 954, "y": 791, "bytes": 75, "compressed": true, "layers": { "muni": { "points": 12, "lines": 0, "polygons": 0, "extent": 4096 } } }
+{ "zoom": 11, "x": 954, "y": 791, "bytes": 73, "compressed": true, "layers": { "muni": { "points": 12, "lines": 0, "polygons": 0, "extent": 4096 } } }
 ]

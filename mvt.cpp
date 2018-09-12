@@ -247,23 +247,8 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					break;
 
 				case 6: /* string values */
-				{
-					protozero::pbf_reader string_pool_reader(layer_reader.get_message());
-
-					while (string_pool_reader.next()) {
-						switch (string_pool_reader.tag()) {
-						case 2: /* string */
-							layer.string_values.string_values.push_back(string_pool_reader.get_string());
-							break;
-
-						default:
-							string_pool_reader.skip();
-							break;
-						}
-					}
-
+					layer.string_values.push_back(layer_reader.get_string());
 					break;
-				}
 
 				case 7: /* floats */
 				{
@@ -531,14 +516,9 @@ std::string mvt_tile::encode() {
 			layer_writer.add_message(4, value_string);
 		}
 
-		std::string string_pool_string;
-		protozero::pbf_writer string_pool_writer(string_pool_string);
-
-		for (size_t v = 0; v < layers[i].string_values.string_values.size(); v++) {
-			string_pool_writer.add_string(2, layers[i].string_values.string_values[v]);
+		for (size_t v = 0; v < layers[i].string_values.size(); v++) {
+			layer_writer.add_string(6, layers[i].string_values[v]);
 		}
-
-		layer_writer.add_message(6, string_pool_string);
 
 		layer_writer.add_packed_float(7, std::begin(layers[i].float_values), std::end(layers[i].float_values));
 		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
@@ -929,8 +909,8 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 
 	if (vi == property_map.end()) {
 		if (value.type == mvt_string) {
-			vo = (string_values.string_values.size() << 4) | 0;
-			string_values.string_values.push_back(value.string_value);
+			vo = (string_values.size() << 4) | 0;
+			string_values.push_back(value.string_value);
 			onto.push_back(vo);
 		} else if (value.type == mvt_float) {
 			vo = (float_values.size() << 4) | 1;
@@ -1052,11 +1032,11 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 	switch (type) {
 	case 0: /* string reference */
 		ret.type = mvt_string;
-		if (property[off] >> 4 >= string_values.string_values.size()) {
-			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property[off] >> 4, string_values.string_values.size());
+		if (property[off] >> 4 >= string_values.size()) {
+			fprintf(stderr, "Out of bounds string reference: %lu vs %zu\n", property[off] >> 4, string_values.size());
 			exit(EXIT_FAILURE);
 		}
-		ret.string_value = string_values.string_values[property[off] >> 4];
+		ret.string_value = string_values[property[off] >> 4];
 		return ret;
 
 	case 1: /* float reference */

@@ -112,10 +112,6 @@ struct mvt_value {
 	}
 };
 
-struct mvt_string_values {
-	std::vector<std::string> string_values{};
-};
-
 struct mvt_layer {
 	int version = 0;
 	std::string name = "";
@@ -124,7 +120,7 @@ struct mvt_layer {
 	std::vector<mvt_value> values{};
 	long long extent = 0;
 
-	mvt_string_values string_values;
+	std::vector<std::string> string_values;
 	std::vector<float> float_values{};
 	std::vector<double> double_values{};
 	std::vector<unsigned long> uint64_values{};
