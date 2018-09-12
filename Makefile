@@ -95,7 +95,9 @@ suffixes = json json.gz
 	rm $@.out $@.mbtiles
 
 # Don't test overflow with geobuf, because it fails (https://github.com/mapbox/geobuf/issues/87)
-nogeobuf = tests/overflow/out/-z0.json tests/node-attributes/out/-z5.json
+# Don't test files that depend upon string IDs with geobuf, since it only supports numeric IDs
+# Don't test 3-D geometries with geobuf, since it only supports 2-D
+nogeobuf = tests/overflow/out/-z0.json tests/node-attributes/out/-z5.json tests/feature-filter/out/-z0_-Jtests%feature-filter%filter.json tests/id/out/-Z11.json tests/node-attributes/out/-Ccat_-z0.json tests/node-attributes/out/-z0_-ccat.json tests/node-attributes/out/-z5.json
 geobuf-test: tippecanoe-json-tool $(addsuffix .checkbuf,$(filter-out $(nogeobuf),$(TESTS)))
 
 # For quicker address sanitizer build, hope that regular JSON parsing is tested enough by parallel and join tests
