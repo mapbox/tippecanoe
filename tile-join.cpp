@@ -450,6 +450,7 @@ struct reader {
 	long long sorty = 0;
 	long long y = 0;
 	int z_flag = 0;
+	std::string fname;
 
 	std::string data = "";
 
@@ -482,6 +483,13 @@ struct reader {
 			return false;
 		}
 
+		if (fname < r.fname) {
+			return true;
+		}
+		if (fname > r.fname) {
+			return false;
+		}
+
 		if (data < r.data) {
 			return true;
 		}
@@ -509,6 +517,7 @@ struct reader *begin_reading(char *fname) {
 			r->x = r->dirtiles[0].x;
 			r->y = r->dirtiles[0].y;
 			r->sorty = (1LL << r->zoom) - 1 - r->y;
+			r->fname = fname;
 			r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 			r->dirtiles.erase(r->dirtiles.begin());
@@ -538,11 +547,13 @@ struct reader *begin_reading(char *fname) {
 		r->db = db;
 		r->stmt = stmt;
 		r->next = NULL;
+		r->fname = fname;
 
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
 			r->zoom = sqlite3_column_int(stmt, 0);
 			r->x = sqlite3_column_int(stmt, 1);
 			r->sorty = sqlite3_column_int(stmt, 2);
+			r->fname = fname;
 			r->y = (1LL << r->zoom) - 1 - r->sorty;
 
 			const char *data = (const char *) sqlite3_column_blob(stmt, 3);
