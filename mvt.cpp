@@ -590,10 +590,31 @@ std::string mvt_tile::encode() {
 		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
 		layer_writer.add_packed_fixed64(9, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
 
+		std::vector<mvt_dimension> dimensions;
+		for (size_t f = 0; f < layers[i].features.size(); f++) {
+			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
+
+			for (size_t g = 0; g < geom.size(); g++) {
+				while (geom[g].elevations.size() > dimensions.size()) {
+					mvt_dimension dim;
+
+					// XXX choose more appropriately
+					dim.scale = 0.5;
+					dim.global_offset = -22.7;
+					dim.offset = 10;
+
+					if (dimensions.size() == 0) {
+						dim.is_elevation = true; // 4th dimension is elevation
+					}
+
+					dimensions.push_back(dim);
+				}
+			}
+		}
+
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
-			size_t dimensions = 0;
 			bool has_attributes = false;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
@@ -607,7 +628,11 @@ std::string mvt_tile::encode() {
 				feature_writer.add_string(10, layers[i].features[f].string_id);
 			}
 
-			std::vector<uint32_t> geometry;
+			std::vector<uint64_t> elevations;
+			std::vector<int64_t> current_elevation;
+			for (size_t d = 0; d < dimensions.size(); d++) {
+				current_elevation.push_back(dimensions[d].offset);
+			}
 
 			int px = 0, py = 0;
 			int cmd_idx = -1;
@@ -616,6 +641,7 @@ std::string mvt_tile::encode() {
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
+			std::vector<uint32_t> geometry;
 			for (size_t g = 0; g < geom.size(); g++) {
 				int op = geom[g].op;
 
@@ -644,11 +670,27 @@ std::string mvt_tile::encode() {
 					py = wwy;
 					length++;
 
-					if (geom[g].elevations.size() > dimensions) {
-						dimensions = geom[g].elevations.size();
-					}
 					if (geom[g].attributes.size() > 0) {
 						has_attributes = true;
+					}
+
+					for (size_t d = 0; d < dimensions.size(); d++) {
+						double el;
+						if (d < geom[g].elevations.size()) {
+							el = geom[g].elevations[d];
+						} else {
+							el = NAN;
+						}
+
+						if (std::isnan(el)) {
+							elevations.push_back(0);
+						} else {
+							el -= dimensions[d].global_offset;
+							int64_t delta = el - current_elevation[d];
+
+							elevations.push_back((protozero::encode_zigzag64(delta) << 1) | 1);
+							current_elevation[d] += delta;
+						}
 					}
 				} else if (op == mvt_closepath) {
 					length++;
@@ -663,26 +705,7 @@ std::string mvt_tile::encode() {
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
-
-			if (dimensions > 0) {
-				std::vector<double> elevations;
-
-				for (size_t g = 0; g < geom.size(); g++) {
-					int op = geom[g].op;
-					if (op == mvt_moveto || op == mvt_lineto) {
-						for (size_t e = 0; e < dimensions; e++) {
-							if (e < geom[g].elevations.size()) {
-								elevations.push_back(geom[g].elevations[e]);
-							} else {
-								elevations.push_back(NAN);
-							}
-						}
-					}
-				}
-
-				feature_writer.add_packed_double(6, std::begin(elevations), std::end(elevations));
-				feature_writer.add_uint64(7, dimensions);
-			}
+			feature_writer.add_packed_uint64(6, std::begin(elevations), std::end(elevations));
 
 			if (has_attributes > 0) {
 				std::vector<unsigned long> attributes;
@@ -704,6 +727,21 @@ std::string mvt_tile::encode() {
 			}
 
 			layer_writer.add_message(2, feature_string);
+		}
+
+		for (size_t d = 0; d < dimensions.size(); d++) {
+			std::string dimension_string;
+			protozero::pbf_writer dimension_writer(dimension_string);
+
+			if (dimensions[d].is_elevation) {
+				dimension_writer.add_bool(2, true);
+			}
+
+			dimension_writer.add_sint64(3, dimensions[d].offset);
+			dimension_writer.add_double(8, dimensions[d].scale);
+			dimension_writer.add_double(9, dimensions[d].global_offset);
+
+			layer_writer.add_message(8, dimension_string);
 		}
 
 		writer.add_message(3, layer_string);
