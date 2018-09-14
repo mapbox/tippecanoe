@@ -335,8 +335,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader feature_reader(layer_reader.get_message());
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
-					size_t dimensions = 0;
-					std::vector<double> elevations;
 
 					while (feature_reader.next()) {
 						switch (feature_reader.tag()) {
@@ -378,16 +376,10 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 6: /* elevations */
 						{
-							auto pi = feature_reader.get_packed_double();
+							auto pi = feature_reader.get_packed_uint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
-								elevations.push_back(*it);
+								feature.elevations.push_back(*it);
 							}
-							break;
-						}
-
-						case 7: /* dimensions */
-						{
-							dimensions = feature_reader.get_uint64();
 							break;
 						}
 
@@ -412,7 +404,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
-					size_t elevation_index = 0;
 					long long px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
@@ -426,16 +417,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 								g += 2;
 
 								mvt_geometry decoded = mvt_geometry(op, px, py);
-
-								for (size_t i = 0; i < dimensions; i++) {
-									if (elevation_index < elevations.size()) {
-										decoded.elevations.push_back(elevations[elevation_index]);
-										elevation_index++;
-									} else {
-										decoded.elevations.push_back(NAN);
-									}
-								}
-
 								feature.geometry.push_back(decoded);
 							}
 						} else {
@@ -461,7 +442,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 			}
 
 			// This has to wait until the layer is decoded because we might not know
-			// the values until after the features.
+			// the values or elevation scales until after the features.
 
 			for (size_t i = 0; i < layer.features.size(); i++) {
 				std::vector<mvt_geometry> &geom = layer.features[i].geometry;
@@ -492,6 +473,42 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				}
 
 				attr.clear();
+
+				std::vector<int64_t> current_elevation;
+				for (size_t j = 0; j < dimensions.size(); j++) {
+					current_elevation.push_back(dimensions[j].offset);
+				}
+
+				off = 0;
+
+				std::vector<uint64_t> &elevations = layer.features[i].elevations;
+				if (elevations.size() != 0) {
+					for (size_t j = 0; j < geom.size(); j++) {
+						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
+							for (size_t k = 0; k < dimensions.size(); k++) {
+								if (off < elevations.size()) {
+									double el;
+
+									if ((elevations[off] & 1) == 0) {
+										el = NAN;
+									} else {
+										current_elevation[k] += protozero::decode_zigzag64(elevations[off] >> 1);
+										el = dimensions[k].global_offset + dimensions[k].scale * current_elevation[k];
+									}
+
+									geom[j].elevations.push_back(el);
+
+									off++;
+								} else {
+									fprintf(stderr, "Ran out of elevations\n");
+									exit(EXIT_FAILURE);
+								}
+							}
+						}
+					}
+				}
+
+				elevations.clear();
 			}
 
 			layers.push_back(layer);
