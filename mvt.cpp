@@ -144,6 +144,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 		{
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
+			std::vector<mvt_dimension> dimensions;
 
 			while (layer_reader.next()) {
 				switch (layer_reader.tag()) {
@@ -274,6 +275,54 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					for (auto it = pi.first; it != pi.second; ++it) {
 						layer.uint64_values.push_back(*it);
 					}
+					break;
+				}
+
+				case 10: /* dimensions */
+				{
+					protozero::pbf_reader dimension_reader(layer_reader.get_message());
+					mvt_dimension dimension;
+
+					dimension.scale = 1;
+					dimension.global_offset = 0;
+					dimension.offset = 0;
+
+					while (dimension_reader.next()) {
+						switch (dimension_reader.tag()) {
+						case 2:
+							dimension.is_elevation = dimension_reader.get_bool();
+							break;
+
+						case 3:
+							dimension.offset = dimension_reader.get_sint64();
+							break;
+
+						case 4:
+							dimension.scale = dimension_reader.get_sint64();
+							break;
+
+						case 8:
+							dimension.scale = dimension_reader.get_double();
+							break;
+
+						case 5:
+							dimension.global_offset = dimension_reader.get_sint64();
+							break;
+
+						case 9:
+							dimension.global_offset = dimension_reader.get_double();
+							break;
+
+						case 10:
+							dimension.name = dimension_reader.get_string();
+							break;
+
+						default:
+							dimension_reader.skip();
+							break;
+						}
+					}
+
 					break;
 				}
 

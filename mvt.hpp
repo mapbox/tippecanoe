@@ -112,6 +112,14 @@ struct mvt_value {
 	}
 };
 
+struct mvt_dimension {
+	bool is_elevation;
+	long offset;
+	double scale;
+	double global_offset;
+	std::string name;
+};
+
 struct mvt_layer {
 	int version = 0;
 	std::string name = "";
