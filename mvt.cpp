@@ -323,6 +323,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
+					dimensions.push_back(dimension);
 					break;
 				}
 
@@ -685,7 +686,7 @@ std::string mvt_tile::encode() {
 						if (std::isnan(el)) {
 							elevations.push_back(0);
 						} else {
-							el -= dimensions[d].global_offset;
+							el = std::round((el - dimensions[d].global_offset) / dimensions[d].scale);
 							int64_t delta = el - current_elevation[d];
 
 							elevations.push_back((protozero::encode_zigzag64(delta) << 1) | 1);
@@ -741,7 +742,7 @@ std::string mvt_tile::encode() {
 			dimension_writer.add_double(8, dimensions[d].scale);
 			dimension_writer.add_double(9, dimensions[d].global_offset);
 
-			layer_writer.add_message(8, dimension_string);
+			layer_writer.add_message(10, dimension_string);
 		}
 
 		writer.add_message(3, layer_string);
