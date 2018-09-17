@@ -399,6 +399,15 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 11: /* knots */
+						{
+							auto pi = feature_reader.get_packed_double();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								feature.knots.push_back(*it);
+							}
+							break;
+						}
+
 						default:
 							feature_reader.skip();
 							break;
@@ -707,6 +716,7 @@ std::string mvt_tile::encode() {
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
 			feature_writer.add_packed_uint64(6, std::begin(elevations), std::end(elevations));
+			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
 
 			if (has_attributes > 0) {
 				std::vector<unsigned long> attributes;

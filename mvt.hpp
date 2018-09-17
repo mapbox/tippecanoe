@@ -53,13 +53,15 @@ struct mvt_geometry {
 enum mvt_geometry_type {
 	mvt_point = 1,
 	mvt_linestring = 2,
-	mvt_polygon = 3
+	mvt_polygon = 3,
+	mvt_curve = 4,
 };
 
 struct mvt_feature {
 	std::vector<unsigned> tags{};
 	std::vector<unsigned long> properties{};
 	std::vector<mvt_geometry> geometry{};
+	std::vector<double> knots{};
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;
