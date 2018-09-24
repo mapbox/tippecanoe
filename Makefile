@@ -137,10 +137,15 @@ parallel-test:
 	rm tests/parallel/*.mbtiles tests/parallel/*.json
 
 raw-tiles-test:
-	./tippecanoe -q -f -e tests/raw-tiles/raw-tiles -r1 tests/raw-tiles/hackspots.geojson -pC
+	./tippecanoe -q -f -e tests/raw-tiles/raw-tiles -r1 -pC tests/raw-tiles/hackspots.geojson
 	./tippecanoe-decode -x generator tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles.json.check
 	cmp tests/raw-tiles/raw-tiles.json.check tests/raw-tiles/raw-tiles.json
 	rm -rf tests/raw-tiles/raw-tiles tests/raw-tiles/compare.json.check
+	# Test that metadata.json is created even if all features are clipped away
+	./tippecanoe -q -f -e tests/raw-tiles/nothing tests/raw-tiles/nothing.geojson
+	./tippecanoe-decode -x generator tests/raw-tiles/nothing > tests/raw-tiles/nothing.json.check
+	cmp tests/raw-tiles/nothing.json.check tests/raw-tiles/nothing.json
+	rm -r tests/raw-tiles/nothing tests/raw-tiles/nothing.json.check
 
 decode-test:
 	mkdir -p tests/muni/decode

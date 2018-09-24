@@ -65,6 +65,7 @@ static bool pbfname(const char *s) {
 void check_dir(const char *dir, bool force, bool forcetable) {
 	struct stat st;
 
+	mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string meta = std::string(dir) + "/" + "metadata.json";
 	if (force) {
 		unlink(meta.c_str());  // error OK since it may not exist;

@@ -1,0 +1,13 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-180.000000,85.051129,180.000000,85.051129",
+"center": "-179.989014,85.051129,14",
+"description": "tests/raw-tiles/nothing",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"nothing\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"nothing\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "14",
+"minzoom": "0",
+"name": "tests/raw-tiles/nothing",
+"type": "overlay",
+"version": "2"
+}, "features": [
+] }
