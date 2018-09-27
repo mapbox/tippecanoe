@@ -144,7 +144,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 		{
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
-			std::vector<mvt_dimension> dimensions;
+			std::vector<mvt_scaling> dimensions;
 
 			while (layer_reader.next()) {
 				switch (layer_reader.tag()) {
@@ -281,7 +281,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				case 10: /* dimensions */
 				{
 					protozero::pbf_reader dimension_reader(layer_reader.get_message());
-					mvt_dimension dimension;
+					mvt_scaling dimension;
 
 					dimension.scale = 1;
 					dimension.global_offset = 0;
@@ -289,27 +289,23 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 					while (dimension_reader.next()) {
 						switch (dimension_reader.tag()) {
-						case 2:
-							dimension.is_elevation = dimension_reader.get_bool();
-							break;
-
-						case 3:
+						case 1:
 							dimension.offset = dimension_reader.get_sint64();
 							break;
 
-						case 4:
+						case 2:
 							dimension.scale = dimension_reader.get_sint64();
 							break;
 
-						case 8:
+						case 3:
 							dimension.scale = dimension_reader.get_double();
 							break;
 
-						case 5:
+						case 4:
 							dimension.global_offset = dimension_reader.get_sint64();
 							break;
 
-						case 9:
+						case 5:
 							dimension.global_offset = dimension_reader.get_double();
 							break;
 
@@ -600,22 +596,18 @@ std::string mvt_tile::encode() {
 		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
 		layer_writer.add_packed_fixed64(9, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
 
-		std::vector<mvt_dimension> dimensions;
+		std::vector<mvt_scaling> dimensions;
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
 				while (geom[g].elevations.size() > dimensions.size()) {
-					mvt_dimension dim;
+					mvt_scaling dim;
 
 					// XXX choose more appropriately
 					dim.scale = 0.5;
 					dim.global_offset = -22.7;
 					dim.offset = 10;
-
-					if (dimensions.size() == 0) {
-						dim.is_elevation = true; // 4th dimension is elevation
-					}
 
 					dimensions.push_back(dim);
 				}
@@ -744,13 +736,9 @@ std::string mvt_tile::encode() {
 			std::string dimension_string;
 			protozero::pbf_writer dimension_writer(dimension_string);
 
-			if (dimensions[d].is_elevation) {
-				dimension_writer.add_bool(2, true);
-			}
-
-			dimension_writer.add_sint64(3, dimensions[d].offset);
-			dimension_writer.add_double(8, dimensions[d].scale);
-			dimension_writer.add_double(9, dimensions[d].global_offset);
+			dimension_writer.add_sint64(1, dimensions[d].offset);
+			dimension_writer.add_double(3, dimensions[d].scale);
+			dimension_writer.add_double(5, dimensions[d].global_offset);
 
 			layer_writer.add_message(10, dimension_string);
 		}

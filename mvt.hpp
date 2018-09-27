@@ -115,8 +115,7 @@ struct mvt_value {
 	}
 };
 
-struct mvt_dimension {
-	bool is_elevation;
+struct mvt_scaling {
 	long offset;
 	double scale;
 	double global_offset;
