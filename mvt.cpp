@@ -13,6 +13,7 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
+#include "jsonpull/jsonpull.h"
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
@@ -188,6 +189,38 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							value.numeric_value.bool_value = value_reader.get_bool();
 							break;
 
+						case 8: /* hash */
+							value.type = mvt_hash;
+							{
+								auto pi = value_reader.get_packed_uint32();
+								for (auto it = pi.first; it != pi.second; ++it) {
+									value.list_value.push_back(*it);
+								}
+							}
+							break;
+
+						case 9: /* list */
+							value.type = mvt_list;
+							{
+								auto pi = value_reader.get_packed_uint32();
+								for (auto it = pi.first; it != pi.second; ++it) {
+									value.list_value.push_back(*it);
+								}
+							}
+							break;
+
+						case 10: /* empty */
+						{
+							unsigned type = value_reader.get_uint64();
+							if (type == 0) {
+								value.type = mvt_hash;
+								value.list_value.clear();
+							} else if (type == 1) {
+								value.type = mvt_list;
+								value.list_value.clear();
+							}
+						} break;
+
 						default:
 							value_reader.skip();
 							break;
@@ -332,9 +365,20 @@ std::string mvt_tile::encode() {
 				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
 			} else if (pbv.type == mvt_bool) {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
+			} else if (pbv.type == mvt_hash) {
+				if (pbv.list_value.size() > 0) {
+					value_writer.add_packed_uint32(8, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				} else {
+					value_writer.add_uint64(10, 0);
+				}
+			} else if (pbv.type == mvt_list) {
+				if (pbv.list_value.size() > 0) {
+					value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
+				} else {
+					value_writer.add_uint64(10, 1);
+				}
 			} else if (pbv.type == mvt_null) {
-				fprintf(stderr, "Internal error: trying to write null attribute to tile\n");
-				exit(EXIT_FAILURE);
+				// empty value represents null
 			} else {
 				fprintf(stderr, "Internal error: trying to write undefined attribute type to tile\n");
 				exit(EXIT_FAILURE);
@@ -424,6 +468,8 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
 		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
 		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value) ||
+		    (type == mvt_list && list_value < o.list_value) ||
+		    (type == mvt_hash && list_value < o.list_value) ||
 		    (type == mvt_null && numeric_value.null_value < o.numeric_value.null_value)) {
 			return true;
 		}
@@ -485,11 +531,10 @@ std::string mvt_value::toString() {
 	}
 }
 
-void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
-	size_t ko, vo;
+size_t mvt_layer::tag_key(std::string const &key) {
+	size_t ko;
 
 	std::map<std::string, size_t>::iterator ki = key_map.find(key);
-	std::map<mvt_value, size_t>::iterator vi = value_map.find(value);
 
 	if (ki == key_map.end()) {
 		ko = keys.size();
@@ -499,6 +544,63 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 		ko = ki->second;
 	}
 
+	return ko;
+}
+
+size_t tag_object(mvt_layer &layer, json_object *j) {
+	mvt_value tv;
+
+	if (j->type == JSON_NUMBER) {
+		long long v;
+		if (is_integer(j->string, &v)) {
+			if (v >= 0) {
+				tv.type = mvt_int;
+				tv.numeric_value.int_value = v;
+			} else {
+				tv.type = mvt_sint;
+				tv.numeric_value.sint_value = v;
+			}
+		} else {
+			tv.type = mvt_double;
+			tv.numeric_value.double_value = atof(j->string);
+		}
+	} else if (j->type == JSON_TRUE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 1;
+	} else if (j->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 0;
+	} else if (j->type == JSON_STRING) {
+		tv.type = mvt_string;
+		tv.string_value = std::string(j->string);
+	} else if (j->type == JSON_NULL) {
+		tv.type = mvt_null;
+		tv.numeric_value.null_value = 0;
+	} else if (j->type == JSON_HASH) {
+		tv.type = mvt_hash;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(layer.tag_key(std::string(j->keys[i]->string)));
+			tv.list_value.push_back(tag_object(layer, j->values[i]));
+		}
+	} else if (j->type == JSON_ARRAY) {
+		tv.type = mvt_list;
+		tv.list_value = std::vector<size_t>();
+
+		for (size_t i = 0; i < j->length; i++) {
+			tv.list_value.push_back(tag_object(layer, j->array[i]));
+		}
+	}
+
+	return layer.tag_value(tv);
+}
+
+size_t mvt_layer::tag_value(mvt_value const &value) {
+	size_t vo;
+
+	std::map<mvt_value, size_t>::iterator vi = value_map.find(value);
+
 	if (vi == value_map.end()) {
 		vo = values.size();
 		values.push_back(value);
@@ -507,8 +609,27 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 		vo = vi->second;
 	}
 
-	feature.tags.push_back(ko);
-	feature.tags.push_back(vo);
+	return vo;
+}
+
+void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
+	if (value.type == mvt_hash) {
+		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+		json_object *jo = json_read_tree(jp);
+		if (jo == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			exit(EXIT_FAILURE);
+		}
+		size_t ko = tag_key(key);
+		size_t vo = tag_object(*this, jo);
+		feature.tags.push_back(ko);
+		feature.tags.push_back(vo);
+		json_free(jo);
+		json_end(jp);
+	} else {
+		feature.tags.push_back(tag_key(key));
+		feature.tags.push_back(tag_value(value));
+	}
 }
 
 bool is_integer(const char *s, long long *v) {
@@ -630,8 +751,11 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	} else if (type == mvt_null) {
 		tv.type = mvt_null;
 		tv.numeric_value.null_value = 0;
-	} else {
+	} else if (type == mvt_string) {
 		tv.type = mvt_string;
+		tv.string_value = s;
+	} else {
+		tv.type = mvt_hash; /* or list */
 		tv.string_value = s;
 	}
 

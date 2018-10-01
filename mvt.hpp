@@ -64,12 +64,15 @@ enum mvt_value_type {
 	mvt_uint,
 	mvt_sint,
 	mvt_bool,
+	mvt_hash,
+	mvt_list,
 	mvt_null,
 };
 
 struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
+	std::vector<size_t> list_value;
 	union {
 		float float_value;
 		double double_value;
@@ -100,6 +103,8 @@ struct mvt_layer {
 
 	// Add a key-value pair to a feature, using this layer's constant pool
 	void tag(mvt_feature &feature, std::string key, mvt_value value);
+	size_t tag_value(mvt_value const &value);
+	size_t tag_key(std::string const &key);
 
 	// For tracking the key-value constants already used in this layer
 	std::map<std::string, size_t> key_map{};

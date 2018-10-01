@@ -178,7 +178,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			type = mvt_null;
 			stringified = "null";
 		} else {
-			type = mvt_string;
+			type = mvt_hash;
 			stringified = val;
 		}
 	}

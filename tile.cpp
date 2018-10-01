@@ -46,6 +46,10 @@ extern "C" {
 
 #include "plugin.hpp"
 
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
+
 #define CMD_BITS 3
 
 #define XSTRINGIFY(s) STRINGIFY(s)
@@ -195,14 +199,16 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
+void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature, bool suppress_null) {
 	size_t i;
 	for (i = 0; i < metakeys.size(); i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		layer.tag(feature, key.string_value, value);
+		if (!suppress_null || value.type != mvt_null) {
+			layer.tag(feature, key.string_value, value);
+		}
 	}
 }
 
@@ -1505,7 +1511,7 @@ void *run_prefilter(void *v) {
 			tmp_feature.geometry[i].y += sy;
 		}
 
-		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
+		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature, false);
 		tmp_layer.features.push_back(tmp_feature);
 
 		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
@@ -2206,11 +2212,15 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				feature.id = layer_features[x].id;
 				feature.has_id = layer_features[x].has_id;
 
-				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
+				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
+
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
-					layer.tag(feature, layer_features[x].full_keys[a], v);
+
+					if (v.type != mvt_null) {
+						layer.tag(feature, layer_features[x].full_keys[a], v);
+					}
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
