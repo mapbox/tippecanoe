@@ -283,9 +283,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					protozero::pbf_reader dimension_reader(layer_reader.get_message());
 					mvt_scaling dimension;
 
-					dimension.scale = 1;
-					dimension.global_offset = 0;
 					dimension.offset = 0;
+					dimension.multiplier = 1;
+					dimension.base = 0;
 
 					while (dimension_reader.next()) {
 						switch (dimension_reader.tag()) {
@@ -294,23 +294,11 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 
 						case 2:
-							dimension.scale = dimension_reader.get_sint64();
+							dimension.multiplier = dimension_reader.get_double();
 							break;
 
 						case 3:
-							dimension.scale = dimension_reader.get_double();
-							break;
-
-						case 4:
-							dimension.global_offset = dimension_reader.get_sint64();
-							break;
-
-						case 5:
-							dimension.global_offset = dimension_reader.get_double();
-							break;
-
-						case 10:
-							dimension.name = dimension_reader.get_string();
+							dimension.base = dimension_reader.get_double();
 							break;
 
 						default:
@@ -499,7 +487,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 										el = NAN;
 									} else {
 										current_elevation[k] += protozero::decode_zigzag64(elevations[off] >> 1);
-										el = dimensions[k].global_offset + dimensions[k].scale * current_elevation[k];
+										el = dimensions[k].base + dimensions[k].multiplier * current_elevation[k];
 									}
 
 									geom[j].elevations.push_back(el);
@@ -605,8 +593,8 @@ std::string mvt_tile::encode() {
 					mvt_scaling dim;
 
 					// XXX choose more appropriately
-					dim.scale = 0.5;
-					dim.global_offset = -22.7;
+					dim.multiplier = 0.5;
+					dim.base = -22.7;
 					dim.offset = 10;
 
 					dimensions.push_back(dim);
@@ -687,7 +675,7 @@ std::string mvt_tile::encode() {
 						if (std::isnan(el)) {
 							elevations.push_back(0);
 						} else {
-							el = std::round((el - dimensions[d].global_offset) / dimensions[d].scale);
+							el = std::round((el - dimensions[d].base) / dimensions[d].multiplier);
 							int64_t delta = el - current_elevation[d];
 
 							elevations.push_back((protozero::encode_zigzag64(delta) << 1) | 1);
@@ -737,8 +725,8 @@ std::string mvt_tile::encode() {
 			protozero::pbf_writer dimension_writer(dimension_string);
 
 			dimension_writer.add_sint64(1, dimensions[d].offset);
-			dimension_writer.add_double(3, dimensions[d].scale);
-			dimension_writer.add_double(5, dimensions[d].global_offset);
+			dimension_writer.add_double(2, dimensions[d].multiplier);
+			dimension_writer.add_double(3, dimensions[d].base);
 
 			layer_writer.add_message(10, dimension_string);
 		}

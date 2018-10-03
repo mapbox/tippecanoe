@@ -117,9 +117,8 @@ struct mvt_value {
 
 struct mvt_scaling {
 	long offset;
-	double scale;
-	double global_offset;
-	std::string name;
+	double multiplier;
+	double base;
 };
 
 struct mvt_layer {
