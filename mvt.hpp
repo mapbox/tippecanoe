@@ -94,7 +94,7 @@ enum mvt_value_type {
 struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
-	std::vector<size_t> list_value;
+	// std::vector<size_t> list_value;
 	union {
 		float float_value;
 		double double_value;

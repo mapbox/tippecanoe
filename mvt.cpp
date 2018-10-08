@@ -201,38 +201,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							value.numeric_value.bool_value = value_reader.get_bool();
 							break;
 
-						case 8: /* hash */
-							value.type = mvt_hash;
-							{
-								auto pi = value_reader.get_packed_uint32();
-								for (auto it = pi.first; it != pi.second; ++it) {
-									value.list_value.push_back(*it);
-								}
-							}
-							break;
-
-						case 9: /* list */
-							value.type = mvt_list;
-							{
-								auto pi = value_reader.get_packed_uint32();
-								for (auto it = pi.first; it != pi.second; ++it) {
-									value.list_value.push_back(*it);
-								}
-							}
-							break;
-
-						case 10: /* empty */
-						{
-							unsigned type = value_reader.get_uint64();
-							if (type == 0) {
-								value.type = mvt_hash;
-								value.list_value.clear();
-							} else if (type == 1) {
-								value.type = mvt_list;
-								value.list_value.clear();
-							}
-						} break;
-
 						default:
 							value_reader.skip();
 							break;
@@ -554,20 +522,6 @@ std::string mvt_tile::encode() {
 				value_writer.add_sint64(6, pbv.numeric_value.sint_value);
 			} else if (pbv.type == mvt_bool) {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
-			} else if (pbv.type == mvt_hash) {
-				if (pbv.list_value.size() > 0) {
-					value_writer.add_packed_uint32(8, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
-				} else {
-					value_writer.add_uint64(10, 0);
-				}
-			} else if (pbv.type == mvt_list) {
-				if (pbv.list_value.size() > 0) {
-					value_writer.add_packed_uint32(9, std::begin(layers[i].values[v].list_value), std::end(layers[i].values[v].list_value));
-				} else {
-					value_writer.add_uint64(10, 1);
-				}
-			} else if (pbv.type == mvt_null) {
-				// empty value represents null
 			} else {
 				fprintf(stderr, "Internal error: trying to write undefined attribute type to tile\n");
 				exit(EXIT_FAILURE);
@@ -749,8 +703,6 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
 		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
 		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value) ||
-		    (type == mvt_list && list_value < o.list_value) ||
-		    (type == mvt_hash && list_value < o.list_value) ||
 		    (type == mvt_null && numeric_value.null_value < o.numeric_value.null_value)) {
 			return true;
 		}
@@ -859,21 +811,6 @@ size_t tag_object(mvt_layer &layer, json_object *j) {
 	} else if (j->type == JSON_NULL) {
 		tv.type = mvt_null;
 		tv.numeric_value.null_value = 0;
-	} else if (j->type == JSON_HASH) {
-		tv.type = mvt_hash;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i < j->length; i++) {
-			tv.list_value.push_back(layer.tag_key(std::string(j->keys[i]->string)));
-			tv.list_value.push_back(tag_object(layer, j->values[i]));
-		}
-	} else if (j->type == JSON_ARRAY) {
-		tv.type = mvt_list;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i < j->length; i++) {
-			tv.list_value.push_back(tag_object(layer, j->array[i]));
-		}
 	}
 
 	return layer.tag_value(tv);

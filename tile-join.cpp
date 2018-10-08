@@ -57,26 +57,7 @@ struct stats {
 };
 
 size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outlayer) {
-	mvt_value tv;
-
-	if (val.type == mvt_hash) {
-		tv.type = mvt_hash;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i + 1 < val.list_value.size(); i += 2) {
-			tv.list_value.push_back(outlayer.tag_key(layer.keys[val.list_value[i]]));
-			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i + 1]], outlayer));
-		}
-	} else if (val.type == mvt_list) {
-		tv.type = mvt_list;
-		tv.list_value = std::vector<size_t>();
-
-		for (size_t i = 0; i < val.list_value.size(); i++) {
-			tv.list_value.push_back(tag_object(layer, layer.values[val.list_value[i]], outlayer));
-		}
-	} else {
-		tv = val;
-	}
+	mvt_value tv = val;
 
 	return outlayer.tag_value(tv);
 }
