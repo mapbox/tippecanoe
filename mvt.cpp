@@ -415,7 +415,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					for (size_t j = 0; j < geom.size(); j++) {
 						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
 							if (off < attr.size()) {
-								mvt_value v = layer.decode_property(attr, off);
+								mvt_value v = layer.decode_property(attr, off, true);
 								off++;
 								if (v.type == mvt_hash || v.type == mvt_list) {
 									geom[j].attribute = v.string_value;
@@ -915,7 +915,7 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 			tv.type = mvt_string;
 			tv.string_value = j->keys[i]->string;
 
-			layer.tag_v3_value(tv, onto);
+			onto.push_back(layer.tag_v3_key(tv.string_value));
 			tag_object_v3(layer, j->values[i], onto);
 		}
 	} else if (j->type == JSON_ARRAY) {
@@ -1053,7 +1053,7 @@ void mvt_layer::reorder_values() {
 	}
 }
 
-mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off) const {
+mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off, bool stringify_nested) const {
 	int type = property[off] & 0x0F;
 	mvt_value ret;
 
@@ -1129,20 +1129,28 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		ret.string_value = "[";
+		if (stringify_nested) {
+			ret.string_value = "[";
+		}
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off);
+			mvt_value v1 = decode_property(property, off, stringify_nested);
 			off++;
 
-			ret.string_value.append(v1.toString());
+			if (stringify_nested) {
+				ret.string_value.append(v1.toString());
 
-			if (i + 1 < len) {
-				ret.string_value.push_back(',');
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
+			} else {
+				ret.list_value.push_back(v1);
 			}
 		}
 
-		ret.string_value.append("]");
+		if (stringify_nested) {
+			ret.string_value.append("]");
+		}
 
 		off--;  // so caller can increment
 		return ret;
@@ -1154,25 +1162,40 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		ret.string_value = "{";
+		if (stringify_nested) {
+			ret.string_value = "{";
+		}
 
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off);
+			if (property[off] >= keys.size()) {
+				fprintf(stderr, "Out of bounds hash key reference\n");
+				exit(EXIT_FAILURE);
+			}
+
+			mvt_value v1;
+			v1.type = mvt_string;
+			v1.string_value = keys[property[off]];
 			off++;
 
-			mvt_value v2 = decode_property(property, off);
+			mvt_value v2 = decode_property(property, off, stringify_nested);
 			off++;
 
-			ret.string_value.append(v1.toString());
-			ret.string_value.append(":");
-			ret.string_value.append(v2.toString());
+			if (stringify_nested) {
+				ret.string_value.append(v1.toString());
+				ret.string_value.append(":");
+				ret.string_value.append(v2.toString());
 
-			if (i + 1 < len) {
-				ret.string_value.push_back(',');
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
+			} else {
+				ret.hash_value.insert(std::pair<std::string, mvt_value>(v1.string_value, v2));
 			}
 		}
 
-		ret.string_value.append("}");
+		if (stringify_nested) {
+			ret.string_value.append("}");
+		}
 
 		off--;  // so caller can increment
 		return ret;
