@@ -283,7 +283,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					break;
 				}
 
-				case 11: /* elevation scaling */
+				case 11: /* attribute scaling */
 				{
 					layer.attribute_scalings.push_back(read_scaling(layer_reader.get_message()));
 					break;
@@ -682,6 +682,17 @@ std::string mvt_tile::encode() {
 			layer_writer.add_message(10, dimension_string);
 		}
 
+		for (size_t d = 0; d < layers[i].attribute_scalings.size(); d++) {
+			std::string dimension_string;
+			protozero::pbf_writer dimension_writer(dimension_string);
+
+			dimension_writer.add_sint64(1, layers[i].attribute_scalings[d].offset);
+			dimension_writer.add_double(2, layers[i].attribute_scalings[d].multiplier);
+			dimension_writer.add_double(3, layers[i].attribute_scalings[d].base);
+
+			layer_writer.add_message(11, dimension_string);
+		}
+
 		writer.add_message(3, layer_string);
 	}
 
@@ -916,11 +927,40 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 			tag_object_v3(layer, j->values[i], onto);
 		}
 	} else if (j->type == JSON_ARRAY) {
-		unsigned long vo = 8 | (j->length << 4);
-		onto.push_back(vo);
-
+		bool all_ints = true;
 		for (size_t i = 0; i < j->length; i++) {
-			tag_object_v3(layer, j->array[i], onto);
+			if (j->array[i]->type != JSON_NUMBER || j->array[i]->number != std::trunc(j->array[i]->number)) {
+				all_ints = false;
+				break;
+			}
+		}
+
+		if (all_ints) {
+			unsigned long vo = 10 | (j->length << 4);
+			onto.push_back(vo);
+
+			onto.push_back(0);  // which scaling
+
+			long here = 0;
+			for (size_t i = 0; i < j->length; i++) {
+				onto.push_back(protozero::encode_zigzag64(std::trunc(j->array[i]->number - here)) + 1);
+				here = j->array[i]->number;
+			}
+
+			if (layer.attribute_scalings.size() == 0) {
+				mvt_scaling sc;
+				sc.offset = 0;
+				sc.multiplier = 1;
+				sc.base = 0;
+				layer.attribute_scalings.push_back(sc);
+			}
+		} else {
+			unsigned long vo = 8 | (j->length << 4);
+			onto.push_back(vo);
+
+			for (size_t i = 0; i < j->length; i++) {
+				tag_object_v3(layer, j->array[i], onto);
+			}
 		}
 	} else {
 		fprintf(stderr, "Internal error: unknown JSON type\n");
