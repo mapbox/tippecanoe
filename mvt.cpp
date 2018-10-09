@@ -120,6 +120,37 @@ int compress(std::string const &input, std::string &output) {
 	return 0;
 }
 
+mvt_scaling read_scaling(protozero::pbf_reader message) {
+	protozero::pbf_reader dimension_reader(message);
+	mvt_scaling dimension;
+
+	dimension.offset = 0;
+	dimension.multiplier = 1;
+	dimension.base = 0;
+
+	while (dimension_reader.next()) {
+		switch (dimension_reader.tag()) {
+		case 1:
+			dimension.offset = dimension_reader.get_sint64();
+			break;
+
+		case 2:
+			dimension.multiplier = dimension_reader.get_double();
+			break;
+
+		case 3:
+			dimension.base = dimension_reader.get_double();
+			break;
+
+		default:
+			dimension_reader.skip();
+			break;
+		}
+	}
+
+	return dimension;
+}
+
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	layers.clear();
 	std::string src;
@@ -144,6 +175,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 		{
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
+			mvt_scaling elevation_scaling;
 			std::vector<mvt_scaling> dimensions;
 
 			while (layer_reader.next()) {
@@ -248,33 +280,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 				case 10: /* dimensions */
 				{
-					protozero::pbf_reader dimension_reader(layer_reader.get_message());
-					mvt_scaling dimension;
-
-					dimension.offset = 0;
-					dimension.multiplier = 1;
-					dimension.base = 0;
-
-					while (dimension_reader.next()) {
-						switch (dimension_reader.tag()) {
-						case 1:
-							dimension.offset = dimension_reader.get_sint64();
-							break;
-
-						case 2:
-							dimension.multiplier = dimension_reader.get_double();
-							break;
-
-						case 3:
-							dimension.base = dimension_reader.get_double();
-							break;
-
-						default:
-							dimension_reader.skip();
-							break;
-						}
-					}
-
+					mvt_scaling dimension = read_scaling(layer_reader.get_message());
 					dimensions.push_back(dimension);
 					break;
 				}
@@ -327,9 +333,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
-						case 6: /* elevations */
+						case 7: /* elevations */
 						{
-							auto pi = feature_reader.get_packed_uint64();
+							auto pi = feature_reader.get_packed_sint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.elevations.push_back(*it);
 							}
@@ -443,7 +449,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 				off = 0;
 
-				std::vector<uint64_t> &elevations = layer.features[i].elevations;
+				std::vector<long> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
 					for (size_t j = 0; j < geom.size(); j++) {
 						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
@@ -451,12 +457,8 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 								if (off < elevations.size()) {
 									double el;
 
-									if ((elevations[off] & 1) == 0) {
-										el = NAN;
-									} else {
-										current_elevation[k] += protozero::decode_zigzag64(elevations[off] >> 1);
-										el = dimensions[k].base + dimensions[k].multiplier * current_elevation[k];
-									}
+									current_elevation[k] += elevations[off];
+									el = dimensions[k].base + dimensions[k].multiplier * current_elevation[k];
 
 									geom[j].elevations.push_back(el);
 
@@ -572,7 +574,7 @@ std::string mvt_tile::encode() {
 				feature_writer.add_string(10, layers[i].features[f].string_id);
 			}
 
-			std::vector<uint64_t> elevations;
+			std::vector<long> elevations;
 			std::vector<int64_t> current_elevation;
 			for (size_t d = 0; d < dimensions.size(); d++) {
 				current_elevation.push_back(dimensions[d].offset);
@@ -623,18 +625,14 @@ std::string mvt_tile::encode() {
 						if (d < geom[g].elevations.size()) {
 							el = geom[g].elevations[d];
 						} else {
-							el = NAN;
+							el = 0; // XXX detect
 						}
 
-						if (std::isnan(el)) {
-							elevations.push_back(0);
-						} else {
-							el = std::round((el - dimensions[d].base) / dimensions[d].multiplier);
-							int64_t delta = el - current_elevation[d];
+						el = std::round((el - dimensions[d].base) / dimensions[d].multiplier);
+						int64_t delta = el - current_elevation[d];
 
-							elevations.push_back((protozero::encode_zigzag64(delta) << 1) | 1);
-							current_elevation[d] += delta;
-						}
+						elevations.push_back(delta);
+						current_elevation[d] += delta;
 					}
 				} else if (op == mvt_closepath) {
 					length++;
@@ -649,7 +647,7 @@ std::string mvt_tile::encode() {
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
-			feature_writer.add_packed_uint64(6, std::begin(elevations), std::end(elevations));
+			feature_writer.add_packed_sint64(7, std::begin(elevations), std::end(elevations));
 			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
 
 			if (has_attributes > 0) {
