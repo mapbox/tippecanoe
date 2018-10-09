@@ -131,6 +131,7 @@ struct mvt_layer {
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
 	long long extent = 0;
+	std::vector<mvt_scaling> attribute_scalings;
 
 	std::vector<std::string> string_values;
 	std::vector<float> float_values{};

@@ -283,6 +283,12 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					break;
 				}
 
+				case 11: /* elevation scaling */
+				{
+					layer.attribute_scalings.push_back(read_scaling(layer_reader.get_message()));
+					break;
+				}
+
 				case 15: /* version */
 					layer.version = layer_reader.get_uint32();
 					break;
@@ -615,7 +621,7 @@ std::string mvt_tile::encode() {
 						feature_is3d = true;
 						layer_is3d = true;
 					} else {
-						el = 0; // XXX detect
+						el = 0;  // XXX detect
 					}
 
 					el = std::round((el - elevation_scaling.base) / elevation_scaling.multiplier);
@@ -1186,6 +1192,71 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 
 		if (stringify_nested) {
 			ret.string_value.append("}");
+		}
+
+		off--;  // so caller can increment
+		return ret;
+	}
+
+	case 10: /* delta-encoded list */
+	{
+		ret.type = mvt_list;
+		size_t len = property[off] >> 4;
+		off++;
+
+		if (off >= property.size()) {
+			fprintf(stderr, "Not enough elements in list attribute\n");
+			exit(EXIT_FAILURE);
+		}
+		size_t scaling = property[off];
+		off++;
+
+		if (scaling >= attribute_scalings.size()) {
+			fprintf(stderr, "Reference to nonexistent attribute scaling\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (stringify_nested) {
+			ret.string_value = "[";
+		}
+
+		long here = 0;
+
+		for (size_t i = 0; i < len; i++) {
+			if (off >= property.size()) {
+				fprintf(stderr, "Not enough elements in list attribute\n");
+				exit(EXIT_FAILURE);
+			}
+			unsigned long increment = property[off];
+			off++;
+
+			double val;
+
+			if (increment == 0) {
+				val = NAN;
+			} else {
+				long inc = protozero::decode_zigzag64(increment - 1);
+				here += inc;
+				val = attribute_scalings[scaling].base + attribute_scalings[scaling].multiplier * (here + attribute_scalings[scaling].offset);
+			}
+
+			if (stringify_nested) {
+				ret.string_value.append(milo::dtoa_milo(val));
+
+				if (i + 1 < len) {
+					ret.string_value.push_back(',');
+				}
+			} else {
+				mvt_value v;
+				v.type = mvt_double;
+				v.numeric_value.double_value = val;
+
+				ret.list_value.push_back(v);
+			}
+		}
+
+		if (stringify_nested) {
+			ret.string_value.append("]");
 		}
 
 		off--;  // so caller can increment
