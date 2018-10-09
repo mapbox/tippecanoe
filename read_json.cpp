@@ -89,11 +89,11 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			double lat = j->array[1]->number;
 			projection->project(lon, lat, 32, &x, &y);
 
-			if (j->length > 2) {
+			if (j->length > 3) {
 				static int warned = 0;
 
 				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond three\n", fname, line);
 					json_context(j);
 					json_context(feature);
 					warned = 1;

@@ -176,7 +176,6 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
 			mvt_scaling elevation_scaling;
-			std::vector<mvt_scaling> dimensions;
 
 			while (layer_reader.next()) {
 				switch (layer_reader.tag()) {
@@ -278,10 +277,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					break;
 				}
 
-				case 10: /* dimensions */
+				case 10: /* elevation scaling */
 				{
-					mvt_scaling dimension = read_scaling(layer_reader.get_message());
-					dimensions.push_back(dimension);
+					elevation_scaling = read_scaling(layer_reader.get_message());
 					break;
 				}
 
@@ -442,32 +440,24 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 				attr.clear();
 
-				std::vector<int64_t> current_elevation;
-				for (size_t j = 0; j < dimensions.size(); j++) {
-					current_elevation.push_back(dimensions[j].offset);
-				}
-
+				long current_elevation = elevation_scaling.offset;
 				off = 0;
 
 				std::vector<long> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
 					for (size_t j = 0; j < geom.size(); j++) {
-						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
-							for (size_t k = 0; k < dimensions.size(); k++) {
-								if (off < elevations.size()) {
-									double el;
+						if (off < elevations.size()) {
+							double el;
 
-									current_elevation[k] += elevations[off];
-									el = dimensions[k].base + dimensions[k].multiplier * current_elevation[k];
+							current_elevation += elevations[off];
+							el = elevation_scaling.base + elevation_scaling.multiplier * current_elevation;
 
-									geom[j].elevations.push_back(el);
+							geom[j].elevations.push_back(el);
 
-									off++;
-								} else {
-									fprintf(stderr, "Ran out of elevations\n");
-									exit(EXIT_FAILURE);
-								}
-							}
+							off++;
+						} else {
+							fprintf(stderr, "Ran out of elevations\n");
+							exit(EXIT_FAILURE);
 						}
 					}
 				}
@@ -496,6 +486,7 @@ std::string mvt_tile::encode() {
 	for (size_t i = 0; i < layers.size(); i++) {
 		std::string layer_string;
 		protozero::pbf_writer layer_writer(layer_string);
+		bool layer_is3d = false;
 
 		layer_writer.add_uint32(15, layers[i].version); /* version */
 		layer_writer.add_string(1, layers[i].name);     /* name */
@@ -540,12 +531,12 @@ std::string mvt_tile::encode() {
 		layer_writer.add_packed_double(8, std::begin(layers[i].double_values), std::end(layers[i].double_values));
 		layer_writer.add_packed_fixed64(9, std::begin(layers[i].uint64_values), std::end(layers[i].uint64_values));
 
-		std::vector<mvt_scaling> dimensions;
+		mvt_scaling elevation_scaling;
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
-				while (geom[g].elevations.size() > dimensions.size()) {
+				if (geom[g].elevations.size() > 0) {
 					mvt_scaling dim;
 
 					// XXX choose more appropriately
@@ -553,7 +544,7 @@ std::string mvt_tile::encode() {
 					dim.base = -22.7;
 					dim.offset = 10;
 
-					dimensions.push_back(dim);
+					elevation_scaling = dim;
 				}
 			}
 		}
@@ -575,10 +566,7 @@ std::string mvt_tile::encode() {
 			}
 
 			std::vector<long> elevations;
-			std::vector<int64_t> current_elevation;
-			for (size_t d = 0; d < dimensions.size(); d++) {
-				current_elevation.push_back(dimensions[d].offset);
-			}
+			long current_elevation = elevation_scaling.offset;
 
 			int px = 0, py = 0;
 			int cmd_idx = -1;
@@ -586,6 +574,7 @@ std::string mvt_tile::encode() {
 			int length = 0;
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
+			bool feature_is3d = false;
 
 			std::vector<uint32_t> geometry;
 			for (size_t g = 0; g < geom.size(); g++) {
@@ -620,20 +609,20 @@ std::string mvt_tile::encode() {
 						has_attributes = true;
 					}
 
-					for (size_t d = 0; d < dimensions.size(); d++) {
-						double el;
-						if (d < geom[g].elevations.size()) {
-							el = geom[g].elevations[d];
-						} else {
-							el = 0; // XXX detect
-						}
-
-						el = std::round((el - dimensions[d].base) / dimensions[d].multiplier);
-						int64_t delta = el - current_elevation[d];
-
-						elevations.push_back(delta);
-						current_elevation[d] += delta;
+					double el;
+					if (geom[g].elevations.size() > 0) {
+						el = geom[g].elevations[0];
+						feature_is3d = true;
+						layer_is3d = true;
+					} else {
+						el = 0; // XXX detect
 					}
+
+					el = std::round((el - elevation_scaling.base) / elevation_scaling.multiplier);
+					int64_t delta = el - current_elevation;
+
+					elevations.push_back(delta);
+					current_elevation += delta;
 				} else if (op == mvt_closepath) {
 					length++;
 				} else {
@@ -647,7 +636,11 @@ std::string mvt_tile::encode() {
 			}
 
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
-			feature_writer.add_packed_sint64(7, std::begin(elevations), std::end(elevations));
+
+			if (feature_is3d) {
+				feature_writer.add_packed_sint64(7, std::begin(elevations), std::end(elevations));
+			}
+
 			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
 
 			if (has_attributes > 0) {
@@ -672,13 +665,13 @@ std::string mvt_tile::encode() {
 			layer_writer.add_message(2, feature_string);
 		}
 
-		for (size_t d = 0; d < dimensions.size(); d++) {
+		if (layer_is3d) {
 			std::string dimension_string;
 			protozero::pbf_writer dimension_writer(dimension_string);
 
-			dimension_writer.add_sint64(1, dimensions[d].offset);
-			dimension_writer.add_double(2, dimensions[d].multiplier);
-			dimension_writer.add_double(3, dimensions[d].base);
+			dimension_writer.add_sint64(1, elevation_scaling.offset);
+			dimension_writer.add_double(2, elevation_scaling.multiplier);
+			dimension_writer.add_double(3, elevation_scaling.base);
 
 			layer_writer.add_message(10, dimension_string);
 		}
