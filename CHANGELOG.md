@@ -1,3 +1,8 @@
+## 1.32.0
+
+* Fix a bug that allowed coalescing of features with mismatched attributes
+  if they had been passed through a shell prefilter
+
 ## 1.31.7
 
 * Create the output tile directory even if there are no valid features

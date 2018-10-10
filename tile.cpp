@@ -142,21 +142,21 @@ int coalcmp(const void *v1, const void *v2) {
 	}
 
 	for (size_t i = 0; i < c1->full_keys.size(); i++) {
-		if (c1->full_keys[i] < c1->full_keys[i]) {
+		if (c1->full_keys[i] < c2->full_keys[i]) {
 			return -1;
-		} else if (c1->full_keys[i] > c1->full_keys[i]) {
+		} else if (c1->full_keys[i] > c2->full_keys[i]) {
 			return 1;
 		}
 
-		if (c1->full_values[i].type < c1->full_values[i].type) {
+		if (c1->full_values[i].type < c2->full_values[i].type) {
 			return -1;
-		} else if (c1->full_values[i].type > c1->full_values[i].type) {
+		} else if (c1->full_values[i].type > c2->full_values[i].type) {
 			return 1;
 		}
 
-		if (c1->full_values[i].s < c1->full_values[i].s) {
+		if (c1->full_values[i].s < c2->full_values[i].s) {
 			return -1;
-		} else if (c1->full_values[i].s > c1->full_values[i].s) {
+		} else if (c1->full_values[i].s > c2->full_values[i].s) {
 			return 1;
 		}
 	}
