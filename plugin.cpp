@@ -210,7 +210,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (dv.size() > 0) {
 			mvt_feature feature;
 			feature.type = mb_geometry[t];
-			feature.geometry = to_feature(dv, l->second);
+			feature.geometry = to_feature(dv, l->second, feature.node_attributes);
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {

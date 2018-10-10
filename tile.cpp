@@ -1512,7 +1512,7 @@ void *run_prefilter(void *v) {
 
 		mvt_feature tmp_feature;
 		tmp_feature.type = sf.t;
-		tmp_feature.geometry = to_feature(sf.geometry, tmp_layer);
+		tmp_feature.geometry = to_feature(sf.geometry, tmp_layer, tmp_feature.node_attributes);
 		tmp_feature.id = sf.id;
 		tmp_feature.has_id = sf.has_id;
 		tmp_feature.dropped = sf.dropped;
@@ -2241,7 +2241,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 
 				feature.type = layer_features[x].type;
-				feature.geometry = to_feature(layer_features[x].geom, layer);
+				feature.geometry = to_feature(layer_features[x].geom, layer, feature.node_attributes);
 				count += layer_features[x].geom.size();
 				layer_features[x].geom.clear();
 

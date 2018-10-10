@@ -558,11 +558,11 @@ std::string mvt_tile::encode() {
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
 			std::string feature_string;
 			protozero::pbf_writer feature_writer(feature_string);
-			bool has_attributes = false;
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
 			feature_writer.add_packed_uint64(5, std::begin(layers[i].features[f].properties), std::end(layers[i].features[f].properties));
+			feature_writer.add_packed_uint64(5, std::begin(layers[i].features[f].node_attributes), std::end(layers[i].features[f].node_attributes));
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
@@ -611,10 +611,6 @@ std::string mvt_tile::encode() {
 					py = wwy;
 					length++;
 
-					if (geom[g].attributes.size() > 0) {
-						has_attributes = true;
-					}
-
 					double el;
 					if (geom[g].elevations.size() > 0) {
 						el = geom[g].elevations[0];
@@ -648,25 +644,6 @@ std::string mvt_tile::encode() {
 			}
 
 			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
-
-			if (has_attributes > 0) {
-				std::vector<unsigned long> attributes;
-
-				for (size_t g = 0; g < geom.size(); g++) {
-					int op = geom[g].op;
-					if (op == mvt_moveto || op == mvt_lineto) {
-						if (geom[g].attributes.size() > 0) {
-							for (size_t e = 0; e < geom[g].attributes.size(); e++) {
-								attributes.push_back(geom[g].attributes[e]);
-							}
-						} else {
-							attributes.push_back((2 << 4) | 7);  // null
-						}
-					}
-				}
-
-				feature_writer.add_packed_uint64(8, std::begin(attributes), std::end(attributes));
-			}
 
 			layer_writer.add_message(2, feature_string);
 		}
@@ -1440,8 +1417,10 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	return tv;
 }
 
-std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer) {
+std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vector<unsigned long> &onto) {
 	std::vector<mvt_geometry> out;
+
+	std::map<std::string, std::vector<std::string>> node_attributes;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevations);
@@ -1453,12 +1432,72 @@ std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer) {
 				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", geom[i].attributes.c_str());
 				exit(EXIT_FAILURE);
 			}
-			tag_object_v3(layer, jo, g.attributes);
+
+			if (jo->type != JSON_HASH) {
+				fprintf(stderr, "Internal error: per-node attribute is not a hash: %s\n", geom[i].attributes.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			// We have a list by name within each node;
+			// we need a list by node within each name.
+			// This should really keep the parse tree instead of stringifying
+
+			for (size_t j = 0; j < jo->length; j++) {
+				if (node_attributes.count(jo->keys[j]->string) == 0) {
+					std::vector<std::string> attrib;
+					for (size_t k = 0; k < geom.size(); k++) {
+						attrib.push_back("null");
+					}
+
+					node_attributes.insert(std::pair<std::string, std::vector<std::string>>(jo->keys[j]->string, attrib));
+				}
+
+				auto f = node_attributes.find(jo->keys[j]->string);
+				if (f == node_attributes.end()) {
+					fprintf(stderr, "Internal error: node attribute lookup failure\n");
+					exit(EXIT_FAILURE);
+				}
+
+				const char *s = json_stringify(jo->values[j]);
+				f->second[i] = std::string(s);
+				free((void *) s);  // stringify
+			}
+
 			json_free(jo);
 			json_end(jp);
 		}
 
 		out.push_back(g);
+	}
+
+	for (auto f : node_attributes) {
+		std::string key = f.first;
+		std::vector<std::string> val = f.second;
+
+		std::string merged = "[";
+
+		for (size_t i = 0; i < val.size(); i++) {
+			merged.append(val[i]);
+
+			if (i + 1 < val.size()) {
+				merged.append(",");
+			}
+		}
+
+		merged.append("]");
+
+		json_pull *jp = json_begin_string(merged.c_str());
+		json_object *jo = json_read_tree(jp);
+		if (jo == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", merged.c_str());
+			exit(EXIT_FAILURE);
+		}
+
+		onto.push_back(layer.tag_v3_key(key));
+		tag_object_v3(layer, jo, onto);
+
+		json_free(jo);
+		json_end(jp);
 	}
 
 	return out;

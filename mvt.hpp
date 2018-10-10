@@ -31,7 +31,6 @@ struct mvt_geometry {
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
 	std::vector<double> elevations;
-	std::vector<unsigned long> attributes;
 	std::string attribute;
 
 	mvt_geometry(int op, long long x, long long y);
@@ -67,9 +66,9 @@ struct mvt_feature {
 	bool has_id = false;
 	std::string string_id = "";
 	bool dropped = false;
+	std::vector<unsigned long> node_attributes{};
 
 	// For use during decoding
-	std::vector<unsigned long> node_attributes{};
 	std::vector<long> elevations{};
 
 	mvt_feature() {
@@ -172,5 +171,5 @@ mvt_value stringified_to_mvt_value(int type, const char *s);
 
 bool is_integer(const char *s, long long *v);
 bool is_unsigned_integer(const char *s, unsigned long long *v);
-std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer);
+std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vector<unsigned long> &onto);
 #endif
