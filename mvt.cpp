@@ -17,6 +17,8 @@
 #include "milo/dtoa_milo.h"
 #include "jsonpull/jsonpull.h"
 
+static std::string quote(std::string const &s);
+
 int mvt_format = mvt_blake;
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
@@ -337,20 +339,20 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
+						case 6: /* node attributes */
+						{
+							auto pi = feature_reader.get_packed_uint64();
+							for (auto it = pi.first; it != pi.second; ++it) {
+								feature.node_attributes.push_back(*it);
+							}
+							break;
+						}
+
 						case 7: /* elevations */
 						{
 							auto pi = feature_reader.get_packed_sint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.elevations.push_back(*it);
-							}
-							break;
-						}
-
-						case 8: /* node attributes */
-						{
-							auto pi = feature_reader.get_packed_uint64();
-							for (auto it = pi.first; it != pi.second; ++it) {
-								feature.node_attributes.push_back(*it);
 							}
 							break;
 						}
@@ -419,27 +421,31 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 			for (size_t i = 0; i < layer.features.size(); i++) {
 				std::vector<mvt_geometry> &geom = layer.features[i].geometry;
 				std::vector<unsigned long> &attr = layer.features[i].node_attributes;
-				size_t off = 0;
 
-				if (attr.size() != 0) {
-					for (size_t j = 0; j < geom.size(); j++) {
-						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
-							if (off < attr.size()) {
-								mvt_value v = layer.decode_property(attr, off, true);
-								off++;
-								if (v.type == mvt_hash || v.type == mvt_list) {
-									geom[j].attribute = v.string_value;
-								} else if (v.type == mvt_null) {
-									;
-								} else {
-									std::string s = v.toString();
-									fprintf(stderr, "Found unexpected node attribute %s\n", s.c_str());
-									exit(EXIT_FAILURE);
-								}
-							} else {
-								fprintf(stderr, "Ran out of node attributes\n");
-								exit(EXIT_FAILURE);
-							}
+				for (size_t t = 0; t + 1 < attr.size(); t++) {
+					if (attr[t] >= layer.keys.size()) {
+						fprintf(stderr, "Out of bounds attribute reference %lu into %zu\n", attr[t], layer.keys.size());
+						exit(EXIT_FAILURE);
+					}
+
+					std::string key = layer.keys[attr[t]];
+
+					t++;
+					mvt_value const &val = layer.decode_property(attr, t, false);
+
+					if (val.type != mvt_list) {
+						fprintf(stderr, "Expected node attribute to be a list\n");
+						exit(EXIT_FAILURE);
+					}
+
+					if (val.list_value.size() != geom.size()) {
+						fprintf(stderr, "Node attribute list size doesn't match geometry size\n");
+						exit(EXIT_FAILURE);
+					}
+
+					for (size_t g = 0; g < geom.size(); g++) {
+						if (val.list_value[g].type != mvt_null) {
+							geom[g].attribute = std::string("{\"") + quote(key) + "\":" + val.list_value[g].toString() + "}";
 						}
 					}
 				}
@@ -447,7 +453,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				attr.clear();
 
 				long current_elevation = elevation_scaling.offset;
-				off = 0;
+				size_t off = 0;
 
 				std::vector<long> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
@@ -562,7 +568,7 @@ std::string mvt_tile::encode() {
 			feature_writer.add_enum(3, layers[i].features[f].type);
 			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
 			feature_writer.add_packed_uint64(5, std::begin(layers[i].features[f].properties), std::end(layers[i].features[f].properties));
-			feature_writer.add_packed_uint64(5, std::begin(layers[i].features[f].node_attributes), std::end(layers[i].features[f].node_attributes));
+			feature_writer.add_packed_uint64(6, std::begin(layers[i].features[f].node_attributes), std::end(layers[i].features[f].node_attributes));
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
@@ -744,6 +750,18 @@ std::string mvt_value::toString() const {
 		return numeric_value.bool_value ? "true" : "false";
 	} else if ((type == mvt_list || type == mvt_hash) && string_value.size() > 0) {
 		return string_value;
+	} else if (type == mvt_list) {
+		std::string ret = "[";
+
+		for (size_t i = 0; i < list_value.size(); i++) {
+			ret.append(list_value[i].toString());
+			if (i + 1 < list_value.size()) {
+				ret.append(",");
+			}
+		}
+
+		ret.append("]");
+		return ret;
 	} else if (type == mvt_null) {
 		return "null";
 	} else {
