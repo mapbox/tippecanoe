@@ -444,9 +444,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					}
 
 					for (size_t g = 0; g < geom.size(); g++) {
-						if (val.list_value[g].type != mvt_null) {
-							geom[g].attribute = std::string("{\"") + quote(key) + "\":" + val.list_value[g].toString() + "}";
-						}
+						geom[g].attribute = std::string("{\"") + quote(key) + "\":" + val.list_value[g].toString() + "}";
 					}
 				}
 

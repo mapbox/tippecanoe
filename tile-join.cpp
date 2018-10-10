@@ -311,11 +311,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
+							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
+								} else if (attr_type == mvt_null) {
+									outval.type = mvt_null;
+									outval.numeric_value.null_value = 0;
 								} else {
 									outval.type = mvt_double;
 									outval.numeric_value.double_value = atof(joinval.c_str());

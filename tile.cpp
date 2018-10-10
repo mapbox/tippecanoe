@@ -143,21 +143,21 @@ int coalcmp(const void *v1, const void *v2) {
 	}
 
 	for (size_t i = 0; i < c1->full_keys.size(); i++) {
-		if (c1->full_keys[i] < c1->full_keys[i]) {
+		if (c1->full_keys[i] < c2->full_keys[i]) {
 			return -1;
-		} else if (c1->full_keys[i] > c1->full_keys[i]) {
+		} else if (c1->full_keys[i] > c2->full_keys[i]) {
 			return 1;
 		}
 
-		if (c1->full_values[i].type < c1->full_values[i].type) {
+		if (c1->full_values[i].type < c2->full_values[i].type) {
 			return -1;
-		} else if (c1->full_values[i].type > c1->full_values[i].type) {
+		} else if (c1->full_values[i].type > c2->full_values[i].type) {
 			return 1;
 		}
 
-		if (c1->full_values[i].s < c1->full_values[i].s) {
+		if (c1->full_values[i].s < c2->full_values[i].s) {
 			return -1;
-		} else if (c1->full_values[i].s > c1->full_values[i].s) {
+		} else if (c1->full_values[i].s > c2->full_values[i].s) {
 			return 1;
 		}
 	}
@@ -196,14 +196,14 @@ mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
 	return stringified_to_mvt_value(type, s);
 }
 
-void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature, bool suppress_null) {
+void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> const &metavals, char *stringpool, mvt_layer &layer, mvt_feature &feature) {
 	size_t i;
 	for (i = 0; i < metakeys.size(); i++) {
 		int otype;
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		if (!suppress_null || value.type != mvt_null) {
+		{
 			if (mvt_format == mvt_blake) {
 				layer.tag_v3(feature, key.string_value, value);
 			} else {
@@ -1434,24 +1434,6 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 			sf.dropped = true;
 		}
 
-		// Remove nulls, now that the expression evaluation filter has run
-
-		for (ssize_t i = (ssize_t) sf.keys.size() - 1; i >= 0; i--) {
-			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];
-
-			if (type == mvt_null) {
-				sf.keys.erase(sf.keys.begin() + i);
-				sf.values.erase(sf.values.begin() + i);
-			}
-		}
-
-		for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-			if (sf.full_values[i].type == mvt_null) {
-				sf.full_keys.erase(sf.full_keys.begin() + i);
-				sf.full_values.erase(sf.full_values.begin() + i);
-			}
-		}
-
 		return sf;
 	}
 }
@@ -1532,7 +1514,7 @@ void *run_prefilter(void *v) {
 			tmp_feature.geometry[i].y += sy;
 		}
 
-		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature, false);
+		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
 		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
@@ -2252,13 +2234,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					feature.string_id = layer_features[x].string_id;
 				}
 
-				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature, true);
+				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
 
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
 
-					if (v.type != mvt_null) {
+					{
 						if (mvt_format == mvt_blake) {
 							layer.tag_v3(feature, layer_features[x].full_keys[a], v);
 						} else {

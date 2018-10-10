@@ -282,7 +282,7 @@ allow-existing-test:
 	if ./tippecanoe -q -Z1 -z1 -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json; then exit 1; else exit 0; fi
 	# Replace existing
 	./tippecanoe -q -Z8 -z9 -f -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
-	./tippecanoe q- -Z10 -z11 -F -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
+	./tippecanoe -q -Z10 -z11 -F -o tests/allow-existing/both.mbtiles tests/coalesce-tract/tl_2010_06001_tract10.json
 	./tippecanoe-decode -x generator tests/allow-existing/both.mbtiles > tests/allow-existing/both.mbtiles.json.check
 	cmp tests/allow-existing/both.mbtiles.json.check tests/allow-existing/both.mbtiles.json
 	# Make a tileset

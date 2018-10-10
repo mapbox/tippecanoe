@@ -3,7 +3,7 @@
 "center": "0.000000,0.000000,0",
 "description": "tests/object/out/-z0.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"compound\": \"Mixed\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"compound\",\"count\": 1,\"type\": \"mixed\",\"values\": [\"{\\\"string\\\":\\\"string\\\",\\\"number\\\":10,\\\"null\\\":null,\\\"true\\\":true,\\\"false\\\":false,\\\"array\\\":[\\\"string\\\",10,null,true,false,[1,2,3],{\\\"this\\\":\\\"that\\\"}],\\\"emptylist\\\":[],\\\"emptyhash\\\":{},\\\"nest\\\":{\\\"something\\\":\\\"else\\\"}}\"]}]}]}}",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"compound\": \"Mixed\", \"null\": \"Mixed\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 2,\"attributes\": [{\"attribute\": \"compound\",\"count\": 1,\"type\": \"mixed\",\"values\": [\"{\\\"string\\\":\\\"string\\\",\\\"number\\\":10,\\\"null\\\":null,\\\"true\\\":true,\\\"false\\\":false,\\\"array\\\":[\\\"string\\\",10,null,true,false,[1,2,3],{\\\"this\\\":\\\"that\\\"}],\\\"emptylist\\\":[],\\\"emptyhash\\\":{},\\\"nest\\\":{\\\"something\\\":\\\"else\\\"}}\"]},{\"attribute\": \"null\",\"count\": 1,\"type\": \"mixed\",\"values\": [\"null\"]}]}]}}",
 "maxzoom": "0",
 "minzoom": "0",
 "name": "tests/object/out/-z0.json.check.mbtiles",
@@ -12,7 +12,7 @@
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": { "compound": {"string":"string","number":10,"null":null,"true":true,"false":false,"array":["string",10,null,true,false,[1,2,3],{"this":"that"}],"emptylist":[],"emptyhash":{},"nest":{"something":"else"}} }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "properties": { "null": null, "compound": {"string":"string","number":10,"null":null,"true":true,"false":false,"array":["string",10,null,true,false,[1,2,3],{"this":"that"}],"emptylist":[],"emptyhash":{},"nest":{"something":"else"}} }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ] }
 ] }
 ] }
