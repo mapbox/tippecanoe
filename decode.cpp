@@ -76,6 +76,21 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 		state.json_write_string("extent");
 		state.json_write_signed(tile.layers[i].extent);
 
+		if (tile.layers[i].zoom >= 0) {
+			state.json_write_string("zoom");
+			state.json_write_unsigned(tile.layers[i].zoom);
+		}
+
+		if (tile.layers[i].x >= 0) {
+			state.json_write_string("x");
+			state.json_write_unsigned(tile.layers[i].x);
+		}
+
+		if (tile.layers[i].y >= 0) {
+			state.json_write_string("y");
+			state.json_write_unsigned(tile.layers[i].y);
+		}
+
 		state.json_end_hash();
 	}
 
@@ -188,6 +203,21 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 
 				state.json_write_string("extent");
 				state.json_write_signed(layer.extent);
+
+				if (layer.zoom >= 0) {
+					state.json_write_string("zoom");
+					state.json_write_unsigned(layer.zoom);
+				}
+
+				if (layer.x >= 0) {
+					state.json_write_string("x");
+					state.json_write_unsigned(layer.x);
+				}
+
+				if (layer.y >= 0) {
+					state.json_write_string("y");
+					state.json_write_unsigned(layer.y);
+				}
 
 				state.json_end_hash();
 

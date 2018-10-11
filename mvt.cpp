@@ -291,6 +291,18 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					break;
 				}
 
+				case 12: /* tile x */
+					layer.x = layer_reader.get_uint32();
+					break;
+
+				case 13: /* tile y */
+					layer.y = layer_reader.get_uint32();
+					break;
+
+				case 14: /* zoom */
+					layer.zoom = layer_reader.get_uint32();
+					break;
+
 				case 15: /* version */
 					layer.version = layer_reader.get_uint32();
 					break;
@@ -501,6 +513,12 @@ std::string mvt_tile::encode() {
 		layer_writer.add_uint32(15, layers[i].version); /* version */
 		layer_writer.add_string(1, layers[i].name);     /* name */
 		layer_writer.add_uint32(5, layers[i].extent);   /* extent */
+
+		if (layers[i].zoom >= 0 && layers[i].x >= 0 && layers[i].y >= 0) {
+			layer_writer.add_uint32(12, layers[i].x);
+			layer_writer.add_uint32(13, layers[i].y);
+			layer_writer.add_uint32(14, layers[i].zoom);
+		}
 
 		for (size_t j = 0; j < layers[i].keys.size(); j++) {
 			layer_writer.add_string(3, layers[i].keys[j]); /* key */

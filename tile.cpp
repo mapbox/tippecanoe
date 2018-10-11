@@ -2210,6 +2210,11 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			layer.name = layer_iterator->first;
 			layer.version = 2;
 			layer.extent = 1 << line_detail;
+#if 0
+			layer.zoom = z;
+			layer.x = tx;
+			layer.y = ty;
+#endif
 
 			for (size_t x = 0; x < layer_features.size(); x++) {
 				mvt_feature feature;

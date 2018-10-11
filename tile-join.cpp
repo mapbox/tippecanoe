@@ -107,6 +107,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			outtile.layers[ol].name = layer.name;
 			outtile.layers[ol].version = layer.version;
 			outtile.layers[ol].extent = layer.extent;
+			outtile.layers[ol].zoom = layer.zoom;
+			outtile.layers[ol].x = layer.y;
+			outtile.layers[ol].x = layer.y;
 		}
 
 		mvt_layer &outlayer = outtile.layers[ol];
