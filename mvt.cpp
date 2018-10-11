@@ -443,7 +443,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					std::string key = layer.keys[attr[t]];
 
 					t++;
-					mvt_value const &val = layer.decode_property(attr, t, false);
+					mvt_value const &val = layer.decode_property(attr, t);
 
 					if (val.type != mvt_list) {
 						fprintf(stderr, "Expected node attribute to be a list\n");
@@ -710,6 +710,8 @@ bool mvt_value::operator<(const mvt_value &o) const {
 		    (type == mvt_uint && numeric_value.uint_value < o.numeric_value.uint_value) ||
 		    (type == mvt_sint && numeric_value.sint_value < o.numeric_value.sint_value) ||
 		    (type == mvt_bool && numeric_value.bool_value < o.numeric_value.bool_value) ||
+		    (type == mvt_hash && toString() < o.toString()) ||
+		    (type == mvt_list && toString() < o.toString()) ||
 		    (type == mvt_null && numeric_value.null_value < o.numeric_value.null_value)) {
 			return true;
 		}
@@ -764,8 +766,6 @@ std::string mvt_value::toString() const {
 		return std::to_string(numeric_value.uint_value);
 	} else if (type == mvt_bool) {
 		return numeric_value.bool_value ? "true" : "false";
-	} else if ((type == mvt_list || type == mvt_hash) && string_value.size() > 0) {
-		return string_value;
 	} else if (type == mvt_list) {
 		std::string ret = "[";
 
@@ -777,6 +777,22 @@ std::string mvt_value::toString() const {
 		}
 
 		ret.append("]");
+		return ret;
+	} else if (type == mvt_hash) {
+		std::string ret = "{";
+
+		for (size_t i = 0; i < list_value.size() && i < hash_keys.size(); i++) {
+			ret.append("\"");
+			ret.append(quote(hash_keys[i]));
+			ret.append("\":");
+			ret.append(list_value[i].toString());
+
+			if (i + 1 < list_value.size()) {
+				ret.append(",");
+			}
+		}
+
+		ret.append("}");
 		return ret;
 	} else if (type == mvt_null) {
 		return "null";
@@ -852,11 +868,11 @@ size_t mvt_layer::tag_value(mvt_value const &value) {
 }
 
 void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
-	if (value.type == mvt_hash) {
+	if (value.type == mvt_hash || value.type == mvt_list) {
 		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
 		json_object *jo = json_read_tree(jp);
 		if (jo == NULL) {
-			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			fprintf(stderr, "Internal error: failed to reconstruct JSON in tag %s\n", value.string_value.c_str());
 			exit(EXIT_FAILURE);
 		}
 		size_t ko = tag_key(key);
@@ -1041,11 +1057,18 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 	size_t ko = tag_v3_key(key);
 	feature.properties.push_back(ko);
 
-	if (value.type == mvt_hash) {
-		json_pull *jp = json_begin_string((char *) value.string_value.c_str());
+	if (value.type == mvt_hash || value.type == mvt_list) {
+		// XXX This is backwards:
+		// tag_object_v3 should turn JSON into mvt_value,
+		// which should then get tagged as part of
+		// tag_object_v3, instead of stringifying here
+
+		std::string s = value.toString();
+
+		json_pull *jp = json_begin_string(s.c_str());
 		json_object *jo = json_read_tree(jp);
 		if (jo == NULL) {
-			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", value.string_value.c_str());
+			fprintf(stderr, "Internal error: failed to reconstruct JSON in tag_v3 %s\n", s.c_str());
 			exit(EXIT_FAILURE);
 		}
 		tag_object_v3(*this, jo, feature.properties);
@@ -1101,7 +1124,7 @@ void mvt_layer::reorder_values() {
 	}
 }
 
-mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off, bool stringify_nested) const {
+mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property, size_t &off) const {
 	int type = property[off] & 0x0F;
 	mvt_value ret;
 
@@ -1177,27 +1200,11 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		if (stringify_nested) {
-			ret.string_value = "[";
-		}
-
 		for (size_t i = 0; i < len; i++) {
-			mvt_value v1 = decode_property(property, off, stringify_nested);
+			mvt_value v1 = decode_property(property, off);
 			off++;
 
-			if (stringify_nested) {
-				ret.string_value.append(v1.toString());
-
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
-			} else {
-				ret.list_value.push_back(v1);
-			}
-		}
-
-		if (stringify_nested) {
-			ret.string_value.append("]");
+			ret.list_value.push_back(v1);
 		}
 
 		off--;  // so caller can increment
@@ -1210,10 +1217,6 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 		size_t len = property[off] >> 4;
 		off++;
 
-		if (stringify_nested) {
-			ret.string_value = "{";
-		}
-
 		for (size_t i = 0; i < len; i++) {
 			if (property[off] >= keys.size()) {
 				fprintf(stderr, "Out of bounds hash key reference\n");
@@ -1225,24 +1228,11 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 			v1.string_value = keys[property[off]];
 			off++;
 
-			mvt_value v2 = decode_property(property, off, stringify_nested);
+			mvt_value v2 = decode_property(property, off);
 			off++;
 
-			if (stringify_nested) {
-				ret.string_value.append(v1.toString());
-				ret.string_value.append(":");
-				ret.string_value.append(v2.toString());
-
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
-			} else {
-				ret.hash_value.insert(std::pair<std::string, mvt_value>(v1.string_value, v2));
-			}
-		}
-
-		if (stringify_nested) {
-			ret.string_value.append("}");
+			ret.hash_keys.push_back(v1.string_value);
+			ret.list_value.push_back(v2);
 		}
 
 		off--;  // so caller can increment
@@ -1267,10 +1257,6 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 			exit(EXIT_FAILURE);
 		}
 
-		if (stringify_nested) {
-			ret.string_value = "[";
-		}
-
 		long here = 0;
 
 		for (size_t i = 0; i < len; i++) {
@@ -1291,23 +1277,11 @@ mvt_value mvt_layer::decode_property(std::vector<unsigned long> const &property,
 				val = attribute_scalings[scaling].base + attribute_scalings[scaling].multiplier * (here + attribute_scalings[scaling].offset);
 			}
 
-			if (stringify_nested) {
-				ret.string_value.append(milo::dtoa_milo(val));
+			mvt_value v;
+			v.type = mvt_double;
+			v.numeric_value.double_value = val;
 
-				if (i + 1 < len) {
-					ret.string_value.push_back(',');
-				}
-			} else {
-				mvt_value v;
-				v.type = mvt_double;
-				v.numeric_value.double_value = val;
-
-				ret.list_value.push_back(v);
-			}
-		}
-
-		if (stringify_nested) {
-			ret.string_value.append("]");
+			ret.list_value.push_back(v);
 		}
 
 		off--;  // so caller can increment
@@ -1392,6 +1366,41 @@ bool is_unsigned_integer(const char *s, unsigned long long *v) {
 	return 1;
 }
 
+mvt_value json_to_mvt_value(json_object *o) {
+	mvt_value tv;
+
+	if (o->type == JSON_NUMBER) {
+		return stringified_to_mvt_value(mvt_double, o->string);
+	} else if (o->type == JSON_STRING) {
+		tv.type = mvt_string;
+		tv.string_value = o->string;
+	} else if (o->type == JSON_NULL) {
+		tv.type = mvt_null;
+		tv.numeric_value.null_value = 0;
+	} else if (o->type == JSON_TRUE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 1;
+	} else if (o->type == JSON_FALSE) {
+		tv.type = mvt_bool;
+		tv.numeric_value.bool_value = 0;
+	} else if (o->type == JSON_ARRAY) {
+		tv.type = mvt_list;
+
+		for (size_t i = 0; i < o->length; i++) {
+			tv.list_value.push_back(json_to_mvt_value(o->array[i]));
+		}
+	} else if (o->type == JSON_HASH) {
+		tv.type = mvt_hash;
+
+		for (size_t i = 0; i < o->length; i++) {
+			tv.hash_keys.push_back(o->keys[i]->string);
+			tv.list_value.push_back(json_to_mvt_value(o->values[i]));
+		}
+	}
+
+	return tv;
+}
+
 mvt_value stringified_to_mvt_value(int type, const char *s) {
 	mvt_value tv;
 
@@ -1443,9 +1452,37 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 	} else if (type == mvt_string) {
 		tv.type = mvt_string;
 		tv.string_value = s;
+	} else if (type == mvt_hash || type == mvt_list) {
+		json_pull *jp = json_begin_string(s);
+		json_object *jo = json_read_tree(jp);
+		if (jo == NULL) {
+			fprintf(stderr, "Internal error: failed to reconstruct JSON in stringified_to_mvt_value %s\n", s);
+			exit(EXIT_FAILURE);
+		}
+
+		if (jo->type == JSON_ARRAY) {
+			tv.type = mvt_list;
+
+			for (size_t i = 0; i < jo->length; i++) {
+				tv.list_value.push_back(json_to_mvt_value(jo->array[i]));
+			}
+		} else if (jo->type == JSON_HASH) {
+			tv.type = mvt_hash;
+
+			for (size_t i = 0; i < jo->length; i++) {
+				tv.hash_keys.push_back(jo->keys[i]->string);
+				tv.list_value.push_back(json_to_mvt_value(jo->values[i]));
+			}
+		} else {
+			fprintf(stderr, "Expected a list or hash, not %s\n", s);
+			exit(EXIT_FAILURE);
+		}
+
+		json_free(jo);
+		json_end(jp);
 	} else {
-		tv.type = mvt_hash; /* or list */
-		tv.string_value = s;
+		fprintf(stderr, "Internal error: unknown type\n");
+		exit(EXIT_FAILURE);
 	}
 
 	return tv;
@@ -1463,7 +1500,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vecto
 			json_pull *jp = json_begin_string(geom[i].attributes.c_str());
 			json_object *jo = json_read_tree(jp);
 			if (jo == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", geom[i].attributes.c_str());
+				fprintf(stderr, "Internal error: failed to reconstruct JSON in to_feature geometry %s\n", geom[i].attributes.c_str());
 				exit(EXIT_FAILURE);
 			}
 
@@ -1523,7 +1560,7 @@ std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vecto
 		json_pull *jp = json_begin_string(merged.c_str());
 		json_object *jo = json_read_tree(jp);
 		if (jo == NULL) {
-			fprintf(stderr, "Internal error: failed to reconstruct JSON %s\n", merged.c_str());
+			fprintf(stderr, "Internal error: failed to reconstruct JSON in to_feature list %s\n", merged.c_str());
 			exit(EXIT_FAILURE);
 		}
 

@@ -328,9 +328,9 @@ void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const
 	} else if (val.type == mvt_bool) {
 		out.append(val.numeric_value.bool_value ? "true" : "false");
 	} else if (val.type == mvt_list) {
-		out.append(val.string_value);
+		out.append(val.toString());
 	} else if (val.type == mvt_hash) {
-		out.append(val.string_value);
+		out.append(val.toString());
 	} else if (val.type == mvt_null) {
 		out.append("null");
 	}
@@ -448,7 +448,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			const char *key = layer.keys[feat.properties[t]].c_str();
 
 			t++;
-			mvt_value const &val = layer.decode_property(feat.properties, t, true);
+			mvt_value const &val = layer.decode_property(feat.properties, t);
 
 			state.json_write_string(key);
 			print_val(feat, layer, val, 0, state);

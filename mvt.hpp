@@ -94,8 +94,8 @@ struct mvt_value {
 	mvt_value_type type;
 	std::string string_value;
 
+	std::vector<std::string> hash_keys;
 	std::vector<mvt_value> list_value;
-	std::map<std::string, mvt_value> hash_value;
 
 	union {
 		float float_value;
@@ -153,7 +153,7 @@ struct mvt_layer {
 	std::map<mvt_value, size_t> value_map{};
 	std::map<mvt_value, unsigned long> property_map{};
 
-	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off, bool stringify_nested) const;
+	mvt_value decode_property(std::vector<unsigned long> const &property, size_t &off) const;
 	void reorder_values();
 };
 

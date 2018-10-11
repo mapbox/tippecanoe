@@ -154,7 +154,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					}
 					std::string key = layer.keys[feat.properties[t]];
 					t++;
-					mvt_value val = layer.decode_property(feat.properties, t, true);
+					mvt_value val = layer.decode_property(feat.properties, t);
 
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
@@ -229,7 +229,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 				std::string key = layer.keys[feat.properties[t]];
 				t++;
-				mvt_value val = layer.decode_property(feat.properties, t, true);
+				mvt_value val = layer.decode_property(feat.properties, t);
 
 				todo.push_back(std::pair<std::string, mvt_value>(key, val));
 			}
@@ -266,13 +266,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
 					type = mvt_double;
 				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
+					value = val.toString();
 					type = mvt_hash;
-					if (val.string_value.size() > 0) {
-						value = val.string_value;
-					} else {
-						// XXX catching reference loops disabled
-						stringify_val(value, feat, layer, val, layer.values.size());
-					}
 				} else {
 					continue;
 				}
