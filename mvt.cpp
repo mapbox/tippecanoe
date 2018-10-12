@@ -502,7 +502,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	return true;
 }
 
-std::string mvt_tile::encode() {
+std::string mvt_tile::encode(int z) {
 	std::string data;
 
 	protozero::pbf_writer writer(data);
@@ -569,10 +569,21 @@ std::string mvt_tile::encode() {
 				if (geom[g].elevations.size() > 0) {
 					mvt_scaling dim;
 
-					// XXX choose more appropriately
-					dim.multiplier = 0.5;
-					dim.base = -22.7;
-					dim.offset = 10;
+					// Use approximately the same resolution as ground resolution
+					// for elevation resolution:
+					// 1 meter at zoom level 13
+
+					// dim.multiplier = exp(log(0.5) * (z - 13));
+					// Use shifts instead of log for exact precision
+					if (z <= 13) {
+						dim.multiplier = 1 << (13 - z);
+					} else {
+						dim.multiplier = 1.0 / (1 << (z - 13));
+					}
+
+					// Arbitrary base and offset, just to make sure encoding and decoding work
+					dim.base = dim.multiplier * 4;
+					dim.offset = 50;
 
 					elevation_scaling = dim;
 				}

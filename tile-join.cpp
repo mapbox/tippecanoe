@@ -593,7 +593,7 @@ void *join_worker(void *v) {
 				}
 			}
 
-			std::string pbf = outtile.encode();
+			std::string pbf = outtile.encode(ai->first.z);
 			std::string compressed;
 
 			if (!pC) {

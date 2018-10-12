@@ -343,7 +343,7 @@ void write_coordinates(json_writer &state, lonlat const &p) {
 	state.json_write_float(p.lat);
 
 	for (size_t i = 0; i < p.elevations.size(); i++) {
-		state.json_write_float(p.elevations[i]);
+		state.json_write_number(p.elevations[i]);
 	}
 
 	state.json_end_array();
