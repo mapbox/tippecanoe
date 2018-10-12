@@ -468,18 +468,20 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				std::vector<long> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
 					for (size_t j = 0; j < geom.size(); j++) {
-						if (off < elevations.size()) {
-							double el;
+						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
+							if (off < elevations.size()) {
+								double el;
 
-							current_elevation += elevations[off];
-							el = elevation_scaling.base + elevation_scaling.multiplier * current_elevation;
+								current_elevation += elevations[off];
+								el = elevation_scaling.base + elevation_scaling.multiplier * current_elevation;
 
-							geom[j].elevations.push_back(el);
+								geom[j].elevations.push_back(el);
 
-							off++;
-						} else {
-							fprintf(stderr, "Ran out of elevations\n");
-							exit(EXIT_FAILURE);
+								off++;
+							} else {
+								fprintf(stderr, "Ran out of elevations\n");
+								exit(EXIT_FAILURE);
+							}
 						}
 					}
 				}
