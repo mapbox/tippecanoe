@@ -1505,51 +1505,39 @@ mvt_value stringified_to_mvt_value(int type, const char *s) {
 std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vector<unsigned long> &onto) {
 	std::vector<mvt_geometry> out;
 
-	std::map<std::string, std::vector<std::string>> node_attributes;
+	std::map<std::string, std::vector<mvt_value>> node_attributes;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		mvt_geometry g(geom[i].op, geom[i].x, geom[i].y, geom[i].elevations);
 
 		if (geom[i].attributes.size() != 0) {
-			json_pull *jp = json_begin_string(geom[i].attributes.c_str());
-			json_object *jo = json_read_tree(jp);
-			if (jo == NULL) {
-				fprintf(stderr, "Internal error: failed to reconstruct JSON in to_feature geometry %s\n", geom[i].attributes.c_str());
-				exit(EXIT_FAILURE);
-			}
-
-			if (jo->type != JSON_HASH) {
-				fprintf(stderr, "Internal error: per-node attribute is not a hash: %s\n", geom[i].attributes.c_str());
-				exit(EXIT_FAILURE);
-			}
+			mvt_value v = stringified_to_mvt_value(mvt_hash, geom[i].attributes.c_str());
 
 			// We have a list by name within each node;
 			// we need a list by node within each name.
-			// This should really keep the parse tree instead of stringifying
 
-			for (size_t j = 0; j < jo->length; j++) {
-				if (node_attributes.count(jo->keys[j]->string) == 0) {
-					std::vector<std::string> attrib;
+			for (size_t j = 0; j < v.hash_keys.size() && j < v.list_value.size(); j++) {
+				if (node_attributes.count(v.hash_keys[j]) == 0) {
+					mvt_value null_value;
+					null_value.type = mvt_null;
+					null_value.numeric_value.null_value = 0;
+
+					std::vector<mvt_value> attrib;
 					for (size_t k = 0; k < geom.size(); k++) {
-						attrib.push_back("null");
+						attrib.push_back(null_value);
 					}
 
-					node_attributes.insert(std::pair<std::string, std::vector<std::string>>(jo->keys[j]->string, attrib));
+					node_attributes.insert(std::pair<std::string, std::vector<mvt_value>>(v.hash_keys[j], attrib));
 				}
 
-				auto f = node_attributes.find(jo->keys[j]->string);
+				auto f = node_attributes.find(v.hash_keys[j]);
 				if (f == node_attributes.end()) {
 					fprintf(stderr, "Internal error: node attribute lookup failure\n");
 					exit(EXIT_FAILURE);
 				}
 
-				const char *s = json_stringify(jo->values[j]);
-				f->second[i] = std::string(s);
-				free((void *) s);  // stringify
+				f->second[i] = v.list_value[j];
 			}
-
-			json_free(jo);
-			json_end(jp);
 		}
 
 		out.push_back(g);
@@ -1557,32 +1545,17 @@ std::vector<mvt_geometry> to_feature(drawvec &geom, mvt_layer &layer, std::vecto
 
 	for (auto f : node_attributes) {
 		std::string key = f.first;
-		std::vector<std::string> val = f.second;
+		std::vector<mvt_value> val = f.second;
 
-		std::string merged = "[";
+		mvt_value merged;
+		merged.type = mvt_list;
 
 		for (size_t i = 0; i < val.size(); i++) {
-			merged.append(val[i]);
-
-			if (i + 1 < val.size()) {
-				merged.append(",");
-			}
-		}
-
-		merged.append("]");
-
-		json_pull *jp = json_begin_string(merged.c_str());
-		json_object *jo = json_read_tree(jp);
-		if (jo == NULL) {
-			fprintf(stderr, "Internal error: failed to reconstruct JSON in to_feature list %s\n", merged.c_str());
-			exit(EXIT_FAILURE);
+			merged.list_value.push_back(val[i]);
 		}
 
 		onto.push_back(layer.tag_v3_key(key));
-		tag_object_v3(layer, jo, onto);
-
-		json_free(jo);
-		json_end(jp);
+		layer.tag_v3_value(merged, onto);
 	}
 
 	return out;
