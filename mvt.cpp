@@ -1054,6 +1054,26 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 		} else if (value.type == mvt_null) {
 			vo = (2 << 4) | 7;
 			onto.push_back(vo);
+		} else if (value.type == mvt_list) {
+			vo = 8 | (value.list_value.size() << 4);
+			onto.push_back(vo);
+
+			// XXX do delta-encoding
+			for (size_t i = 0; i < value.list_value.size(); i++) {
+				tag_v3_value(value.list_value[i], onto);
+			}
+
+			return; // Can't save duplicate
+		} else if (value.type == mvt_hash) {
+			vo = 9 | (value.list_value.size() << 4);
+			onto.push_back(vo);
+
+			for (size_t i = 0; i < value.list_value.size() && i < value.hash_keys.size(); i++) {
+				onto.push_back(tag_v3_key(value.hash_keys[i]));
+				tag_v3_value(value.list_value[i], onto);
+			}
+
+			return; // Can't save duplicate
 		} else {
 			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
 			exit(EXIT_FAILURE);
@@ -1070,26 +1090,7 @@ void mvt_layer::tag_v3(mvt_feature &feature, std::string key, mvt_value value) {
 	size_t ko = tag_v3_key(key);
 	feature.properties.push_back(ko);
 
-	if (value.type == mvt_hash || value.type == mvt_list) {
-		// XXX This is backwards:
-		// tag_object_v3 should turn JSON into mvt_value,
-		// which should then get tagged as part of
-		// tag_object_v3, instead of stringifying here
-
-		std::string s = value.toString();
-
-		json_pull *jp = json_begin_string(s.c_str());
-		json_object *jo = json_read_tree(jp);
-		if (jo == NULL) {
-			fprintf(stderr, "Internal error: failed to reconstruct JSON in tag_v3 %s\n", s.c_str());
-			exit(EXIT_FAILURE);
-		}
-		tag_object_v3(*this, jo, feature.properties);
-		json_free(jo);
-		json_end(jp);
-	} else {
-		tag_v3_value(value, feature.properties);
-	}
+	tag_v3_value(value, feature.properties);
 }
 
 void mvt_layer::reorder_values() {
