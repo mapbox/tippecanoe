@@ -285,12 +285,6 @@ void write_kv(json_writer &state, const char *key, mvt_value const &val) {
 	}
 }
 
-void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo, json_writer &state) {
-	std::string s;
-	stringify_val(s, feature, layer, val, vo);
-	state.json_write_stringified(s);
-}
-
 static std::string quote(std::string const &s) {
 	std::string buf;
 	buf.push_back('"');
@@ -314,30 +308,18 @@ static std::string quote(std::string const &s) {
 	return buf;
 }
 
-void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
+void stringify_val(std::string &out, mvt_value const &val) {
 	if (val.type == mvt_string) {
 		out.append(quote(val.string_value));
-	} else if (val.type == mvt_int) {
-		out.append(std::to_string(val.numeric_value.int_value));
-	} else if (val.type == mvt_double) {
-		double v = val.numeric_value.double_value;
-		out.append(milo::dtoa_milo(v));
-	} else if (val.type == mvt_float) {
-		double v = val.numeric_value.float_value;
-		out.append(milo::dtoa_milo(v));
-	} else if (val.type == mvt_sint) {
-		out.append(std::to_string(val.numeric_value.sint_value));
-	} else if (val.type == mvt_uint) {
-		out.append(std::to_string(val.numeric_value.uint_value));
-	} else if (val.type == mvt_bool) {
-		out.append(val.numeric_value.bool_value ? "true" : "false");
-	} else if (val.type == mvt_list) {
+	} else {
 		out.append(val.toString());
-	} else if (val.type == mvt_hash) {
-		out.append(val.toString());
-	} else if (val.type == mvt_null) {
-		out.append("null");
 	}
+}
+
+void print_val(mvt_value const &val, json_writer &state) {
+	std::string s;
+	stringify_val(s, val);
+	state.json_write_stringified(s);
 }
 
 void write_coordinates(json_writer &state, lonlat const &p) {
@@ -475,7 +457,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			mvt_value const &val = layer.values[feat.tags[t + 1]];
 
 			state.json_write_string(key);
-			print_val(feat, layer, val, feat.tags[t + 1], state);
+			print_val(val, state);
 		}
 
 		for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
@@ -489,7 +471,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			mvt_value const &val = layer.decode_property(feat.properties, t);
 
 			state.json_write_string(key);
-			print_val(feat, layer, val, 0, state);
+			print_val(val, state);
 		}
 
 		state.json_end_hash();
@@ -515,8 +497,8 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
-				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, attributes[g]));
-				if (attributes[g].size() != 0) {
+				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, g >= attributes.size() ? "" : attributes[g]));
+				if (g < attributes.size() && attributes[g].size() != 0) {
 					has_attributes = true;
 				}
 			} else {
