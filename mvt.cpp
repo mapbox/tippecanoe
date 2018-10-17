@@ -362,7 +362,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 7: /* elevations */
 						{
-							auto pi = feature_reader.get_packed_sint64();
+							auto pi = feature_reader.get_packed_sint32();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.elevations.push_back(*it);
 							}
@@ -465,7 +465,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				long current_elevation = elevation_scaling.offset;
 				size_t off = 0;
 
-				std::vector<long> &elevations = layer.features[i].elevations;
+				std::vector<int> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
 					for (size_t j = 0; j < geom.size(); j++) {
 						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {
@@ -675,7 +675,7 @@ std::string mvt_tile::encode(int z) {
 			feature_writer.add_packed_uint32(4, std::begin(geometry), std::end(geometry));
 
 			if (feature_is3d) {
-				feature_writer.add_packed_sint64(7, std::begin(elevations), std::end(elevations));
+				feature_writer.add_packed_sint32(7, std::begin(elevations), std::end(elevations));
 			}
 
 			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
