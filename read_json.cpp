@@ -132,13 +132,13 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 
 void merge_node_attributes(drawvec &geom, drawvec &attributes) {
 	if (attributes.size() != geom.size()) {
-		fprintf(stderr, "Geometry attributes don't match coordinates\n");
+		fprintf(stderr, "Geometry attributes don't match coordinates: %zu attributes for %zu geometries\n", attributes.size(), geom.size());
 		exit(EXIT_FAILURE);
 	}
 
 	for (size_t i = 0; i < attributes.size(); i++) {
 		if (geom[i].op != attributes[i].op) {
-			fprintf(stderr, "Geometry attributes don't match coordinates\n");
+			fprintf(stderr, "Geometry attributes don't match coordinates: op %d vs %d\n", geom[i].op, attributes[i].op);
 			exit(EXIT_FAILURE);
 		}
 

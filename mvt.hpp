@@ -31,7 +31,6 @@ struct mvt_geometry {
 	long long y = 0;
 	int /* mvt_operation */ op = 0;
 	std::vector<double> elevations;
-	std::string attribute;
 
 	mvt_geometry(int op, long long x, long long y);
 	mvt_geometry(int op, long long x, long long y, std::vector<double> elevation);

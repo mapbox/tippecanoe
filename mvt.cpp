@@ -432,40 +432,11 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 			for (size_t i = 0; i < layer.features.size(); i++) {
 				std::vector<mvt_geometry> &geom = layer.features[i].geometry;
-				std::vector<unsigned long> &attr = layer.features[i].node_attributes;
-
-				for (size_t t = 0; t + 1 < attr.size(); t++) {
-					if (attr[t] >= layer.keys.size()) {
-						fprintf(stderr, "Out of bounds attribute reference %lu into %zu\n", attr[t], layer.keys.size());
-						exit(EXIT_FAILURE);
-					}
-
-					std::string key = layer.keys[attr[t]];
-
-					t++;
-					mvt_value const &val = layer.decode_property(attr, t);
-
-					if (val.type != mvt_list) {
-						fprintf(stderr, "Expected node attribute to be a list\n");
-						exit(EXIT_FAILURE);
-					}
-
-					if (val.list_value.size() != geom.size()) {
-						fprintf(stderr, "Node attribute list size doesn't match geometry size\n");
-						exit(EXIT_FAILURE);
-					}
-
-					for (size_t g = 0; g < geom.size(); g++) {
-						geom[g].attribute = std::string("{\"") + quote(key) + "\":" + val.list_value[g].toString() + "}";
-					}
-				}
-
-				attr.clear();
+				std::vector<int> &elevations = layer.features[i].elevations;
 
 				long current_elevation = elevation_scaling.offset;
 				size_t off = 0;
 
-				std::vector<int> &elevations = layer.features[i].elevations;
 				if (elevations.size() != 0) {
 					for (size_t j = 0; j < geom.size(); j++) {
 						if (geom[j].op == mvt_moveto || geom[j].op == mvt_lineto) {

@@ -291,8 +291,10 @@ void print_val(mvt_feature const &feature, mvt_layer const &layer, mvt_value con
 	state.json_write_stringified(s);
 }
 
-static void quote(std::string &buf, std::string const &s) {
+static std::string quote(std::string const &s) {
+	std::string buf;
 	buf.push_back('"');
+
 	for (size_t i = 0; i < s.size(); i++) {
 		unsigned char ch = s[i];
 
@@ -307,12 +309,14 @@ static void quote(std::string &buf, std::string const &s) {
 			buf.push_back(ch);
 		}
 	}
+
 	buf.push_back('"');
+	return buf;
 }
 
 void stringify_val(std::string &out, mvt_feature const &feature, mvt_layer const &layer, mvt_value const &val, size_t vo) {
 	if (val.type == mvt_string) {
-		quote(out, val.string_value);
+		out.append(quote(val.string_value));
 	} else if (val.type == mvt_int) {
 		out.append(std::to_string(val.numeric_value.int_value));
 	} else if (val.type == mvt_double) {
@@ -362,6 +366,40 @@ struct coordinate_writer {
 	std::string tag;
 	void (*function)(json_writer &state, lonlat const &p);
 };
+
+std::vector<std::string> decode_node_attributes(mvt_feature const &feature, const mvt_layer &layer) {
+	std::vector<mvt_geometry> const &geom = feature.geometry;
+	std::vector<unsigned long> const &attr = feature.node_attributes;
+	std::vector<std::string> out;
+
+	for (size_t t = 0; t + 1 < attr.size(); t++) {
+		if (attr[t] >= layer.keys.size()) {
+			fprintf(stderr, "Out of bounds attribute reference %lu into %zu\n", attr[t], layer.keys.size());
+			exit(EXIT_FAILURE);
+		}
+
+		std::string key = layer.keys[attr[t]];
+
+		t++;
+		mvt_value const &val = layer.decode_property(attr, t);
+
+		if (val.type != mvt_list) {
+			fprintf(stderr, "Expected node attribute to be a list\n");
+			exit(EXIT_FAILURE);
+		}
+
+		if (val.list_value.size() != geom.size()) {
+			fprintf(stderr, "Node attribute list size doesn't match geometry size\n");
+			exit(EXIT_FAILURE);
+		}
+
+		for (size_t g = 0; g < geom.size(); g++) {
+			out.push_back(std::string("{") + quote(key) + ":" + val.list_value[g].toString() + "}");
+		}
+	}
+
+	return out;
+}
 
 void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
@@ -462,6 +500,8 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		std::vector<lonlat> ops;
 		bool has_attributes = false;
 
+		std::vector<std::string> attributes = decode_node_attributes(feat, layer);
+
 		for (size_t g = 0; g < feat.geometry.size(); g++) {
 			int op = feat.geometry[g].op;
 			long long px = feat.geometry[g].x;
@@ -475,8 +515,8 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
 
-				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, feat.geometry[g].attribute));
-				if (feat.geometry[g].attribute.size() != 0) {
+				ops.push_back(lonlat(op, lon, lat, px, py, feat.geometry[g].elevations, attributes[g]));
+				if (attributes[g].size() != 0) {
 					has_attributes = true;
 				}
 			} else {
