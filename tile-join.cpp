@@ -384,6 +384,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					}
 				}
 
+				std::map<std::string, mvt_value> node_attributes;
+				for (size_t t = 0; t + 1 < feat.node_attributes.size(); t++) {
+					if (feat.node_attributes[t] >= layer.keys.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
+					std::string key = layer.keys[feat.node_attributes[t]];
+					t++;
+					mvt_value val = layer.decode_property(feat.node_attributes, t);
+
+					outfeature.node_attributes.push_back(outlayer.tag_v3_key(key));
+					outlayer.tag_v3_value(val, outfeature.node_attributes);
+				}
+
 				features_added++;
 				outlayer.features.push_back(outfeature);
 

@@ -256,6 +256,13 @@ join-test: tile-join
 	./tippecanoe-decode -x generator tests/join-population/concat.mbtiles > tests/join-population/concat.mbtiles.json.check
 	cmp tests/join-population/concat.mbtiles.json.check tests/join-population/concat.mbtiles.json
 	rm tests/join-population/concat.mbtiles.json.check tests/join-population/concat.mbtiles tests/join-population/macarthur.mbtiles
+	# Test preservation of per-node attributes
+	./tippecanoe -q -z5 -f -o tests/node-attributes/out/1.mbtiles tests/node-attributes/in.json
+	./tile-join -q -f -o tests/node-attributes/out/2.mbtiles tests/node-attributes/out/1.mbtiles
+	./tippecanoe-decode -x generator -x bounds -x json tests/node-attributes/out/1.mbtiles > tests/node-attributes/out/1.mbtiles.check
+	./tippecanoe-decode -x generator -x bounds -x json tests/node-attributes/out/2.mbtiles > tests/node-attributes/out/2.mbtiles.check
+	cmp tests/node-attributes/out/1.mbtiles.check tests/node-attributes/out/2.mbtiles.check
+	rm -f tests/node-attributes/out/1.mbtiles.check tests/node-attributes/out/2.mbtiles.check tests/node-attributes/out/1.mbtiles tests/node-attributes/out/2.mbtiles
 
 join-filter-test:
 	# Comes out different from the direct tippecanoe run because null attributes are lost
