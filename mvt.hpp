@@ -59,7 +59,7 @@ struct mvt_feature {
 	std::vector<unsigned> tags{};
 	std::vector<unsigned long> properties{};
 	std::vector<mvt_geometry> geometry{};
-	std::vector<double> knots{};
+	std::vector<unsigned long> knots{};
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;
@@ -129,10 +129,13 @@ struct mvt_layer {
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
 	long long extent = 0;
-	std::vector<mvt_scaling> attribute_scalings;
 	long zoom = -1;
 	long x = -1;
 	long y = -1;
+
+	std::vector<mvt_scaling> attribute_scalings;
+	ssize_t delta_list_scaling = -1;
+	ssize_t spline_scaling = -1;
 
 	std::vector<std::string> string_values;
 	std::vector<float> float_values{};

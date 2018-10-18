@@ -377,7 +377,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 11: /* knots */
 						{
-							auto pi = feature_reader.get_packed_double();
+							auto pi = feature_reader.get_packed_uint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.knots.push_back(*it);
 							}
@@ -649,7 +649,7 @@ std::string mvt_tile::encode(int z) {
 				feature_writer.add_packed_sint32(7, std::begin(elevations), std::end(elevations));
 			}
 
-			feature_writer.add_packed_double(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
+			feature_writer.add_packed_uint64(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
 
 			layer_writer.add_message(2, feature_string);
 		}
@@ -947,23 +947,24 @@ void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> 
 		}
 
 		if (all_ints) {
-			unsigned long vo = 10 | (j->length << 4);
-			onto.push_back(vo);
+			if (layer.delta_list_scaling < 0) {
+				layer.delta_list_scaling = layer.attribute_scalings.size();
 
-			onto.push_back(0);  // which scaling
-
-			long here = 0;
-			for (size_t i = 0; i < j->length; i++) {
-				onto.push_back(protozero::encode_zigzag64(std::trunc(j->array[i]->number - here)) + 1);
-				here = j->array[i]->number;
-			}
-
-			if (layer.attribute_scalings.size() == 0) {
 				mvt_scaling sc;
 				sc.offset = 0;
 				sc.multiplier = 1;
 				sc.base = 0;
 				layer.attribute_scalings.push_back(sc);
+			}
+
+			unsigned long vo = 10 | (j->length << 4);
+			onto.push_back(vo);
+			onto.push_back(layer.delta_list_scaling);  // which scaling
+
+			long here = 0;
+			for (size_t i = 0; i < j->length; i++) {
+				onto.push_back(protozero::encode_zigzag64(std::trunc(j->array[i]->number - here)) + 1);
+				here = j->array[i]->number;
 			}
 		} else {
 			unsigned long vo = 8 | (j->length << 4);
@@ -1034,7 +1035,7 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 				tag_v3_value(value.list_value[i], onto);
 			}
 
-			return; // Can't save duplicate
+			return;  // Can't save duplicate
 		} else if (value.type == mvt_hash) {
 			vo = 9 | (value.list_value.size() << 4);
 			onto.push_back(vo);
@@ -1044,7 +1045,7 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 				tag_v3_value(value.list_value[i], onto);
 			}
 
-			return; // Can't save duplicate
+			return;  // Can't save duplicate
 		} else {
 			fprintf(stderr, "Internal error: unknown value type %d\n", value.type);
 			exit(EXIT_FAILURE);
