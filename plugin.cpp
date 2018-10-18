@@ -254,6 +254,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				fk->second.lines++;
 			} else if (feature.type == mvt_polygon) {
 				fk->second.polygons++;
+			} else if (feature.type == mvt_spline) {
+				fk->second.splines++;
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
@@ -508,6 +510,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					fk->second.lines++;
 				} else if (sf.t == mvt_polygon) {
 					fk->second.polygons++;
+				} else if (sf.t == mvt_spline) {
+					fk->second.splines++;
 				}
 			}
 

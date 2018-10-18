@@ -34,6 +34,7 @@ struct layermap_entry {
 	size_t points = 0;
 	size_t lines = 0;
 	size_t polygons = 0;
+	size_t splines = 0;
 	size_t retain = 0;  // keep for tilestats, even if no features directly here
 
 	layermap_entry(size_t _id) {

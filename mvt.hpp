@@ -52,7 +52,7 @@ enum mvt_geometry_type {
 	mvt_point = 1,
 	mvt_linestring = 2,
 	mvt_polygon = 3,
-	mvt_curve = 4,
+	mvt_spline = 4,
 };
 
 struct mvt_feature {
@@ -60,6 +60,7 @@ struct mvt_feature {
 	std::vector<unsigned long> properties{};
 	std::vector<mvt_geometry> geometry{};
 	std::vector<unsigned long> knots{};
+	size_t spline_degree = 2;
 	int /* mvt_geometry_type */ type = 0;
 	unsigned long long id = 0;
 	bool has_id = false;

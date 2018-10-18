@@ -375,7 +375,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							break;
 						}
 
-						case 11: /* knots */
+						case 8: /* knots */
 						{
 							auto pi = feature_reader.get_packed_uint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
@@ -383,6 +383,10 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							}
 							break;
 						}
+
+						case 9: /* spline degree */
+							feature.spline_degree = feature_reader.get_uint32();
+							break;
 
 						default:
 							feature_reader.skip();
@@ -649,7 +653,11 @@ std::string mvt_tile::encode(int z) {
 				feature_writer.add_packed_sint32(7, std::begin(elevations), std::end(elevations));
 			}
 
-			feature_writer.add_packed_uint64(11, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
+			feature_writer.add_packed_uint64(8, std::begin(layers[i].features[f].knots), std::end(layers[i].features[f].knots));
+
+			if (layers[i].features[f].spline_degree != 2) {
+				feature_writer.add_uint32(9, layers[i].features[f].spline_degree);
+			}
 
 			layer_writer.add_message(2, feature_string);
 		}

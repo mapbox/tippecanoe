@@ -51,7 +51,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	for (size_t i = 0; i < tile.layers.size(); i++) {
 		state.json_write_string(tile.layers[i].name);
 
-		size_t points = 0, lines = 0, polygons = 0;
+		size_t points = 0, lines = 0, polygons = 0, splines = 0;
 		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
 			if (tile.layers[i].features[j].type == mvt_point) {
 				points++;
@@ -59,6 +59,8 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 				lines++;
 			} else if (tile.layers[i].features[j].type == mvt_polygon) {
 				polygons++;
+			} else if (tile.layers[i].features[j].type == mvt_spline) {
+				splines++;
 			}
 		}
 
@@ -72,6 +74,9 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 
 		state.json_write_string("polygons");
 		state.json_write_unsigned(polygons);
+
+		state.json_write_string("splines");
+		state.json_write_unsigned(splines);
 
 		state.json_write_string("extent");
 		state.json_write_signed(tile.layers[i].extent);

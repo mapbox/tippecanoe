@@ -9,6 +9,7 @@
 #define VT_POINT 1
 #define VT_LINE 2
 #define VT_POLYGON 3
+#define VT_SPLINE 4
 
 #define VT_END 0
 #define VT_MOVETO 1

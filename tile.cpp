@@ -1411,6 +1411,8 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 				v.string_value = "LineString";
 			} else if (sf.t == mvt_polygon) {
 				v.string_value = "Polygon";
+			} else if (sf.t == mvt_spline) {
+				v.string_value = "Spline";
 			}
 
 			attributes.insert(std::pair<std::string, mvt_value>("$type", v));

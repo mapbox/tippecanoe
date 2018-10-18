@@ -182,6 +182,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					v.string_value = "LineString";
 				} else if (feat.type == mvt_polygon) {
 					v.string_value = "Polygon";
+				} else if (feat.type == mvt_spline) {
+					v.string_value = "Spline";
 				}
 
 				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
@@ -414,6 +416,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					file_keys->second.lines++;
 				} else if (feat.type == mvt_polygon) {
 					file_keys->second.polygons++;
+				} else if (feat.type == mvt_spline) {
+					file_keys->second.splines++;
 				}
 			}
 		}

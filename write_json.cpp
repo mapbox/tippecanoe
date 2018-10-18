@@ -545,7 +545,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					state.json_end_array();
 				}
 			}
-		} else if (feat.type == VT_LINE) {
+		} else if (feat.type == VT_LINE || feat.type == VT_SPLINE) {
 			int movetos = 0;
 			for (size_t i = 0; i < ops.size(); i++) {
 				if (ops[i].op == VT_MOVETO) {
@@ -555,7 +555,12 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 			if (movetos < 2) {
 				state.json_write_string("type");
-				state.json_write_string("LineString");
+
+				if (feat.type == VT_LINE) {
+					state.json_write_string("LineString");
+				} else {
+					state.json_write_string("Spline");
+				}
 
 				for (auto c : coordinate_writers) {
 					state.json_write_string(c.tag);
@@ -569,7 +574,12 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				}
 			} else {
 				state.json_write_string("type");
-				state.json_write_string("MultiLineString");
+
+				if (feat.type == VT_LINE) {
+					state.json_write_string("MultiLineString");
+				} else {
+					state.json_write_string("MultiSpline");
+				}
 
 				for (auto c : coordinate_writers) {
 					state.json_write_string(c.tag);
