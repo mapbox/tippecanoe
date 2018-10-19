@@ -519,6 +519,24 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				attrib_writer.function = write_attributes;
 				coordinate_writers.push_back(attrib_writer);
 			}
+
+			if (feat.knots.size() != 0) {
+				state.json_write_string("degree");
+				state.json_write_number(feat.spline_degree);
+
+				state.json_write_string("knots");
+				state.json_write_array();
+
+				size_t here = 0;
+				while (here < feat.knots.size()) {
+					mvt_value v = layer.decode_property(feat.knots, here);
+					here++;
+
+					state.json_write_stringified(v.toString());
+				}
+
+				state.json_end_array();
+			}
 		}
 
 		if (feat.type == VT_POINT) {
