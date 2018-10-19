@@ -118,9 +118,9 @@ struct mvt_value {
 };
 
 struct mvt_scaling {
-	long offset;
-	double multiplier;
-	double base;
+	long offset = 0;
+	double multiplier = 1;
+	double base = 0;
 };
 
 struct mvt_layer {
@@ -137,6 +137,8 @@ struct mvt_layer {
 	std::vector<mvt_scaling> attribute_scalings;
 	ssize_t delta_list_scaling = -1;
 	ssize_t spline_scaling = -1;
+	mvt_scaling elevation_scaling;
+	bool has_elevation_scaling = false;
 
 	std::vector<std::string> string_values;
 	std::vector<float> float_values{};
