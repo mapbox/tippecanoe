@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096, "attribute_scalings": [ { "offset": 0, "multiplier": 1, "base": 0 } ] }, "features": [
 { "type": "Feature", "properties": { "null": null, "compound": {"string":"string","number":10,"null":null,"true":true,"false":false,"array":["string",10,null,true,false,[1,2,3],{"this":"that"}],"emptylist":[],"emptyhash":{},"nest":{"something":"else"}} }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ] }
 ] }

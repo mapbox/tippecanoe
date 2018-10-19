@@ -894,100 +894,6 @@ size_t mvt_layer::tag_v3_key(std::string key) {
 	return ko;
 }
 
-void tag_object_v3(mvt_layer &layer, json_object *j, std::vector<unsigned long> &onto) {
-	mvt_value tv;
-
-	if (j->type == JSON_NUMBER) {
-		long long v;
-		if (is_integer(j->string, &v)) {
-			if (v >= 0) {
-				tv.type = mvt_int;
-				tv.numeric_value.int_value = v;
-			} else {
-				tv.type = mvt_sint;
-				tv.numeric_value.sint_value = v;
-			}
-		} else {
-			tv.type = mvt_double;
-			tv.numeric_value.double_value = atof(j->string);
-		}
-
-		layer.tag_v3_value(tv, onto);
-	} else if (j->type == JSON_TRUE) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = 1;
-		layer.tag_v3_value(tv, onto);
-	} else if (j->type == JSON_FALSE) {
-		tv.type = mvt_bool;
-		tv.numeric_value.bool_value = 0;
-		layer.tag_v3_value(tv, onto);
-	} else if (j->type == JSON_STRING) {
-		tv.type = mvt_string;
-		tv.string_value = std::string(j->string);
-		layer.tag_v3_value(tv, onto);
-	} else if (j->type == JSON_NULL) {
-		tv.type = mvt_null;
-		tv.numeric_value.null_value = 0;
-		layer.tag_v3_value(tv, onto);
-	} else if (j->type == JSON_HASH) {
-		unsigned long vo = 9 | (j->length << 4);
-		onto.push_back(vo);
-
-		for (size_t i = 0; i < j->length; i++) {
-			if (j->keys[i]->type != JSON_STRING) {
-				fprintf(stderr, "Internal error: hash key is not a string\n");
-				exit(EXIT_FAILURE);
-			}
-
-			tv.type = mvt_string;
-			tv.string_value = j->keys[i]->string;
-
-			onto.push_back(layer.tag_v3_key(tv.string_value));
-			tag_object_v3(layer, j->values[i], onto);
-		}
-	} else if (j->type == JSON_ARRAY) {
-		bool all_ints = true;
-		for (size_t i = 0; i < j->length; i++) {
-			if (j->array[i]->type != JSON_NUMBER || j->array[i]->number != std::trunc(j->array[i]->number)) {
-				all_ints = false;
-				break;
-			}
-		}
-
-		if (all_ints) {
-			if (layer.delta_list_scaling < 0) {
-				layer.delta_list_scaling = layer.attribute_scalings.size();
-
-				mvt_scaling sc;
-				sc.offset = 0;
-				sc.multiplier = 1;
-				sc.base = 0;
-				layer.attribute_scalings.push_back(sc);
-			}
-
-			unsigned long vo = 10 | (j->length << 4);
-			onto.push_back(vo);
-			onto.push_back(layer.delta_list_scaling);  // which scaling
-
-			long here = 0;
-			for (size_t i = 0; i < j->length; i++) {
-				onto.push_back(protozero::encode_zigzag64(std::trunc(j->array[i]->number - here)) + 1);
-				here = j->array[i]->number;
-			}
-		} else {
-			unsigned long vo = 8 | (j->length << 4);
-			onto.push_back(vo);
-
-			for (size_t i = 0; i < j->length; i++) {
-				tag_object_v3(layer, j->array[i], onto);
-			}
-		}
-	} else {
-		fprintf(stderr, "Internal error: unknown JSON type\n");
-		exit(EXIT_FAILURE);
-	}
-}
-
 void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) {
 	std::map<mvt_value, unsigned long>::iterator vi = property_map.find(value);
 	unsigned long vo;
@@ -1035,12 +941,64 @@ void mvt_layer::tag_v3_value(mvt_value value, std::vector<unsigned long> &onto) 
 			vo = (2 << 4) | 7;
 			onto.push_back(vo);
 		} else if (value.type == mvt_list) {
-			vo = 8 | (value.list_value.size() << 4);
-			onto.push_back(vo);
-
-			// XXX do delta-encoding
+			bool all_ints = true;
 			for (size_t i = 0; i < value.list_value.size(); i++) {
-				tag_v3_value(value.list_value[i], onto);
+				mvt_value &v = value.list_value[i];
+
+				// Only try to delta-encode lists whose values are all smallish integers,
+				// to avoid precision loss below
+
+				if ((v.type == mvt_sint && v.numeric_value.sint_value < INT_MAX && v.numeric_value.sint_value > INT_MIN) ||
+				    (v.type == mvt_uint && v.numeric_value.uint_value < INT_MAX) ||
+				    (v.type == mvt_int && v.numeric_value.int_value < INT_MAX && v.numeric_value.int_value > INT_MIN)) {
+					;
+				} else {
+					all_ints = false;
+					break;
+				}
+			}
+
+			if (all_ints) {
+				if (delta_list_scaling < 0) {
+					delta_list_scaling = attribute_scalings.size();
+
+					mvt_scaling sc;
+					sc.offset = 0;
+					sc.multiplier = 1;
+					sc.base = 0;
+					attribute_scalings.push_back(sc);
+				}
+
+				vo = 10 | (value.list_value.size() << 4);
+				onto.push_back(vo);
+				onto.push_back(delta_list_scaling);  // which scaling
+
+				long here = 0;
+				for (size_t i = 0; i < value.list_value.size(); i++) {
+					mvt_value &v = value.list_value[i];
+					long val;
+
+					if (v.type == mvt_sint) {
+						val = v.numeric_value.sint_value;
+					} else if (v.type == mvt_uint) {
+						val = v.numeric_value.uint_value;
+					} else if (v.type == mvt_int) {
+						val = v.numeric_value.int_value;
+					} else {
+						fprintf(stderr, "Delta-encoded list: can't happen\n");
+						exit(EXIT_FAILURE);
+					}
+
+					onto.push_back(protozero::encode_zigzag64(val - here) + 1);
+					here = val;
+				}
+			} else {
+				vo = 8 | (value.list_value.size() << 4);
+				onto.push_back(vo);
+
+				for (size_t i = 0; i < value.list_value.size(); i++) {
+					tag_v3_value(value.list_value[i], onto);
+				}
 			}
 
 			return;  // Can't save duplicate
