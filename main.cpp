@@ -93,6 +93,8 @@ long long MAX_FILES;
 static long long diskfree;
 char **av;
 
+std::vector<clipbbox> clipbboxes;
+
 void checkdisk(std::vector<struct reader> *r) {
 	long long used = 0;
 	for (size_t i = 0; i < r->size(); i++) {
@@ -2594,6 +2596,7 @@ int main(int argc, char **argv) {
 		{"detect-longitude-wraparound", no_argument, &additional[A_DETECT_WRAPAROUND], 1},
 		{"use-source-polygon-winding", no_argument, &prevent[P_USE_SOURCE_POLYGON_WINDING], 1},
 		{"reverse-source-polygon-winding", no_argument, &prevent[P_REVERSE_SOURCE_POLYGON_WINDING], 1},
+		{"clip-bounding-box", required_argument, 0, '~'},
 
 		{"Filtering tile contents", 0, 0, 0},
 		{"prefilter", required_argument, 0, 'C'},
@@ -2682,6 +2685,17 @@ int main(int argc, char **argv) {
 				max_tilestats_sample_values = atoi(optarg);
 			} else if (strcmp(opt, "tile-stats-values-limit") == 0) {
 				max_tilestats_values = atoi(optarg);
+			} else if (strcmp(opt, "clip-bounding-box") == 0) {
+				clipbbox clip;
+				if (sscanf(optarg, "%lf,%lf,%lf,%lf", &clip.lon1, &clip.lat1, &clip.lon2, &clip.lat2) == 4) {
+					clipbboxes.push_back(clip);
+				} else {
+					fprintf(stderr, "%s: Can't parse bounding box --%s=%s\n", argv[0], opt, optarg);
+					exit(EXIT_FAILURE);
+				}
+			} else {
+				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
+				exit(EXIT_FAILURE);
 			}
 			break;
 		}
@@ -3001,6 +3015,14 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 		}
+	}
+
+	// Wait until here to project the bounding box, so that the behavior is
+	// the same no matter what order the projection and bounding box are
+	// specified in
+	for (auto &c : clipbboxes) {
+		projection->project(c.lon1, c.lat1, 32, &c.minx, &c.maxy);
+		projection->project(c.lon2, c.lat2, 32, &c.maxx, &c.miny);
 	}
 
 	if (max_tilestats_sample_values < max_tilestats_values) {

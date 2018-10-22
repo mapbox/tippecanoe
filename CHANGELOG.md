@@ -2,6 +2,7 @@
 
 * Fix null pointer crash when reading filter output that does not
   tag features with their extent
+* Add `--clip-bounding-box` option to clip input geometry
 
 ## 1.32.0
 

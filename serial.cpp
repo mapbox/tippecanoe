@@ -387,6 +387,16 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.geometry = fix_polygon(sf.geometry);
 	}
 
+	for (auto &c : clipbboxes) {
+		if (sf.t == VT_POLYGON) {
+			sf.geometry = simple_clip_poly(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+		} else if (sf.t == VT_LINE) {
+			sf.geometry = clip_lines(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+		} else if (sf.t == VT_POINT) {
+			sf.geometry = clip_point(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+		}
+	}
+
 	if (!sf.has_id) {
 		if (additional[A_GENERATE_IDS]) {
 			sf.has_id = true;
