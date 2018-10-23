@@ -129,7 +129,7 @@ struct mvt_layer {
 	std::vector<mvt_feature> features{};
 	std::vector<std::string> keys{};
 	std::vector<mvt_value> values{};
-	long long extent = 0;
+	long long extent = 4096;
 	long zoom = -1;
 	long x = -1;
 	long y = -1;
