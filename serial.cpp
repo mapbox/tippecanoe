@@ -387,6 +387,45 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.geometry = fix_polygon(sf.geometry);
 	}
 
+	for (auto &c : clipbboxes) {
+		if (sf.t == VT_POLYGON) {
+			sf.geometry = simple_clip_poly(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+		} else if (sf.t == VT_LINE) {
+			sf.geometry = clip_lines(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+			sf.geometry = remove_noop(sf.geometry, sf.t, 0);
+		} else if (sf.t == VT_POINT) {
+			sf.geometry = clip_point(sf.geometry, c.minx >> geometry_scale, c.miny >> geometry_scale, c.maxx >> geometry_scale, c.maxy >> geometry_scale);
+		}
+
+		sf.bbox[0] = LLONG_MAX;
+		sf.bbox[1] = LLONG_MAX;
+		sf.bbox[2] = LLONG_MIN;
+		sf.bbox[3] = LLONG_MIN;
+
+		for (auto &g : sf.geometry) {
+			long long x = g.x << geometry_scale;
+			long long y = g.y << geometry_scale;
+
+			if (x < sf.bbox[0]) {
+				sf.bbox[0] = x;
+			}
+			if (y < sf.bbox[1]) {
+				sf.bbox[1] = y;
+			}
+			if (x > sf.bbox[2]) {
+				sf.bbox[2] = x;
+			}
+			if (y > sf.bbox[3]) {
+				sf.bbox[3] = y;
+			}
+		}
+	}
+
+	if (sf.geometry.size() == 0) {
+		// Feature was clipped away
+		return 1;
+	}
+
 	if (!sf.has_id) {
 		if (additional[A_GENERATE_IDS]) {
 			sf.has_id = true;

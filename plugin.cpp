@@ -419,7 +419,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				}
 
 				json_object *extent = json_hash_get(tippecanoe, "extent");
-				if (extent != NULL && sequence->type == JSON_NUMBER) {
+				if (extent != NULL && extent->type == JSON_NUMBER) {
 					sf.extent = extent->number;
 				}
 

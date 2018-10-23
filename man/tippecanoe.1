@@ -560,6 +560,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pw\fR or \fB\fC\-\-use\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
 .IP \(bu 2
 \fB\fC\-pW\fR or \fB\fC\-\-reverse\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
+.IP \(bu 2
+\fB\fC\-\-clip\-bounding\-box=\fR\fIminlon\fP\fB\fC,\fR\fIminlat\fP\fB\fC,\fR\fImaxlon\fP\fB\fC,\fR\fImaxlat\fP: Clip all features to the specified bounding box.
 .RE
 .SS Setting or disabling tile size limits
 .RS

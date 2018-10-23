@@ -2246,7 +2246,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			tile.layers = filter_layers(postfilter, tile.layers, z, tx, ty, layermaps, tiling_seg, layer_unmaps, 1 << line_detail);
 		}
 
-		if (z == 0 && unclipped_features < original_features / 2) {
+		if (z == 0 && unclipped_features < original_features / 2 && clipbboxes.size() == 0) {
 			fprintf(stderr, "\n\nMore than half the features were clipped away at zoom level 0.\n");
 			fprintf(stderr, "Is your data in the wrong projection? It should be in WGS84/EPSG:4326.\n");
 		}
