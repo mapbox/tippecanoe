@@ -77,13 +77,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			}
 
 			out.push_back(d);
-		} else if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
-			if (j == NULL || j->type != JSON_ARRAY) {
-				fprintf(stderr, "%s:%d: expected array for coordinate pair %d\n", fname, line, t);
-				json_context(feature);
-				return;
-			}
-
+		} else if (j != NULL && j->type == JSON_ARRAY && j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
 			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
