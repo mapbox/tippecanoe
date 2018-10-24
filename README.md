@@ -447,6 +447,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `-aw` or `--detect-longitude-wraparound`: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
  * `-pw` or `--use-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
  * `-pW` or `--reverse-source-polygon-winding`: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
+ * `--clip-bounding-box=`*minlon*`,`*minlat*`,`*maxlon*`,`*maxlat*: Clip all features to the specified bounding box.
 
 ### Setting or disabling tile size limits
 

@@ -610,16 +610,20 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 }
 
 drawvec clip_point(drawvec &geom, int z, long long buffer) {
-	drawvec out;
-
 	long long min = 0;
 	long long area = 1LL << (32 - z);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
 
+	return clip_point(geom, min, min, area, area);
+}
+
+drawvec clip_point(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+	drawvec out;
+
 	for (size_t i = 0; i < geom.size(); i++) {
-		if (geom[i].x >= min && geom[i].y >= min && geom[i].x <= area && geom[i].y <= area) {
+		if (geom[i].x >= minx && geom[i].y >= miny && geom[i].x <= maxx && geom[i].y <= maxy) {
 			out.push_back(geom[i]);
 		}
 	}
@@ -661,12 +665,16 @@ bool point_within_tile(long long x, long long y, int z) {
 }
 
 drawvec clip_lines(drawvec &geom, int z, long long buffer) {
-	drawvec out;
-
 	long long min = 0;
 	long long area = 1LL << (32 - z);
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
+
+	return clip_lines(geom, min, min, area, area);
+}
+
+drawvec clip_lines(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (i > 0 && (geom[i - 1].op == VT_MOVETO || geom[i - 1].op == VT_LINETO) && geom[i].op == VT_LINETO) {
@@ -679,7 +687,7 @@ drawvec clip_lines(drawvec &geom, int z, long long buffer) {
 			std::vector<double> e2 = geom[i - 0].elevations;
 
 			bool changed0 = false, changed1 = false;
-			int c = clip(&x1, &y1, &x2, &y2, min, min, area, area, &changed0, &changed1, &e1, &e2);
+			int c = clip(&x1, &y1, &x2, &y2, minx, miny, maxx, maxy, &changed0, &changed1, &e1, &e2);
 
 			if (c > 1) {  // clipped
 				if (changed0) {

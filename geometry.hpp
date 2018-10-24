@@ -91,4 +91,8 @@ void check_polygon(drawvec &geom);
 double get_area(drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
 
+drawvec simple_clip_poly(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
+drawvec clip_lines(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
+drawvec clip_point(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
+
 #endif

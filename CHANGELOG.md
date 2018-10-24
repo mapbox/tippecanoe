@@ -1,3 +1,9 @@
+## 1.32.1
+
+* Fix null pointer crash when reading filter output that does not
+  tag features with their extent
+* Add `--clip-bounding-box` option to clip input geometry
+
 ## 1.32.0
 
 * Fix a bug that allowed coalescing of features with mismatched attributes
