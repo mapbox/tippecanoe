@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "macarthur", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "LINEARID": "1104486392881", "FULLNAME": "W Macarthur", "RTTYP": "M", "MTFCC": "S1400" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.255859, 37.857507 ], [ -122.343750, 37.857507 ] ] } }
 ,
 { "type": "Feature", "properties": { "LINEARID": "1104486090991", "FULLNAME": "Macarthur Fwy", "RTTYP": "M", "MTFCC": "S1100" }, "geometry": { "type": "LineString", "coordinates": [ [ -122.343750, 37.857507 ], [ -122.167969, 37.718590 ] ] } }

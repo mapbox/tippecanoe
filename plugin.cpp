@@ -171,7 +171,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (ret.count(layername) == 0) {
 			mvt_layer l;
 			l.name = layername;
-			l.version = 2;
+			l.version = 3;
 			l.extent = extent;
 
 			ret.insert(std::pair<std::string, mvt_layer>(layername, l));
