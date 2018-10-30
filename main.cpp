@@ -1137,7 +1137,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions, struct bbox limitbox) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -1402,6 +1402,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].filter = filter;
 				sst[i].basezoom = basezoom;
 				sst[i].attribute_types = attribute_types;
+				sst[i].limitbox = limitbox;
 			}
 
 			parse_geobuf(&sst, map, st.st_size, layer, sources[layer].layer);
@@ -1461,6 +1462,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].filter = filter;
 				sst[i].basezoom = basezoom;
 				sst[i].attribute_types = attribute_types;
+				sst[i].limitbox = limitbox;
 			}
 
 			parse_geocsv(sst, sources[source].file, layer, sources[layer].layer);
@@ -1668,6 +1670,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.filter = filter;
 				sst.basezoom = basezoom;
 				sst.attribute_types = attribute_types;
+				sst.limitbox = limitbox;
 
 				parse_json(&sst, jp, layer, sources[layer].layer);
 				json_end(jp);
@@ -2272,7 +2275,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter, limitbox);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2482,6 +2485,7 @@ int main(int argc, char **argv) {
 	std::vector<source> sources;
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
+	struct bbox limitbox;
 	bool guess_maxzoom = false;
 
 	std::set<std::string> exclude, include;
@@ -2601,6 +2605,7 @@ int main(int argc, char **argv) {
 		{"Filtering tile contents", 0, 0, 0},
 		{"prefilter", required_argument, 0, 'C'},
 		{"postfilter", required_argument, 0, 'c'},
+		{"limit-to-bounding-box", required_argument, 0, '~'},
 
 		{"Setting or disabling tile size limits", 0, 0, 0},
 		{"maximum-tile-bytes", required_argument, 0, 'M'},
@@ -2693,7 +2698,15 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s: Can't parse bounding box --%s=%s\n", argv[0], opt, optarg);
 					exit(EXIT_FAILURE);
 				}
-			} else {
+			} else if(strcmp(opt, "limit-to-bounding-box") == 0){
+				if (sscanf(optarg, "%lf,%lf,%lf,%lf", &limitbox.lon1, &limitbox.lat1, &limitbox.lon2, &limitbox.lat2) == 4) {
+					limitbox.is_set = true;
+					fprintf(stderr, "%s: Got the bounding box --%s=%s\n", argv[0], opt, optarg);
+				} else {
+					fprintf(stderr, "%s: Can't parse bounding box for limit --%s=%s\n", argv[0], opt, optarg);
+					exit(EXIT_FAILURE);
+				}
+			}else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_FAILURE);
 			}
@@ -3138,7 +3151,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, limitbox);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

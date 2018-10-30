@@ -1210,6 +1210,7 @@ struct write_tile_args {
 	int wrote_zoom = 0;
 	size_t tiling_seg = 0;
 	struct json_object *filter = NULL;
+	struct bbox limitbox;
 };
 
 bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
@@ -1467,6 +1468,7 @@ struct run_prefilter_args {
 	long long *pool_off = NULL;
 	FILE *prefilter_fp = NULL;
 	struct json_object *filter = NULL;
+	struct bbox limitbox;
 };
 
 void *run_prefilter(void *v) {
@@ -1474,6 +1476,7 @@ void *run_prefilter(void *v) {
 	json_writer state(rpa->prefilter_fp);
 
 	while (1) {
+
 		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards, rpa->filter, rpa->stringpool, rpa->pool_off, rpa->layer_unmaps);
 		if (sf.t < 0) {
 			break;
@@ -1508,7 +1511,7 @@ void *run_prefilter(void *v) {
 		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
-		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
+		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, false, state);
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {
@@ -1688,6 +1691,14 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
+int long2tilex(double lon, int z) { 
+	return (int)(floor((lon + 180.0) / 360.0 * pow(2.0, z))); 
+}
+
+int lat2tiley(double lat, int z){ 
+	return (int)(floor((1.0 - log( tan(lat * M_PI/180.0) + 1.0 / cos(lat * M_PI/180.0)) / M_PI) / 2.0 * pow(2.0, z))); 
+}
+
 long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1725,6 +1736,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
 		long long count = 0;
 		double accum_area = 0;
+		bool skip = false;
 
 		double fraction_accum = 0;
 
@@ -1829,6 +1841,22 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards, filter, stringpool, pool_off, layer_unmaps);
 			} else {
 				sf = parse_feature(prefilter_jp, z, tx, ty, layermaps, tiling_seg, layer_unmaps, postfilter != NULL);
+			}
+
+			if(arg->limitbox.is_set == true && z >= minzoom && z <= maxzoom){
+				int yTile1 = lat2tiley(arg->limitbox.lat2, z);
+				int xTile1 = long2tilex(arg->limitbox.lon1, z);			
+				// min lat and max long
+				int yTile2 = lat2tiley(arg->limitbox.lat1, z);
+				int xTile2 = long2tilex(arg->limitbox.lon2, z);
+
+
+				if (tx >= xTile1 && tx <= xTile2 && ty >= yTile1 && ty <= yTile2){
+					skip = false;
+				}
+				else{
+					skip = true;
+				}
 			}
 
 			if (sf.t < 0) {
@@ -2445,7 +2473,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					line_detail++;  // to keep it the same when the loop decrements it
 				}
 			} else {
-				if (pass == 1) {
+				if (pass == 1 && skip == false) {
+
 					if (pthread_mutex_lock(&db_lock) != 0) {
 						perror("pthread_mutex_lock");
 						exit(EXIT_FAILURE);
@@ -2519,7 +2548,35 @@ void *run_thread(void *vargs) {
 
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
-			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
+			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg); 
+
+			// if(arg->limitbox.is_set == true){
+			// 	// max lat and min long
+			// 	int yTile1 = lat2tiley(arg->limitbox.lat2, z);
+			// 	int xTile1 = long2tilex(arg->limitbox.lon1, z);			
+			// 	// min lat and max long
+			// 	int yTile2 = lat2tiley(arg->limitbox.lat1, z);
+			// 	int xTile2 = long2tilex(arg->limitbox.lon2, z);
+
+			// 	//len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
+			
+
+			// 	if (x >= xTile1 && x <= xTile2 && y >= yTile1 && y <= yTile2){
+			// 		arg->pass = 1;
+			// 		*arg->along += geompos - prevgeom;
+			// 		prevgeom = geompos;
+			// 		break;
+			// 		//len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
+			// 	}
+			// 	else{
+			// 		len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
+			// 	}
+				
+			// }
+			// else{
+			// 	len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
+			// }
+
 
 			if (len < 0) {
 				int *err = &arg->err;
@@ -2584,7 +2641,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum, struct json_object *filter) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum, struct json_object *filter, struct bbox limitbox) {
 	last_progress = 0;
 
 	// The existing layermaps are one table per input thread.
@@ -2774,6 +2831,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].postfilter = postfilter;
 				args[thread].attribute_accum = attribute_accum;
 				args[thread].filter = filter;
+				args[thread].limitbox = limitbox;
 
 				args[thread].tasks = dispatches[thread].tasks;
 				args[thread].running = &running;
@@ -2782,6 +2840,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].wrote_zoom = -1;
 				args[thread].still_dropping = false;
 
+				
 				if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 					perror("pthread_create");
 					exit(EXIT_FAILURE);

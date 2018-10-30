@@ -156,6 +156,7 @@ struct serialization_state {
 
 	bool filters = false;
 	bool uses_gamma = false;
+	struct bbox limitbox;
 
 	std::map<std::string, layermap_entry> *layermap = NULL;
 

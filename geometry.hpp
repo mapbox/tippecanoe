@@ -54,6 +54,19 @@ struct draw {
 	}
 };
 
+struct bbox {
+	bool is_set = false;
+	double lon1;
+	double lat1;
+	double lon2;
+	double lat2;
+
+	long long minx;
+	long long miny;
+	long long maxx;
+	long long maxy;
+};
+
 typedef std::vector<draw> drawvec;
 
 drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y);
