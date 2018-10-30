@@ -1850,8 +1850,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				int yTile2 = lat2tiley(arg->limitbox.lat1, z);
 				int xTile2 = long2tilex(arg->limitbox.lon2, z);
 
-
-				if (tx >= xTile1 && tx <= xTile2 && ty >= yTile1 && ty <= yTile2){
+				if (tx >= xTile1 && tx < xTile2 && ty > yTile1 && ty < yTile2){
 					skip = false;
 				}
 				else{
@@ -2549,34 +2548,6 @@ void *run_thread(void *vargs) {
 			// fprintf(stderr, "%d/%u/%u\n", z, x, y);
 
 			long long len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg); 
-
-			// if(arg->limitbox.is_set == true){
-			// 	// max lat and min long
-			// 	int yTile1 = lat2tiley(arg->limitbox.lat2, z);
-			// 	int xTile1 = long2tilex(arg->limitbox.lon1, z);			
-			// 	// min lat and max long
-			// 	int yTile2 = lat2tiley(arg->limitbox.lat1, z);
-			// 	int xTile2 = long2tilex(arg->limitbox.lon2, z);
-
-			// 	//len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
-			
-
-			// 	if (x >= xTile1 && x <= xTile2 && y >= yTile1 && y <= yTile2){
-			// 		arg->pass = 1;
-			// 		*arg->along += geompos - prevgeom;
-			// 		prevgeom = geompos;
-			// 		break;
-			// 		//len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
-			// 	}
-			// 	else{
-			// 		len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
-			// 	}
-				
-			// }
-			// else{
-			// 	len = write_tile(geom, &geompos, arg->metabase, arg->stringpool, z, x, y, z == arg->maxzoom ? arg->full_detail : arg->low_detail, arg->min_detail, arg->outdb, arg->outdir, arg->buffer, arg->fname, arg->geomfile, arg->minzoom, arg->maxzoom, arg->todo, arg->along, geompos, arg->gamma, arg->child_shards, arg->meta_off, arg->pool_off, arg->initial_x, arg->initial_y, arg->running, arg->simplification, arg->layermaps, arg->layer_unmaps, arg->tiling_seg, arg->pass, arg->passes, arg->mingap, arg->minextent, arg->fraction, arg->prefilter, arg->postfilter, arg->filter, arg);
-			// }
-
 
 			if (len < 0) {
 				int *err = &arg->err;
