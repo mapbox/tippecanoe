@@ -363,6 +363,7 @@ struct reader {
 
 	std::vector<zxy> dirtiles;
 	std::string dirbase;
+	std::string name;
 
 	sqlite3 *db = NULL;
 	sqlite3_stmt *stmt = NULL;
@@ -400,8 +401,9 @@ struct reader {
 
 struct reader *begin_reading(char *fname) {
 	struct reader *r = new reader;
-	struct stat st;
+	r->name = fname;
 
+	struct stat st;
 	if (stat(fname, &st) == 0 && (st.st_mode & S_IFDIR) != 0) {
 		r->db = NULL;
 		r->stmt = NULL;
@@ -735,6 +737,11 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
 				int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
+
+				if (st->maxzoom >= 0 && maxz != st->maxzoom) {
+					fprintf(stderr, "Warning: mismatched maxzooms: %d in %s vs previous %d\n", maxz, r->name.c_str(), st->maxzoom);
+				}
+
 				st->maxzoom = max(st->maxzoom, maxz);
 			}
 			sqlite3_finalize(r->stmt);
