@@ -1,3 +1,7 @@
+## 1.32.3
+
+* Add an option to convert stringified number feature IDs to numbers
+
 ## 1.32.2
 
 * Warn in tile-join if tilesets being joined have inconsistent maxzooms

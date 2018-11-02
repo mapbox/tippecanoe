@@ -352,6 +352,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
    `sum`, `product`, `mean`, `max`, `min`, `concat`, or `comma`
    to specify how the named _attribute_ is accumulated onto the attribute of the same name in a feature that does survive.
  * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
+ * `-aI` or `--convert-stringified-ids-to-numbers`: If a feature ID is the string representation of a number, convert it to a plain number to use as the feature ID.
 
 ### Filtering features by attributes
 

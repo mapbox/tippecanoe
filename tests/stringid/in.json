@@ -1,0 +1,6 @@
+{ "type": "Feature", "id": 12345, "properties": {}, "geometry": { "type": "Point", "coordinates": [ 1, 1 ] } }
+{ "type": "Feature", "id": "12345", "properties": {}, "geometry": { "type": "Point", "coordinates": [ 2, 1 ] } }
+{ "type": "Feature", "id": "12345.6789", "properties": {}, "geometry": { "type": "Point", "coordinates": [ 3, 1 ] } }
+{ "type": "Feature", "id": "9837489273489273894728943728903480989080938597489274389", "properties": {}, "geometry": { "type": "Point", "coordinates": [ 4, 1 ] } }
+{ "type": "Feature", "id": 9837489273489273894728943728903480989080938597489274389, "properties": {}, "geometry": { "type": "Point", "coordinates": [ 5, 1 ] } }
+{ "type": "Feature", "id": "1e5", "properties": {}, "geometry": { "type": "Point", "coordinates": [ 6, 1 ] } }
