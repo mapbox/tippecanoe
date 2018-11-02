@@ -426,6 +426,8 @@ to specify how the named \fIattribute\fP is accumulated onto the attribute of th
 \fB\fC\-pe\fR or \fB\fC\-\-empty\-csv\-columns\-are\-null\fR: Treat empty CSV columns as nulls rather than as empty strings.
 .IP \(bu 2
 \fB\fC\-aI\fR or \fB\fC\-\-convert\-stringified\-ids\-to\-numbers\fR: If a feature ID is the string representation of a number, convert it to a plain number to use as the feature ID.
+.IP \(bu 2
+\fB\fC\-\-use\-attribute\-for\-id=\fR\fIname\fP: Use the attribute with the specified \fIname\fP as if it were specified as the feature ID. (If this attribute is a stringified number, you must also use \fB\fC\-aI\fR to convert it to a number.)
 .RE
 .SS Filtering features by attributes
 .RS

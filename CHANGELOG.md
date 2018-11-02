@@ -1,6 +1,7 @@
 ## 1.32.3
 
 * Add an option to convert stringified number feature IDs to numbers
+* Add an option to use a specified feature attribute as the feature ID
 
 ## 1.32.2
 
