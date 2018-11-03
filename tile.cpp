@@ -1850,7 +1850,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				int yTile2 = lat2tiley(arg->limitbox.lat1, z);
 				int xTile2 = long2tilex(arg->limitbox.lon2, z);
 
-				if (tx >= xTile1 && tx < xTile2 && ty > yTile1 && ty < yTile2){
+				if (tx >= xTile1 && tx < xTile2 && ty >= yTile1 && ty <= yTile2){
 					skip = false;
 				}
 				else{
