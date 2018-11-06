@@ -24,7 +24,7 @@ void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
 		lat = 89.9;
 	}
 	if (lon_class == FP_INFINITE || lon_class == FP_NAN) {
-		lon = 360;
+		lon = 180;
 	}
 
 	// Must limit latitude somewhere to prevent overflow.
@@ -37,11 +37,11 @@ void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
 		lat = 89.9;
 	}
 
-	if (lon < -360) {
-		lon = -360;
+	if (lon < -180) {
+		lon = -180;
 	}
-	if (lon > 360) {
-		lon = 360;
+	if (lon > 180) {
+		lon = 180;
 	}
 
 	double lat_rad = lat * M_PI / 180;
