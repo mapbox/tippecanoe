@@ -9,3 +9,4 @@
 { "type": "Feature", "id": 1234, "properties": { "yes": "no", "special": 27.5, "something": false }, "geometry": { "type": "Point", "coordinates": [ 9, 1 ] } }
 { "type": "Feature", "id": 1234, "properties": { "yes": "no", "special": 98237489273489274389728497289472839478297489274892734892, "something": false }, "geometry": { "type": "Point", "coordinates": [ 10, 1 ] } }
 { "type": "Feature", "properties": { "yes": "no", "special": 27, "something": false }, "geometry": { "type": "Point", "coordinates": [ 11, 1 ] } }
+{ "type": "Feature", "properties": { "yes": "no", "special": "01005", "something": false }, "geometry": { "type": "Point", "coordinates": [ 12, 1 ] } }
