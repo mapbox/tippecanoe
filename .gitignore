@@ -40,9 +40,13 @@ unit
 # Tests
 tests/**/*.mbtiles
 tests/**/*.check
+tests/**/*.geobuf
 
 # Vim
 *.swp
 
 # Mac
 .DS_Store
+
+# Nodejs
+node_modules
