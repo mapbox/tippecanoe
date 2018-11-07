@@ -1,3 +1,12 @@
+## 1.32.3
+
+* Add an option to convert stringified number feature IDs to numbers
+* Add an option to use a specified feature attribute as the feature ID
+
+## 1.32.2
+
+* Warn in tile-join if tilesets being joined have inconsistent maxzooms
+
 ## 1.32.1
 
 * Fix null pointer crash when reading filter output that does not

@@ -76,6 +76,7 @@ size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
 long justx = -1, justy = -1;
+std::string attribute_for_id = "";
 
 int prevent[256];
 int additional[256];
@@ -2542,6 +2543,8 @@ int main(int argc, char **argv) {
 		{"attribute-description", required_argument, 0, 'Y'},
 		{"accumulate-attribute", required_argument, 0, 'E'},
 		{"empty-csv-columns-are-null", no_argument, &prevent[P_EMPTY_CSV_COLUMNS], 1},
+		{"convert-stringified-ids-to-numbers", no_argument, &additional[A_CONVERT_NUMERIC_IDS], 1},
+		{"use-attribute-for-id", required_argument, 0, '~'},
 
 		{"Filtering features by attributes", 0, 0, 0},
 		{"feature-filter-file", required_argument, 0, 'J'},
@@ -2707,6 +2710,8 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s: Can't parse bounding box --%s=%s\n", argv[0], opt, optarg);
 					exit(EXIT_FAILURE);
 				}
+			} else if (strcmp(opt, "use-attribute-for-id") == 0) {
+				attribute_for_id = optarg;
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_FAILURE);
