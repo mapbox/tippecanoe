@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <atomic>
+#include <string>
 
 struct index {
 	long long start = 0;
@@ -46,6 +47,7 @@ extern size_t TEMP_FILES;
 extern size_t max_tile_size;
 extern size_t max_tile_features;
 extern int cluster_distance;
+extern std::string attribute_for_id;
 
 int mkstemp_cloexec(char *name);
 FILE *fopen_oflag(const char *name, const char *mode, int oflag);
