@@ -1,9 +1,9 @@
 { "type": "FeatureCollection", "properties": {
-"bounds": "1.000000,1.000000,11.000000,1.000000",
+"bounds": "1.000000,1.000000,12.000000,1.000000",
 "center": "1.000000,1.000000,0",
 "description": "tests/stringid/out/-z0_-aI_--use-attribute-for-id_special.json.check.mbtiles",
 "format": "pbf",
-"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"something\": \"Boolean\", \"special\": \"Number\", \"yes\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 11,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"something\",\"count\": 1,\"type\": \"boolean\",\"values\": [false]},{\"attribute\": \"special\",\"count\": 2,\"type\": \"number\",\"values\": [27.5,9.823748927348929e+55],\"min\": 27.5,\"max\": 9.823748927348929e+55},{\"attribute\": \"yes\",\"count\": 1,\"type\": \"string\",\"values\": [\"no\"]}]}]}}",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"something\": \"Boolean\", \"special\": \"Number\", \"yes\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 12,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"something\",\"count\": 1,\"type\": \"boolean\",\"values\": [false]},{\"attribute\": \"special\",\"count\": 2,\"type\": \"number\",\"values\": [27.5,9.823748927348929e+55],\"min\": 27.5,\"max\": 9.823748927348929e+55},{\"attribute\": \"yes\",\"count\": 1,\"type\": \"string\",\"values\": [\"no\"]}]}]}}",
 "maxzoom": "0",
 "minzoom": "0",
 "name": "tests/stringid/out/-z0_-aI_--use-attribute-for-id_special.json.check.mbtiles",
@@ -33,6 +33,8 @@
 { "type": "Feature", "id": 1234, "properties": { "yes": "no", "special": 9.823748927348929e+55, "something": false }, "geometry": { "type": "Point", "coordinates": [ 9.931641, 1.054628 ] } }
 ,
 { "type": "Feature", "id": 27, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 10.986328, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 1005, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 11.953125, 1.054628 ] } }
 ] }
 ] }
 ] }

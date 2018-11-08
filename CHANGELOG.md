@@ -1,3 +1,7 @@
+## 1.32.4
+
+* Ignore leading zeroes when converting string attributes to feature IDs
+
 ## 1.32.3
 
 * Add an option to convert stringified number feature IDs to numbers
