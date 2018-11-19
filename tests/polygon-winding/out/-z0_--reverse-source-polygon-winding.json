@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 100.722656, 0.878872 ], [ 100.722656, 0.263671 ], [ 100.195312, 0.263671 ], [ 100.195312, 0.878872 ], [ 100.722656, 0.878872 ] ] ] } }
 ] }
 ] }

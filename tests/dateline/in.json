@@ -5,6 +5,7 @@
 "boolean": true,
 "otherboolean": false,
 "stringify": [ "yes", 27.000000, 27, 1.4e27, { "foo": "bar" } ],
+"integers": [ 1, 2, 4, 8, 16, 32, 64, 128, 256 ],
 "nothing": null,
 "": "something for nothing",
 "escape": "foo\u0001bar,ü\"\\\/\b\f\n\r\t\u2192\uD83D\uDC02🐳",
@@ -92,8 +93,7 @@
     "coordinates": [
       [
 	-112.851562,
-	55.178867,
-	27
+	55.178867
       ],
       [
 	-117.773437,

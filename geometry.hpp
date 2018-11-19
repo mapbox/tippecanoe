@@ -4,15 +4,20 @@
 #include <vector>
 #include <atomic>
 #include <sqlite3.h>
+#include <math.h>
 
 #define VT_POINT 1
 #define VT_LINE 2
 #define VT_POLYGON 3
+#define VT_SPLINE 4
 
 #define VT_END 0
 #define VT_MOVETO 1
 #define VT_LINETO 2
 #define VT_CLOSEPATH 7
+
+#define VT_NODE_3D 8
+#define VT_NODE_ATTRIB 16
 
 // The bitfield is to make sizeof(draw) be 16 instead of 24
 // at the cost, apparently, of a 0.7% increase in running time
@@ -21,12 +26,22 @@ struct draw {
 	long long x : 40;
 	signed char op;
 	long long y : 40;
+	std::vector<double> elevations;
+	std::string attributes;
 	signed char necessary;
 
 	draw(int nop, long long nx, long long ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),
+	      necessary(0) {
+	}
+
+	draw(int nop, long long nx, long long ny, std::vector<double> nel)
+	    : x(nx),
+	      op(nop),
+	      y(ny),
+	      elevations(nel),
 	      necessary(0) {
 	}
 

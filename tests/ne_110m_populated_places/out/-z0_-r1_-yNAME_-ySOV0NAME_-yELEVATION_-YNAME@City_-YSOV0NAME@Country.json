@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "NAME": "Vancouver", "SOV0NAME": "Canada", "ELEVATION": 0 }, "geometry": { "type": "Point", "coordinates": [ -123.134766, 49.325122 ] } }
 ,
 { "type": "Feature", "properties": { "NAME": "San Francisco", "SOV0NAME": "United States", "ELEVATION": 16 }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }

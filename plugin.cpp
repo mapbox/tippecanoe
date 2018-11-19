@@ -72,17 +72,6 @@ void *run_writer(void *a) {
 	return NULL;
 }
 
-// XXX deduplicate
-static std::vector<mvt_geometry> to_feature(drawvec &geom) {
-	std::vector<mvt_geometry> out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
-	}
-
-	return out;
-}
-
 // Reads from the postfilter
 std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	std::map<std::string, mvt_layer> ret;
@@ -152,6 +141,10 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
+		json_object *attributes = json_hash_get(geometry, "attributes");
+		if (attributes == NULL || attributes->type != JSON_ARRAY) {
+			attributes = NULL;
+		}
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
@@ -178,7 +171,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (ret.count(layername) == 0) {
 			mvt_layer l;
 			l.name = layername;
-			l.version = 2;
+			l.version = 3;
 			l.extent = extent;
 
 			ret.insert(std::pair<std::string, mvt_layer>(layername, l));
@@ -186,7 +179,12 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		auto l = ret.find(layername);
 
 		drawvec dv;
-		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
+		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
+		if (attributes != NULL) {
+			drawvec dv2;
+			parse_geometry(t, attributes, dv2, VT_MOVETO, "Filter output", jp->line, j, true);
+			merge_node_attributes(dv, dv2);
+		}
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}
@@ -212,12 +210,16 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (dv.size() > 0) {
 			mvt_feature feature;
 			feature.type = mb_geometry[t];
-			feature.geometry = to_feature(dv);
+			feature.geometry = to_feature(dv, l->second, feature.node_attributes);
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				feature.id = atoll(id->string);
-				feature.has_id = true;
+				if (id->type == JSON_NUMBER) {
+					feature.id = atoll(id->string);
+					feature.has_id = true;
+				} else if (id->type == JSON_STRING) {
+					feature.string_id = id->string;
+				}
 			}
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
@@ -252,6 +254,8 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				fk->second.lines++;
 			} else if (feature.type == mvt_polygon) {
 				fk->second.polygons++;
+			} else if (feature.type == mvt_spline) {
+				fk->second.splines++;
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
@@ -263,9 +267,14 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				// Nulls can be excluded here because this is the postfilter
 				// and it is nearly time to create the vector representation
 
-				if (tp >= 0 && tp != mvt_null) {
+				if (tp >= 0) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
-					l->second.tag(feature, std::string(properties->keys[i]->string), v);
+
+					if (mvt_format == mvt_blake) {
+						l->second.tag_v3(feature, std::string(properties->keys[i]->string), v);
+					} else {
+						l->second.tag(feature, std::string(properties->keys[i]->string), v);
+					}
 
 					type_and_string attrib;
 					attrib.type = tp;
@@ -357,6 +366,10 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
+		json_object *attributes = json_hash_get(geometry, "attributes");
+		if (attributes == NULL || attributes->type != JSON_ARRAY) {
+			attributes = NULL;
+		}
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
@@ -371,7 +384,12 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		}
 
 		drawvec dv;
-		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j);
+		parse_geometry(t, coordinates, dv, VT_MOVETO, "Filter output", jp->line, j, false);
+		if (attributes != NULL) {
+			drawvec dv2;
+			parse_geometry(t, attributes, dv2, VT_MOVETO, "Filter output", jp->line, j, true);
+			merge_node_attributes(dv, dv2);
+		}
 		if (mb_geometry[t] == VT_POLYGON) {
 			dv = fix_polygon(dv);
 		}
@@ -448,8 +466,12 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 			json_object *id = json_hash_get(j, "id");
 			if (id != NULL) {
-				sf.id = atoll(id->string);
-				sf.has_id = true;
+				if (id->type == JSON_NUMBER) {
+					sf.id = atoll(id->string);
+					sf.has_id = true;
+				} else if (id->type == JSON_STRING) {
+					sf.string_id = id->string;
+				}
 			}
 
 			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
@@ -488,6 +510,8 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					fk->second.lines++;
 				} else if (sf.t == mvt_polygon) {
 					fk->second.polygons++;
+				} else if (sf.t == mvt_spline) {
+					fk->second.splines++;
 				}
 			}
 
@@ -497,10 +521,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
 
-				// Nulls can be excluded here because the expression evaluation filter
-				// would have already run before prefiltering
-
-				if (v.type >= 0 && v.type != mvt_null) {
+				if (v.type >= 0) {
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));
 					sf.full_values.push_back(v);
 

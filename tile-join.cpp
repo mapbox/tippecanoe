@@ -27,6 +27,8 @@
 #include "mbtiles.hpp"
 #include "geometry.hpp"
 #include "dirtiles.hpp"
+#include "write_json.hpp"
+#include "text.hpp"
 #include "evaluator.hpp"
 #include "csv.hpp"
 #include <fstream>
@@ -54,19 +56,17 @@ struct stats {
 	double minlat, minlon, maxlat, maxlon;
 };
 
-void aprintf(std::string *buf, const char *format, ...) {
-	va_list ap;
-	char *tmp;
+size_t tag_object(mvt_layer const &layer, mvt_value const &val, mvt_layer &outlayer) {
+	mvt_value tv = val;
 
-	va_start(ap, format);
-	if (vasprintf(&tmp, format, ap) < 0) {
-		fprintf(stderr, "memory allocation failure\n");
-		exit(EXIT_FAILURE);
-	}
-	va_end(ap);
+	return outlayer.tag_value(tv);
+}
 
-	buf->append(tmp, strlen(tmp));
-	free(tmp);
+void copy_nested(mvt_layer &layer, mvt_feature &, std::string key, mvt_value &val, mvt_layer &outlayer, mvt_feature &outfeature) {
+	size_t ko = outlayer.tag_key(key);
+	size_t vo = tag_object(layer, val, outlayer);
+	outfeature.tags.push_back(ko);
+	outfeature.tags.push_back(vo);
 }
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
@@ -107,6 +107,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			outtile.layers[ol].name = layer.name;
 			outtile.layers[ol].version = layer.version;
 			outtile.layers[ol].extent = layer.extent;
+			outtile.layers[ol].zoom = layer.zoom;
+			outtile.layers[ol].x = layer.y;
+			outtile.layers[ol].x = layer.y;
 		}
 
 		mvt_layer &outlayer = outtile.layers[ol];
@@ -134,8 +137,24 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				std::map<std::string, mvt_value> attributes;
 
 				for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
+					if (feat.tags[t] >= layer.keys.size() || feat.tags[t + 1] >= layer.values.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
 					std::string key = layer.keys[feat.tags[t]];
 					mvt_value &val = layer.values[feat.tags[t + 1]];
+
+					attributes.insert(std::pair<std::string, mvt_value>(key, val));
+				}
+
+				for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
+					if (feat.properties[t] >= layer.keys.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
+					std::string key = layer.keys[feat.properties[t]];
+					t++;
+					mvt_value val = layer.decode_property(feat.properties, t);
 
 					attributes.insert(std::pair<std::string, mvt_value>(key, val));
 				}
@@ -144,6 +163,12 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					mvt_value v;
 					v.type = mvt_uint;
 					v.numeric_value.uint_value = feat.id;
+
+					attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+				} else if (feat.string_id.size() != 0) {
+					mvt_value v;
+					v.type = mvt_string;
+					v.string_value = feat.string_id;
 
 					attributes.insert(std::pair<std::string, mvt_value>("$id", v));
 				}
@@ -157,6 +182,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					v.string_value = "LineString";
 				} else if (feat.type == mvt_polygon) {
 					v.string_value = "Polygon";
+				} else if (feat.type == mvt_spline) {
+					v.string_value = "Spline";
 				}
 
 				attributes.insert(std::pair<std::string, mvt_value>("$type", v));
@@ -179,13 +206,43 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.has_id = true;
 				outfeature.id = feat.id;
 			}
+			if (feat.string_id.size() != 0) {
+				outfeature.string_id = feat.string_id;
+			}
+
+			std::vector<std::pair<std::string, mvt_value>> todo;
+
+			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
+				if (feat.tags[t] >= layer.keys.size() || feat.tags[t + 1] >= layer.values.size()) {
+					fprintf(stderr, "Out of bounds attribute reference\n");
+					exit(EXIT_FAILURE);
+				}
+				std::string key = layer.keys[feat.tags[t]];
+				mvt_value &val = layer.values[feat.tags[t + 1]];
+
+				todo.push_back(std::pair<std::string, mvt_value>(key, val));
+			}
+
+			for (size_t t = 0; t + 1 < feat.properties.size(); t++) {
+				if (feat.properties[t] > layer.keys.size()) {
+					fprintf(stderr, "Internal error: out of bounds property key\n");
+					exit(EXIT_FAILURE);
+				}
+
+				std::string key = layer.keys[feat.properties[t]];
+				t++;
+				mvt_value val = layer.decode_property(feat.properties, t);
+
+				todo.push_back(std::pair<std::string, mvt_value>(key, val));
+			}
 
 			std::map<std::string, std::pair<mvt_value, type_and_string>> attributes;
 			std::vector<std::string> key_order;
 
-			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
-				const char *key = layer.keys[feat.tags[t]].c_str();
-				mvt_value &val = layer.values[feat.tags[t + 1]];
+			for (size_t t = 0; t < todo.size(); t++) {
+				const char *key = todo[t].first.c_str();
+				mvt_value &val = todo[t].second;
+
 				std::string value;
 				int type = -1;
 
@@ -210,6 +267,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				} else if (val.type == mvt_uint) {
 					aprintf(&value, "%llu", (long long) val.numeric_value.uint_value);
 					type = mvt_double;
+				} else if (val.type == mvt_null || val.type == mvt_list || val.type == mvt_hash) {
+					value = val.toString();
+					type = mvt_hash;
 				} else {
 					continue;
 				}
@@ -251,11 +311,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
+							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
 									outval.string_value = joinval;
+								} else if (attr_type == mvt_null) {
+									outval.type = mvt_null;
+									outval.numeric_value.null_value = 0;
 								} else {
 									outval.type = mvt_double;
 									outval.numeric_value.double_value = atof(joinval.c_str());
@@ -294,7 +357,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					auto fa = attributes.find(k);
 
 					if (fa != attributes.end()) {
-						outlayer.tag(outfeature, k, fa->second.first);
+						if (fa->second.first.type == mvt_hash) {
+							if (mvt_format == mvt_blake) {
+								outlayer.tag_v3(outfeature, k, fa->second.first);
+							} else {
+								copy_nested(layer, feat, k, fa->second.first, outlayer, outfeature);
+							}
+						} else {
+							if (mvt_format == mvt_blake) {
+								outlayer.tag_v3(outfeature, k, fa->second.first);
+							} else {
+								outlayer.tag(outfeature, k, fa->second.first);
+							}
+						}
+
 						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
 						attributes.erase(fa);
 					}
@@ -308,6 +384,20 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 						outfeature.geometry[i].x = outfeature.geometry[i].x * outlayer.extent / layer.extent;
 						outfeature.geometry[i].y = outfeature.geometry[i].y * outlayer.extent / layer.extent;
 					}
+				}
+
+				std::map<std::string, mvt_value> node_attributes;
+				for (size_t t = 0; t + 1 < feat.node_attributes.size(); t++) {
+					if (feat.node_attributes[t] >= layer.keys.size()) {
+						fprintf(stderr, "Out of bounds attribute reference\n");
+						exit(EXIT_FAILURE);
+					}
+					std::string key = layer.keys[feat.node_attributes[t]];
+					t++;
+					mvt_value val = layer.decode_property(feat.node_attributes, t);
+
+					outfeature.node_attributes.push_back(outlayer.tag_v3_key(key));
+					outlayer.tag_v3_value(val, outfeature.node_attributes);
 				}
 
 				features_added++;
@@ -326,6 +416,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					file_keys->second.lines++;
 				} else if (feat.type == mvt_polygon) {
 					file_keys->second.polygons++;
+				} else if (feat.type == mvt_spline) {
+					file_keys->second.splines++;
 				}
 			}
 		}
@@ -358,6 +450,7 @@ struct reader {
 	long long sorty = 0;
 	long long y = 0;
 	int z_flag = 0;
+	std::string fname;
 
 	std::string data = "";
 
@@ -391,6 +484,13 @@ struct reader {
 			return false;
 		}
 
+		if (fname < r.fname) {
+			return true;
+		}
+		if (fname > r.fname) {
+			return false;
+		}
+
 		if (data < r.data) {
 			return true;
 		}
@@ -419,6 +519,7 @@ struct reader *begin_reading(char *fname) {
 			r->x = r->dirtiles[0].x;
 			r->y = r->dirtiles[0].y;
 			r->sorty = (1LL << r->zoom) - 1 - r->y;
+			r->fname = fname;
 			r->data = dir_read_tile(r->dirbase, r->dirtiles[0]);
 
 			r->dirtiles.erase(r->dirtiles.begin());
@@ -448,11 +549,13 @@ struct reader *begin_reading(char *fname) {
 		r->db = db;
 		r->stmt = stmt;
 		r->next = NULL;
+		r->fname = fname;
 
 		if (sqlite3_step(stmt) == SQLITE_ROW) {
 			r->zoom = sqlite3_column_int(stmt, 0);
 			r->x = sqlite3_column_int(stmt, 1);
 			r->sorty = sqlite3_column_int(stmt, 2);
+			r->fname = fname;
 			r->y = (1LL << r->zoom) - 1 - r->sorty;
 
 			const char *data = (const char *) sqlite3_column_blob(stmt, 3);
@@ -504,7 +607,13 @@ void *join_worker(void *v) {
 		}
 
 		if (anything) {
-			std::string pbf = outtile.encode();
+			if (mvt_format == mvt_reordered) {
+				for (size_t i = 0; i < outtile.layers.size(); i++) {
+					outtile.layers[i].reorder_values();
+				}
+			}
+
+			std::string pbf = outtile.encode(ai->first.z);
 			std::string compressed;
 
 			if (!pC) {
@@ -893,6 +1002,7 @@ int main(int argc, char **argv) {
 		{"no-tile-compression", no_argument, &pC, 1},
 		{"empty-csv-columns-are-null", no_argument, &pe, 1},
 		{"no-tile-stats", no_argument, &pg, 1},
+		{"tile-format", required_argument, 0, 'V'},
 
 		{0, 0, 0, 0},
 	};
@@ -915,6 +1025,19 @@ int main(int argc, char **argv) {
 	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {
 		case 0:
+			break;
+
+		case 'V':
+			if (strcmp(optarg, "blake") == 0) {
+				mvt_format = mvt_blake;
+			} else if (strcmp(optarg, "original") == 0) {
+				mvt_format = mvt_original;
+			} else if (strcmp(optarg, "reordered") == 0) {
+				mvt_format = mvt_reordered;
+			} else {
+				fprintf(stderr, "Unknown vector tile format %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'o':

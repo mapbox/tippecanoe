@@ -2510,6 +2510,7 @@ int main(int argc, char **argv) {
 		{"name", required_argument, 0, 'n'},
 		{"attribution", required_argument, 0, 'A'},
 		{"description", required_argument, 0, 'N'},
+		{"tile-format", required_argument, 0, 'V'},
 
 		{"Input files and layer names", 0, 0, 0},
 		{"layer", required_argument, 0, 'l'},
@@ -2678,6 +2679,19 @@ int main(int argc, char **argv) {
 	while ((i = getopt_long(argc, argv, getopt_str, long_options, &option_index)) != -1) {
 		switch (i) {
 		case 0:
+			break;
+
+		case 'V':
+			if (strcmp(optarg, "blake") == 0) {
+				mvt_format = mvt_blake;
+			} else if (strcmp(optarg, "original") == 0) {
+				mvt_format = mvt_original;
+			} else if (strcmp(optarg, "reordered") == 0) {
+				mvt_format = mvt_reordered;
+			} else {
+				fprintf(stderr, "Unknown vector tile format %s\n", optarg);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case '~': {

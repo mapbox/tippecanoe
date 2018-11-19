@@ -46,6 +46,10 @@ extern "C" {
 
 #include "plugin.hpp"
 
+extern "C" {
+#include "jsonpull/jsonpull.h"
+}
+
 #define CMD_BITS 3
 
 #define XSTRINGIFY(s) STRINGIFY(s)
@@ -53,16 +57,6 @@ extern "C" {
 
 pthread_mutex_t db_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t var_lock = PTHREAD_MUTEX_INITIALIZER;
-
-std::vector<mvt_geometry> to_feature(drawvec &geom) {
-	std::vector<mvt_geometry> out;
-
-	for (size_t i = 0; i < geom.size(); i++) {
-		out.push_back(mvt_geometry(geom[i].op, geom[i].x, geom[i].y));
-	}
-
-	return out;
-}
 
 bool draws_something(drawvec &geom) {
 	for (size_t i = 1; i < geom.size(); i++) {
@@ -91,6 +85,7 @@ struct coalesce {
 	double spacing = 0;
 	bool has_id = false;
 	unsigned long long id = 0;
+	std::string string_id;
 
 	bool operator<(const coalesce &o) const {
 		int cmp = coalindexcmp(this, &o);
@@ -120,7 +115,6 @@ int coalcmp(const void *v1, const void *v2) {
 	if (c1->has_id != c2->has_id) {
 		return (int) c1->has_id - (int) c2->has_id;
 	}
-
 	if (c1->has_id && c2->has_id) {
 		if (c1->id < c2->id) {
 			return -1;
@@ -128,6 +122,13 @@ int coalcmp(const void *v1, const void *v2) {
 		if (c1->id > c2->id) {
 			return 1;
 		}
+	}
+
+	if (c1->string_id < c2->string_id) {
+		return -1;
+	}
+	if (c1->string_id > c2->string_id) {
+		return 1;
 	}
 
 	cmp = metacmp(c1->keys, c1->values, c1->stringpool, c2->keys, c2->values, c2->stringpool);
@@ -202,7 +203,13 @@ void decode_meta(std::vector<long long> const &metakeys, std::vector<long long> 
 		mvt_value key = retrieve_string(metakeys[i], stringpool, NULL);
 		mvt_value value = retrieve_string(metavals[i], stringpool, &otype);
 
-		layer.tag(feature, key.string_value, value);
+		{
+			if (mvt_format == mvt_blake) {
+				layer.tag_v3(feature, key.string_value, value);
+			} else {
+				layer.tag(feature, key.string_value, value);
+			}
+		}
 	}
 }
 
@@ -244,7 +251,7 @@ static int metacmp(const std::vector<long long> &keys1, const std::vector<long l
 	}
 }
 
-void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, std::atomic<long long> *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
+void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, std::atomic<long long> *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, std::string string_id, unsigned long long index, long long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
 		int xo, yo;
 		int span = 1 << (nextzoom - z);
@@ -284,7 +291,10 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 		drawvec geom2;
 		for (size_t i = 0; i < geom.size(); i++) {
-			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
+			draw d = geom[i];
+			d.x = (geom[i].x + sx) >> geometry_scale;
+			d.y = (geom[i].y + sy) >> geometry_scale;
+			geom2.push_back(d);
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -327,6 +337,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 					sf.t = t;
 					sf.has_id = has_id;
 					sf.id = id;
+					sf.string_id = string_id;
 					sf.has_tippecanoe_minzoom = tippecanoe_minzoom != -1;
 					sf.tippecanoe_minzoom = tippecanoe_minzoom;
 					sf.has_tippecanoe_maxzoom = tippecanoe_maxzoom != -1;
@@ -370,6 +381,7 @@ struct partial {
 	double simplification = 0;
 	signed char t = 0;
 	unsigned long long id = 0;
+	std::string string_id;
 	bool has_id = 0;
 	ssize_t renamed = 0;
 	long long extent = 0;
@@ -1227,13 +1239,17 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 
 			if (sf.bbox[0] <= (1LL << 32) * buffer / 256) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x + (1LL << 32), sf.geometry[i].y));
+					draw d = sf.geometry[i];
+					d.x += 1LL << 32;
+					sf.geometry.push_back(d);
 				}
 			}
 
 			if (sf.bbox[2] >= (1LL << 32) - ((1LL << 32) * buffer / 256)) {
 				for (size_t i = 0; i < n; i++) {
-					sf.geometry.push_back(draw(sf.geometry[i].op, sf.geometry[i].x - (1LL << 32), sf.geometry[i].y));
+					draw d = sf.geometry[i];
+					d.x -= 1LL << 32;
+					sf.geometry.push_back(d);
 				}
 			}
 
@@ -1333,7 +1349,7 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.string_id, sf.index, sf.extent);
 			}
 		}
 
@@ -1378,6 +1394,13 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 				attributes.insert(std::pair<std::string, mvt_value>("$id", v));
 			}
+			if (sf.string_id.size() != 0) {
+				mvt_value v;
+				v.type = mvt_string;
+				v.string_value = sf.string_id;
+
+				attributes.insert(std::pair<std::string, mvt_value>("$id", v));
+			}
 
 			mvt_value v;
 			v.type = mvt_string;
@@ -1388,6 +1411,8 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 				v.string_value = "LineString";
 			} else if (sf.t == mvt_polygon) {
 				v.string_value = "Polygon";
+			} else if (sf.t == mvt_spline) {
+				v.string_value = "Spline";
 			}
 
 			attributes.insert(std::pair<std::string, mvt_value>("$type", v));
@@ -1409,24 +1434,6 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 		if (sf.tippecanoe_minzoom == -1 && z < sf.feature_minzoom) {
 			sf.dropped = true;
-		}
-
-		// Remove nulls, now that the expression evaluation filter has run
-
-		for (ssize_t i = (ssize_t) sf.keys.size() - 1; i >= 0; i--) {
-			int type = (stringpool + pool_off[sf.segment])[sf.values[i]];
-
-			if (type == mvt_null) {
-				sf.keys.erase(sf.keys.begin() + i);
-				sf.values.erase(sf.values.begin() + i);
-			}
-		}
-
-		for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-			if (sf.full_values[i].type == mvt_null) {
-				sf.full_keys.erase(sf.full_keys.begin() + i);
-				sf.full_values.erase(sf.full_values.begin() + i);
-			}
 		}
 
 		return sf;
@@ -1489,10 +1496,14 @@ void *run_prefilter(void *v) {
 
 		mvt_feature tmp_feature;
 		tmp_feature.type = sf.t;
-		tmp_feature.geometry = to_feature(sf.geometry);
+		tmp_feature.geometry = to_feature(sf.geometry, tmp_layer, tmp_feature.node_attributes);
 		tmp_feature.id = sf.id;
 		tmp_feature.has_id = sf.has_id;
 		tmp_feature.dropped = sf.dropped;
+
+		if (sf.string_id.size() != 0) {
+			tmp_feature.string_id = sf.string_id;
+		}
 
 		// Offset from tile coordinates back to world coordinates
 		unsigned sx = 0, sy = 0;
@@ -1860,10 +1871,23 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					    sf.geometry.size() == 1) {
 						double x = (double) partials[which_partial].geoms[0][0].x * partials[which_partial].clustered;
 						double y = (double) partials[which_partial].geoms[0][0].y * partials[which_partial].clustered;
+
 						x += sf.geometry[0].x;
 						y += sf.geometry[0].y;
+
 						partials[which_partial].geoms[0][0].x = x / (partials[which_partial].clustered + 1);
 						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
+
+						std::vector<double> e;
+						for (size_t i = 0; i < partials[which_partial].geoms[0][0].elevations.size() &&
+								   i < sf.geometry[0].elevations.size();
+						     i++) {
+							e.push_back(partials[which_partial].geoms[0][0].elevations[i] * partials[which_partial].clustered);
+							e[i] += sf.geometry[0].elevations[i];
+							e[i] /= (partials[which_partial].clustered + 1);
+						}
+
+						partials[which_partial].geoms[0][0].elevations = e;
 					}
 
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
@@ -1949,6 +1973,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.simplification = simplification;
 				p.id = sf.id;
 				p.has_id = sf.has_id;
+				p.string_id = sf.string_id;
 				p.index = sf.index;
 				p.renamed = -1;
 				p.extent = sf.extent;
@@ -2088,6 +2113,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					c.spacing = partials[i].spacing;
 					c.id = partials[i].id;
 					c.has_id = partials[i].has_id;
+					c.string_id = partials[i].string_id;
 
 					// printf("segment %d layer %lld is %s\n", partials[i].segment, partials[i].layer, (*layer_unmaps)[partials[i].segment][partials[i].layer].c_str());
 
@@ -2184,8 +2210,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 			mvt_layer layer;
 			layer.name = layer_iterator->first;
-			layer.version = 2;
+			layer.version = 3;
 			layer.extent = 1 << line_detail;
+#if 0
+			layer.zoom = z;
+			layer.x = tx;
+			layer.y = ty;
+#endif
 
 			for (size_t x = 0; x < layer_features.size(); x++) {
 				mvt_feature feature;
@@ -2199,18 +2230,30 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 
 				feature.type = layer_features[x].type;
-				feature.geometry = to_feature(layer_features[x].geom);
+				feature.geometry = to_feature(layer_features[x].geom, layer, feature.node_attributes);
 				count += layer_features[x].geom.size();
 				layer_features[x].geom.clear();
 
 				feature.id = layer_features[x].id;
 				feature.has_id = layer_features[x].has_id;
 
+				if (layer_features[x].string_id.size() != 0) {
+					feature.string_id = layer_features[x].string_id;
+				}
+
 				decode_meta(layer_features[x].keys, layer_features[x].values, layer_features[x].stringpool, layer, feature);
+
 				for (size_t a = 0; a < layer_features[x].full_keys.size(); a++) {
 					serial_val sv = layer_features[x].full_values[a];
 					mvt_value v = stringified_to_mvt_value(sv.type, sv.s.c_str());
-					layer.tag(feature, layer_features[x].full_keys[a], v);
+
+					{
+						if (mvt_format == mvt_blake) {
+							layer.tag_v3(feature, layer_features[x].full_keys[a], v);
+						} else {
+							layer.tag(feature, layer_features[x].full_keys[a], v);
+						}
+					}
 				}
 
 				if (additional[A_CALCULATE_FEATURE_DENSITY]) {
@@ -2225,7 +2268,12 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					mvt_value v;
 					v.type = mvt_sint;
 					v.numeric_value.sint_value = glow;
-					layer.tag(feature, "tippecanoe_feature_density", v);
+
+					if (mvt_format == mvt_blake) {
+						layer.tag_v3(feature, "tippecanoe_feature_density", v);
+					} else {
+						layer.tag(feature, "tippecanoe_feature_density", v);
+					}
 
 					serial_val sv;
 					sv.type = mvt_double;
@@ -2353,7 +2401,14 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			std::string compressed;
-			std::string pbf = tile.encode();
+
+			if (mvt_format == mvt_reordered) {
+				for (size_t i = 0; i < tile.layers.size(); i++) {
+					tile.layers[i].reorder_values();
+				}
+			}
+
+			std::string pbf = tile.encode(z);
 
 			if (!prevent[P_TILE_COMPRESSION]) {
 				compress(pbf, compressed);

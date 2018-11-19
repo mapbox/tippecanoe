@@ -78,7 +78,7 @@ serial_val readValue(protozero::pbf_reader &pbf) {
 			break;
 
 		case 6:
-			sv.type = mvt_string;  // stringified JSON
+			sv.type = mvt_hash;  // stringified JSON
 			sv.s = pbf.get_string();
 
 			if (sv.s == "null") {

@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 326, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MITCHELL RD/Visitor's Center" }, "geometry": { "type": "Point", "coordinates": [ -122.536268, 37.831785 ] } }
@@ -41,7 +41,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 792 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Lake Merced Blvd & Higuera Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.485027, 37.718726 ] } }
@@ -729,7 +729,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515411, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Rifle Range" }, "geometry": { "type": "Point", "coordinates": [ -122.508845, 37.833039 ] } }
@@ -6371,7 +6371,7 @@
 { "type": "Feature", "properties": { "name": "Gilman Ave & Bill Walsh Way" }, "geometry": { "type": "Point", "coordinates": [ -122.387009, 37.717504 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435331, 37.762708 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
@@ -6391,7 +6391,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 954, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
 ] }
 ] }

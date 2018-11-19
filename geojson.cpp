@@ -65,6 +65,11 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 		return 0;
 	}
 
+	json_object *attributes = json_hash_get(geometry, "attributes");
+	if (attributes != NULL && attributes->type != JSON_ARRAY) {
+		attributes = NULL;
+	}
+
 	int t;
 	for (t = 0; t < GEOM_TYPES; t++) {
 		if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
@@ -100,6 +105,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	bool has_id = false;
 	unsigned long long id_value = 0;
+	std::string string_id_value;
 	if (id != NULL) {
 		if (id->type == JSON_NUMBER) {
 			if (id->number >= 0) {
@@ -159,13 +165,17 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 			}
 
 			if (!converted) {
-				static bool warned_nan = false;
+				if (id->type == JSON_STRING) {
+					string_id_value = id->string;
+				} else {
+					static bool warned_nan = false;
 
-				if (!warned_nan) {
-					char *s = json_stringify(id);
-					fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
-					free(s);  // stringify
-					warned_nan = true;
+					if (!warned_nan) {
+						char *s = json_stringify(id);
+						fprintf(stderr, "Warning: Can't represent non-numeric feature ID %s\n", s);
+						free(s);  // stringify
+						warned_nan = true;
+					}
 				}
 			}
 		}
@@ -210,7 +220,13 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	}
 
 	drawvec dv;
-	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature);
+	parse_geometry(t, coordinates, dv, VT_MOVETO, sst->fname, sst->line, feature, false);
+
+	if (attributes != NULL) {
+		drawvec dv2;
+		parse_geometry(t, attributes, dv2, VT_MOVETO, sst->fname, sst->line, feature, true);
+		merge_node_attributes(dv, dv2);
+	}
 
 	serial_feature sf;
 	sf.layer = layer;
@@ -218,6 +234,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	sf.t = mb_geometry[t];
 	sf.has_id = has_id;
 	sf.id = id_value;
+	sf.string_id = string_id_value;
 	sf.has_tippecanoe_minzoom = (tippecanoe_minzoom != -1);
 	sf.tippecanoe_minzoom = tippecanoe_minzoom;
 	sf.has_tippecanoe_maxzoom = (tippecanoe_maxzoom != -1);

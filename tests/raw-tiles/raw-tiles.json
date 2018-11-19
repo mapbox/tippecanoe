@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.583290 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.583290 ] } }
@@ -23,7 +23,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 1, "x": 0, "y": 0, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.583290 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.583290 ] } }
@@ -35,7 +35,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 2, "x": 0, "y": 1, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.583290 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.695312, 45.567910 ] } }
@@ -47,7 +47,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 3, "x": 1, "y": 2, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.684326, 45.575600 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.684326, 45.560218 ] } }
@@ -59,7 +59,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 4, "x": 2, "y": 5, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.684326, 45.571755 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.678833, 45.560218 ] } }
@@ -71,7 +71,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 5, "x": 5, "y": 11, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.684326, 45.571755 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.676086, 45.558295 ] } }
@@ -83,7 +83,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 6, "x": 10, "y": 22, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682953, 45.570794 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.676086, 45.557333 ] } }
@@ -95,7 +95,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 7, "x": 20, "y": 45, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682953, 45.570313 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675400, 45.556853 ] } }
@@ -107,7 +107,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 8, "x": 40, "y": 91, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682610, 45.570073 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675400, 45.556853 ] } }
@@ -119,7 +119,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 9, "x": 81, "y": 183, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682438, 45.570073 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675228, 45.556732 ] } }
@@ -131,7 +131,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 10, "x": 163, "y": 366, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682438, 45.570013 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675228, 45.556732 ] } }
@@ -143,7 +143,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 326, "y": 732, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682438, 45.569983 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675185, 45.556732 ] } }
@@ -155,7 +155,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 652, "y": 1465, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Three Friends Coffeehouse", "Address": "201 SE 12th Ave, Portland, OR 97214", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.654972, 45.521263 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Lucky Labrador Brew Pub", "Address": "915 SE Hawthorne Blvd. Portland, OR 97214", "Notes": "Dog friendly" }, "geometry": { "type": "Point", "coordinates": [ -122.656260, 45.512332 ] } }
@@ -163,7 +163,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 652, "y": 1464, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682438, 45.569983 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675185, 45.556732 ] } }
@@ -173,7 +173,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1304, "y": 2930, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Three Friends Coffeehouse", "Address": "201 SE 12th Ave, Portland, OR 97214", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.654961, 45.521263 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Lucky Labrador Brew Pub", "Address": "915 SE Hawthorne Blvd. Portland, OR 97214", "Notes": "Dog friendly" }, "geometry": { "type": "Point", "coordinates": [ -122.656260, 45.512332 ] } }
@@ -181,13 +181,13 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1304, "y": 2929, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Three Friends Coffeehouse", "Address": "201 SE 12th Ave, Portland, OR 97214", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.654961, 45.521263 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1304, "y": 2928, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682427, 45.569975 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675174, 45.556732 ] } }
@@ -195,19 +195,19 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 14, "x": 2608, "y": 5857, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Albina Press", "Address": "4637 N Albina Ave  Portland, OR 97217", "Notes": "usually busy, outlets on side wall only" }, "geometry": { "type": "Point", "coordinates": [ -122.675169, 45.556732 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 14, "x": 2608, "y": 5856, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Arbor Lodge", "Address": "1507 N Rosa Parks Way  Portland, OR 97217", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.682427, 45.569975 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 14, "x": 2609, "y": 5860, "compressed": false }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "hackspots", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "Name": "Three Friends Coffeehouse", "Address": "201 SE 12th Ave, Portland, OR 97214", "Notes": "" }, "geometry": { "type": "Point", "coordinates": [ -122.654961, 45.521259 ] } }
 ,
 { "type": "Feature", "properties": { "Name": "Lucky Labrador Brew Pub", "Address": "915 SE Hawthorne Blvd. Portland, OR 97214", "Notes": "Dog friendly" }, "geometry": { "type": "Point", "coordinates": [ -122.656260, 45.512332 ] } }

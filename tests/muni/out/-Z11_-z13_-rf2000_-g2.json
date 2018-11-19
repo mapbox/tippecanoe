@@ -11,7 +11,7 @@
 "version": "2"
 }, "features": [
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 326, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MITCHELL RD/Visitor's Center" }, "geometry": { "type": "Point", "coordinates": [ -122.536268, 37.831785 ] } }
@@ -33,7 +33,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 792 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Arballo Dr & Pinto Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.483096, 37.720763 ] } }
@@ -587,7 +587,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515411, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Rifle Range" }, "geometry": { "type": "Point", "coordinates": [ -122.508845, 37.833039 ] } }
@@ -5095,7 +5095,7 @@
 { "type": "Feature", "properties": { "name": "Gilman Ave & Giants Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.387009, 37.717504 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435331, 37.762708 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
@@ -5111,13 +5111,13 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 954, "y": 791 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820023 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 653, "y": 1582 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832395 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MITCHELL RD/Visitor's Center" }, "geometry": { "type": "Point", "coordinates": [ -122.536268, 37.831785 ] } }
@@ -5143,7 +5143,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1584 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500048, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.499919, 37.718743 ] } }
@@ -5489,7 +5489,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1583 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Lincoln Blvd & Bowley Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.482624, 37.788471 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Presidio Ave & Clay St" }, "geometry": { "type": "Point", "coordinates": [ -122.447047, 37.788980 ] } }
@@ -8139,7 +8139,7 @@
 { "type": "Feature", "properties": { "name": "Russia Ave & Moscow St" }, "geometry": { "type": "Point", "coordinates": [ -122.430139, 37.718183 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435310, 37.762691 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762624 ] } }
@@ -8149,7 +8149,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 654, "y": 1582 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515390, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.514961, 37.831802 ] } }
@@ -8497,7 +8497,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1584 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Naples St & Russia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.432413, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Persia Ave & Moscow St" }, "geometry": { "type": "Point", "coordinates": [ -122.428980, 37.719711 ] } }
@@ -8803,7 +8803,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1583 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fillmore St & Sutter St" }, "geometry": { "type": "Point", "coordinates": [ -122.433207, 37.785996 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Sutter St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.432842, 37.786097 ] } }
@@ -11091,7 +11091,7 @@
 { "type": "Feature", "properties": { "name": "Gilman Ave & Bill Walsh Way" }, "geometry": { "type": "Point", "coordinates": [ -122.387009, 37.717504 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788709 ] } }
@@ -11113,7 +11113,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 655, "y": 1582 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Buchanan St & Bay St" }, "geometry": { "type": "Point", "coordinates": [ -122.433357, 37.803443 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Marina Blvd & Laguna St" }, "geometry": { "type": "Point", "coordinates": [ -122.432220, 37.805139 ] } }
@@ -12077,7 +12077,7 @@
 { "type": "Feature", "properties": { "name": "Harrison St & Main St" }, "geometry": { "type": "Point", "coordinates": [ -122.390614, 37.788014 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401943, 37.788709 ] } }
@@ -12085,19 +12085,19 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 12, "x": 1908, "y": 1582 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240014, 37.820006 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1307, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Field Rd & Light House" }, "geometry": { "type": "Point", "coordinates": [ -122.529691, 37.821836 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1307, "y": 3164 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fort Cronkhite Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.538671, 37.832387 ] } }
 ,
 { "type": "Feature", "properties": { "name": "MITCHELL RD/Visitor's Center" }, "geometry": { "type": "Point", "coordinates": [ -122.536268, 37.831785 ] } }
@@ -12125,7 +12125,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1308, "y": 3168 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.500037, 37.718998 ] } }
 ,
 { "type": "Feature", "properties": { "name": "John Muir Dr & Skyline Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.499919, 37.718743 ] } }
@@ -12201,7 +12201,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1308, "y": 3167 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Noriega St & 38th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.496722, 37.753437 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Sunset Blvd & Noriega St" }, "geometry": { "type": "Point", "coordinates": [ -122.495327, 37.753539 ] } }
@@ -12745,7 +12745,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1308, "y": 3166 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Lincoln Blvd & Bowley Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.482624, 37.788471 ] } }
 ,
 { "type": "Feature", "properties": { "name": "48th Ave & Point Lobos Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.509950, 37.779916 ] } }
@@ -13377,7 +13377,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1308, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Golden Gate Br Tunnel/Merchant Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.475876, 37.806673 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Merchant St & Lincoln Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.475886, 37.803960 ] } }
@@ -13411,7 +13411,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1308, "y": 3164 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.515390, 37.831751 ] } }
 ,
 { "type": "Feature", "properties": { "name": "BUNKER RD/Stables" }, "geometry": { "type": "Point", "coordinates": [ -122.514950, 37.831802 ] } }
@@ -13447,7 +13447,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1309, "y": 3168 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Gonzalez Dr & Cardenas Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475640, 37.719108 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Cardenas Ave & Gonzalez Dr" }, "geometry": { "type": "Point", "coordinates": [ -122.475382, 37.719040 ] } }
@@ -13765,7 +13765,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1309, "y": 3167 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "19th Ave & Ortega St" }, "geometry": { "type": "Point", "coordinates": [ -122.476197, 37.752725 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Ortega St" }, "geometry": { "type": "Point", "coordinates": [ -122.476401, 37.752063 ] } }
@@ -14975,13 +14975,13 @@
 { "type": "Feature", "properties": { "name": "San Jose Ave & Mt Vernon Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.448603, 37.718285 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458624, 37.748356 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1309, "y": 3166 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Sacramento St & Presidio Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.447015, 37.788098 ] } }
 ,
 { "type": "Feature", "properties": { "name": "California St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.440878, 37.788090 ] } }
@@ -16219,7 +16219,7 @@
 { "type": "Feature", "properties": { "name": "Market St & Sanchez St" }, "geometry": { "type": "Point", "coordinates": [ -122.431222, 37.765635 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435299, 37.762691 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435235, 37.762624 ] } }
@@ -16227,7 +16227,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1309, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Golden Gate Br Tunnel/Merchant Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.475876, 37.806673 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Merchant St & Lincoln Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.475886, 37.803960 ] } }
@@ -16629,7 +16629,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1310, "y": 3168 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Naples St & Russia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.432413, 37.719201 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Prague St & Persia Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.427188, 37.719032 ] } }
@@ -16983,7 +16983,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1310, "y": 3167 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "24th St & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.431995, 37.751384 ] } }
 ,
 { "type": "Feature", "properties": { "name": "24th St & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.431780, 37.751512 ] } }
@@ -18147,7 +18147,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1310, "y": 3166 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Fillmore St & Eddy St" }, "geometry": { "type": "Point", "coordinates": [ -122.432338, 37.781739 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Fillmore St & Eddy St" }, "geometry": { "type": "Point", "coordinates": [ -122.432402, 37.781527 ] } }
@@ -19669,7 +19669,7 @@
 { "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.387663, 37.753132 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412522, 37.780348 ] } }
@@ -19691,7 +19691,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1310, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "FORT MASON/Bus isl nr guard gate" }, "geometry": { "type": "Point", "coordinates": [ -122.432102, 37.805283 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Marina Blvd & Laguna St" }, "geometry": { "type": "Point", "coordinates": [ -122.432220, 37.805130 ] } }
@@ -20809,7 +20809,7 @@
 { "type": "Feature", "properties": { "name": "Harrison St & Main St" }, "geometry": { "type": "Point", "coordinates": [ -122.390614, 37.788014 ] } }
 ] }
 ,
-{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "subway", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402136, 37.788794 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.401932, 37.788709 ] } }
@@ -20817,7 +20817,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1311, "y": 3168 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Gilman Ave & Griffith St" }, "geometry": { "type": "Point", "coordinates": [ -122.388275, 37.718242 ] } }
 ,
 { "type": "Feature", "properties": { "name": "49ERS DRIVE" }, "geometry": { "type": "Point", "coordinates": [ -122.387813, 37.714126 ] } }
@@ -20833,7 +20833,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1311, "y": 3167 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.387867, 37.752555 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Cesar Chavez St" }, "geometry": { "type": "Point", "coordinates": [ -122.387727, 37.750400 ] } }
@@ -21071,7 +21071,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1311, "y": 3166 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "The Embarcadero & Brannan St" }, "geometry": { "type": "Point", "coordinates": [ -122.388146, 37.784359 ] } }
 ,
 { "type": "Feature", "properties": { "name": "The Embarcadero & Brannan St" }, "geometry": { "type": "Point", "coordinates": [ -122.387985, 37.784630 ] } }
@@ -21111,7 +21111,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1311, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "The Embarcadero&Harrsion St NE-FS/PS" }, "geometry": { "type": "Point", "coordinates": [ -122.388543, 37.789684 ] } }
 ,
 { "type": "Feature", "properties": { "name": "The Embarcadero & Folsom St" }, "geometry": { "type": "Point", "coordinates": [ -122.388489, 37.789574 ] } }
@@ -21165,7 +21165,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 1311, "y": 3164 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "Gateview Ave & Mason Ct" }, "geometry": { "type": "Point", "coordinates": [ -122.377224, 37.828184 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Avenue B & Gateview Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.377406, 37.826955 ] } }
@@ -21211,7 +21211,7 @@
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 13, "x": 3817, "y": 3165 }, "features": [
-{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 2, "extent": 4096 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "muni", "version": 3, "extent": 4096 }, "features": [
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.240003, 37.820006 ] } }
 ] }
 ] }

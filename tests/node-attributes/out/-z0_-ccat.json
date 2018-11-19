@@ -1,0 +1,36 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-122.399233,36.034494,-86.296642,39.844024",
+"center": "-86.296642,36.034494,0",
+"description": "tests/node-attributes/out/-z0_-ccat.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 10,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/node-attributes/out/-z0_-ccat.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 3, "extent": 4096, "elevation_scaling": { "offset": 50, "multiplier": 8192, "base": 32768 } }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -122.255859, 37.718590, 0 ], [ -122.431641, 37.788081, 0 ], [ -122.431641, 37.439974, 8192 ], [ -122.255859, 37.370157, 8192 ], [ -120.146484, 36.949892, 8192 ], [ -116.982422, 36.879621, 8192 ], [ -116.279297, 36.385913, 8192 ], [ -116.103516, 36.385913, 8192 ], [ -115.839844, 36.102376, 8192 ], [ -115.224609, 36.102376, 0 ] ], "attributes": [ {"time":"2015-06-23T22:02:16Z"}, {"time":"2015-06-23T22:30:35Z"}, {"time":"2015-06-23T22:34:00Z"}, {"time":"2015-06-23T22:35:21Z"}, {"time":"2015-06-23T22:49:15Z"}, {"time":"2015-06-23T23:09:16Z"}, {"time":"2015-06-23T23:15:42Z"}, {"time":"2015-06-23T23:16:40Z"}, {"time":"2015-06-23T23:20:11Z"}, {"time":"2015-06-23T23:27:27Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -115.224609, 36.102376, 0 ], [ -115.312500, 36.244273, 0 ], [ -113.291016, 36.315125, 8192 ], [ -110.917969, 37.230328, 8192 ], [ -108.193359, 37.718590, 16384 ] ], "attributes": [ {"time":"2015-06-24T01:14:16Z"}, {"time":"2015-06-24T01:53:02Z"}, {"time":"2015-06-24T02:06:33Z"}, {"time":"2015-06-24T02:22:26Z"}, {"time":"2015-06-24T02:38:46Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -107.841797, 37.788081, 16384 ], [ -107.138672, 37.926868, 16384 ] ], "attributes": [ {"time":"2015-06-24T02:41:22Z"}, {"time":"2015-06-24T02:45:17Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -107.050781, 37.926868, 16384 ], [ -105.996094, 38.065392, 16384 ] ], "attributes": [ {"time":"2015-06-24T02:45:58Z"}, {"time":"2015-06-24T02:52:16Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -105.732422, 38.134557, 16384 ], [ -105.644531, 38.134557, 16384 ] ], "attributes": [ {"time":"2015-06-24T02:54:01Z"}, {"time":"2015-06-24T02:54:26Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -105.380859, 38.203655, 0 ], [ -103.974609, 38.134557, 16384 ] ], "attributes": [ {"time":"2015-06-24T02:56:22Z"}, {"time":"2015-06-24T03:04:33Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -103.886719, 38.134557, 16384 ], [ -102.568359, 38.134557, 16384 ], [ -101.601562, 38.341656, 16384 ] ], "attributes": [ {"time":"2015-06-24T03:05:09Z"}, {"time":"2015-06-24T03:13:01Z"}, {"time":"2015-06-24T03:18:59Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -101.425781, 38.341656, 16384 ], [ -100.634766, 38.548165, 16384 ], [ -97.207031, 39.027719, 16384 ] ], "attributes": [ {"time":"2015-06-24T03:20:11Z"}, {"time":"2015-06-24T03:25:26Z"}, {"time":"2015-06-24T03:45:35Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -96.328125, 39.164141, 16384 ], [ -90.439453, 39.842286, 16384 ], [ -86.923828, 39.909736, 8192 ] ], "attributes": [ {"time":"2015-06-24T03:51:05Z"}, {"time":"2015-06-24T04:25:18Z"}, {"time":"2015-06-24T04:45:15Z"} ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ -86.923828, 39.909736, 0 ], [ -86.572266, 39.639538, 0 ], [ -86.308594, 39.774769, 0 ] ], "attributes": [ {"time":"2015-06-24T04:45:30Z"}, {"time":"2015-06-24T04:49:24Z"}, {"time":"2015-06-24T04:55:29Z"} ] } }
+] }
+] }
+] }

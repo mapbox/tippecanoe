@@ -41,15 +41,15 @@ void json_context(json_object *j) {
 	free(s);  // stringify
 }
 
-void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature) {
-	if (j == NULL || j->type != JSON_ARRAY) {
-		fprintf(stderr, "%s:%d: expected array for type %d\n", fname, line, t);
-		json_context(feature);
-		return;
-	}
-
+void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fname, int line, json_object *feature, bool doing_attributes) {
 	int within = geometry_within[t];
 	if (within >= 0) {
+		if (j == NULL || j->type != JSON_ARRAY) {
+			fprintf(stderr, "%s:%d: expected array for coordinate container %d\n", fname, line, t);
+			json_context(feature);
+			return;
+		}
+
 		size_t i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
@@ -60,20 +60,34 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 				}
 			}
 
-			parse_geometry(within, j->array[i], out, op, fname, line, feature);
+			parse_geometry(within, j->array[i], out, op, fname, line, feature, doing_attributes);
 		}
 	} else {
-		if (j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
+		if (doing_attributes) {
+			draw d(op, 0, 0);
+
+			if (j != NULL && j->type == JSON_HASH) {
+				char *s = json_stringify(j);
+				d.attributes = std::string(s);
+				free(s);  // stringify
+			} else {
+				fprintf(stderr, "%s:%d: malformed point attribute\n", fname, line);
+				json_context(j);
+				json_context(feature);
+			}
+
+			out.push_back(d);
+		} else if (j != NULL && j->type == JSON_ARRAY && j->length >= 2 && j->array[0]->type == JSON_NUMBER && j->array[1]->type == JSON_NUMBER) {
 			long long x, y;
 			double lon = j->array[0]->number;
 			double lat = j->array[1]->number;
 			projection->project(lon, lat, 32, &x, &y);
 
-			if (j->length > 2) {
+			if (j->length > 3) {
 				static int warned = 0;
 
 				if (!warned) {
-					fprintf(stderr, "%s:%d: ignoring dimensions beyond two\n", fname, line);
+					fprintf(stderr, "%s:%d: ignoring dimensions beyond three\n", fname, line);
 					json_context(j);
 					json_context(feature);
 					warned = 1;
@@ -81,7 +95,14 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			}
 
 			draw d(op, x, y);
-			out.push_back(draw(op, x, y));
+
+			for (size_t i = 2; i < j->length; i++) {
+				if (j->array[i]->type == JSON_NUMBER) {
+					d.elevations.push_back(j->array[i]->number);
+				}
+			}
+
+			out.push_back(d);
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 			json_context(j);
@@ -100,6 +121,22 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 		// of the outer ring be the opposite of the order of the inner rings.
 
 		out.push_back(draw(VT_CLOSEPATH, 0, 0));
+	}
+}
+
+void merge_node_attributes(drawvec &geom, drawvec &attributes) {
+	if (attributes.size() != geom.size()) {
+		fprintf(stderr, "Geometry attributes don't match coordinates: %zu attributes for %zu geometries\n", attributes.size(), geom.size());
+		exit(EXIT_FAILURE);
+	}
+
+	for (size_t i = 0; i < attributes.size(); i++) {
+		if (geom[i].op != attributes[i].op) {
+			fprintf(stderr, "Geometry attributes don't match coordinates: op %d vs %d\n", geom[i].op, attributes[i].op);
+			exit(EXIT_FAILURE);
+		}
+
+		geom[i].attributes = attributes[i].attributes;
 	}
 }
 
@@ -178,7 +215,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			type = mvt_null;
 			stringified = "null";
 		} else {
-			type = mvt_string;
+			type = mvt_hash;
 			stringified = val;
 		}
 	}

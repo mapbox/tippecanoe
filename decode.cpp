@@ -51,7 +51,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	for (size_t i = 0; i < tile.layers.size(); i++) {
 		state.json_write_string(tile.layers[i].name);
 
-		size_t points = 0, lines = 0, polygons = 0;
+		size_t points = 0, lines = 0, polygons = 0, splines = 0;
 		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
 			if (tile.layers[i].features[j].type == mvt_point) {
 				points++;
@@ -59,6 +59,8 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 				lines++;
 			} else if (tile.layers[i].features[j].type == mvt_polygon) {
 				polygons++;
+			} else if (tile.layers[i].features[j].type == mvt_spline) {
+				splines++;
 			}
 		}
 
@@ -73,8 +75,26 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 		state.json_write_string("polygons");
 		state.json_write_unsigned(polygons);
 
+		state.json_write_string("splines");
+		state.json_write_unsigned(splines);
+
 		state.json_write_string("extent");
 		state.json_write_signed(tile.layers[i].extent);
+
+		if (tile.layers[i].zoom >= 0) {
+			state.json_write_string("zoom");
+			state.json_write_unsigned(tile.layers[i].zoom);
+		}
+
+		if (tile.layers[i].x >= 0) {
+			state.json_write_string("x");
+			state.json_write_unsigned(tile.layers[i].x);
+		}
+
+		if (tile.layers[i].y >= 0) {
+			state.json_write_string("y");
+			state.json_write_unsigned(tile.layers[i].y);
+		}
 
 		state.json_end_hash();
 	}
@@ -83,6 +103,21 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	state.json_end_hash();
 
 	state.json_write_newline();
+}
+
+void write_scaling(json_writer &state, mvt_scaling const &scaling) {
+	state.json_write_hash();
+
+	state.json_write_string("offset");
+	state.json_write_unsigned(scaling.offset);
+
+	state.json_write_string("multiplier");
+	state.json_write_number(scaling.multiplier);
+
+	state.json_write_string("base");
+	state.json_write_number(scaling.base);
+
+	state.json_end_hash();
 }
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
@@ -188,6 +223,37 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 
 				state.json_write_string("extent");
 				state.json_write_signed(layer.extent);
+
+				if (layer.zoom >= 0) {
+					state.json_write_string("zoom");
+					state.json_write_unsigned(layer.zoom);
+				}
+
+				if (layer.x >= 0) {
+					state.json_write_string("x");
+					state.json_write_unsigned(layer.x);
+				}
+
+				if (layer.y >= 0) {
+					state.json_write_string("y");
+					state.json_write_unsigned(layer.y);
+				}
+
+				if (layer.has_elevation_scaling) {
+					state.json_write_string("elevation_scaling");
+					write_scaling(state, layer.elevation_scaling);
+				}
+
+				if (layer.attribute_scalings.size() != 0) {
+					state.json_write_string("attribute_scalings");
+					state.json_write_array();
+
+					for (size_t i = 0; i < layer.attribute_scalings.size(); i++) {
+						write_scaling(state, layer.attribute_scalings[i]);
+					}
+
+					state.json_end_array();
+				}
 
 				state.json_end_hash();
 

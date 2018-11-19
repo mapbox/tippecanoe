@@ -1,0 +1,13 @@
+#!/bin/sh
+
+rm -rf /tmp/vec
+../mbutil/mb-util --image_format=pbf $1 /tmp/vec
+
+find /tmp/vec -name '*.pbf' -type f -print0 |
+if xargs -0 python3 ../vector-tile-base/tests/test_decode_reencode.py
+then :
+else exit 1
+fi
+
+./tippecanoe-decode -x generator /tmp/vec
+# rm -rf /tmp/$$

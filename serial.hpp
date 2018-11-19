@@ -16,21 +16,25 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 void serialize_int(FILE *out, int n, std::atomic<long long> *fpos, const char *fname);
 void serialize_long_long(FILE *out, long long n, std::atomic<long long> *fpos, const char *fname);
 void serialize_ulong_long(FILE *out, unsigned long long n, std::atomic<long long> *fpos, const char *fname);
+void serialize_double(FILE *out, double n, std::atomic<long long> *fpos, const char *fname);
 void serialize_byte(FILE *out, signed char n, std::atomic<long long> *fpos, const char *fname);
 void serialize_uint(FILE *out, unsigned n, std::atomic<long long> *fpos, const char *fname);
-void serialize_string(FILE *out, const char *s, std::atomic<long long> *fpos, const char *fname);
+void serialize_string(FILE *out, std::string const &s, std::atomic<long long> *fpos, const char *fname);
 
 void deserialize_int(char **f, int *n);
 void deserialize_long_long(char **f, long long *n);
 void deserialize_ulong_long(char **f, unsigned long long *n);
+void deserialize_double(char **f, double *n);
 void deserialize_uint(char **f, unsigned *n);
 void deserialize_byte(char **f, signed char *n);
 
 int deserialize_int_io(FILE *f, int *n, std::atomic<long long> *geompos);
 int deserialize_long_long_io(FILE *f, long long *n, std::atomic<long long> *geompos);
 int deserialize_ulong_long_io(FILE *f, unsigned long long *n, std::atomic<long long> *geompos);
+int deserialize_double_io(FILE *f, double *n, std::atomic<long long> *geompos);
 int deserialize_uint_io(FILE *f, unsigned *n, std::atomic<long long> *geompos);
 int deserialize_byte_io(FILE *f, signed char *n, std::atomic<long long> *geompos);
+int deserialize_string_io(FILE *f, std::string &s, std::atomic<long long> *geompos);
 
 struct serial_val {
 	int type = 0;
@@ -47,6 +51,7 @@ struct serial_feature {
 
 	bool has_id = false;
 	unsigned long long id = 0;
+	std::string string_id = "";
 
 	bool has_tippecanoe_minzoom = false;
 	int tippecanoe_minzoom = 0;
