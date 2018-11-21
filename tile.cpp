@@ -1688,6 +1688,26 @@ bool find_partial(std::vector<partial> &partials, serial_feature &sf, ssize_t &o
 	return false;
 }
 
+static bool line_is_too_small(drawvec const &geometry, int z, int detail) {
+	if (geometry.size() == 0) {
+		return true;
+	}
+
+	long long x = geometry[0].x >> (32 - detail - z);
+	long long y = geometry[0].y >> (32 - detail - z);
+
+	for (auto &g : geometry) {
+		long long xx = g.x >> (32 - detail - z);
+		long long yy = g.y >> (32 - detail - z);
+
+		if (xx != x || yy != y) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1928,6 +1948,11 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					sf.geometry = reduce_tiny_poly(sf.geometry, z, line_detail, &reduced, &accum_area);
 				}
 				has_polygons = true;
+			}
+			if (sf.t == VT_POLYGON || sf.t == VT_LINE) {
+				if (line_is_too_small(sf.geometry, z, line_detail)) {
+					continue;
+				}
 			}
 
 			if (sf.geometry.size() > 0) {
