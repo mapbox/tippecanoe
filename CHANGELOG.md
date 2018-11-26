@@ -1,3 +1,7 @@
+## 1.32.6
+
+* Make it an error, not a warning, to have missing coordinates for a point
+
 ## 1.32.5
 
 * Use less memory on lines and polygons that are too small for the tile

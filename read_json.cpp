@@ -86,6 +86,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 			json_context(j);
 			json_context(feature);
+			exit(EXIT_FAILURE);
 		}
 	}
 
