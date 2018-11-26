@@ -1135,8 +1135,8 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 	double scale = 1 << (32 - detail - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
-		geom[i].x = std::round(geom[i].x / scale);
-		geom[i].y = std::round(geom[i].y / scale);
+		geom[i].x = std::floor(geom[i].x / scale);
+		geom[i].y = std::floor(geom[i].y / scale);
 	}
 
 	for (size_t i = 0; i < geom.size(); i++) {

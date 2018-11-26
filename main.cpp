@@ -3050,9 +3050,14 @@ int main(int argc, char **argv) {
 		full_detail = 12;
 	}
 
-	if (full_detail < min_detail || low_detail < min_detail) {
-		fprintf(stderr, "%s: Full detail and low detail must be at least minimum detail\n", argv[0]);
-		exit(EXIT_FAILURE);
+	if (full_detail < min_detail) {
+		min_detail = full_detail;
+		fprintf(stderr, "%s: Reducing minimum detail to match full detail %d\n", argv[0], min_detail);
+	}
+
+	if (low_detail < min_detail) {
+		min_detail = low_detail;
+		fprintf(stderr, "%s: Reducing minimum detail to match low detail %d\n", argv[0], min_detail);
 	}
 
 	// Need two checks: one for geometry representation, the other for

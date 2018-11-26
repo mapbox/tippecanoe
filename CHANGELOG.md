@@ -1,3 +1,10 @@
+## 1.32.5
+
+* Use less memory on lines and polygons that are too small for the tile
+* Fix coordinate rounding problem that was causing --grid-low-zooms grids
+  to be lost at low zooms if the original polygons were not aligned to
+  tile boundaries
+
 ## 1.32.4
 
 * Ignore leading zeroes when converting string attributes to feature IDs
