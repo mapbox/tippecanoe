@@ -1142,7 +1142,7 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			out.push_back(geom[i]);
-		} else {
+		} else if (out.size() > 0) {
 			long long x0 = out[out.size() - 1].x;
 			long long y0 = out[out.size() - 1].y;
 			long long x1 = geom[i].x;
@@ -1202,6 +1202,9 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 			}
 
 			// out.push_back(draw(VT_LINETO, xx, yy));
+		} else {
+			fprintf(stderr, "Can't happen: stairstepping lineto with no moveto\n");
+			exit(EXIT_FAILURE);
 		}
 	}
 
