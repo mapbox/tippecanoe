@@ -21,15 +21,15 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.000000, 0.000000 ], [ 0.000000, -0.966751 ], [ -1.054688, -0.966751 ], [ -1.054688, 0.000000 ], [ 0.000000, 0.000000 ] ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.054628 ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 1.054628 ], [ 0.966797, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.054628 ], [ 0.966797, 1.054628 ] ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.966751 ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 0.000000 ], [ 0.966797, -0.966751 ], [ 0.000000, -0.966751 ], [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 0.000000 ], [ 0.966797, -0.966751 ], [ 0.000000, -0.966751 ], [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.054628 ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 1.054628 ], [ 0.966797, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.054628 ], [ 0.966797, 1.054628 ] ] ] } }
 ] }
 ] }
 ,
@@ -63,21 +63,21 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.966751 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 0.000000 ], [ 0.966797, -0.966751 ], [ 0.000000, -0.966751 ], [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 1, "x": 1, "y": 0 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.010690 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.966797, 1.010690 ], [ 0.966797, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ], [ 0.966797, 1.010690 ] ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.966797, 0.000000 ] ] } }
 ] }
 ] }
 ,
@@ -111,21 +111,21 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.988720 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.988770, 0.000000 ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.988770, 0.000000 ], [ 0.988770, -0.988720 ], [ 0.000000, -0.988720 ], [ 0.000000, 0.000000 ], [ 0.988770, 0.000000 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.988770, 0.000000 ] ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 2, "x": 2, "y": 1 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.010690 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.988770, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.988770, 1.010690 ], [ 0.988770, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ], [ 0.988770, 1.010690 ] ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.988770, 0.000000 ] ] } }
 ] }
 ] }
 ,
@@ -136,8 +136,6 @@
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ -1.010742, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.000000, 0.000000 ], [ 0.000000, -0.999705 ], [ -1.010742, -0.999705 ], [ -1.010742, 0.000000 ], [ 0.000000, 0.000000 ] ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.999705 ] ] } }
 ] }
@@ -153,7 +151,7 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.010690 ] } }
 ] }
 ] }
 ,
@@ -163,9 +161,9 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.999705 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 0.000000 ], [ 0.999756, -0.999705 ], [ 0.000000, -0.999705 ], [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.999756, 0.000000 ] } }
 ] }
@@ -173,17 +171,17 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 3, "x": 4, "y": 3 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.010690 ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 1.010690 ], [ 0.999756, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ], [ 0.999756, 1.010690 ] ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.999756, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 1.010690 ], [ 0.999756, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.010690 ], [ 0.999756, 1.010690 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.010690 ] } }
 ] }
 ] }
 ,
@@ -211,11 +209,11 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ -1.005249, 0.000000 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.005197 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.005197 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.005197 ] } }
 ] }
 ] }
 ,
@@ -225,29 +223,29 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, -0.999705 ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 0.000000 ], [ 0.999756, -0.999705 ], [ 0.000000, -0.999705 ], [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] ] } }
 ,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, -0.999705 ] } }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.999756, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, -0.999705 ] } }
 ] }
 ] }
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 4, "x": 8, "y": 7 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.005197 ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.005197 ] ] } }
-,
-{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 1.005197 ], [ 0.999756, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.005197 ], [ 0.999756, 1.005197 ] ] ] } }
-,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.999756, 0.000000 ] ] } }
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.999756, 0.000000 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "LineString", "coordinates": [ [ 0.000000, 0.000000 ], [ 0.000000, 1.005197 ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 0.999756, 1.005197 ], [ 0.999756, 0.000000 ], [ 0.000000, 0.000000 ], [ 0.000000, 1.005197 ], [ 0.999756, 1.005197 ] ] ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 1.005197 ] } }
 ] }
 ] }
 ] }

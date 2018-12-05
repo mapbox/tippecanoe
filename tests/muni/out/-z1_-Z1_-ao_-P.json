@@ -450,15 +450,15 @@
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Sloat Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Taraval St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
-,
-{ "type": "Feature", "properties": { "name": "19th Ave & Taraval St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
-,
 { "type": "Feature", "properties": { "name": "19th Ave & Taraval St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "19th Ave & Ulloa St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "19th Ave & Taraval St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "19th Ave & Taraval St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Ulloa St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "19th Ave & Ulloa St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "19th Ave & Vicente St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
@@ -730,9 +730,9 @@
 ,
 { "type": "Feature", "properties": { "name": "26th St & Mission St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "26th St & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
-,
 { "type": "Feature", "properties": { "name": "26th St & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "26th St & Noe St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "26th St & Rhode Island St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
@@ -936,9 +936,9 @@
 ,
 { "type": "Feature", "properties": { "name": "3rd St & 23rd St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
-,
 { "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "3rd St & 25th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & 4th St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
@@ -954,9 +954,9 @@
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Carroll Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "3rd St & Cesar Chavez St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
-,
 { "type": "Feature", "properties": { "name": "3rd St & Cesar Chavez St" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "3rd St & Cesar Chavez St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "3rd St & Egbert Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.753344 ] } }
 ,
@@ -2204,9 +2204,9 @@
 ,
 { "type": "Feature", "properties": { "name": "California St & Davis St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "California St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
-,
 { "type": "Feature", "properties": { "name": "California St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "California St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
 ,
 { "type": "Feature", "properties": { "name": "California St & Drumm St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
@@ -3120,9 +3120,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Divisadero St & Bush St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Divisadero St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
-,
 { "type": "Feature", "properties": { "name": "Divisadero St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Divisadero St & California St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Divisadero St & Chestnut St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
 ,
@@ -4152,9 +4152,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Golden Gate Ave & Van Ness Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Golden Gate Br Tunnel/Merchant Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.822802 ] } }
-,
 { "type": "Feature", "properties": { "name": "Golden Gate Br Tunnel/Merchant Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Golden Gate Br Tunnel/Merchant Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.822802 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Golden Gate Bridge/Parking Lot" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.822802 ] } }
 ,
@@ -5638,9 +5638,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Mcallister St & Divisadero St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Mcallister St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
-,
 { "type": "Feature", "properties": { "name": "Mcallister St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Mcallister St & Fillmore St" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Mcallister St & Gough St" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
@@ -6208,9 +6208,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Noriega St & 48th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Noriega St & Sunset Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.788081 ] } }
-,
 { "type": "Feature", "properties": { "name": "Noriega St & Sunset Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Noriega St & Sunset Blvd" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "North Gate Rd and Macalla Rd" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.822802 ] } }
 ,
@@ -7142,69 +7142,69 @@
 ,
 { "type": "Feature", "properties": { "name": "Quintara St & Funston Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+,
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.788081 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
-,
-{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -12.260742, 37.822802 ] } }
+{ "type": "Feature", "properties": { "name": "REFERENCE & REFERENCE" }, "geometry": { "type": "Point", "coordinates": [ -122.431641, 37.822802 ] } }
 ,
 { "type": "Feature", "properties": { "name": "ROBINSON ST/Bldg 152" }, "geometry": { "type": "Point", "coordinates": [ -122.387695, 37.753344 ] } }
 ,
@@ -8098,9 +8098,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Sunset Blvd & Moraga St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.788081 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Sunset Blvd & Noriega St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.788081 ] } }
-,
 { "type": "Feature", "properties": { "name": "Sunset Blvd & Noriega St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Sunset Blvd & Noriega St" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.788081 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Sunset Blvd & Ocean Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,
@@ -8254,9 +8254,9 @@
 ,
 { "type": "Feature", "properties": { "name": "Taraval St & 17th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
 ,
-{ "type": "Feature", "properties": { "name": "Taraval St & 19th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
-,
 { "type": "Feature", "properties": { "name": "Taraval St & 19th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.475586, 37.753344 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Taraval St & 19th Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Taraval St & 22nd Ave" }, "geometry": { "type": "Point", "coordinates": [ -122.519531, 37.753344 ] } }
 ,

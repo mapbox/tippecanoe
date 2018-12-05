@@ -18,11 +18,33 @@
 ,
 { "type": "FeatureCollection", "properties": { "zoom": 11, "x": 327, "y": 791 }, "features": [
 { "type": "FeatureCollection", "properties": { "layer": "subway", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407737, 37.784215 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775057 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775159 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775091 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419367, 37.775260 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415032, 37.778686 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414818, 37.778551 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412543, 37.780348 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767356 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429194, 37.767221 ] } }
+,
+{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
+,
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.435331, 37.762708 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Castro Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.435246, 37.762641 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Forest Hill Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.458634, 37.748356 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Montgomery Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.402158, 37.788794 ] } }
 ,
@@ -33,28 +55,6 @@
 { "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396450, 37.793168 ] } }
 ,
 { "type": "Feature", "properties": { "name": "Metro Embarcadero Station" }, "geometry": { "type": "Point", "coordinates": [ -122.396407, 37.793168 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.412543, 37.780348 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Van Ness Station Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419367, 37.775260 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775159 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station" }, "geometry": { "type": "Point", "coordinates": [ -122.419195, 37.775091 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Van Ness Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.419281, 37.775057 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Outbd" }, "geometry": { "type": "Point", "coordinates": [ -122.415032, 37.778686 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Civic Center Station/Downtn" }, "geometry": { "type": "Point", "coordinates": [ -122.414818, 37.778551 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.429323, 37.767356 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Church Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.429194, 37.767221 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Outbound" }, "geometry": { "type": "Point", "coordinates": [ -122.407823, 37.784317 ] } }
-,
-{ "type": "Feature", "properties": { "name": "Metro Powell Station/Downtown" }, "geometry": { "type": "Point", "coordinates": [ -122.407737, 37.784215 ] } }
 ] }
 ] }
 ,
