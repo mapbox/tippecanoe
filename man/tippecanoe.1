@@ -1,6 +1,6 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
+Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], Shapefile \[la]https://en.wikipedia.org/wiki/Shapefile\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
 [Mapbox Tippecanoe](\[la]https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG\[ra])
@@ -330,6 +330,8 @@ or if metadata fields can't be set. You probably don't want to use this.
 \fIname\fP\fB\fC\&.json.gz\fR or \fIname\fP\fB\fC\&.geojson.gz\fR: Read the named gzipped GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+.IP \(bu 2
+\fIname\fP\fB\fC\&.shp\fR or \fIname\fP\fB\fC\&.shp\fR: Read the named Shapefile input file into a layer called \fIname\fP\&. Note that \fIname\fP\fB\fC\&.dbf\fR must also exist.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.csv\fR: Read the named CSV input file into a layer called \fIname\fP\&.
 .IP \(bu 2
@@ -938,6 +940,41 @@ Then you can join those populations to the geometries and discard the no\-longer
 .RS
 .nf
 \&./tile\-join \-o population.mbtiles \-x GEOID10 \-c population.csv tl_2010_06001_tabblock10.mbtiles
+.fi
+.RE
+.SH Another example
+.PP
+If you have this GeoJSON \fB\fCpoints.json\fR, with attribute \fB\fCid\fR:
+.PP
+.RS
+.nf
+{ "type": "Feature", "properties": { "id": 1 }, "geometry": { "type": "Point", "coordinates": [ 0, 0 ] } }
+{ "type": "Feature", "properties": { "id": 2 }, "geometry": { "type": "Point", "coordinates": [ 1, 1 ] } }
+{ "type": "Feature", "properties": { "id": 3 }, "geometry": { "type": "Point", "coordinates": [ 2, 2 ] } }
+{ "type": "Feature", "properties": { "id": 4 }, "geometry": { "type": "Point", "coordinates": [ 3, 3 ] } }
+{ "type": "Feature", "properties": { "id": 5 }, "geometry": { "type": "Point", "coordinates": [ 4, 4 ] } }
+.fi
+.RE
+.PP
+and this CSV \fB\fCjoin.csv\fR, with first column \fB\fCid\fR:
+.PP
+.RS
+.nf
+id,name,square
+1,One,1
+2,Two,4
+3,Three,9
+4,Four,16
+5,Five,25
+.fi
+.RE
+.PP
+it will add \fB\fCname\fR and \fB\fCsquare\fR attributes to each feature based on the matching \fB\fCid\fR if you do:
+.PP
+.RS
+.nf
+tippecanoe \-o points.mbtiles points.json
+tile\-join \-o joined.mbtiles \-c join.csv points.mbtiles
 .fi
 .RE
 .SH tippecanoe\-enumerate

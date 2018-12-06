@@ -7,7 +7,7 @@
  * Returns an empty string if `s` is valid utf8;
  * otherwise returns an error message.
  */
-std::string check_utf8(std::string s) {
+std::string check_utf8(std::string const &s) {
 	for (size_t i = 0; i < s.size(); i++) {
 		size_t fail = 0;
 
@@ -123,6 +123,24 @@ std::string truncate16(std::string const &s, size_t runes) {
 	}
 
 	return std::string(s, 0, lastgood - start);
+}
+
+void to_utf8(unsigned ch, std::string &s) {
+	if (ch <= 0x7F) {
+		s.push_back(ch);
+	} else if (ch <= 0x7FF) {
+		s.push_back(0xC0 | (ch >> 6));
+		s.push_back(0x80 | (ch & 0x3F));
+	} else if (ch < 0xFFFF) {
+		s.push_back(0xE0 | (ch >> 12));
+		s.push_back(0x80 | ((ch >> 6) & 0x3F));
+		s.push_back(0x80 | (ch & 0x3F));
+	} else {
+		s.push_back(0xF0 | (ch >> 18));
+		s.push_back(0x80 | ((ch >> 12) & 0x3F));
+		s.push_back(0x80 | ((ch >> 6) & 0x3F));
+		s.push_back(0x80 | (ch & 0x3F));
+	}
 }
 
 int integer_zoom(std::string where, std::string text) {

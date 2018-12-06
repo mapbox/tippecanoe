@@ -1,6 +1,8 @@
 #ifndef PROJECTION_HPP
 #define PROJECTION_HPP
 
+#include <stdio.h>
+
 void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y);
 void epsg3857totile(double ix, double iy, int zoom, long long *x, long long *y);
 void tile2lonlat(long long x, long long y, int zoom, double *lon, double *lat);
@@ -14,6 +16,7 @@ struct projection {
 	void (*project)(double ix, double iy, int zoom, long long *ox, long long *oy);
 	void (*unproject)(long long ix, long long iy, int zoom, double *ox, double *oy);
 	const char *alias;
+	void (*warn)(FILE *prj);
 };
 
 extern struct projection *projection;
