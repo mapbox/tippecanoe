@@ -323,6 +323,29 @@ Parallel processing will also be automatic if the input file is in Geobuf format
  * `-R` _zoom_`/`_x_`/`_y_ or `--one-tile=`_zoom_`/`_x_`/`_y_: Set the minzoom and maxzoom to _zoom_ and produce only
    the single specified tile at that zoom level.
 
+If you know the precision to which you want your data to be represented,
+this table shows the approximate precision corresponding to various
+`-z` options if you use the default `-d` detail of 12:
+
+zoom level | precision (ft) | precision (m)
+---------- | -------------- | -------------
+`-z0` | 32000 ft | 10000 m
+`-z1` | 16000 ft | 5000 m
+`-z2` | 8000 ft | 2500 m
+`-z3` | 4000 ft | 1250 m
+`-z4` | 2000 ft | 600 m
+`-z5` | 1000 ft | 300 m
+`-z6` | 500 ft | 150 m
+`-z7` | 250 ft | 80 m
+`-z8` | 125 ft | 40 m
+`-z9` | 64 ft | 20 m
+`-z10` | 32 ft | 10 m
+`-z11` | 16 ft | 5 m
+`-z12` | 8 ft | 2 m
+`-z13` | 4 ft | 1 m
+`-z14` | 2 ft | 0.5 m
+`-z15` | 1 ft | 0.25 m
+
 ### Tile resolution
 
  * `-d` _detail_ or `--full-detail=`_detail_: Detail at max zoom level (default 12, for tile resolution of 2^12=4096)

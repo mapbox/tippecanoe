@@ -385,6 +385,48 @@ specified maximum zoom and to any levels added beyond that.
 \fB\fC\-R\fR \fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP or \fB\fC\-\-one\-tile=\fR\fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP: Set the minzoom and maxzoom to \fIzoom\fP and produce only
 the single specified tile at that zoom level.
 .RE
+.PP
+If you know the precision to which you want your data to be represented,
+this table shows the approximate precision corresponding to various
+\fB\fC\-z\fR options\fB\fCif you use the default\fR\-d` detail of 12:
+.TS
+allbox;
+cb cb cb
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+.
+zoom level	precision (ft)	precision (m)
+\fB\fC\-z0\fR	32000 ft	10000 m
+\fB\fC\-z1\fR	16000 ft	5000 m
+\fB\fC\-z2\fR	8000 ft	2500 m
+\fB\fC\-z3\fR	4000 ft	1250 m
+\fB\fC\-z4\fR	2000 ft	600 m
+\fB\fC\-z5\fR	1000 ft	300 m
+\fB\fC\-z6\fR	500 ft	150 m
+\fB\fC\-z7\fR	250 ft	80 m
+\fB\fC\-z8\fR	125 ft	40 m
+\fB\fC\-z9\fR	64 ft	20 m
+\fB\fC\-z10\fR	32 ft	10 m
+\fB\fC\-z11\fR	16 ft	5 m
+\fB\fC\-z12\fR	8 ft	2 m
+\fB\fC\-z13\fR	4 ft	1 m
+\fB\fC\-z14\fR	2 ft	0.5 m
+\fB\fC\-z15\fR	1 ft	0.25 m
+.TE
 .SS Tile resolution
 .RS
 .IP \(bu 2
