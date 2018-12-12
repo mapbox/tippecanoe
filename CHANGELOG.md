@@ -1,3 +1,7 @@
+## 1.32.7
+
+* Point features may now be coalesced into MultiPoint features with --coalesce.
+
 ## 1.32.6
 
 * Make it an error, not a warning, to have missing coordinates for a point

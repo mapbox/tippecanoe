@@ -493,7 +493,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
-\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
+\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry. Furthermore, the polygons that nested polygons are coalesced to may not necessarily be the immediately enclosing features.
 .IP \(bu 2
 \fB\fC\-aD\fR or \fB\fC\-\-coalesce\-densest\-as\-needed\fR: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
 .IP \(bu 2
@@ -545,7 +545,7 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same attributes in sequence, to try to get them to coalesce. You probably want to use this if you use \fB\fC\-\-coalesce\fR\&.
 .IP \(bu 2
-\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
+\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
 .IP \(bu 2
 \fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 .RE
