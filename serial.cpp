@@ -460,7 +460,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		std::vector<unsigned long long> locs;
 		for (size_t i = 0; i < sf.geometry.size(); i++) {
 			if (sf.geometry[i].op == VT_MOVETO || sf.geometry[i].op == VT_LINETO) {
-				locs.push_back(encode(sf.geometry[i].x << geometry_scale, sf.geometry[i].y << geometry_scale));
+				locs.push_back(encode_index(sf.geometry[i].x << geometry_scale, sf.geometry[i].y << geometry_scale));
 			}
 		}
 		std::sort(locs.begin(), locs.end());
@@ -552,7 +552,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	// and then mask to bring it back into the addressable area
 	long long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
 	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
-	bbox_index = encode(midx, midy);
+	bbox_index = encode_index(midx, midy);
 
 	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {
 		sf.index = bbox_index;
@@ -633,7 +633,6 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 				}
 			}
 		}
-
 	}
 
 	if (!sst->filters) {

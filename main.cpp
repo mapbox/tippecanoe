@@ -269,7 +269,7 @@ struct drop_state {
 int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, double gamma) {
 	int feature_minzoom = 0;
 	unsigned xx, yy;
-	decode(ix->ix, &xx, &yy);
+	decode_index(ix->ix, &xx, &yy);
 
 	if (gamma >= 0 && (ix->t == VT_POINT ||
 			   (additional[A_LINE_DROP] && ix->t == VT_LINE) ||
@@ -2062,7 +2062,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		long long ip;
 		for (ip = 0; ip < indices; ip++) {
 			unsigned xx, yy;
-			decode(map[ip].ix, &xx, &yy);
+			decode_index(map[ip].ix, &xx, &yy);
 
 			long long nprogress = 100 * ip / indices;
 			if (nprogress != progress) {
@@ -2590,6 +2590,7 @@ int main(int argc, char **argv) {
 		{"reorder", no_argument, &additional[A_REORDER], 1},
 		{"coalesce", no_argument, &additional[A_COALESCE], 1},
 		{"reverse", no_argument, &additional[A_REVERSE], 1},
+		{"hilbert", no_argument, &additional[A_HILBERT], 1},
 
 		{"Adding calculated attributes", 0, 0, 0},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
@@ -3020,6 +3021,14 @@ int main(int argc, char **argv) {
 			exit(EXIT_FAILURE);
 		}
 		}
+	}
+
+	if (additional[A_HILBERT]) {
+		encode_index = encode_hilbert;
+		decode_index = decode_hilbert;
+	} else {
+		encode_index = encode_quadkey;
+		decode_index = decode_quadkey;
 	}
 
 	// Wait until here to project the bounding box, so that the behavior is

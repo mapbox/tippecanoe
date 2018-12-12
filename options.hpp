@@ -24,6 +24,7 @@
 #define A_CLUSTER_DENSEST_AS_NEEDED ((int) 'C')
 #define A_GENERATE_IDS ((int) 'i')
 #define A_CONVERT_NUMERIC_IDS ((int) 'I')
+#define A_HILBERT ((int) 'h')
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')
