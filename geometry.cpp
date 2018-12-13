@@ -874,8 +874,8 @@ drawvec reorder_lines(drawvec &geom) {
 	// instead of down and to the right
 	// so that it will coalesce better
 
-	unsigned long long l1 = encode(geom[0].x, geom[0].y);
-	unsigned long long l2 = encode(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+	unsigned long long l1 = encode_index(geom[0].x, geom[0].y);
+	unsigned long long l2 = encode_index(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
 
 	if (l1 > l2) {
 		drawvec out;

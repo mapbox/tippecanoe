@@ -1,3 +1,8 @@
+## 1.32.7
+
+* Point features may now be coalesced into MultiPoint features with --coalesce.
+* Add --hilbert option to put features in Hilbert Curve sequence
+
 ## 1.32.6
 
 * Make it an error, not a warning, to have missing coordinates for a point

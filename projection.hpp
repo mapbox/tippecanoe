@@ -5,8 +5,6 @@ void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y);
 void epsg3857totile(double ix, double iy, int zoom, long long *x, long long *y);
 void tile2lonlat(long long x, long long y, int zoom, double *lon, double *lat);
 void tiletoepsg3857(long long x, long long y, int zoom, double *ox, double *oy);
-unsigned long long encode(unsigned int wx, unsigned int wy);
-void decode(unsigned long long index, unsigned *wx, unsigned *wy);
 void set_projection_or_exit(const char *optarg);
 
 struct projection {
@@ -18,5 +16,14 @@ struct projection {
 
 extern struct projection *projection;
 extern struct projection projections[];
+
+extern unsigned long long (*encode_index)(unsigned int wx, unsigned int wy);
+extern void (*decode_index)(unsigned long long index, unsigned *wx, unsigned *wy);
+
+unsigned long long encode_quadkey(unsigned int wx, unsigned int wy);
+void decode_quadkey(unsigned long long index, unsigned *wx, unsigned *wy);
+
+unsigned long long encode_hilbert(unsigned int wx, unsigned int wy);
+void decode_hilbert(unsigned long long index, unsigned *wx, unsigned *wy);
 
 #endif

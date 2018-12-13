@@ -2163,7 +2163,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 #endif
 
-				if (additional[A_COALESCE] && out.size() > 0 && coalcmp(&layer_features[x], &out[y]) == 0 && layer_features[x].type != VT_POINT) {
+				if (additional[A_COALESCE] && out.size() > 0 && coalcmp(&layer_features[x], &out[y]) == 0) {
 					for (size_t g = 0; g < layer_features[x].geom.size(); g++) {
 						out[y].geom.push_back(layer_features[x].geom[g]);
 					}

@@ -385,6 +385,48 @@ specified maximum zoom and to any levels added beyond that.
 \fB\fC\-R\fR \fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP or \fB\fC\-\-one\-tile=\fR\fIzoom\fP\fB\fC/\fR\fIx\fP\fB\fC/\fR\fIy\fP: Set the minzoom and maxzoom to \fIzoom\fP and produce only
 the single specified tile at that zoom level.
 .RE
+.PP
+If you know the precision to which you want your data to be represented,
+this table shows the approximate precision corresponding to various
+\fB\fC\-z\fR options if you use the default \fB\fC\-d\fR detail of 12:
+.TS
+allbox;
+cb cb cb
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+l l l
+.
+zoom level	precision (ft)	precision (m)
+\fB\fC\-z0\fR	32000 ft	10000 m
+\fB\fC\-z1\fR	16000 ft	5000 m
+\fB\fC\-z2\fR	8000 ft	2500 m
+\fB\fC\-z3\fR	4000 ft	1250 m
+\fB\fC\-z4\fR	2000 ft	600 m
+\fB\fC\-z5\fR	1000 ft	300 m
+\fB\fC\-z6\fR	500 ft	150 m
+\fB\fC\-z7\fR	250 ft	80 m
+\fB\fC\-z8\fR	125 ft	40 m
+\fB\fC\-z9\fR	64 ft	20 m
+\fB\fC\-z10\fR	32 ft	10 m
+\fB\fC\-z11\fR	16 ft	5 m
+\fB\fC\-z12\fR	8 ft	2 m
+\fB\fC\-z13\fR	4 ft	1 m
+\fB\fC\-z14\fR	2 ft	0.5 m
+\fB\fC\-z15\fR	1 ft	0.25 m
+.TE
 .SS Tile resolution
 .RS
 .IP \(bu 2
@@ -493,7 +535,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-an\fR or \fB\fC\-\-drop\-smallest\-as\-needed\fR: Dynamically drop the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level to keep large tiles under the 500K size limit. This option will not work for point features.
 .IP \(bu 2
-\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features, only their geometry.
+\fB\fC\-aN\fR or \fB\fC\-\-coalesce\-smallest\-as\-needed\fR: Dynamically combine the smallest features (physically smallest: the shortest lines or the smallest polygons) from each zoom level into other nearby features to keep large tiles under the 500K size limit. This option will not work for point features, and will probably not help very much with LineStrings. It is mostly intended for polygons, to maintain the full original area covered by polygons while still reducing the feature count somehow. The attributes of the small polygons are \fInot\fP preserved into the combined features (except through \fB\fC\-\-accumulate\-attribute\fR), only their geometry. Furthermore, the polygons to which nested polygons are coalesced may not necessarily be the immediately enclosing features.
 .IP \(bu 2
 \fB\fC\-aD\fR or \fB\fC\-\-coalesce\-densest\-as\-needed\fR: Dynamically combine the densest features from each zoom level into other nearby features to keep large tiles under the 500K size limit. (Again, mostly useful for polygons.)
 .IP \(bu 2
@@ -543,11 +585,13 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pi\fR or \fB\fC\-\-preserve\-input\-order\fR: Preserve the original input order of features as the drawing order instead of ordering geographically. (This is implemented as a restoration of the original order at the end, so that dot\-dropping is still geographic, which means it also undoes \fB\fC\-ao\fR).
 .IP \(bu 2
-\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same attributes in sequence, to try to get them to coalesce. You probably want to use this if you use \fB\fC\-\-coalesce\fR\&.
+\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce consecutive features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
 .IP \(bu 2
-\fB\fC\-ac\fR or \fB\fC\-\-coalesce\fR: Coalesce adjacent line and polygon features that have the same attributes. This can be useful if you have lots of small polygons with identical attributes and you would like to merge them together.
+\fB\fC\-ao\fR or \fB\fC\-\-reorder\fR: Reorder features to put ones with the same attributes in sequence (instead of ones that are approximately spatially adjacent), to try to get them to coalesce. You probably want to use this if you use \fB\fC\-\-coalesce\fR\&.
 .IP \(bu 2
 \fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
+.IP \(bu 2
+\fB\fC\-ah\fR or \fB\fC\-\-hilbert\fR: Put features in Hilbert Curve order instead of the usual Z\-Order. This improves the odds that spatially adjacent features will be sequentially adjacent, and should improve density calculations and spatial coalescing. It should be the default eventually.
 .RE
 .SS Adding calculated attributes
 .RS
@@ -559,7 +603,7 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .SS Trying to correct bad source geometry
 .RS
 .IP \(bu 2
-\fB\fC\-aw\fR or \fB\fC\-\-detect\-longitude\-wraparound\fR: Detect when adjacent points within a feature jump to the other side of the world, and try to fix the geometry.
+\fB\fC\-aw\fR or \fB\fC\-\-detect\-longitude\-wraparound\fR: Detect when consecutive points within a feature jump to the other side of the world, and try to fix the geometry.
 .IP \(bu 2
 \fB\fC\-pw\fR or \fB\fC\-\-use\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the original polygon winding in the source data to distinguish inner (clockwise) and outer (counterclockwise) polygon rings.
 .IP \(bu 2
