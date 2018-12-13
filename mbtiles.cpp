@@ -45,7 +45,8 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: create metadata table: %s\n", argv[0], err);
+		fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", argv[0], dbname);
+		fprintf(stderr, "%s: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}

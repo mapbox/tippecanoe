@@ -6,7 +6,7 @@
 
 void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf);
 
-void check_dir(const char *d, bool force, bool forcetable);
+void check_dir(const char *d, char **argv, bool force, bool forcetable);
 
 struct zxy {
 	long long z;

@@ -3130,7 +3130,7 @@ int main(int argc, char **argv) {
 		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
 	}
 	if (out_dir != NULL) {
-		check_dir(out_dir, force, forcetable);
+		check_dir(out_dir, argv, force, forcetable);
 	}
 
 	int ret = EXIT_SUCCESS;
