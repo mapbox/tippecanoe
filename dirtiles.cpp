@@ -62,7 +62,7 @@ static bool pbfname(const char *s) {
 	return strcmp(s, ".pbf") == 0;
 }
 
-void check_dir(const char *dir, bool force, bool forcetable) {
+void check_dir(const char *dir, char **argv, bool force, bool forcetable) {
 	struct stat st;
 
 	mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO);
@@ -71,7 +71,8 @@ void check_dir(const char *dir, bool force, bool forcetable) {
 		unlink(meta.c_str());  // error OK since it may not exist;
 	} else {
 		if (stat(meta.c_str(), &st) == 0) {
-			fprintf(stderr, "%s: file exists\n", meta.c_str());
+			fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", argv[0], dir);
+			fprintf(stderr, "%s: %s: file exists\n", argv[0], meta.c_str());
 			if (!forcetable) {
 				exit(EXIT_FAILURE);
 			}

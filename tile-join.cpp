@@ -1049,7 +1049,7 @@ int main(int argc, char **argv) {
 		outdb = mbtiles_open(out_mbtiles, argv, 0);
 	}
 	if (out_dir != NULL) {
-		check_dir(out_dir, force, false);
+		check_dir(out_dir, argv, force, false);
 	}
 
 	struct stats st;
