@@ -1,3 +1,8 @@
+## 1.32.9
+
+* Limit tile detail to 30 and buffer size to 127 to prevent coordinate
+  delta overflow in vector tiles.
+
 ## 1.32.8
 
 * Better error message if the output tileset already exists

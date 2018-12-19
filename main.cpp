@@ -2632,6 +2632,7 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
+		{"help", no_argument, 0, '?'},
 
 		{0, 0, 0, 0},
 	};
@@ -2799,10 +2800,21 @@ int main(int argc, char **argv) {
 
 		case 'd':
 			full_detail = atoi_require(optarg, "Full detail");
+			if (full_detail > 30) {
+				// So the maximum geometry delta of just under 2 tile extents
+				// is less than 2^31
+
+				fprintf(stderr, "%s: --full-detail can be at most 30\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'D':
 			low_detail = atoi_require(optarg, "Low detail");
+			if (low_detail > 30) {
+				fprintf(stderr, "%s: --low-detail can be at most 30\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'm':
@@ -2886,6 +2898,14 @@ int main(int argc, char **argv) {
 
 		case 'b':
 			buffer = atoi_require(optarg, "Buffer");
+			if (buffer > 127) {
+				// So the maximum geometry delta is under 2 tile extents,
+				// from less than half a tile beyond one side to less than
+				// half a tile beyond the other.
+
+				fprintf(stderr, "%s: --buffer can be at most 127\n", argv[0]);
+				exit(EXIT_FAILURE);
+			}
 			break;
 
 		case 'f':
@@ -2990,8 +3010,10 @@ int main(int argc, char **argv) {
 			break;
 
 		default: {
+			if (i != '?') {
+				fprintf(stderr, "Unknown option -%c\n", i);
+			}
 			int width = 7 + strlen(argv[0]);
-			fprintf(stderr, "Unknown option -%c\n", i);
 			fprintf(stderr, "Usage: %s [options] [file.json ...]", argv[0]);
 			for (size_t lo = 0; long_options_orig[lo].name != NULL && strlen(long_options_orig[lo].name) > 0; lo++) {
 				if (long_options_orig[lo].val == 0) {

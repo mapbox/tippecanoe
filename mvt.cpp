@@ -356,7 +356,7 @@ std::string mvt_tile::encode() {
 
 			std::vector<uint32_t> geometry;
 
-			int px = 0, py = 0;
+			long long px = 0, py = 0;
 			int cmd_idx = -1;
 			int cmd = -1;
 			int length = 0;
@@ -381,8 +381,13 @@ std::string mvt_tile::encode() {
 					long long wwx = geom[g].x;
 					long long wwy = geom[g].y;
 
-					int dx = wwx - px;
-					int dy = wwy - py;
+					long long dx = wwx - px;
+					long long dy = wwy - py;
+
+					if (dx < INT_MIN || dx > INT_MAX || dy < INT_MIN || dy > INT_MAX) {
+						fprintf(stderr, "Internal error: Geometry delta is too big: %lld,%lld\n", dx, dy);
+						exit(EXIT_FAILURE);
+					}
 
 					geometry.push_back(protozero::encode_zigzag32(dx));
 					geometry.push_back(protozero::encode_zigzag32(dy));
