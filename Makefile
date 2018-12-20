@@ -340,3 +340,8 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	./tippecanoe-decode -x generator $@.check.mbtiles > $@
 	cmp $(patsubst %.check,%,$@) $@
 	rm $@.check.mbtiles
+
+libdeflate:
+	git clone https://github.com/ebiggers/libdeflate libdeflate
+	cd libdeflate/
+	make -j12 install
