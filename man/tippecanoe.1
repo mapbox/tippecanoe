@@ -279,6 +279,34 @@ As above, but
 .IP \(bu 2
 \fB\fC\-l counties\fR: Specify the layer name instead of letting it be derived from the source file names
 .RE
+.SS Selectively remove and replace features (Census tracts) to update a tileset
+.PP
+.RS
+.nf
+# Retrieve and tile California 2000 Census tracts
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/TRACT/2000/tl_2010_06_tract00.zip
+unzip tl_2010_06_tract00.zip
+ogr2ogr \-f GeoJSON tl_2010_06_tract00.shp.json tl_2010_06_tract00.shp
+tippecanoe \-z11 \-o tracts.mbtiles \-l tracts tl_2010_06_tract00.shp.json
+
+# Create a copy of the tileset, minus Alameda County (FIPS code 001)
+tile\-join \-j '{"*":["none",["==","COUNTYFP00","001"]]}' \-f \-o tracts\-filtered.mbtiles tracts.mbtiles
+
+# Retrieve and tile Alameda County Census tracts for 2010
+curl \-L \-O https://www2.census.gov/geo/tiger/TIGER2010/TRACT/2010/tl_2010_06001_tract10.zip
+unzip tl_2010_06001_tract10.zip
+ogr2ogr \-f GeoJSON tl_2010_06001_tract10.shp.json tl_2010_06001_tract10.shp
+tippecanoe \-z11 \-o tracts\-added.mbtiles \-l tracts tl_2010_06001_tract10.shp.json
+
+# Merge the filtered tileset and the tileset of new tracts into a final tileset
+tile\-join \-o tracts\-final.mbtiles tracts\-filtered.mbtiles tracts\-added.mbtiles
+.fi
+.RE
+.PP
+The \fB\fC\-z11\fR option explicitly specifies the maxzoom, to make sure both the old and new tilesets have the same zoom range.
+.PP
+The \fB\fC\-j\fR option to \fB\fCtile\-join\fR specifies a filter, so that only the desired features will be copied to the new tileset.
+This filter excludes (using \fB\fCnone\fR) any features whose FIPS code (\fB\fCCOUNTYFP00\fR) is the code for Alameda County (\fB\fC001\fR).
 .SH Options
 .PP
 There are a lot of options. A lot of the time you won't want to use any of them
