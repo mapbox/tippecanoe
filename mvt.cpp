@@ -45,7 +45,7 @@ int decompress(std::string const &input, std::string &output) {
 							   &existing_output);
 
 		output.resize(existing_output + 2 * avail_in + 100);
-		next_out = (void *) (output.data() + existing_output);
+		next_out = (void *) (next_out + existing_output);
 		avail_out = (output.size() - existing_output);
 
 		if (ret != LIBDEFLATE_SUCCESS) {
@@ -84,7 +84,7 @@ int compress(std::string const &input, std::string &output) {
 		size_t increase = input.size() / 2 + 1024;
 		output.resize(avail_in + increase);
 		avail_out = increase;
-		next_out = ((void *) output.data() + avail_in);
+		next_out = (void *) (output.data() + avail_in);
 		int ret = libdeflate_deflate_compress(deflate_s,
 						      next_in, avail_in,
 						      next_out, avail_out);
