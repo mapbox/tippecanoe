@@ -39,10 +39,9 @@ int decompress(std::string const &input, std::string &output) {
 	while (true) {
 		long unsigned int existing_output = 0;
 
-		int ret = libdeflate_deflate_decompress_ex(decompressor,
+		int ret = libdeflate_deflate_decompress(decompressor,
 							   next_in, avail_in,
 							   next_out, avail_out,
-							   &existing_output,
 							   &existing_output);
 
 		output.resize(existing_output + 2 * avail_in + 100);
