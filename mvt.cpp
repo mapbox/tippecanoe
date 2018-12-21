@@ -37,17 +37,18 @@ int decompress(std::string const &input, std::string &output) {
 	void *next_out = (void *) output.data();
 	size_t avail_out = output.size();
 	while (true) {
-		long unsigned int existing_output;
-
-		output.resize(existing_output + 2 * avail_in + 100);
-		next_out = (void *) (output.data() + existing_output);
-		avail_out = (output.size() - existing_output);
+		long unsigned int existing_output = 0;
 
 		int ret = libdeflate_deflate_decompress_ex(decompressor,
 							   next_in, avail_in,
 							   next_out, avail_out,
 							   &existing_output,
 							   &existing_output);
+
+		output.resize(existing_output + 2 * avail_in + 100);
+		next_out = (void *) (output.data() + existing_output);
+		avail_out = (output.size() - existing_output);
+
 		if (ret != LIBDEFLATE_SUCCESS) {
 			fprintf(stderr, "Decompression error: ");
 			if (ret == LIBDEFLATE_BAD_DATA) {
