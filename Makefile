@@ -19,7 +19,7 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit tippecanoe-json-tool
+all: libdeflate tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit tippecanoe-json-tool
 
 docs: man/tippecanoe.1
 
@@ -342,6 +342,4 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	rm $@.check.mbtiles
 
 libdeflate:
-	git clone https://github.com/ebiggers/libdeflate libdeflate
-	cd libdeflate/
-	make -j12 install
+	make $(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) $(LDFLAGS) -C libdeflate -j12 install
