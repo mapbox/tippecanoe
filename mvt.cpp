@@ -56,11 +56,8 @@ int decompress(std::string const &input, std::string &output) {
 			if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
 				fprintf(stderr, "out of memory");
 			}
-			if (ret == LIBDEFLATE_SHORT_OUTPUT) {
-				fprintf(stderr, "no data in buffer");
-			}
 			fprintf(stderr, "\n");
-			return 0;
+			return -ret;
 		}
 
 		if (ret == LIBDEFLATE_SHORT_OUTPUT) {
