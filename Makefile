@@ -342,5 +342,5 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	rm $@.check.mbtiles
 
 deflate:
-	git submodule update --remote libdeflate
+	git clone https://github.com/ebiggers/libdeflate
 	make -C libdeflate install
