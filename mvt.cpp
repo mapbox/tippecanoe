@@ -45,7 +45,7 @@ int decompress(std::string const &input, std::string &output) {
 							   &existing_output);
 
 		output.resize(existing_output + 2 * avail_in + 100);
-		next_out = (void *) (next_out + existing_output);
+		next_out = (void *) (output.data() + existing_output);
 		avail_out = (output.size() - existing_output);
 
 		if (ret != LIBDEFLATE_SUCCESS) {
