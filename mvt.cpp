@@ -27,77 +27,77 @@ bool is_compressed(std::string const &data) {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int decompress(std::string const &input, std::string &output) {
-    /*
+	/*
         if (inflateInit2(inflate_s, 32 + 15) != Z_OK) {
                 fprintf(stderr, "Decompression error: %s\n", msg);
         }*/
-        struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
-        void* next_in = (void*)input.data();
-        size_t avail_in = input.size();
-        void* next_out = (void*)output.data();
-        size_t avail_out = output.size();
+	struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
+	void *next_in = (void *) input.data();
+	size_t avail_in = input.size();
+	void *next_out = (void *) output.data();
+	size_t avail_out = output.size();
 	while (true) {
-                long unsigned int existing_output;
+		long unsigned int existing_output;
 
-                output.resize(existing_output + 2 * avail_in + 100);
-                next_out = (void*)(output.data() + existing_output);
-                avail_out = (output.size() - existing_output);
+		output.resize(existing_output + 2 * avail_in + 100);
+		next_out = (void *) (output.data() + existing_output);
+		avail_out = (output.size() - existing_output);
 
-                int ret = libdeflate_deflate_decompress_ex(decompressor,
-                                                 next_in, avail_in,
-                                                 next_out, avail_out,
-                                                 &existing_output,
-                                                 &existing_output);
-                if (ret != LIBDEFLATE_SUCCESS) {
-                        fprintf(stderr, "Decompression error: ");
-                        if (ret == LIBDEFLATE_BAD_DATA) {
+		int ret = libdeflate_deflate_decompress_ex(decompressor,
+							   next_in, avail_in,
+							   next_out, avail_out,
+							   &existing_output,
+							   &existing_output);
+		if (ret != LIBDEFLATE_SUCCESS) {
+			fprintf(stderr, "Decompression error: ");
+			if (ret == LIBDEFLATE_BAD_DATA) {
 				fprintf(stderr, "data error");
-                        }
-                        if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
+			}
+			if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
 				fprintf(stderr, "out of memory");
-                        }
-                        if (ret == LIBDEFLATE_SHORT_OUTPUT) {
+			}
+			if (ret == LIBDEFLATE_SHORT_OUTPUT) {
 				fprintf(stderr, "no data in buffer");
-                        }
+			}
 			fprintf(stderr, "\n");
 			return 0;
 		}
 
-                if (ret == LIBDEFLATE_SHORT_OUTPUT) {
-                        break;
-                }
+		if (ret == LIBDEFLATE_SHORT_OUTPUT) {
+			break;
+		}
 
 		// ret must be Z_OK or Z_NEED_DICT;
 		// continue decompresing
 	}
 
-        output.resize(avail_out - output.size());
-        libdeflate_free_decompressor(decompressor);
+	output.resize(avail_out - output.size());
+	libdeflate_free_decompressor(decompressor);
 	return 1;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int compress(std::string const &input, std::string &output) {
-        void* next_in = (void*)input.data();
-        size_t avail_in = input.size();
-        void* next_out = (void*)output.data();
-        size_t avail_out = output.size();
-        struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
-        do {
-                size_t increase = input.size() / 2 + 1024;
-                output.resize(avail_in + increase);
-                avail_out = increase;
-                next_out = ((void*)output.data() + avail_in);
-                int ret = libdeflate_deflate_compress(deflate_s,
-                                            next_in, avail_in,
-                                            next_out, avail_out);
-                if (ret != LIBDEFLATE_SUCCESS) {
+	void *next_in = (void *) input.data();
+	size_t avail_in = input.size();
+	void *next_out = (void *) output.data();
+	size_t avail_out = output.size();
+	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
+	do {
+		size_t increase = input.size() / 2 + 1024;
+		output.resize(avail_in + increase);
+		avail_out = increase;
+		next_out = ((void *) output.data() + avail_in);
+		int ret = libdeflate_deflate_compress(deflate_s,
+						      next_in, avail_in,
+						      next_out, avail_out);
+		if (ret != LIBDEFLATE_SUCCESS) {
 			return -1;
-                }
-                avail_in += (increase - avail_out);
-        } while (avail_out == 0);
-        libdeflate_free_compressor(deflate_s);
-        output.resize(avail_in);
+		}
+		avail_in += (increase - avail_out);
+	} while (avail_out == 0);
+	libdeflate_free_compressor(deflate_s);
+	output.resize(avail_in);
 	return 0;
 }
 
