@@ -342,4 +342,4 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	rm $@.check.mbtiles
 
 libdeflate:
-	make $(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) $(LDFLAGS) -C libdeflate -j12 install
+	make $(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) $(LDFLAGS) -C libdeflate install
