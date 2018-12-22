@@ -27,10 +27,6 @@ bool is_compressed(std::string const &data) {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int decompress(std::string const &input, std::string &output) {
-	/*
-        if (inflateInit2(inflate_s, 32 + 15) != Z_OK) {
-                fprintf(stderr, "Decompression error: %s\n", msg);
-        }*/
 	struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
 	void *next_in = (void *) input.data();
 	size_t avail_in = input.size();
@@ -43,11 +39,12 @@ int decompress(std::string const &input, std::string &output) {
 							   next_in, avail_in,
 							   next_out, avail_out,
 							   &existing_output);
-
-		output.resize(existing_output + 2 * avail_in + 100);
-		next_out = (void *) (output.data() + existing_output);
-		avail_out = (output.size() - existing_output);
+		existing_output += avail_in + 1024;
+		output.resize(existing_output);
+		next_out = (void *) (output.data() + existing_output + 1024);
+		next_in = (void *) (input.data() + existing_output / 2);
 		avail_in = (input.size() - avail_in);
+		avail_out = avail_in;
 
 		if (ret != LIBDEFLATE_SUCCESS) {
 			fprintf(stderr, "Decompression error: ");
@@ -68,7 +65,6 @@ int decompress(std::string const &input, std::string &output) {
 		// ret must be Z_OK or Z_NEED_DICT;
 		// continue decompresing
 	}
-
 	output.resize(avail_out - output.size());
 	libdeflate_free_decompressor(decompressor);
 	return 1;
@@ -82,18 +78,18 @@ int compress(std::string const &input, std::string &output) {
 	size_t avail_out = output.size();
 	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
 	do {
-		size_t increase = input.size() / 2 + 1024;
+		size_t increase = 1024;
 		output.resize(avail_in + increase);
 		avail_out = increase;
-		next_out = (void *) (output.data() + avail_in);
-		next_in = (void *) (input.data() + avail_in);
+		next_out = (void *) (next_out + increase);
+		next_in = (void *) (next_in + increase * 2);
 		int ret = libdeflate_deflate_compress(deflate_s,
 						      next_in, avail_in,
 						      next_out, avail_out);
 		if (ret != LIBDEFLATE_SUCCESS) {
 			return -1;
 		}
-		avail_in -= (increase - avail_out);
+		avail_in -= increase;
 	} while (avail_out == 0);
 	libdeflate_free_compressor(deflate_s);
 	output.resize(avail_in);
