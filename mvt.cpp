@@ -44,11 +44,12 @@ decompress:
 						   current_out, avail_out,
 						   &actual_input,
 						   &actual_output);
+	actual_in += actual_input;
 	actual_out += actual_output;
 	if (ret == LIBDEFLATE_SHORT_OUTPUT) {
-		output.resize(actual_output + avail_out);
-		current_out = (void*)((long)current_out + actual_out);
-		current_in = (void*)((long)current_in + actual_in);
+		output.resize(actual_out + avail_out);
+		current_out = (void*)((long)output.data() + actual_out);
+		current_in = (void*)((long)input.data() + actual_in);
 		goto decompress;
 	}
 	libdeflate_free_decompressor(decompressor);
@@ -74,8 +75,8 @@ decompress:
 int compress(std::string const &input, std::string &output) {
 	size_t avail_in = input.size();
 	size_t avail_out = avail_in * 8;
-	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
 	output.resize(avail_out);
+	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
 	int ret = libdeflate_deflate_compress(deflate_s,
 					      (void*)input.data(), avail_in,
 					      (void*)output.data(), avail_out);
