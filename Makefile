@@ -343,4 +343,4 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	rm $@.check.mbtiles
 
 deflate:
-	make -C libdeflate
+	make -C libdeflate libdeflate.a
