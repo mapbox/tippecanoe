@@ -34,8 +34,8 @@ int decompress(std::string const &input, std::string &output) {
 	long unsigned int actual_out = 0;
 	long unsigned int actual_in = 0;
 	output.resize(avail_out);
-	void *current_out = (void*)output.data();
-	void *current_in = (void*)input.data();
+	void *current_out = (void *) output.data();
+	void *current_in = (void *) input.data();
 
 	struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
 decompress:
@@ -48,8 +48,8 @@ decompress:
 	actual_out += actual_output;
 	if (ret == LIBDEFLATE_SHORT_OUTPUT) {
 		output.resize(actual_out + avail_out);
-		current_out = (void*)((long)output.data() + actual_out);
-		current_in = (void*)((long)input.data() + actual_in);
+		current_out = (void *) ((long) output.data() + actual_out);
+		current_in = (void *) ((long) input.data() + actual_in);
 		goto decompress;
 	}
 	libdeflate_free_decompressor(decompressor);
@@ -78,8 +78,8 @@ int compress(std::string const &input, std::string &output) {
 	output.resize(avail_out);
 	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
 	int ret = libdeflate_deflate_compress(deflate_s,
-					      (void*)input.data(), avail_in,
-					      (void*)output.data(), avail_out);
+					      (void *) input.data(), avail_in,
+					      (void *) output.data(), avail_out);
 	libdeflate_free_compressor(deflate_s);
 	if (ret == 0) {
 		return -1;
@@ -104,7 +104,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 	while (reader.next()) {
 		switch (reader.tag()) {
-		case 3: /* layer */		{
+		case 3: /* layer */ {
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
 
