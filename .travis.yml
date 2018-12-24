@@ -100,11 +100,9 @@ before_install:
     fi
 
 install:
- - echo "${TRAVIS_BUILD_DIR}/libdeflate/" | sudo tee /etc/ld.so.conf.d/libdeflate.conf && sudo ldconfig
  - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
- - echo "${TRAVIS_BUILD_DIR}/libdeflate/" | sudo tee /etc/ld.so.conf.d/libdeflate.conf && sudo ldconfig
  - npm install geobuf
  - if [ -n "${FEWER}" ]; then
        BUILDTYPE=${BUILDTYPE} make fewer-tests; else
