@@ -100,7 +100,7 @@ before_install:
     fi
 
 install:
- - echo "$(pwd)/libdeflate/" | sudo tee /etc/ld.so.conf.d/libdeflate.conf && sudo ldconfig
+ - echo "${TRAVIS_BUILD_DIR}/libdeflate/" | sudo tee /etc/ld.so.conf.d/libdeflate.conf && sudo ldconfig
  - BUILDTYPE=${BUILDTYPE} make -j
 
 script:
