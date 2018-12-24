@@ -22,102 +22,88 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
-	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
+	return data.size() > 2 && (((uint8_t) data[0] & 0x60) == 0x4 || ((uint8_t) data[0] & 0x60) == 0x20);
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int decompress(std::string const &input, std::string &output) {
+	size_t avail_in = 8192;
+	size_t avail_out = 8192;
+	long unsigned int actual_output = 0;
+	long unsigned int actual_input = 0;
+	long unsigned int actual_out = 0;
+	long unsigned int actual_in = 0;
+	output.resize(avail_out);
+	void *current_out = (void*)output.data();
+	void *current_in = (void*)input.data();
+
 	struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
-	void *next_in = (void *) input.data();
-	size_t avail_in = input.size();
-	void *next_out = (void *) output.data();
-	size_t avail_out = output.size();
-	while (true) {
-		long unsigned int existing_output = 0;
+decompress:
+	int ret = libdeflate_deflate_decompress_ex(decompressor,
+						   current_in, avail_in,
+						   current_out, avail_out,
+						   &actual_input,
+						   &actual_output);
+	actual_out += actual_output;
+	if (ret == LIBDEFLATE_SHORT_OUTPUT) {
+		output.resize(actual_output + avail_out);
+		current_out = (void*)((long)current_out + actual_out);
+		current_in = (void*)((long)current_in + actual_in);
+		goto decompress;
+	}
+	libdeflate_free_decompressor(decompressor);
 
-		int ret = libdeflate_deflate_decompress(decompressor,
-							   next_in, avail_in,
-							   next_out, avail_out,
-							   &existing_output);
-		existing_output += avail_in + 1024;
-		output.resize(existing_output);
-		next_out = (void *) (output.data() + existing_output + 1024);
-		next_in = (void *) (input.data() + existing_output / 2);
-		avail_in = (input.size() - avail_in);
-		avail_out = avail_in;
-
-		if (ret != LIBDEFLATE_SUCCESS) {
+	if (ret != LIBDEFLATE_SUCCESS) {
+		if (ret == LIBDEFLATE_BAD_DATA) {
+			fprintf(stderr, "data not compressed");
+		} else {
 			fprintf(stderr, "Decompression error: ");
-			if (ret == LIBDEFLATE_BAD_DATA) {
-				fprintf(stderr, "data error");
-			}
 			if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
 				fprintf(stderr, "out of memory");
 			}
-			fprintf(stderr, "\n");
-			return -ret;
 		}
-
-		if (ret == LIBDEFLATE_SHORT_OUTPUT) {
-			break;
-		}
-
-		// ret must be Z_OK or Z_NEED_DICT;
-		// continue decompresing
+		fprintf(stderr, "\n");
+		return -ret;
 	}
-	output.resize(avail_out - output.size());
-	libdeflate_free_decompressor(decompressor);
-	return 1;
+
+	output.resize(actual_out);
+	return 0;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int compress(std::string const &input, std::string &output) {
-	void *next_in = (void *) input.data();
 	size_t avail_in = input.size();
-	void *next_out = (void *) output.data();
-	size_t avail_out = output.size();
+	size_t avail_out = avail_in * 8;
 	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
-	do {
-		size_t increase = 1024;
-		output.resize(avail_in + increase);
-		avail_out = increase;
-		next_out = (void *) (next_out + increase);
-		next_in = (void *) (next_in + increase * 2);
-		int ret = libdeflate_deflate_compress(deflate_s,
-						      next_in, avail_in,
-						      next_out, avail_out);
-		if (ret != LIBDEFLATE_SUCCESS) {
-			return -1;
-		}
-		avail_in -= increase;
-	} while (avail_out == 0);
+	output.resize(avail_out);
+	int ret = libdeflate_deflate_compress(deflate_s,
+					      (void*)input.data(), avail_in,
+					      (void*)output.data(), avail_out);
 	libdeflate_free_compressor(deflate_s);
-	output.resize(avail_in);
-	return 0;
+	if (ret == 0) {
+		return -1;
+	}
+	output.resize(ret);
+	return 1;
 }
 
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	layers.clear();
 	std::string src;
+	std::string uncompressed;
 
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		if (decompress(message, uncompressed) == 0) {
-			exit(EXIT_FAILURE);
-		}
+	was_compressed = false;
+	src = message;
+	if (decompress(message, uncompressed) == 0) {
 		src = uncompressed;
 		was_compressed = true;
-	} else {
-		src = message;
-		was_compressed = false;
 	}
 
 	protozero::pbf_reader reader(src);
 
 	while (reader.next()) {
 		switch (reader.tag()) {
-		case 3: /* layer */
-		{
+		case 3: /* layer */		{
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
 

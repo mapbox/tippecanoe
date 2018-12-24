@@ -87,7 +87,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 
 void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
 	mvt_tile tile;
-	bool was_compressed = true;
+	bool was_compressed;
 
 	try {
 		if (!tile.decode(message, was_compressed)) {
