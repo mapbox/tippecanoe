@@ -23,7 +23,7 @@ all: deflate tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit ti
 
 docs: man/tippecanoe.1
 
-install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join tippecanoe-json-tool
+install: deflate tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join tippecanoe-json-tool
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
@@ -342,7 +342,7 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	cmp $(patsubst %.check,%,$@) $@
 	rm $@.check.mbtiles
 
-deflate:
+deflate: deflate-clean
 	cd libdeflate && make BUILDTYPE=$(BUILDTYPE) libdeflate.a
 
 deflate-clean:
