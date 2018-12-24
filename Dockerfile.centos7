@@ -6,6 +6,7 @@ RUN yum install -y make sqlite-devel zlib-devel bash git gcc-c++
 RUN mkdir -p /tmp/tippecanoe-src
 WORKDIR /tmp/tippecanoe-src
 COPY . /tmp/tippecanoe-src
+ENV LD_LIBRARY_PATH LD_LIBRARY_PATH:libdeflate
 
 # Build tippecanoe
 RUN make \
