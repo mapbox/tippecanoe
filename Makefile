@@ -74,7 +74,7 @@ unit: unit.o text.o
 %.o: %.cpp
 	$(CXX) -MMD $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
-clean:
+clean: deflate-clean
 	rm -f ./tippecanoe ./tippecanoe-* ./tile-join ./unit *.o *.d */*.o */*.d tests/**/*.mbtiles tests/**/*.check
 
 indent:
@@ -344,3 +344,6 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 
 deflate:
 	make -C libdeflate libdeflate.a
+
+deflate-clean:
+	make -C libdeflate realclean
