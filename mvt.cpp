@@ -87,7 +87,7 @@ int compress(std::string const &input, std::string &output) {
                 size_t increase = input.size() / 2 + 1024;
                 output.resize(avail_in + increase);
                 avail_out = increase;
-                next_out = ((void*)output.data() + avail_in);
+                next_out = (void*)((long)output.data() + avail_in);
                 int ret = libdeflate_deflate_compress(deflate_s,
                                             next_in, avail_in,
                                             next_out, avail_out);
