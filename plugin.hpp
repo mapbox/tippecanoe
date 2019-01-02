@@ -1,3 +1,3 @@
-std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layer, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent);
-void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, unsigned z, unsigned x, unsigned y);
-serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool filters);
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layer, uint32_t z, uint32_t x, uint32_t y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int32_t extent);
+void setup_filter(const char *filter, int32_t *write_to, int32_t *read_from, pid_t *pid, uint32_t z, uint32_t x, uint32_t y);
+serial_feature parse_feature(json_pull *jp, int32_t z, uint32_t x, uint32_t y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool filters);

@@ -14,7 +14,7 @@
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
 
-mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
+mvt_geometry::mvt_geometry(int32_t nop, int64_t nx, int64_t ny) {
 	this->op = nop;
 	this->x = nx;
 	this->y = ny;
@@ -26,7 +26,7 @@ bool is_compressed(std::string const &data) {
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int decompress(std::string const &input, std::string &output) {
+int32_t decompress(std::string const &input, std::string &output) {
 	z_stream inflate_s;
 	inflate_s.zalloc = Z_NULL;
 	inflate_s.zfree = Z_NULL;
@@ -48,7 +48,7 @@ int decompress(std::string const &input, std::string &output) {
 		inflate_s.next_out = (Bytef *) output.data() + existing_output;
 		inflate_s.avail_out = output.size() - existing_output;
 
-		int ret = inflate(&inflate_s, 0);
+		int32_t ret = inflate(&inflate_s, 0);
 		if (ret < 0) {
 			fprintf(stderr, "Decompression error: ");
 			if (ret == Z_DATA_ERROR) {
@@ -81,7 +81,7 @@ int decompress(std::string const &input, std::string &output) {
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
-int compress(std::string const &input, std::string &output) {
+int32_t compress(std::string const &input, std::string &output) {
 	z_stream deflate_s;
 	deflate_s.zalloc = Z_NULL;
 	deflate_s.zfree = Z_NULL;
@@ -97,7 +97,7 @@ int compress(std::string const &input, std::string &output) {
 		output.resize(length + increase);
 		deflate_s.avail_out = increase;
 		deflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = deflate(&deflate_s, Z_FINISH);
+		int32_t ret = deflate(&deflate_s, Z_FINISH);
 		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
 			return -1;
 		}
@@ -168,7 +168,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 							value.numeric_value.double_value = value_reader.get_double();
 							break;
 
-						case 4: /* int */
+						case 4: /* int32_t */
 							value.type = mvt_int;
 							value.numeric_value.int_value = value_reader.get_int64();
 							break;
@@ -247,7 +247,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
-					long long px = 0, py = 0;
+					int64_t px = 0, py = 0;
 					for (size_t g = 0; g < geoms.size(); g++) {
 						uint32_t geom = geoms[g];
 						uint32_t op = geom & 7;
@@ -356,15 +356,15 @@ std::string mvt_tile::encode() {
 
 			std::vector<uint32_t> geometry;
 
-			long long px = 0, py = 0;
-			int cmd_idx = -1;
-			int cmd = -1;
-			int length = 0;
+			int64_t px = 0, py = 0;
+			int32_t cmd_idx = -1;
+			int32_t cmd = -1;
+			int32_t length = 0;
 
 			std::vector<mvt_geometry> &geom = layers[i].features[f].geometry;
 
 			for (size_t g = 0; g < geom.size(); g++) {
-				int op = geom[g].op;
+				int32_t op = geom[g].op;
 
 				if (op != cmd) {
 					if (cmd_idx >= 0) {
@@ -378,11 +378,11 @@ std::string mvt_tile::encode() {
 				}
 
 				if (op == mvt_moveto || op == mvt_lineto) {
-					long long wwx = geom[g].x;
-					long long wwy = geom[g].y;
+					int64_t wwx = geom[g].x;
+					int64_t wwy = geom[g].y;
 
-					long long dx = wwx - px;
-					long long dy = wwy - py;
+					int64_t dx = wwx - px;
+					int64_t dy = wwy - py;
 
 					if (dx < INT_MIN || dx > INT_MAX || dy < INT_MIN || dy > INT_MAX) {
 						fprintf(stderr, "Internal error: Geometry delta is too big: %lld,%lld\n", dx, dy);
@@ -465,15 +465,15 @@ std::string mvt_value::toString() {
 		return std::to_string(numeric_value.int_value);
 	} else if (type == mvt_double) {
 		double v = numeric_value.double_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (int64_t) v) {
+			return std::to_string((int64_t) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
 	} else if (type == mvt_float) {
 		double v = numeric_value.float_value;
-		if (v == (long long) v) {
-			return std::to_string((long long) v);
+		if (v == (int64_t) v) {
+			return std::to_string((int64_t) v);
 		} else {
 			return milo::dtoa_milo(v);
 		}
@@ -516,7 +516,7 @@ void mvt_layer::tag(mvt_feature &feature, std::string key, mvt_value value) {
 	feature.tags.push_back(vo);
 }
 
-bool is_integer(const char *s, long long *v) {
+bool is_integer(const char *s, int64_t *v) {
 	errno = 0;
 	char *endptr;
 
@@ -547,7 +547,7 @@ bool is_integer(const char *s, long long *v) {
 	return 1;
 }
 
-bool is_unsigned_integer(const char *s, unsigned long long *v) {
+bool is_uint32_t_integer(const char *s, uint64_t *v) {
 	errno = 0;
 	char *endptr;
 
@@ -587,13 +587,13 @@ bool is_unsigned_integer(const char *s, unsigned long long *v) {
 	return 1;
 }
 
-mvt_value stringified_to_mvt_value(int type, const char *s) {
+mvt_value stringified_to_mvt_value(int32_t type, const char *s) {
 	mvt_value tv;
 
 	if (type == mvt_double) {
-		long long v;
-		unsigned long long uv;
-		if (is_unsigned_integer(s, &uv)) {
+		int64_t v;
+		uint64_t uv;
+		if (is_uint32_t_integer(s, &uv)) {
 			if (uv <= LLONG_MAX) {
 				tv.type = mvt_int;
 				tv.numeric_value.int_value = uv;

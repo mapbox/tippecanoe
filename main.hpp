@@ -6,12 +6,12 @@
 #include <string>
 
 struct index {
-	long long start = 0;
-	long long end = 0;
-	unsigned long long ix = 0;
+	int64_t start = 0;
+	int64_t end = 0;
+	uint64_t ix = 0;
 	short segment = 0;
-	unsigned short t : 2;
-	unsigned long long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
+	uint16_t t : 2;
+	uint64_t seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
 
 	index()
 	    : t(0),
@@ -25,19 +25,19 @@ struct clipbbox {
 	double lon2;
 	double lat2;
 
-	long long minx;
-	long long miny;
-	long long maxx;
-	long long maxy;
+	int64_t minx;
+	int64_t miny;
+	int64_t maxx;
+	int64_t maxy;
 };
 
 extern std::vector<clipbbox> clipbboxes;
 
 void checkdisk(std::vector<struct reader> *r);
 
-extern int geometry_scale;
-extern int quiet;
-extern int quiet_progress;
+extern int32_t geometry_scale;
+extern int32_t quiet;
+extern int32_t quiet_progress;
 extern double progress_interval;
 extern std::atomic<double> last_progress;
 
@@ -46,11 +46,11 @@ extern size_t TEMP_FILES;
 
 extern size_t max_tile_size;
 extern size_t max_tile_features;
-extern int cluster_distance;
+extern int32_t cluster_distance;
 extern std::string attribute_for_id;
 
-int mkstemp_cloexec(char *name);
-FILE *fopen_oflag(const char *name, const char *mode, int oflag);
+int32_t mkstemp_cloexec(char *name);
+FILE *fopen_oflag(const char *name, const char *mode, int32_t oflag);
 bool progress_time();
 
 #define MAX_ZOOM 24

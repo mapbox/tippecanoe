@@ -2,11 +2,11 @@
 #define POOL_HPP
 
 struct stringpool {
-	unsigned long left = 0;
-	unsigned long right = 0;
-	unsigned long off = 0;
+	uint64_t left = 0;
+	uint64_t right = 0;
+	uint64_t off = 0;
 };
 
-long long addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
+int64_t addpool(struct memfile *poolfile, struct memfile *treefile, const char *s, char type);
 
 #endif

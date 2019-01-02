@@ -10,7 +10,7 @@
 #include "milo/dtoa_milo.h"
 #include "options.hpp"
 
-void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fname, int layer, std::string layername) {
+void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fname, int32_t layer, std::string layername) {
 	FILE *f;
 
 	if (fname.size() == 0) {
@@ -73,7 +73,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		}
 
 		if (line[loncol].empty() || line[latcol].empty()) {
-			static int warned = 0;
+			static int32_t warned = 0;
 			if (!warned) {
 				fprintf(stderr, "%s:%zu: null geometry (additional not reported)\n", fname.c_str(), seq + 1);
 				warned = 1;
@@ -83,7 +83,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		double lon = atof(line[loncol].c_str());
 		double lat = atof(line[latcol].c_str());
 
-		long long x, y;
+		int64_t x, y;
 		projection->project(lon, lat, 32, &x, &y);
 		drawvec dv;
 		dv.push_back(draw(VT_MOVETO, x, y));

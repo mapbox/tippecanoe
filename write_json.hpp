@@ -45,8 +45,8 @@ struct json_writer {
 	void json_write_string(std::string const &s);
 	void json_write_number(double d);
 	void json_write_float(double d);
-	void json_write_unsigned(unsigned long long v);
-	void json_write_signed(long long v);
+	void json_write_uint32_t(uint64_t v);
+	void json_write_signed(int64_t v);
 	void json_write_stringified(std::string const &s);
 	void json_write_bool(bool b);
 	void json_write_null();
@@ -60,7 +60,7 @@ struct json_writer {
 	void adds(std::string const &s);
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state);
+void layer_to_geojson(mvt_layer const &layer, uint32_t z, uint32_t x, uint32_t y, bool comma, bool name, bool zoom, bool dropped, uint64_t index, int64_t sequence, int64_t extent, bool complain, json_writer &state);
 void fprintq(FILE *f, const char *s);
 
 #endif

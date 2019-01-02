@@ -10,7 +10,7 @@ extern size_t max_tilestats_sample_values;
 extern size_t max_tilestats_values;
 
 struct type_and_string {
-	int type = 0;
+	int32_t type = 0;
 	std::string string = "";
 
 	bool operator<(const type_and_string &o) const;
@@ -21,14 +21,14 @@ struct type_and_string_stats {
 	std::vector<type_and_string> sample_values = std::vector<type_and_string>();  // sorted
 	double min = INFINITY;
 	double max = -INFINITY;
-	int type = 0;
+	int32_t type = 0;
 };
 
 struct layermap_entry {
 	size_t id = 0;
 	std::map<std::string, type_and_string_stats> file_keys{};
-	int minzoom = 0;
-	int maxzoom = 0;
+	int32_t minzoom = 0;
+	int32_t maxzoom = 0;
 	std::string description = "";
 
 	size_t points = 0;
@@ -41,11 +41,11 @@ struct layermap_entry {
 	}
 };
 
-sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);
+sqlite3 *mbtiles_open(char *dbname, char **argv, int32_t forcetable);
 
-void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size);
+void mbtiles_write_tile(sqlite3 *outdb, int32_t z, int32_t tx, int32_t ty, const char *data, int32_t size);
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program);
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int32_t minzoom, int32_t maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int32_t forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program);
 
 void mbtiles_close(sqlite3 *outdb, const char *pgm);
 

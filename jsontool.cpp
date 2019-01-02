@@ -12,33 +12,33 @@
 #include "text.hpp"
 #include "geojson-loop.hpp"
 
-int fail = EXIT_SUCCESS;
+int32_t fail = EXIT_SUCCESS;
 bool wrap = false;
 const char *extract = NULL;
 
 FILE *csvfile = NULL;
 std::vector<std::string> header;
 std::vector<std::string> fields;
-int pe = false;
+int32_t pe = false;
 
 std::string buffered;
-int buffered_type = -1;
+int32_t buffered_type = -1;
 // 0: nothing yet
 // 1: buffered a line
 // 2: wrote the line and the wrapper
-int buffer_state = 0;
+int32_t buffer_state = 0;
 
-std::vector<unsigned long> decode32(const char *s) {
-	std::vector<unsigned long> utf32;
+std::vector<uint64_t> decode32(const char *s) {
+	std::vector<uint64_t> utf32;
 
 	while (*s != '\0') {
-		unsigned long b = *(s++) & 0xFF;
+		uint64_t b = *(s++) & 0xFF;
 
 		if (b < 0x80) {
 			utf32.push_back(b);
 		} else if ((b & 0xe0) == 0xc0) {
-			unsigned long c = (b & 0x1f) << 6;
-			unsigned long b1 = *(s++) & 0xFF;
+			uint64_t c = (b & 0x1f) << 6;
+			uint64_t b1 = *(s++) & 0xFF;
 
 			if ((b1 & 0xc0) == 0x80) {
 				c |= b1 & 0x3f;
@@ -48,12 +48,12 @@ std::vector<unsigned long> decode32(const char *s) {
 				utf32.push_back(0xfffd);
 			}
 		} else if ((b & 0xf0) == 0xe0) {
-			unsigned long c = (b & 0x0f) << 12;
-			unsigned long b1 = *(s++) & 0xFF;
+			uint64_t c = (b & 0x0f) << 12;
+			uint64_t b1 = *(s++) & 0xFF;
 
 			if ((b1 & 0xc0) == 0x80) {
 				c |= (b1 & 0x3f) << 6;
-				unsigned long b2 = *(s++) & 0xFF;
+				uint64_t b2 = *(s++) & 0xFF;
 
 				if ((b2 & 0xc0) == 0x80) {
 					c |= b2 & 0x3f;
@@ -67,16 +67,16 @@ std::vector<unsigned long> decode32(const char *s) {
 				utf32.push_back(0xfffd);
 			}
 		} else if ((b & 0xf8) == 0xf0) {
-			unsigned long c = (b & 0x07) << 18;
-			unsigned long b1 = *(s++) & 0xFF;
+			uint64_t c = (b & 0x07) << 18;
+			uint64_t b1 = *(s++) & 0xFF;
 
 			if ((b1 & 0xc0) == 0x80) {
 				c |= (b1 & 0x3f) << 12;
-				unsigned long b2 = *(s++) & 0xFF;
+				uint64_t b2 = *(s++) & 0xFF;
 
 				if ((b2 & 0xc0) == 0x80) {
 					c |= (b2 & 0x3f) << 6;
-					unsigned long b3 = *(s++) & 0xFF;
+					uint64_t b3 = *(s++) & 0xFF;
 
 					if ((b3 & 0xc0) == 0x80) {
 						c |= b3 & 0x3f;
@@ -106,16 +106,16 @@ std::vector<unsigned long> decode32(const char *s) {
 // so that they will sort in UTF-32 order in spite of quoting
 
 std::string sort_quote(const char *s) {
-	std::vector<unsigned long> utf32 = decode32(s);
+	std::vector<uint64_t> utf32 = decode32(s);
 	std::string ret;
 
 	for (size_t i = 0; i < utf32.size(); i++) {
 		if (utf32[i] < 0xD800) {
 			char buf[7];
-			sprintf(buf, "\\u%04lu", utf32[i]);
+			sprintf(buf, "\\u%04llu", utf32[i]);
 			ret.append(std::string(buf));
 		} else {
-			unsigned long c = utf32[i];
+			uint64_t c = utf32[i];
 
 			if (c <= 0x7f) {
 				ret.push_back(c);
@@ -138,7 +138,7 @@ std::string sort_quote(const char *s) {
 	return ret;
 }
 
-void out(std::string const &s, int type, json_object *properties) {
+void out(std::string const &s, int32_t type, json_object *properties) {
 	if (extract != NULL) {
 		std::string extracted = sort_quote("null");
 		bool found = false;
@@ -364,7 +364,7 @@ void join_csv(json_object *j) {
 }
 
 struct json_join_action : json_feature_action {
-	int add_feature(json_object *geometry, bool, json_object *, json_object *, json_object *, json_object *feature) {
+	int32_t add_feature(json_object *geometry, bool, json_object *, json_object *, json_object *, json_object *feature) {
 		if (feature != geometry) {  // a real feature, not a bare geometry
 			if (csvfile != NULL) {
 				join_csv(feature);
@@ -395,7 +395,7 @@ void process(FILE *fp, const char *fname) {
 	json_end(jp);
 }
 
-int main(int argc, char **argv) {
+int32_t main(int32_t argc, char **argv) {
 	const char *csv = NULL;
 
 	struct option long_options[] = {
@@ -419,8 +419,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	extern int optind;
-	int i;
+	extern int32_t optind;
+	int32_t i;
 
 	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
 		switch (i) {

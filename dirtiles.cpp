@@ -21,7 +21,7 @@ std::string dir_read_tile(std::string base, struct zxy tile) {
 	return (contents.str());
 }
 
-void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf) {
+void dir_write_tile(const char *outdir, int32_t z, int32_t tx, int32_t ty, std::string const &pbf) {
 	mkdir(outdir, S_IRWXU | S_IRWXG | S_IRWXO);
 	std::string curdir(outdir);
 	std::string slash("/");
@@ -110,7 +110,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 		while ((dp = readdir(d1)) != NULL) {
 			if (numeric(dp->d_name)) {
 				std::string z = std::string(fname) + "/" + dp->d_name;
-				int tz = atoi(dp->d_name);
+				int32_t tz = atoi(dp->d_name);
 
 				DIR *d2 = opendir(z.c_str());
 				if (d2 == NULL) {
@@ -122,7 +122,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 				while ((dp2 = readdir(d2)) != NULL) {
 					if (numeric(dp2->d_name)) {
 						std::string x = z + "/" + dp2->d_name;
-						int tx = atoi(dp2->d_name);
+						int32_t tx = atoi(dp2->d_name);
 
 						DIR *d3 = opendir(x.c_str());
 						if (d3 == NULL) {
@@ -133,7 +133,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname) {
 						struct dirent *dp3;
 						while ((dp3 = readdir(d3)) != NULL) {
 							if (pbfname(dp3->d_name)) {
-								int ty = atoi(dp3->d_name);
+								int32_t ty = atoi(dp3->d_name);
 								tiles.push_back(zxy(tz, tx, ty));
 							}
 						}

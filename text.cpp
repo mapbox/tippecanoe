@@ -53,7 +53,7 @@ std::string check_utf8(std::string s) {
 	return "";
 }
 
-const char *utf8_next(const char *s, long *c) {
+const char *utf8_next(const char *s, int64_t *c) {
 	if (s == NULL) {
 		*c = -1;
 		return NULL;
@@ -70,7 +70,7 @@ const char *utf8_next(const char *s, long *c) {
 				*c = 0xFFFD;
 				s++;
 			} else {
-				*c = ((long) (s[0] & 0x1F) << 6) | ((long) (s[1] & 0x7F));
+				*c = ((int64_t)(s[0] & 0x1F) << 6) | ((int64_t)(s[1] & 0x7F));
 				s += 2;
 			}
 		} else if ((s[0] & 0xF0) == 0xE0) {
@@ -78,7 +78,7 @@ const char *utf8_next(const char *s, long *c) {
 				*c = 0xFFFD;
 				s++;
 			} else {
-				*c = ((long) (s[0] & 0x0F) << 12) | ((long) (s[1] & 0x7F) << 6) | ((long) (s[2] & 0x7F));
+				*c = ((int64_t)(s[0] & 0x0F) << 12) | ((int64_t)(s[1] & 0x7F) << 6) | ((int64_t)(s[2] & 0x7F));
 				s += 3;
 			}
 		} else if ((s[0] & 0xF8) == 0xF0) {
@@ -86,7 +86,7 @@ const char *utf8_next(const char *s, long *c) {
 				*c = 0xFFFD;
 				s++;
 			} else {
-				*c = ((long) (s[0] & 0x0F) << 18) | ((long) (s[1] & 0x7F) << 12) | ((long) (s[2] & 0x7F) << 6) | ((long) (s[3] & 0x7F));
+				*c = ((int64_t)(s[0] & 0x0F) << 18) | ((int64_t)(s[1] & 0x7F) << 12) | ((int64_t)(s[2] & 0x7F) << 6) | ((int64_t)(s[3] & 0x7F));
 				s += 4;
 			}
 		} else {
@@ -106,7 +106,7 @@ std::string truncate16(std::string const &s, size_t runes) {
 	const char *start = cp;
 	const char *lastgood = cp;
 	size_t len = 0;
-	long c;
+	int64_t c;
 
 	while ((cp = utf8_next(cp, &c)) != NULL) {
 		if (c <= 0xFFFF) {
@@ -125,7 +125,7 @@ std::string truncate16(std::string const &s, size_t runes) {
 	return std::string(s, 0, lastgood - start);
 }
 
-int integer_zoom(std::string where, std::string text) {
+int32_t integer_zoom(std::string where, std::string text) {
 	double d = atof(text.c_str());
 	if (!isnormal(d) || d != floor(d) || d < 0 || d > 32) {
 		fprintf(stderr, "%s: Expected integer zoom level in \"tippecanoe\" GeoJSON extension, not %s\n", where.c_str(), text.c_str());

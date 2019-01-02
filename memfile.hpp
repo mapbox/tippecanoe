@@ -4,19 +4,19 @@
 #include <atomic>
 
 struct memfile {
-	int fd = 0;
+	int32_t fd = 0;
 	char *map = NULL;
-	std::atomic<long long> len;
-	long long off = 0;
-	unsigned long tree = 0;
+	std::atomic<int64_t> len;
+	int64_t off = 0;
+	uint64_t tree = 0;
 
 	memfile()
 	    : len(0) {
 	}
 };
 
-struct memfile *memfile_open(int fd);
-int memfile_close(struct memfile *file);
-int memfile_write(struct memfile *file, void *s, long long len);
+struct memfile *memfile_open(int32_t fd);
+int32_t memfile_close(struct memfile *file);
+int32_t memfile_write(struct memfile *file, void *s, int64_t len);
 
 #endif

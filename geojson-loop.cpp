@@ -32,9 +32,9 @@ static void json_context(json_object *j) {
 }
 
 void parse_json(json_feature_action *jfa, json_pull *jp) {
-	long long found_hashes = 0;
-	long long found_features = 0;
-	long long found_geometries = 0;
+	int64_t found_hashes = 0;
+	int64_t found_features = 0;
+	int64_t found_geometries = 0;
 
 	while (1) {
 		json_object *j = json_read(jp);
@@ -64,8 +64,8 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 		}
 
 		if (found_features == 0) {
-			int i;
-			int is_geometry = 0;
+			int32_t i;
+			int32_t is_geometry = 0;
 			for (i = 0; i < GEOM_TYPES; i++) {
 				if (strcmp(type->string, geometry_names[i]) == 0) {
 					is_geometry = 1;

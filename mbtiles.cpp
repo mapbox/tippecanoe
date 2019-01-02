@@ -23,7 +23,7 @@ size_t max_tilestats_attributes = 1000;
 size_t max_tilestats_sample_values = 1000;
 size_t max_tilestats_values = 100;
 
-sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
+sqlite3 *mbtiles_open(char *dbname, char **argv, int32_t forcetable) {
 	sqlite3 *outdb;
 
 	if (sqlite3_open(dbname, &outdb) != SQLITE_OK) {
@@ -73,7 +73,7 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 	return outdb;
 }
 
-void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size) {
+void mbtiles_write_tile(sqlite3 *outdb, int32_t z, int32_t tx, int32_t ty, const char *data, int32_t size) {
 	sqlite3_stmt *stmt;
 	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
 	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
@@ -124,7 +124,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 
 	state.nospace = true;
 	state.json_write_string("layerCount");
-	state.json_write_unsigned(layermap.size());
+	state.json_write_uint32_t(layermap.size());
 
 	state.nospace = true;
 	state.json_write_string("layers");
@@ -143,7 +143,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 
 		state.nospace = true;
 		state.json_write_string("count");
-		state.json_write_unsigned(layer.second.points + layer.second.lines + layer.second.polygons);
+		state.json_write_uint32_t(layer.second.points + layer.second.lines + layer.second.polygons);
 
 		std::string geomtype = "Polygon";
 		if (layer.second.points >= layer.second.lines && layer.second.points >= layer.second.polygons) {
@@ -163,7 +163,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 
 		state.nospace = true;
 		state.json_write_string("attributeCount");
-		state.json_write_unsigned(attrib_count);
+		state.json_write_uint32_t(attrib_count);
 
 		state.nospace = true;
 		state.json_write_string("attributes");
@@ -191,9 +191,9 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 
 			state.nospace = true;
 			state.json_write_string("count");
-			state.json_write_unsigned(val_count);
+			state.json_write_uint32_t(val_count);
 
-			int type = 0;
+			int32_t type = 0;
 			for (auto s : attribute.second.sample_values) {
 				type |= (1 << s.type);
 			}
@@ -270,7 +270,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int32_t minzoom, int32_t maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int32_t forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -435,7 +435,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 
 					auto f = attribute_descriptions.find(j->first);
 					if (f == attribute_descriptions.end()) {
-						int type = 0;
+						int32_t type = 0;
 						for (auto s : j->second.sample_values) {
 							type |= (1 << s.type);
 						}

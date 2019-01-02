@@ -26,9 +26,9 @@ void enumerate(char *fname) {
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		long long zoom = sqlite3_column_int(stmt, 0);
-		long long x = sqlite3_column_int(stmt, 1);
-		long long y = sqlite3_column_int(stmt, 2);
+		int64_t zoom = sqlite3_column_int(stmt, 0);
+		int64_t x = sqlite3_column_int(stmt, 1);
+		int64_t y = sqlite3_column_int(stmt, 2);
 
 		if (zoom < 0 || zoom > 31) {
 			fprintf(stderr, "Corrupt mbtiles file: impossible zoom level %lld\n", zoom);
@@ -52,10 +52,10 @@ void usage(char **argv) {
 	exit(EXIT_FAILURE);
 }
 
-int main(int argc, char **argv) {
-	extern int optind;
+int32_t main(int32_t argc, char **argv) {
+	extern int32_t optind;
 	// extern char *optarg;
-	int i;
+	int32_t i;
 
 	while ((i = getopt(argc, argv, "")) != -1) {
 		usage(argv);

@@ -34,12 +34,12 @@ extern "C" {
 #include "read_json.hpp"
 
 struct writer_arg {
-	int write_to;
+	int32_t write_to;
 	std::vector<mvt_layer> *layers;
-	unsigned z;
-	unsigned x;
-	unsigned y;
-	int extent;
+	uint32_t z;
+	uint32_t x;
+	uint32_t y;
+	int32_t extent;
 };
 
 void *run_writer(void *a) {
@@ -84,7 +84,7 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 }
 
 // Reads from the postfilter
-std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+std::vector<mvt_layer> parse_layers(int32_t fd, int32_t z, uint32_t x, uint32_t y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int32_t extent) {
 	std::map<std::string, mvt_layer> ret;
 
 	FILE *f = fdopen(fd, "r");
@@ -153,7 +153,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		int t;
+		int32_t t;
 		for (t = 0; t < GEOM_TYPES; t++) {
 			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
 				break;
@@ -193,7 +193,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		// Scale and offset geometry from global to tile
 		for (size_t i = 0; i < dv.size(); i++) {
-			long long scale = 1LL << (32 - z);
+			int64_t scale = 1LL << (32 - z);
 			dv[i].x = std::round((dv[i].x - scale * x) * extent / (double) scale);
 			dv[i].y = std::round((dv[i].y - scale * y) * extent / (double) scale);
 		}
@@ -255,7 +255,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
-				int tp = -1;
+				int32_t tp = -1;
 				std::string s;
 
 				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
@@ -295,7 +295,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 }
 
 // Reads from the prefilter
-serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
+serial_feature parse_feature(json_pull *jp, int32_t z, uint32_t x, uint32_t y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
 	serial_feature sf;
 
 	while (1) {
@@ -358,7 +358,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			exit(EXIT_FAILURE);
 		}
 
-		int t;
+		int32_t t;
 		for (t = 0; t < GEOM_TYPES; t++) {
 			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
 				break;
@@ -379,7 +379,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		// Scale and offset geometry from global to tile
 		double scale = 1LL << geometry_scale;
 		for (size_t i = 0; i < dv.size(); i++) {
-			unsigned sx = 0, sy = 0;
+			uint32_t sx = 0, sy = 0;
 			if (z != 0) {
 				sx = x << (32 - z);
 				sy = y << (32 - z);
@@ -524,7 +524,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 static pthread_mutex_t pipe_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid, unsigned z, unsigned x, unsigned y) {
+void setup_filter(const char *filter, int32_t *write_to, int32_t *read_from, pid_t *pid, uint32_t z, uint32_t x, uint32_t y) {
 	// This will create two pipes, a new thread, and a new process.
 	//
 	// The new process will read from one pipe and write to the other, and execute the filter.
@@ -536,7 +536,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 		exit(EXIT_FAILURE);
 	}
 
-	int pipe_orig[2], pipe_filtered[2];
+	int32_t pipe_orig[2], pipe_filtered[2];
 	if (pipe(pipe_orig) < 0) {
 		perror("pipe (original features)");
 		exit(EXIT_FAILURE);
@@ -618,8 +618,8 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
-	int write_to, read_from;
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, uint32_t z, uint32_t x, uint32_t y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int32_t extent) {
+	int32_t write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
 
@@ -640,7 +640,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 	std::vector<mvt_layer> nlayers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
 
 	while (1) {
-		int stat_loc;
+		int32_t stat_loc;
 		if (waitpid(pid, &stat_loc, 0) < 0) {
 			perror("waitpid for filter\n");
 			exit(EXIT_FAILURE);

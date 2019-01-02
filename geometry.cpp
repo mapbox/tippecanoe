@@ -21,10 +21,10 @@
 #include "main.hpp"
 #include "options.hpp"
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
+static int32_t pnpoly(drawvec &vert, size_t start, size_t nvert, int64_t testx, int64_t testy);
+static int32_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
-drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
+drawvec decode_geometry(FILE *meta, std::atomic<int64_t> *geompos, int32_t z, uint32_t tx, uint32_t ty, int64_t *bbox, uint32_t initial_x, uint32_t initial_y) {
 	drawvec out;
 
 	bbox[0] = LLONG_MAX;
@@ -32,7 +32,7 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 	bbox[2] = LLONG_MIN;
 	bbox[3] = LLONG_MIN;
 
-	long long wx = initial_x, wy = initial_y;
+	int64_t wx = initial_x, wy = initial_y;
 
 	while (1) {
 		draw d;
@@ -46,7 +46,7 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 		}
 
 		if (d.op == VT_MOVETO || d.op == VT_LINETO) {
-			long long dx, dy;
+			int64_t dx, dy;
 
 			deserialize_long_long_io(meta, &dx, geompos);
 			deserialize_long_long_io(meta, &dy, geompos);
@@ -54,8 +54,8 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 			wx += dx * (1 << geometry_scale);
 			wy += dy * (1 << geometry_scale);
 
-			long long wwx = wx;
-			long long wwy = wy;
+			int64_t wwx = wx;
+			int64_t wwy = wy;
 
 			if (z != 0) {
 				wwx -= tx << (32 - z);
@@ -85,17 +85,17 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 	return out;
 }
 
-void to_tile_scale(drawvec &geom, int z, int detail) {
+void to_tile_scale(drawvec &geom, int32_t z, int32_t detail) {
 	for (size_t i = 0; i < geom.size(); i++) {
 		geom[i].x >>= (32 - detail - z);
 		geom[i].y >>= (32 - detail - z);
 	}
 }
 
-drawvec remove_noop(drawvec geom, int type, int shift) {
+drawvec remove_noop(drawvec geom, int32_t type, int32_t shift) {
 	// first pass: remove empty linetos
 
-	long long x = 0, y = 0;
+	int64_t x = 0, y = 0;
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -190,7 +190,7 @@ double get_mp_area(drawvec &geom) {
 	return ret;
 }
 
-static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawvec &out) {
+static void decode_clipped(mapbox::geometry::multi_polygon<int64_t> &t, drawvec &out) {
 	out.clear();
 
 	for (size_t i = 0; i < t.size(); i++) {
@@ -220,8 +220,8 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 	}
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
-	mapbox::geometry::wagyu::wagyu<long long> wagyu;
+drawvec clean_or_clip_poly(drawvec &geom, int32_t z, int32_t buffer, bool clip) {
+	mapbox::geometry::wagyu::wagyu<int64_t> wagyu;
 
 	geom = remove_noop(geom, VT_POLYGON, 0);
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -234,10 +234,10 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 			}
 
 			if (j >= i + 4) {
-				mapbox::geometry::linear_ring<long long> lr;
+				mapbox::geometry::linear_ring<int64_t> lr;
 
 				for (size_t k = i; k < j; k++) {
-					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+					lr.push_back(mapbox::geometry::point<int64_t>(geom[k].x, geom[k].y));
 				}
 
 				if (lr.size() >= 3) {
@@ -250,24 +250,24 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 	}
 
 	if (clip) {
-		long long area = 0xFFFFFFFF;
+		int64_t area = 0xFFFFFFFF;
 		if (z != 0) {
 			area = 1LL << (32 - z);
 		}
-		long long clip_buffer = buffer * area / 256;
+		int64_t clip_buffer = buffer * area / 256;
 
-		mapbox::geometry::linear_ring<long long> lr;
+		mapbox::geometry::linear_ring<int64_t> lr;
 
-		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, -clip_buffer));
-		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, area + clip_buffer));
-		lr.push_back(mapbox::geometry::point<long long>(area + clip_buffer, area + clip_buffer));
-		lr.push_back(mapbox::geometry::point<long long>(area + clip_buffer, -clip_buffer));
-		lr.push_back(mapbox::geometry::point<long long>(-clip_buffer, -clip_buffer));
+		lr.push_back(mapbox::geometry::point<int64_t>(-clip_buffer, -clip_buffer));
+		lr.push_back(mapbox::geometry::point<int64_t>(-clip_buffer, area + clip_buffer));
+		lr.push_back(mapbox::geometry::point<int64_t>(area + clip_buffer, area + clip_buffer));
+		lr.push_back(mapbox::geometry::point<int64_t>(area + clip_buffer, -clip_buffer));
+		lr.push_back(mapbox::geometry::point<int64_t>(-clip_buffer, -clip_buffer));
 
 		wagyu.add_ring(lr, mapbox::geometry::wagyu::polygon_type_clip);
 	}
 
-	mapbox::geometry::multi_polygon<long long> result;
+	mapbox::geometry::multi_polygon<int64_t> result;
 	try {
 		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
 	} catch (std::runtime_error e) {
@@ -286,7 +286,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 				}
 
 				if (j >= i + 4) {
-					mapbox::geometry::linear_ring<long long> lr;
+					mapbox::geometry::linear_ring<int64_t> lr;
 
 					if (i != 0) {
 						fprintf(f, ",");
@@ -294,7 +294,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 					fprintf(f, "[");
 
 					for (size_t k = i; k < j; k++) {
-						lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+						lr.push_back(mapbox::geometry::point<int64_t>(geom[k].x, geom[k].y));
 						if (k != i) {
 							fprintf(f, ",");
 						}
@@ -335,7 +335,7 @@ The name of W. Randolph Franklin may not be used to endorse or promote products 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+static int32_t pnpoly(drawvec &vert, size_t start, size_t nvert, int64_t testx, int64_t testy) {
 	size_t i, j;
 	bool c = false;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
@@ -349,7 +349,7 @@ static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, lo
 void check_polygon(drawvec &geom) {
 	geom = remove_noop(geom, VT_POLYGON, 0);
 
-	mapbox::geometry::multi_polygon<long long> mp;
+	mapbox::geometry::multi_polygon<int64_t> mp;
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
 			size_t j;
@@ -360,14 +360,14 @@ void check_polygon(drawvec &geom) {
 			}
 
 			if (j >= i + 4) {
-				mapbox::geometry::linear_ring<long long> lr;
+				mapbox::geometry::linear_ring<int64_t> lr;
 
 				for (size_t k = i; k < j; k++) {
-					lr.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+					lr.push_back(mapbox::geometry::point<int64_t>(geom[k].x, geom[k].y));
 				}
 
 				if (lr.size() >= 3) {
-					mapbox::geometry::polygon<long long> p;
+					mapbox::geometry::polygon<int64_t> p;
 					p.push_back(lr);
 					mp.push_back(p);
 				}
@@ -377,7 +377,7 @@ void check_polygon(drawvec &geom) {
 		}
 	}
 
-	mapbox::geometry::multi_polygon<long long> mp2 = mapbox::geometry::snap_round(mp, true, true);
+	mapbox::geometry::multi_polygon<int64_t> mp2 = mapbox::geometry::snap_round(mp, true, true);
 	if (mp != mp2) {
 		fprintf(stderr, "Internal error: self-intersecting polygon\n");
 	}
@@ -397,7 +397,7 @@ void check_polygon(drawvec &geom) {
 			double area = get_area(geom, i, j);
 
 #if 0
-			fprintf(stderr, "looking at %lld to %lld, area %f\n", (long long) i, (long long) j, area);
+			fprintf(stderr, "looking at %lld to %lld, area %f\n", (int64_t) i, (int64_t) j, area);
 #endif
 
 			if (area > 0) {
@@ -416,7 +416,7 @@ void check_polygon(drawvec &geom) {
 						}
 
 						if (!on_edge) {
-							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (long long) k, (long long) outer_start, (long long) (outer_start + outer_len));
+							printf("%lld,%lld at %lld not in outer ring (%lld to %lld)\n", geom[k].x, geom[k].y, (int64_t) k, (int64_t) outer_start, (int64_t)(outer_start + outer_len));
 
 #if 0
 							for (size_t l = outer_start; l < outer_start + outer_len; l++) {
@@ -461,12 +461,12 @@ drawvec close_poly(drawvec &geom) {
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+drawvec simple_clip_poly(drawvec &geom, int64_t minx, int64_t miny, int64_t maxx, int64_t maxy) {
 	drawvec out;
 
-	mapbox::geometry::point<long long> min(minx, miny);
-	mapbox::geometry::point<long long> max(maxx, maxy);
-	mapbox::geometry::box<long long> bbox(min, max);
+	mapbox::geometry::point<int64_t> min(minx, miny);
+	mapbox::geometry::point<int64_t> max(maxx, maxy);
+	mapbox::geometry::box<int64_t> bbox(min, max);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -477,12 +477,12 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 				}
 			}
 
-			mapbox::geometry::linear_ring<long long> ring;
+			mapbox::geometry::linear_ring<int64_t> ring;
 			for (size_t k = i; k < j; k++) {
-				ring.push_back(mapbox::geometry::point<long long>(geom[k].x, geom[k].y));
+				ring.push_back(mapbox::geometry::point<int64_t>(geom[k].x, geom[k].y));
 			}
 
-			mapbox::geometry::linear_ring<long long> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
+			mapbox::geometry::linear_ring<int64_t> lr = mapbox::geometry::wagyu::quick_clip::quick_lr_clip(ring, bbox);
 
 			if (lr.size() > 0) {
 				for (size_t k = 0; k < lr.size(); k++) {
@@ -500,7 +500,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 
 			i = j - 1;
 		} else {
-			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
+			fprintf(stderr, "Unexpected operation in polygon %d\n", (int32_t) geom[i].op);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -508,16 +508,16 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 	return out;
 }
 
-drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
-	long long area = 1LL << (32 - z);
-	long long clip_buffer = buffer * area / 256;
+drawvec simple_clip_poly(drawvec &geom, int32_t z, int32_t buffer) {
+	int64_t area = 1LL << (32 - z);
+	int64_t clip_buffer = buffer * area / 256;
 
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
 }
 
-drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
+drawvec reduce_tiny_poly(drawvec &geom, int32_t z, int32_t detail, bool *reduced, double *accum_area) {
 	drawvec out;
-	long long pixel = (1 << (32 - detail - z)) * 2;
+	int64_t pixel = (1 << (32 - detail - z)) * 2;
 
 	*reduced = true;
 	bool included_last_outer = false;
@@ -580,7 +580,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 
 			i = j - 1;
 		} else {
-			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int) geom.size());
+			fprintf(stderr, "how did we get here with %d in %d?\n", geom[i].op, (int32_t) geom.size());
 
 			for (size_t n = 0; n < geom.size(); n++) {
 				fprintf(stderr, "%d/%lld/%lld ", geom[n].op, geom[n].x, geom[n].y);
@@ -594,9 +594,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 	return out;
 }
 
-drawvec clip_point(drawvec &geom, int z, long long buffer) {
-	long long min = 0;
-	long long area = 1LL << (32 - z);
+drawvec clip_point(drawvec &geom, int32_t z, int64_t buffer) {
+	int64_t min = 0;
+	int64_t area = 1LL << (32 - z);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
@@ -604,7 +604,7 @@ drawvec clip_point(drawvec &geom, int z, long long buffer) {
 	return clip_point(geom, min, min, area, area);
 }
 
-drawvec clip_point(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+drawvec clip_point(drawvec &geom, int64_t minx, int64_t miny, int64_t maxx, int64_t maxy) {
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -616,9 +616,9 @@ drawvec clip_point(drawvec &geom, long long minx, long long miny, long long maxx
 	return out;
 }
 
-int quick_check(long long *bbox, int z, long long buffer) {
-	long long min = 0;
-	long long area = 1LL << (32 - z);
+int32_t quick_check(int64_t *bbox, int32_t z, int64_t buffer) {
+	int64_t min = 0;
+	int64_t area = 1LL << (32 - z);
 
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
@@ -640,25 +640,25 @@ int quick_check(long long *bbox, int z, long long buffer) {
 	return 2;
 }
 
-bool point_within_tile(long long x, long long y, int z) {
+bool point_within_tile(int64_t x, int64_t y, int32_t z) {
 	// No adjustment for buffer, because the point must be
 	// strictly within the tile to appear exactly once
 
-	long long area = 1LL << (32 - z);
+	int64_t area = 1LL << (32 - z);
 
 	return x >= 0 && y >= 0 && x < area && y < area;
 }
 
-drawvec clip_lines(drawvec &geom, int z, long long buffer) {
-	long long min = 0;
-	long long area = 1LL << (32 - z);
+drawvec clip_lines(drawvec &geom, int32_t z, int64_t buffer) {
+	int64_t min = 0;
+	int64_t area = 1LL << (32 - z);
 	min -= buffer * area / 256;
 	area += buffer * area / 256;
 
 	return clip_lines(geom, min, min, area, area);
 }
 
-drawvec clip_lines(drawvec &geom, long long minx, long long miny, long long maxx, long long maxy) {
+drawvec clip_lines(drawvec &geom, int64_t minx, int64_t miny, int64_t maxx, int64_t maxy) {
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -669,7 +669,7 @@ drawvec clip_lines(drawvec &geom, long long minx, long long miny, long long maxx
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, minx, miny, maxx, maxy);
+			int32_t c = clip(&x1, &y1, &x2, &y2, minx, miny, maxx, maxy);
 
 			if (c > 1) {  // clipped
 				out.push_back(draw(VT_MOVETO, x1, y1));
@@ -688,7 +688,7 @@ drawvec clip_lines(drawvec &geom, long long minx, long long miny, long long maxx
 	return out;
 }
 
-static double square_distance_from_line(long long point_x, long long point_y, long long segA_x, long long segA_y, long long segB_x, long long segB_y) {
+static double square_distance_from_line(int64_t point_x, int64_t point_y, int64_t segA_x, int64_t segA_y, int64_t segB_x, int64_t segB_y) {
 	double p2x = segB_x - segA_x;
 	double p2y = segB_y - segA_y;
 	double something = p2x * p2x + p2y * p2y;
@@ -710,13 +710,13 @@ static double square_distance_from_line(long long point_x, long long point_y, lo
 }
 
 // https://github.com/Project-OSRM/osrm-backend/blob/733d1384a40f/Algorithms/DouglasePeucker.cpp
-static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t kept, size_t retain) {
+static void douglas_peucker(drawvec &geom, int32_t start, int32_t n, double e, size_t kept, size_t retain) {
 	e = e * e;
-	std::stack<int> recursion_stack;
+	std::stack<int32_t> recursion_stack;
 
 	{
-		int left_border = 0;
-		int right_border = 1;
+		int32_t left_border = 0;
+		int32_t right_border = 1;
 		// Sweep linerarily over array and identify those ranges that need to be checked
 		do {
 			if (geom[start + right_border].necessary) {
@@ -730,16 +730,16 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t ke
 
 	while (!recursion_stack.empty()) {
 		// pop next element
-		int second = recursion_stack.top();
+		int32_t second = recursion_stack.top();
 		recursion_stack.pop();
-		int first = recursion_stack.top();
+		int32_t first = recursion_stack.top();
 		recursion_stack.pop();
 
 		double max_distance = -1;
-		int farthest_element_index = second;
+		int32_t farthest_element_index = second;
 
 		// find index idx of element with max_distance
-		int i;
+		int32_t i;
 		for (i = first + 1; i < second; i++) {
 			double temp_dist = square_distance_from_line(geom[start + i].x, geom[start + i].y, geom[start + first].x, geom[start + first].y, geom[start + second].x, geom[start + second].y);
 
@@ -771,7 +771,7 @@ static void douglas_peucker(drawvec &geom, int start, int n, double e, size_t ke
 // If any line segment crosses a tile boundary, add a node there
 // that cannot be simplified away, to prevent the edge of any
 // feature from jumping abruptly at the tile boundary.
-drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
+drawvec impose_tile_boundaries(drawvec &geom, int64_t extent) {
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -782,7 +782,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 			double x2 = geom[i - 0].x;
 			double y2 = geom[i - 0].y;
 
-			int c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
+			int32_t c = clip(&x1, &y1, &x2, &y2, 0, 0, extent, extent);
 
 			if (c > 1) {  // clipped
 				if (x1 != geom[i - 1].x || y1 != geom[i - 1].y) {
@@ -802,9 +802,9 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
-	int res = 1 << (32 - detail - z);
-	long long area = 1LL << (32 - z);
+drawvec simplify_lines(drawvec &geom, int32_t z, int32_t detail, bool mark_tile_bounds, double simplification, size_t retain) {
+	int32_t res = 1 << (32 - detail - z);
+	int64_t area = 1LL << (32 - z);
 
 	for (size_t i = 0; i < geom.size(); i++) {
 		if (geom[i].op == VT_MOVETO) {
@@ -874,8 +874,8 @@ drawvec reorder_lines(drawvec &geom) {
 	// instead of down and to the right
 	// so that it will coalesce better
 
-	unsigned long long l1 = encode_index(geom[0].x, geom[0].y);
-	unsigned long long l2 = encode_index(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
+	uint64_t l1 = encode_index(geom[0].x, geom[0].y);
+	uint64_t l2 = encode_index(geom[geom.size() - 1].x, geom[geom.size() - 1].y);
 
 	if (l1 > l2) {
 		drawvec out;
@@ -891,7 +891,7 @@ drawvec reorder_lines(drawvec &geom) {
 }
 
 drawvec fix_polygon(drawvec &geom) {
-	int outer = 1;
+	int32_t outer = 1;
 	drawvec out;
 
 	for (size_t i = 0; i < geom.size(); i++) {
@@ -937,7 +937,7 @@ drawvec fix_polygon(drawvec &geom) {
 
 			if (reverse_ring) {
 				drawvec tmp;
-				for (int a = ring.size() - 1; a >= 0; a--) {
+				for (int32_t a = ring.size() - 1; a >= 0; a--) {
 					tmp.push_back(ring[a]);
 				}
 				ring = tmp;
@@ -981,8 +981,8 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 					warned = true;
 				}
 
-				long long midx = 0, midy = 0, count = 0;
-				long long maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
+				int64_t midx = 0, midy = 0, count = 0;
+				int64_t maxx = LLONG_MIN, maxy = LLONG_MIN, minx = LLONG_MAX, miny = LLONG_MAX;
 
 				for (size_t j = 0; j < geoms[i].size(); j++) {
 					if (geoms[i][j].op == VT_MOVETO || geoms[i][j].op == VT_LINETO) {
@@ -1053,8 +1053,8 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
 #define BOTTOM 4
 #define TOP 8
 
-static int computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
-	int code = INSIDE;
+static int32_t computeOutCode(double x, double y, double xmin, double ymin, double xmax, double ymax) {
+	int32_t code = INSIDE;
 
 	if (x < xmin) {
 		code |= LEFT;
@@ -1071,11 +1071,11 @@ static int computeOutCode(double x, double y, double xmin, double ymin, double x
 	return code;
 }
 
-static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
-	int outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
-	int outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
-	int accept = 0;
-	int changed = 0;
+static int32_t clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax) {
+	int32_t outcode0 = computeOutCode(*x0, *y0, xmin, ymin, xmax, ymax);
+	int32_t outcode1 = computeOutCode(*x1, *y1, xmin, ymin, xmax, ymax);
+	int32_t accept = 0;
+	int32_t changed = 0;
 
 	while (1) {
 		if (!(outcode0 | outcode1)) {  // Bitwise OR is 0. Trivially accept and get out of loop
@@ -1089,7 +1089,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 			double x = *x0, y = *y0;
 
 			// At least one endpoint is outside the clip rectangle; pick it.
-			int outcodeOut = outcode0 ? outcode0 : outcode1;
+			int32_t outcodeOut = outcode0 ? outcode0 : outcode1;
 
 			// Now find the intersection point;
 			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
@@ -1130,7 +1130,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 	}
 }
 
-drawvec stairstep(drawvec &geom, int z, int detail) {
+drawvec stairstep(drawvec &geom, int32_t z, int32_t detail) {
 	drawvec out;
 	double scale = 1 << (32 - detail - z);
 
@@ -1143,10 +1143,10 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 		if (geom[i].op == VT_MOVETO) {
 			out.push_back(geom[i]);
 		} else if (out.size() > 0) {
-			long long x0 = out[out.size() - 1].x;
-			long long y0 = out[out.size() - 1].y;
-			long long x1 = geom[i].x;
-			long long y1 = geom[i].y;
+			int64_t x0 = out[out.size() - 1].x;
+			int64_t y0 = out[out.size() - 1].y;
+			int64_t x1 = geom[i].x;
+			int64_t y1 = geom[i].y;
 			bool swap = false;
 
 			if (y0 < y1) {
@@ -1155,19 +1155,19 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 				std::swap(y0, y1);
 			}
 
-			long long xx = x0, yy = y0;
-			long long dx = std::abs(x1 - x0);
-			long long sx = (x0 < x1) ? 1 : -1;
-			long long dy = std::abs(y1 - y0);
-			long long sy = (y0 < y1) ? 1 : -1;
-			long long err = ((dx > dy) ? dx : -dy) / 2;
-			int last = -1;
+			int64_t xx = x0, yy = y0;
+			int64_t dx = std::abs(x1 - x0);
+			int64_t sx = (x0 < x1) ? 1 : -1;
+			int64_t dy = std::abs(y1 - y0);
+			int64_t sy = (y0 < y1) ? 1 : -1;
+			int64_t err = ((dx > dy) ? dx : -dy) / 2;
+			int32_t last = -1;
 
 			drawvec tmp;
 			tmp.push_back(draw(VT_LINETO, xx, yy));
 
 			while (xx != x1 || yy != y1) {
-				long long e2 = err;
+				int64_t e2 = err;
 
 				if (e2 > -dx) {
 					err -= dy;

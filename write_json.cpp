@@ -157,13 +157,13 @@ void json_writer::json_write_float(double d) {
 	aprintf("%f", d);
 }
 
-void json_writer::json_write_unsigned(unsigned long long v) {
+void json_writer::json_write_uint32_t(uint64_t v) {
 	json_adjust();
 
 	aprintf("%llu", v);
 }
 
-void json_writer::json_write_signed(long long v) {
+void json_writer::json_write_signed(int64_t v) {
 	json_adjust();
 
 	aprintf("%lld", v);
@@ -232,13 +232,13 @@ void json_writer::adds(std::string const &str) {
 }
 
 struct lonlat {
-	int op;
+	int32_t op;
 	double lon;
 	double lat;
-	long long x;
-	long long y;
+	int64_t x;
+	int64_t y;
 
-	lonlat(int nop, double nlon, double nlat, long long nx, long long ny)
+	lonlat(int32_t nop, double nlon, double nlat, int64_t nx, int64_t ny)
 	    : op(nop),
 	      lon(nlon),
 	      lat(nlat),
@@ -247,7 +247,7 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
+void layer_to_geojson(mvt_layer const &layer, uint32_t z, uint32_t x, uint32_t y, bool comma, bool name, bool zoom, bool dropped, uint64_t index, int64_t sequence, int64_t extent, bool complain, json_writer &state) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -257,7 +257,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 		if (feat.has_id) {
 			state.json_write_string("id");
-			state.json_write_unsigned(feat.id);
+			state.json_write_uint32_t(feat.id);
 		}
 
 		if (name || zoom || index != 0 || sequence != 0 || extent != 0) {
@@ -271,10 +271,10 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 			if (zoom) {
 				state.json_write_string("minzoom");
-				state.json_write_unsigned(z);
+				state.json_write_uint32_t(z);
 
 				state.json_write_string("maxzoom");
-				state.json_write_unsigned(z);
+				state.json_write_uint32_t(z);
 			}
 
 			if (dropped) {
@@ -284,7 +284,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 			if (index != 0) {
 				state.json_write_string("index");
-				state.json_write_unsigned(index);
+				state.json_write_uint32_t(index);
 			}
 
 			if (sequence != 0) {
@@ -333,7 +333,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_signed(val.numeric_value.sint_value);
 			} else if (val.type == mvt_uint) {
 				state.json_write_string(key);
-				state.json_write_unsigned(val.numeric_value.uint_value);
+				state.json_write_uint32_t(val.numeric_value.uint_value);
 			} else if (val.type == mvt_bool) {
 				state.json_write_string(key);
 				state.json_write_bool(val.numeric_value.bool_value);
@@ -354,14 +354,14 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		std::vector<lonlat> ops;
 
 		for (size_t g = 0; g < feat.geometry.size(); g++) {
-			int op = feat.geometry[g].op;
-			long long px = feat.geometry[g].x;
-			long long py = feat.geometry[g].y;
+			int32_t op = feat.geometry[g].op;
+			int64_t px = feat.geometry[g].x;
+			int64_t py = feat.geometry[g].y;
 
 			if (op == VT_MOVETO || op == VT_LINETO) {
-				long long scale = 1LL << (32 - z);
-				long long wx = scale * x + (scale / layer.extent) * px;
-				long long wy = scale * y + (scale / layer.extent) * py;
+				int64_t scale = 1LL << (32 - z);
+				int64_t wx = scale * x + (scale / layer.extent) * px;
+				int64_t wy = scale * y + (scale / layer.extent) * py;
 
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
@@ -400,7 +400,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_end_array();
 			}
 		} else if (feat.type == VT_LINE) {
-			int movetos = 0;
+			int32_t movetos = 0;
 			for (size_t i = 0; i < ops.size(); i++) {
 				if (ops[i].op == VT_MOVETO) {
 					movetos++;
@@ -430,7 +430,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 				state.json_write_array();
 
-				int sstate = 0;
+				int32_t sstate = 0;
 				for (size_t i = 0; i < ops.size(); i++) {
 					if (ops[i].op == VT_MOVETO) {
 						if (sstate == 0) {
@@ -472,7 +472,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					areas.push_back(0);
 				}
 
-				int n = rings.size() - 1;
+				int32_t n = rings.size() - 1;
 				if (n >= 0) {
 					if (ops[i].op == VT_CLOSEPATH) {
 						rings[n].push_back(rings[n][0]);
@@ -497,7 +497,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				}
 			}
 
-			int outer = 0;
+			int32_t outer = 0;
 
 			for (size_t i = 0; i < rings.size(); i++) {
 				long double area = 0;
@@ -534,7 +534,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_array();
 			}
 
-			int sstate = 0;
+			int32_t sstate = 0;
 			for (size_t i = 0; i < rings.size(); i++) {
 				if (i == 0 && areas[i] < 0) {
 					static bool warned = false;

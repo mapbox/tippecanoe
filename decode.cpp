@@ -23,24 +23,24 @@
 #include "jsonpull/jsonpull.h"
 #include "dirtiles.hpp"
 
-int minzoom = 0;
-int maxzoom = 32;
+int32_t minzoom = 0;
+int32_t maxzoom = 32;
 bool force = false;
 
-void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y, json_writer &state) {
+void do_stats(mvt_tile &tile, size_t size, bool compressed, int32_t z, uint32_t x, uint32_t y, json_writer &state) {
 	state.json_write_hash();
 
 	state.json_write_string("zoom");
 	state.json_write_signed(z);
 
 	state.json_write_string("x");
-	state.json_write_unsigned(x);
+	state.json_write_uint32_t(x);
 
 	state.json_write_string("y");
-	state.json_write_unsigned(y);
+	state.json_write_uint32_t(y);
 
 	state.json_write_string("bytes");
-	state.json_write_unsigned(size);
+	state.json_write_uint32_t(size);
 
 	state.json_write_string("compressed");
 	state.json_write_bool(compressed);
@@ -65,13 +65,13 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 		state.json_write_hash();
 
 		state.json_write_string("points");
-		state.json_write_unsigned(points);
+		state.json_write_uint32_t(points);
 
 		state.json_write_string("lines");
-		state.json_write_unsigned(lines);
+		state.json_write_uint32_t(lines);
 
 		state.json_write_string("polygons");
-		state.json_write_unsigned(polygons);
+		state.json_write_uint32_t(polygons);
 
 		state.json_write_string("extent");
 		state.json_write_signed(tile.layers[i].extent);
@@ -85,7 +85,7 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 	state.json_write_newline();
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
+void handle(std::string message, int32_t z, uint32_t x, uint32_t y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -199,7 +199,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 			}
 		}
 
-		// X and Y are unsigned, so no need to check <0
+		// X and Y are uint32_t, so no need to check <0
 		if (x > (1ULL << z) || y > (1ULL << z)) {
 			fprintf(stderr, "Impossible tile %d/%u/%u\n", z, x, y);
 			exit(EXIT_FAILURE);
@@ -223,14 +223,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 	}
 }
 
-void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, std::set<std::string> const &exclude_meta) {
+void decode(char *fname, int32_t z, uint32_t x, uint32_t y, std::set<std::string> const &to_decode, bool pipeline, bool stats, std::set<std::string> const &exclude_meta) {
 	sqlite3 *db = NULL;
 	bool isdir = false;
-	int oz = z;
-	unsigned ox = x, oy = y;
+	int32_t oz = z;
+	uint32_t ox = x, oy = y;
 	json_writer state(stdout);
 
-	int fd = open(fname, O_RDONLY | O_CLOEXEC);
+	int32_t fd = open(fname, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
 		struct stat st;
 		if (fstat(fd, &st) == 0) {
@@ -283,7 +283,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	}
 
 	if (z < 0) {
-		int within = 0;
+		int32_t within = 0;
 
 		if (!pipeline && !stats) {
 			state.json_write_hash();
@@ -400,10 +400,10 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					within = 1;
 				}
 
-				int len = sqlite3_column_bytes(stmt, 0);
-				int tz = sqlite3_column_int(stmt, 1);
-				int tx = sqlite3_column_int(stmt, 2);
-				int ty = sqlite3_column_int(stmt, 3);
+				int32_t len = sqlite3_column_bytes(stmt, 0);
+				int32_t tz = sqlite3_column_int(stmt, 1);
+				int32_t tx = sqlite3_column_int(stmt, 2);
+				int32_t ty = sqlite3_column_int(stmt, 3);
 
 				if (tz < 0 || tz >= 32) {
 					fprintf(stderr, "Impossible zoom level %d in mbtiles\n", tz);
@@ -432,7 +432,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			state.json_write_newline();
 		}
 	} else {
-		int handled = 0;
+		int32_t handled = 0;
 		while (z >= 0 && !handled) {
 			const char *sql = "SELECT tile_data from tiles where zoom_level = ? and tile_column = ? and tile_row = ?;";
 			sqlite3_stmt *stmt;
@@ -446,7 +446,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			sqlite3_bind_int(stmt, 3, (1LL << z) - 1 - y);
 
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
-				int len = sqlite3_column_bytes(stmt, 0);
+				int32_t len = sqlite3_column_bytes(stmt, 0);
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
 				if (z != oz) {
@@ -476,10 +476,10 @@ void usage(char **argv) {
 	exit(EXIT_FAILURE);
 }
 
-int main(int argc, char **argv) {
-	extern int optind;
+int32_t main(int32_t argc, char **argv) {
+	extern int32_t optind;
 	extern char *optarg;
-	int i;
+	int32_t i;
 	std::set<std::string> to_decode;
 	bool pipeline = false;
 	bool stats = false;

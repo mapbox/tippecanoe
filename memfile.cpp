@@ -7,7 +7,7 @@
 #define INCREMENT 131072
 #define INITIAL 256
 
-struct memfile *memfile_open(int fd) {
+struct memfile *memfile_open(int32_t fd) {
 	if (ftruncate(fd, INITIAL) != 0) {
 		return NULL;
 	}
@@ -32,7 +32,7 @@ struct memfile *memfile_open(int fd) {
 	return mf;
 }
 
-int memfile_close(struct memfile *file) {
+int32_t memfile_close(struct memfile *file) {
 	if (munmap(file->map, file->len) != 0) {
 		return -1;
 	}
@@ -47,7 +47,7 @@ int memfile_close(struct memfile *file) {
 	return 0;
 }
 
-int memfile_write(struct memfile *file, void *s, long long len) {
+int32_t memfile_write(struct memfile *file, void *s, int64_t len) {
 	if (file->off + len > file->len) {
 		if (munmap(file->map, file->len) != 0) {
 			return -1;

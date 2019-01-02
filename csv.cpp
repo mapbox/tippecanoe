@@ -6,7 +6,7 @@ std::vector<std::string> csv_split(const char *s) {
 
 	while (*s && *s != '\n' && *s != '\r') {
 		const char *start = s;
-		int within = 0;
+		int32_t within = 0;
 
 		for (; *s && *s != '\n' && *s != '\r'; s++) {
 			if (*s == '"') {
@@ -54,7 +54,7 @@ std::string csv_dequote(std::string s) {
 
 std::string csv_getline(FILE *f) {
 	std::string out;
-	int c;
+	int32_t c;
 	while ((c = getc(f)) != EOF) {
 		out.push_back(c);
 		if (c == '\n') {

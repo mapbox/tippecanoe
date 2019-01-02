@@ -18,12 +18,12 @@
 // at the cost, apparently, of a 0.7% increase in running time
 // for packing and unpacking.
 struct draw {
-	long long x : 40;
+	int64_t x : 40;
 	signed char op;
-	long long y : 40;
+	int64_t y : 40;
 	signed char necessary;
 
-	draw(int nop, long long nx, long long ny)
+	draw(int32_t nop, int64_t nx, int64_t ny)
 	    : x(nx),
 	      op(nop),
 	      y(ny),
@@ -56,19 +56,19 @@ struct draw {
 
 typedef std::vector<draw> drawvec;
 
-drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y);
-void to_tile_scale(drawvec &geom, int z, int detail);
-drawvec remove_noop(drawvec geom, int type, int shift);
-drawvec clip_point(drawvec &geom, int z, long long buffer);
-drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip);
-drawvec simple_clip_poly(drawvec &geom, int z, int buffer);
+drawvec decode_geometry(FILE *meta, std::atomic<int64_t> *geompos, int32_t z, uint32_t tx, uint32_t ty, int64_t *bbox, uint32_t initial_x, uint32_t initial_y);
+void to_tile_scale(drawvec &geom, int32_t z, int32_t detail);
+drawvec remove_noop(drawvec geom, int32_t type, int32_t shift);
+drawvec clip_point(drawvec &geom, int32_t z, int64_t buffer);
+drawvec clean_or_clip_poly(drawvec &geom, int32_t z, int32_t buffer, bool clip);
+drawvec simple_clip_poly(drawvec &geom, int32_t z, int32_t buffer);
 drawvec close_poly(drawvec &geom);
-drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
-drawvec clip_lines(drawvec &geom, int z, long long buffer);
-drawvec stairstep(drawvec &geom, int z, int detail);
-bool point_within_tile(long long x, long long y, int z);
-int quick_check(long long *bbox, int z, long long buffer);
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain);
+drawvec reduce_tiny_poly(drawvec &geom, int32_t z, int32_t detail, bool *reduced, double *accum_area);
+drawvec clip_lines(drawvec &geom, int32_t z, int64_t buffer);
+drawvec stairstep(drawvec &geom, int32_t z, int32_t detail);
+bool point_within_tile(int64_t x, int64_t y, int32_t z);
+int32_t quick_check(int64_t *bbox, int32_t z, int64_t buffer);
+drawvec simplify_lines(drawvec &geom, int32_t z, int32_t detail, bool mark_tile_bounds, double simplification, size_t retain);
 drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
@@ -76,8 +76,8 @@ void check_polygon(drawvec &geom);
 double get_area(drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
 
-drawvec simple_clip_poly(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
-drawvec clip_lines(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
-drawvec clip_point(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
+drawvec simple_clip_poly(drawvec &geom, int64_t x1, int64_t y1, int64_t x2, int64_t y2);
+drawvec clip_lines(drawvec &geom, int64_t x1, int64_t y1, int64_t x2, int64_t y2);
+drawvec clip_point(drawvec &geom, int64_t x1, int64_t y1, int64_t x2, int64_t y2);
 
 #endif

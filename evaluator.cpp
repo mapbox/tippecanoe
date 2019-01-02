@@ -5,7 +5,7 @@
 #include "mvt.hpp"
 #include "evaluator.hpp"
 
-int compare(mvt_value one, json_object *two, bool &fail) {
+int32_t compare(mvt_value one, json_object *two, bool &fail) {
 	if (one.type == mvt_string) {
 		if (two->type != JSON_STRING) {
 			fail = true;
@@ -140,7 +140,7 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 		}
 
 		bool fail = false;
-		int cmp = compare(ff->second, f->array[2], fail);
+		int32_t cmp = compare(ff->second, f->array[2], fail);
 
 		if (fail) {
 			static bool warned = false;
@@ -243,7 +243,7 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 		bool found = false;
 		for (size_t i = 2; i < f->length; i++) {
 			bool fail = false;
-			int cmp = compare(ff->second, f->array[i], fail);
+			int32_t cmp = compare(ff->second, f->array[i], fail);
 
 			if (fail) {
 				static bool warned = false;

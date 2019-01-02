@@ -13,73 +13,73 @@
 
 size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, const char *fname);
 
-void serialize_int(FILE *out, int n, std::atomic<long long> *fpos, const char *fname);
-void serialize_long_long(FILE *out, long long n, std::atomic<long long> *fpos, const char *fname);
-void serialize_ulong_long(FILE *out, unsigned long long n, std::atomic<long long> *fpos, const char *fname);
-void serialize_byte(FILE *out, signed char n, std::atomic<long long> *fpos, const char *fname);
-void serialize_uint(FILE *out, unsigned n, std::atomic<long long> *fpos, const char *fname);
-void serialize_string(FILE *out, const char *s, std::atomic<long long> *fpos, const char *fname);
+void serialize_int(FILE *out, int32_t n, std::atomic<int64_t> *fpos, const char *fname);
+void serialize_long_long(FILE *out, int64_t n, std::atomic<int64_t> *fpos, const char *fname);
+void serialize_ulong_long(FILE *out, uint64_t n, std::atomic<int64_t> *fpos, const char *fname);
+void serialize_byte(FILE *out, signed char n, std::atomic<int64_t> *fpos, const char *fname);
+void serialize_uint(FILE *out, uint32_t n, std::atomic<int64_t> *fpos, const char *fname);
+void serialize_string(FILE *out, const char *s, std::atomic<int64_t> *fpos, const char *fname);
 
-void deserialize_int(char **f, int *n);
-void deserialize_long_long(char **f, long long *n);
-void deserialize_ulong_long(char **f, unsigned long long *n);
-void deserialize_uint(char **f, unsigned *n);
+void deserialize_int(char **f, int32_t *n);
+void deserialize_long_long(char **f, int64_t *n);
+void deserialize_ulong_long(char **f, uint64_t *n);
+void deserialize_uint(char **f, uint32_t *n);
 void deserialize_byte(char **f, signed char *n);
 
-int deserialize_int_io(FILE *f, int *n, std::atomic<long long> *geompos);
-int deserialize_long_long_io(FILE *f, long long *n, std::atomic<long long> *geompos);
-int deserialize_ulong_long_io(FILE *f, unsigned long long *n, std::atomic<long long> *geompos);
-int deserialize_uint_io(FILE *f, unsigned *n, std::atomic<long long> *geompos);
-int deserialize_byte_io(FILE *f, signed char *n, std::atomic<long long> *geompos);
+int32_t deserialize_int_io(FILE *f, int32_t *n, std::atomic<int64_t> *geompos);
+int32_t deserialize_long_long_io(FILE *f, int64_t *n, std::atomic<int64_t> *geompos);
+int32_t deserialize_ulong_long_io(FILE *f, uint64_t *n, std::atomic<int64_t> *geompos);
+int32_t deserialize_uint_io(FILE *f, uint32_t *n, std::atomic<int64_t> *geompos);
+int32_t deserialize_byte_io(FILE *f, signed char *n, std::atomic<int64_t> *geompos);
 
 struct serial_val {
-	int type = 0;
+	int32_t type = 0;
 	std::string s = "";
 };
 
 struct serial_feature {
-	long long layer = 0;
-	int segment = 0;
-	long long seq = 0;
+	int64_t layer = 0;
+	int32_t segment = 0;
+	int64_t seq = 0;
 
 	signed char t = 0;
 	signed char feature_minzoom = 0;
 
 	bool has_id = false;
-	unsigned long long id = 0;
+	uint64_t id = 0;
 
 	bool has_tippecanoe_minzoom = false;
-	int tippecanoe_minzoom = 0;
+	int32_t tippecanoe_minzoom = 0;
 
 	bool has_tippecanoe_maxzoom = false;
-	int tippecanoe_maxzoom = 0;
+	int32_t tippecanoe_maxzoom = 0;
 
 	drawvec geometry = drawvec();
-	unsigned long long index = 0;
-	long long extent = 0;
+	uint64_t index = 0;
+	int64_t extent = 0;
 
-	std::vector<long long> keys{};
-	std::vector<long long> values{};
+	std::vector<int64_t> keys{};
+	std::vector<int64_t> values{};
 	// If >= 0, metadata is external
-	long long metapos = 0;
+	int64_t metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
-	long long bbox[4] = {0, 0, 0, 0};
+	int64_t bbox[4] = {0, 0, 0, 0};
 	std::vector<std::string> full_keys{};
 	std::vector<serial_val> full_values{};
 	std::string layername = "";
 	bool dropped = false;
 };
 
-void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long> *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<int64_t> *geompos, const char *fname, int64_t wx, int64_t wy, bool include_minzoom);
+serial_feature deserialize_feature(FILE *geoms, std::atomic<int64_t> *geompos_in, char *metabase, int64_t *meta_off, uint32_t z, uint32_t tx, uint32_t ty, uint32_t *initial_x, uint32_t *initial_y);
 
 struct reader {
-	int metafd = -1;
-	int poolfd = -1;
-	int treefd = -1;
-	int geomfd = -1;
-	int indexfd = -1;
+	int32_t metafd = -1;
+	int32_t poolfd = -1;
+	int32_t treefd = -1;
+	int32_t geomfd = -1;
+	int32_t indexfd = -1;
 
 	FILE *metafile = NULL;
 	struct memfile *poolfile = NULL;
@@ -87,11 +87,11 @@ struct reader {
 	FILE *geomfile = NULL;
 	FILE *indexfile = NULL;
 
-	std::atomic<long long> metapos;
-	std::atomic<long long> geompos;
-	std::atomic<long long> indexpos;
+	std::atomic<int64_t> metapos;
+	std::atomic<int64_t> geompos;
+	std::atomic<int64_t> indexpos;
 
-	long long file_bbox[4] = {0, 0, 0, 0};
+	int64_t file_bbox[4] = {0, 0, 0, 0};
 
 	struct stat geomst {};
 	struct stat metast {};
@@ -115,7 +115,7 @@ struct reader {
 		geomfile = r.geomfile;
 		indexfile = r.indexfile;
 
-		long long p = r.metapos;
+		int64_t p = r.metapos;
 		metapos = p;
 
 		p = r.geompos;
@@ -135,38 +135,38 @@ struct reader {
 
 struct serialization_state {
 	const char *fname = NULL;  // source file name
-	int line = 0;		   // user-oriented location within source for error reports
+	int32_t line = 0;	  // user-oriented location within source for error reports
 
-	std::atomic<long long> *layer_seq = NULL;     // sequence within current layer
-	std::atomic<long long> *progress_seq = NULL;  // overall sequence for progress indicator
+	std::atomic<int64_t> *layer_seq = NULL;     // sequence within current layer
+	std::atomic<int64_t> *progress_seq = NULL;  // overall sequence for progress indicator
 
 	std::vector<struct reader> *readers = NULL;  // array of data for each input thread
-	int segment = 0;			     // the current input thread
+	int32_t segment = 0;			     // the current input thread
 
-	unsigned *initial_x = NULL;  // relative offset of all geometries
-	unsigned *initial_y = NULL;
-	int *initialized = NULL;
+	uint32_t *initial_x = NULL;  // relative offset of all geometries
+	uint32_t *initial_y = NULL;
+	int32_t *initialized = NULL;
 
 	double *dist_sum = NULL;  // running tally for calculation of resolution within features
 	size_t *dist_count = NULL;
 	bool want_dist = false;
 
-	int maxzoom = 0;
-	int basezoom = 0;
+	int32_t maxzoom = 0;
+	int32_t basezoom = 0;
 
 	bool filters = false;
 	bool uses_gamma = false;
 
 	std::map<std::string, layermap_entry> *layermap = NULL;
 
-	std::map<std::string, int> const *attribute_types = NULL;
+	std::map<std::string, int32_t> const *attribute_types = NULL;
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
-	int exclude_all = 0;
+	int32_t exclude_all = 0;
 	json_object *filter = NULL;
 };
 
-int serialize_feature(struct serialization_state *sst, serial_feature &sf);
-void coerce_value(std::string const &key, int &vt, std::string &val, std::map<std::string, int> const *attribute_types);
+int32_t serialize_feature(struct serialization_state *sst, serial_feature &sf);
+void coerce_value(std::string const &key, int32_t &vt, std::string &val, std::map<std::string, int32_t> const *attribute_types);
 
 #endif
