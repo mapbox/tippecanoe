@@ -355,7 +355,7 @@ static long long scale_geometry(struct serialization_state *sst, long long *bbox
 			}
 
 			if (!*(sst->initialized)) {
-				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL < 32)) {
+				if (x < 0 || x >= (1LL << 32) || y < 0 || y >= (1LL << 32)) {
 					*(sst->initial_x) = 1LL << 31;
 					*(sst->initial_y) = 1LL << 31;
 				} else {
