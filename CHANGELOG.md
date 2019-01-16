@@ -1,3 +1,7 @@
+## 1.32.10
+
+* Fix a bug that disallowed a per-feature minzoom of 0
+
 ## 1.32.9
 
 * Limit tile detail to 30 and buffer size to 127 to prevent coordinate
