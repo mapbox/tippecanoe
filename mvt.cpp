@@ -79,25 +79,26 @@ int decompress(std::string const &input, std::string &output) {
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int compress(std::string const &input, std::string &output) {
         void* next_in = (void*)input.data();
-        size_t avail_in = input.size();
         void* next_out = (void*)output.data();
-        size_t avail_out = output.size();
+        size_t output_size = 0;
+        size_t input_size = 0;
+        size_t increase = 1024;
         struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
         do {
-                size_t increase = input.size() / 2 + 1024;
-                output.resize(avail_in + increase);
-                avail_out = increase;
-                next_out = (void*)((long)output.data() + avail_in);
+                output.resize(output.size() + increase);
                 int ret = libdeflate_deflate_compress(deflate_s,
-                                            next_in, avail_in,
-                                            next_out, avail_out);
+                                            next_in, increase,
+                                            next_out, increase);
                 if (ret != LIBDEFLATE_SUCCESS) {
 			return -1;
                 }
-                avail_in += (increase - avail_out);
-        } while (avail_out == 0);
+                output_size += ret;
+                input_size += increase;
+                next_out = (void*)((long)next_out + ret);
+                next_in = (void*)((long)next_in + increase);
+        } while ((long)next_in < input.size());
         libdeflate_free_compressor(deflate_s);
-        output.resize(avail_in);
+        output.resize(output_size);
 	return 0;
 }
 
