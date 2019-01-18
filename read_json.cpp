@@ -53,7 +53,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 		size_t i;
 		for (i = 0; i < j->length; i++) {
 			if (within == GEOM_POINT) {
-				if (i == 0 || mb_geometry[t] == GEOM_MULTIPOINT) {
+				if (i == 0 || mb_geometry[t] == VT_POINT) {
 					op = VT_MOVETO;
 				} else {
 					op = VT_LINETO;
@@ -80,7 +80,6 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 				}
 			}
 
-			draw d(op, x, y);
 			out.push_back(draw(op, x, y));
 		} else {
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
