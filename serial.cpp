@@ -583,18 +583,6 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
-		if (sst->exclude_all) {
-			if (sst->include->count(sf.full_keys[i]) == 0) {
-				sf.full_keys.erase(sf.full_keys.begin() + i);
-				sf.full_values.erase(sf.full_values.begin() + i);
-				continue;
-			}
-		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
-			sf.full_keys.erase(sf.full_keys.begin() + i);
-			sf.full_values.erase(sf.full_values.begin() + i);
-			continue;
-		}
-
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
 
 		if (sf.full_keys[i] == attribute_for_id) {
@@ -633,6 +621,19 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 				}
 			}
 		}
+
+		if (sst->exclude_all) {
+			if (sst->include->count(sf.full_keys[i]) == 0) {
+				sf.full_keys.erase(sf.full_keys.begin() + i);
+				sf.full_values.erase(sf.full_values.begin() + i);
+				continue;
+			}
+		} else if (sst->exclude->count(sf.full_keys[i]) != 0) {
+			sf.full_keys.erase(sf.full_keys.begin() + i);
+			sf.full_values.erase(sf.full_values.begin() + i);
+			continue;
+		}
+
 	}
 
 	if (!sst->filters) {

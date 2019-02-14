@@ -1,0 +1,40 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "1.000000,1.000000,12.000000,1.000000",
+"center": "1.000000,1.000000,0",
+"description": "tests/stringid/out/-z0_--use-attribute-for-id_special_-X.json.check.mbtiles",
+"format": "pbf",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 12,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/stringid/out/-z0_--use-attribute-for-id_special_-X.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "id": 12345, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 0.966797, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 1.933594, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 2.988281, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 3.955078, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 4.921875, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 5.976562, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 27, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 6.943359, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 1234, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 7.998047, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 1234, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 8.964844, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 1234, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 9.931641, 1.054628 ] } }
+,
+{ "type": "Feature", "id": 27, "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 10.986328, 1.054628 ] } }
+,
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 11.953125, 1.054628 ] } }
+] }
+] }
+] }
