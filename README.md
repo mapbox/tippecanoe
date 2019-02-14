@@ -385,8 +385,8 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
 
 ### Filtering feature attributes
 
- * `-x` _name_ or `--exclude=`_name_: Exclude the named attributes from all features
- * `-y` _name_ or `--include=`_name_: Include the named attributes in all features, excluding all those not explicitly named
+ * `-x` _name_ or `--exclude=`_name_: Exclude the named attributes from all features. You can specify multiple `-x` options to exclude several attributes. (Don't comma-separate names within a single `-x`.)
+ * `-y` _name_ or `--include=`_name_: Include the named attributes in all features, excluding all those not explicitly named. You can specify multiple `-y` options to explicitly include several attributes. (Don't comma-separate names within a single `-y`.)
  * `-X` or `--exclude-all`: Exclude all attributes and encode only geometries
 
 ### Modifying feature attributes

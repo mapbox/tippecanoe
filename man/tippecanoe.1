@@ -471,9 +471,9 @@ resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
 .SS Filtering feature attributes
 .RS
 .IP \(bu 2
-\fB\fC\-x\fR \fIname\fP or \fB\fC\-\-exclude=\fR\fIname\fP: Exclude the named attributes from all features
+\fB\fC\-x\fR \fIname\fP or \fB\fC\-\-exclude=\fR\fIname\fP: Exclude the named attributes from all features. You can specify multiple \fB\fC\-x\fR options to exclude several attributes. (Don't comma\-separate names within a single \fB\fC\-x\fR\&.)
 .IP \(bu 2
-\fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named attributes in all features, excluding all those not explicitly named
+\fB\fC\-y\fR \fIname\fP or \fB\fC\-\-include=\fR\fIname\fP: Include the named attributes in all features, excluding all those not explicitly named. You can specify multiple \fB\fC\-y\fR options to explicitly include several attributes. (Don't comma\-separate names within a single \fB\fC\-y\fR\&.)
 .IP \(bu 2
 \fB\fC\-X\fR or \fB\fC\-\-exclude\-all\fR: Exclude all attributes and encode only geometries
 .RE
@@ -502,7 +502,7 @@ to specify how the named \fIattribute\fP is accumulated onto the attribute of th
 .SS Filtering features by attributes
 .RS
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers. The special variable \fB\fC$zoom\fR refers to the current zoom level.
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://docs.mapbox.com/mapbox-gl-js/style-spec/#other-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers. The special variable \fB\fC$zoom\fR refers to the current zoom level.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .RE
@@ -940,7 +940,7 @@ The options are:
 .IP \(bu 2
 \fB\fC\-i\fR or \fB\fC\-\-if\-matched\fR: Only include features that matched the CSV.
 .IP \(bu 2
-\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://www.mapbox.com/mapbox-gl-js/style-spec/#types-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
+\fB\fC\-j\fR \fIfilter\fP or \fB\fC\-\-feature\-filter\fR=\fIfilter\fP: Check features against a per\-layer filter (as defined in the Mapbox GL Style Specification \[la]https://docs.mapbox.com/mapbox-gl-js/style-spec/#other-filter\[ra]) and only include those that match. Any features in layers that have no filter specified will be passed through. Filters for the layer \fB\fC"*"\fR apply to all layers.
 .IP \(bu 2
 \fB\fC\-J\fR \fIfilter\-file\fP or \fB\fC\-\-feature\-filter\-file\fR=\fIfilter\-file\fP: Like \fB\fC\-j\fR, but read the filter from a file.
 .IP \(bu 2
