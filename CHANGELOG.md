@@ -1,3 +1,8 @@
+## 1.32.11
+
+* Don't let attribute exclusion apply to the attribute that has been specified
+  to become the feature ID
+
 ## 1.32.10
 
 * Fix a bug that disallowed a per-feature minzoom of 0

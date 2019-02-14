@@ -24,7 +24,7 @@
 ,
 { "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 5.976562, 1.054628 ] } }
 ,
-{ "type": "Feature", "id": 1234, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 6.943359, 1.054628 ] } }
+{ "type": "Feature", "id": 27, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 6.943359, 1.054628 ] } }
 ,
 { "type": "Feature", "id": 1234, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 7.998047, 1.054628 ] } }
 ,
@@ -32,7 +32,7 @@
 ,
 { "type": "Feature", "id": 1234, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 9.931641, 1.054628 ] } }
 ,
-{ "type": "Feature", "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 10.986328, 1.054628 ] } }
+{ "type": "Feature", "id": 27, "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 10.986328, 1.054628 ] } }
 ,
 { "type": "Feature", "properties": { "yes": "no", "something": false }, "geometry": { "type": "Point", "coordinates": [ 11.953125, 1.054628 ] } }
 ] }
