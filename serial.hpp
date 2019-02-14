@@ -163,7 +163,6 @@ struct serialization_state {
 	std::set<std::string> *exclude = NULL;
 	std::set<std::string> *include = NULL;
 	int exclude_all = 0;
-	json_object *filter = NULL;
 };
 
 int serialize_feature(struct serialization_state *sst, serial_feature &sf);
