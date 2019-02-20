@@ -1,7 +1,11 @@
-## 1.32.11
+## 1.32.12
 
 * Accept .mvt as well as .pbf in directories of tiles
 * Allow tippecanoe-decode and tile-join of directories with no metadata
+
+## 1.32.11
+* Don't let attribute exclusion apply to the attribute that has been specified
+  to become the feature ID
 
 ## 1.32.10
 
