@@ -1,3 +1,8 @@
+## 1.32.11
+
+* Accept .mvt as well as .pbf in directories of tiles
+* Allow tippecanoe-decode and tile-join of directories with no metadata
+
 ## 1.32.10
 
 * Fix a bug that disallowed a per-feature minzoom of 0

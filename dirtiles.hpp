@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 
 #ifndef DIRTILES_HPP
 #define DIRTILES_HPP
@@ -12,6 +13,7 @@ struct zxy {
 	long long z;
 	long long x;
 	long long y;
+	std::string extension = ".pbf";
 
 	zxy(int _z, int _x, int _y)
 	    : z(_z), x(_x), y(_y) {
@@ -36,7 +38,7 @@ struct zxy {
 	}
 
 	std::string path() {
-		return std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + ".pbf";
+		return std::to_string(z) + "/" + std::to_string(x) + "/" + std::to_string(y) + extension;
 	}
 };
 
