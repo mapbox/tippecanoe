@@ -1,3 +1,7 @@
+## 1.33.0
+
+* MultiLineStrings were previously ignored in Geobuf input
+
 ## 1.32.12
 
 * Accept .mvt as well as .pbf in directories of tiles
