@@ -42,7 +42,7 @@ $ brew install tippecanoe
 On Ubuntu it will usually be easiest to build from the source repository:
 
 ```sh
-$ git clone git@github.com:mapbox/tippecanoe.git
+$ git clone https://github.com/mapbox/tippecanoe.git
 $ cd tippecanoe
 $ make -j
 $ make install
