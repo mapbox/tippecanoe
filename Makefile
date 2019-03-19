@@ -142,7 +142,14 @@ raw-tiles-test:
 	./tippecanoe -q -f -e tests/raw-tiles/raw-tiles -r1 -pC tests/raw-tiles/hackspots.geojson
 	./tippecanoe-decode -x generator tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles.json.check
 	cmp tests/raw-tiles/raw-tiles.json.check tests/raw-tiles/raw-tiles.json
-	rm -rf tests/raw-tiles/raw-tiles tests/raw-tiles/compare.json.check
+	# Test that -z and -Z work in tippecanoe-decode
+	./tippecanoe-decode -x generator -Z6 -z7 tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles-z67.json.check
+	cmp tests/raw-tiles/raw-tiles-z67.json.check tests/raw-tiles/raw-tiles-z67.json
+	# Test that -z and -Z work in tile-join
+	./tile-join -q -f -Z6 -z7 -e tests/raw-tiles/raw-tiles-z67 tests/raw-tiles/raw-tiles
+	./tippecanoe-decode -x generator tests/raw-tiles/raw-tiles-z67 > tests/raw-tiles/raw-tiles-z67-join.json.check
+	cmp tests/raw-tiles/raw-tiles-z67-join.json.check tests/raw-tiles/raw-tiles-z67-join.json
+	rm -rf tests/raw-tiles/raw-tiles tests/raw-tiles/raw-tiles-z67 tests/raw-tiles/raw-tiles.json.check raw-tiles-z67.json.check tests/raw-tiles/raw-tiles-z67-join.json.check
 	# Test that metadata.json is created even if all features are clipped away
 	./tippecanoe -q -f -e tests/raw-tiles/nothing tests/raw-tiles/nothing.geojson
 	./tippecanoe-decode -x generator tests/raw-tiles/nothing > tests/raw-tiles/nothing.json.check

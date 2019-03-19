@@ -268,7 +268,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		isdir = true;
 
 		db = dirmeta2tmp(fname);
-		tiles = enumerate_dirtiles(fname);
+		tiles = enumerate_dirtiles(fname, minzoom, maxzoom);
 	} else {
 		if (sqlite3_open(fname, &db) != SQLITE_OK) {
 			fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));

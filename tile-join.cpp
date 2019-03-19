@@ -409,7 +409,7 @@ struct reader *begin_reading(char *fname) {
 		r->stmt = NULL;
 		r->next = NULL;
 
-		r->dirtiles = enumerate_dirtiles(fname);
+		r->dirtiles = enumerate_dirtiles(fname, minzoom, maxzoom);
 		r->dirbase = fname;
 
 		if (r->dirtiles.size() == 0) {

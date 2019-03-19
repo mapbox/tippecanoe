@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
 #include "jsonpull/jsonpull.h"
@@ -84,7 +85,7 @@ void check_dir(const char *dir, char **argv, bool force, bool forcetable) {
 		return;
 	}
 
-	std::vector<zxy> tiles = enumerate_dirtiles(dir);
+	std::vector<zxy> tiles = enumerate_dirtiles(dir, INT_MIN, INT_MAX);
 
 	for (size_t i = 0; i < tiles.size(); i++) {
 		std::string fn = std::string(dir) + "/" + tiles[i].path();
@@ -101,14 +102,14 @@ void check_dir(const char *dir, char **argv, bool force, bool forcetable) {
 	}
 }
 
-std::vector<zxy> enumerate_dirtiles(const char *fname) {
+std::vector<zxy> enumerate_dirtiles(const char *fname, int minzoom, int maxzoom) {
 	std::vector<zxy> tiles;
 
 	DIR *d1 = opendir(fname);
 	if (d1 != NULL) {
 		struct dirent *dp;
 		while ((dp = readdir(d1)) != NULL) {
-			if (numeric(dp->d_name)) {
+			if (numeric(dp->d_name) && atoi(dp->d_name) >= minzoom && atoi(dp->d_name) <= maxzoom) {
 				std::string z = std::string(fname) + "/" + dp->d_name;
 				int tz = atoi(dp->d_name);
 

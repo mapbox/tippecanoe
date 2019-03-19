@@ -633,7 +633,6 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 			sf.full_values.erase(sf.full_values.begin() + i);
 			continue;
 		}
-
 	}
 
 	if (!sst->filters) {
