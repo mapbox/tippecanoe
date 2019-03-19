@@ -2626,7 +2626,7 @@ int main(int argc, char **argv) {
 		{"check-polygons", no_argument, &additional[A_DEBUG_POLYGON], 1},
 		{"no-polygon-splitting", no_argument, &prevent[P_POLYGON_SPLIT], 1},
 		{"prefer-radix-sort", no_argument, &additional[A_PREFER_RADIX_SORT], 1},
-		{"help", no_argument, 0, '?'},
+		{"help", no_argument, 0, 'H'},
 
 		{0, 0, 0, 0},
 	};
@@ -2961,7 +2961,7 @@ int main(int argc, char **argv) {
 
 		case 'v':
 			fprintf(stderr, "tippecanoe %s\n", VERSION);
-			exit(EXIT_FAILURE);
+			exit(EXIT_SUCCESS);
 
 		case 'P':
 			read_parallel = 1;
@@ -3004,7 +3004,7 @@ int main(int argc, char **argv) {
 			break;
 
 		default: {
-			if (i != '?') {
+			if (i != 'H') {
 				fprintf(stderr, "Unknown option -%c\n", i);
 			}
 			int width = 7 + strlen(argv[0]);
@@ -3034,7 +3034,11 @@ int main(int argc, char **argv) {
 				width = 8;
 			}
 			fprintf(stderr, "\n");
-			exit(EXIT_FAILURE);
+			if (i == 'H') {
+				exit(EXIT_SUCCESS);
+			} else {
+				exit(EXIT_FAILURE);
+			}
 		}
 		}
 	}
