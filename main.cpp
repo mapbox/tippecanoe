@@ -3004,7 +3004,7 @@ int main(int argc, char **argv) {
 			break;
 
 		default: {
-			if (i != 'H') {
+			if (i != 'H' && i != '?') {
 				fprintf(stderr, "Unknown option -%c\n", i);
 			}
 			int width = 7 + strlen(argv[0]);
