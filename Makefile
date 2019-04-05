@@ -206,7 +206,7 @@ join-test: tile-join
 	cmp tests/join-population/merged.mbtiles.json.check tests/join-population/merged.mbtiles.json
 	cmp tests/join-population/windows.mbtiles.json.check tests/join-population/windows.mbtiles.json
 	rm -f tests/join-population/joined-null.mbtiles tests/join-population/joined-null.mbtiles.json.check
-	./tile-join -q -f -l macarthur -n "macarthur name" -N "macarthur description" -A "macarthur attribution" -o tests/join-population/just-macarthur.mbtiles tests/join-population/merged.mbtiles
+	./tile-join -q -f -l macarthur -n "macarthur name" -N "macarthur description" -A "macarthur's attribution" -o tests/join-population/just-macarthur.mbtiles tests/join-population/merged.mbtiles
 	./tile-join -q -f -L macarthur -o tests/join-population/no-macarthur.mbtiles tests/join-population/merged.mbtiles
 	./tippecanoe-decode -x generator tests/join-population/just-macarthur.mbtiles > tests/join-population/just-macarthur.mbtiles.json.check
 	./tippecanoe-decode -x generator tests/join-population/no-macarthur.mbtiles > tests/join-population/no-macarthur.mbtiles.json.check
