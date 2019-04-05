@@ -3,6 +3,7 @@
 "center": "100.000000,0.000000,0",
 "description": "tests/polygon-winding/out/-z0_--reverse-source-polygon-winding.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/polygon-winding/out/-z0_--reverse-source-polygon-winding.json.check.mbtiles -z0 --reverse-source-polygon-winding tests/polygon-winding/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1,\"geometry\": \"Polygon\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "0",
 "minzoom": "0",

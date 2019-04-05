@@ -4,6 +4,7 @@
 "center": "-1.000000,1.000000,4",
 "description": "tests/nullisland/out/-b0_-z4_-ANullIsland.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/nullisland/out/-b0_-z4_-ANullIsland.json.check.mbtiles -b0 -z4 -ANullIsland tests/nullisland/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 13,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "4",
 "minzoom": "0",

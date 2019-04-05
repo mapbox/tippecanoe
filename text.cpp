@@ -133,3 +133,39 @@ int integer_zoom(std::string where, std::string text) {
 	}
 	return d;
 }
+
+std::string format_commandline(int argc, char **argv) {
+	std::string out;
+
+	for (int i = 0; i < argc; i++) {
+		bool need_quote = false;
+		for (char *cp = argv[i]; *cp != '\0'; cp++) {
+			if (!isalpha(*cp) && !isdigit(*cp) &&
+			    *cp != '/' && *cp != '-' && *cp != '_' && *cp != '@' && *cp != ':' &&
+			    *cp != '.' && *cp != '%' && *cp != ',') {
+				need_quote = true;
+				break;
+			}
+		}
+
+		if (need_quote) {
+			out.push_back('\'');
+			for (char *cp = argv[i]; *cp != '\0'; cp++) {
+				if (*cp == '\'') {
+					out.append("'\"'\"'");
+				} else {
+					out.push_back(*cp);
+				}
+			}
+			out.push_back('\'');
+		} else {
+			out.append(argv[i]);
+		}
+
+		if (i + 1 < argc) {
+			out.push_back(' ');
+		}
+	}
+
+	return out;
+}

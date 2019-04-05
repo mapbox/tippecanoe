@@ -3,6 +3,7 @@
 "center": "-84.375000,36.466030,5",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-ymapcolor13_-ymapcolor9_-pSi_-d8_-D16.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-ymapcolor13_-ymapcolor9_-pSi_-d8_-D16.json.check.mbtiles -z5 -ymapcolor13 -ymapcolor9 -pSi -d8 -D16 tests/ne_110m_admin_1_states_provinces_lines/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 5, \"fields\": {\"mapcolor13\": \"Number\", \"mapcolor9\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 110,\"geometry\": \"LineString\",\"attributeCount\": 2,\"attributes\": [{\"attribute\": \"mapcolor13\",\"count\": 1,\"type\": \"number\",\"values\": [1],\"min\": 1,\"max\": 1},{\"attribute\": \"mapcolor9\",\"count\": 1,\"type\": \"number\",\"values\": [1],\"min\": 1,\"max\": 1}]}]}}",
 "maxzoom": "5",
 "minzoom": "0",

@@ -3,6 +3,7 @@
 "center": "-122.249782,37.796763,14",
 "description": "tests/empty-linestring/out/-ac.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/empty-linestring/out/-ac.json.check.mbtiles -ac tests/empty-linestring/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 5,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "14",
 "minzoom": "0",

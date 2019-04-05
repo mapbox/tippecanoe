@@ -3,6 +3,7 @@
 "center": "-122.080078,37.649001,11",
 "description": "tests/coalesce-tract/out/-P_--coalesce_--reorder_-z11_-Z11_-y_STATEFP10_-y_COUNTYFP10_-l_merged.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/coalesce-tract/out/-P_--coalesce_--reorder_-z11_-Z11_-y_STATEFP10_-y_COUNTYFP10_-l_merged.json.check.mbtiles -P --coalesce --reorder -z11 -Z11 -y STATEFP10 -y COUNTYFP10 -l merged tests/coalesce-tract/tl_2010_06001_tract10.json tests/coalesce-tract/tl_2010_06075_tract10.json",
 "json": "{\"vector_layers\": [ { \"id\": \"merged\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 11, \"fields\": {\"COUNTYFP10\": \"String\", \"STATEFP10\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"merged\",\"count\": 558,\"geometry\": \"Polygon\",\"attributeCount\": 2,\"attributes\": [{\"attribute\": \"COUNTYFP10\",\"count\": 2,\"type\": \"string\",\"values\": [\"001\",\"075\"]},{\"attribute\": \"STATEFP10\",\"count\": 1,\"type\": \"string\",\"values\": [\"06\"]}]}]}}",
 "maxzoom": "11",
 "minzoom": "11",

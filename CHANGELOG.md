@@ -1,3 +1,7 @@
+## 1.34.0
+
+* Record the command line options in the tileset metadata
+
 ## 1.33.0
 
 * MultiLineStrings were previously ignored in Geobuf input

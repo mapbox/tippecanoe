@@ -3,6 +3,7 @@
 "center": "-82.968750,37.710240,7",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.check.mbtiles -lcountries -P -Z1 -z7 -b4 -xfeaturecla -xscalerank -acrol -ps tests/ne_110m_admin_1_states_provinces_lines/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"countries\", \"description\": \"\", \"minzoom\": 1, \"maxzoom\": 7, \"fields\": {\"adm0_a3\": \"String\", \"adm0_name\": \"String\", \"mapcolor13\": \"Number\", \"mapcolor9\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"countries\",\"count\": 110,\"geometry\": \"LineString\",\"attributeCount\": 4,\"attributes\": [{\"attribute\": \"adm0_a3\",\"count\": 1,\"type\": \"string\",\"values\": [\"USA\"]},{\"attribute\": \"adm0_name\",\"count\": 1,\"type\": \"string\",\"values\": [\"United States of America\"]},{\"attribute\": \"mapcolor13\",\"count\": 1,\"type\": \"number\",\"values\": [1],\"min\": 1,\"max\": 1},{\"attribute\": \"mapcolor9\",\"count\": 1,\"type\": \"number\",\"values\": [1],\"min\": 1,\"max\": 1}]}]}}",
 "maxzoom": "7",
 "minzoom": "1",
