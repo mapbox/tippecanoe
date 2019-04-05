@@ -3,6 +3,7 @@
 "center": "117.290039,-31.391150,12",
 "description": "tests/wyalkatchem/out/-pk_-pf_-Z9_-z12_-ldata.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/wyalkatchem/out/-pk_-pf_-Z9_-z12_-ldata.json.check.mbtiles -pk -pf -Z9 -z12 -ldata tests/wyalkatchem/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"data\", \"description\": \"\", \"minzoom\": 9, \"maxzoom\": 12, \"fields\": {\"country\": \"String\", \"text\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"data\",\"count\": 1,\"geometry\": \"Polygon\",\"attributeCount\": 2,\"attributes\": [{\"attribute\": \"country\",\"count\": 1,\"type\": \"string\",\"values\": [\"au\"]},{\"attribute\": \"text\",\"count\": 1,\"type\": \"string\",\"values\": [\"Wyalkatchem\"]}]}]}}",
 "maxzoom": "12",
 "minzoom": "9",

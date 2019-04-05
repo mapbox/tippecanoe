@@ -3,6 +3,7 @@
 "center": "0.000000,0.000000,0",
 "description": "tests/attribute-type/out/-z0_-Tinttype@int_-Tfloattype@float_-Tbooltype@bool_-Tstringtype@string.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/attribute-type/out/-z0_-Tinttype@int_-Tfloattype@float_-Tbooltype@bool_-Tstringtype@string.json.check.mbtiles -z0 -Tinttype:int -Tfloattype:float -Tbooltype:bool -Tstringtype:string tests/attribute-type/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"booltype\": \"Boolean\", \"expect\": \"Mixed\", \"floattype\": \"Number\", \"inttype\": \"Number\", \"stringtype\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 39,\"geometry\": \"Point\",\"attributeCount\": 5,\"attributes\": [{\"attribute\": \"booltype\",\"count\": 2,\"type\": \"boolean\",\"values\": [false,true]},{\"attribute\": \"expect\",\"count\": 14,\"type\": \"mixed\",\"values\": [0,\"2\",\"2.5\",3,5,5.6,6,\"[2,3]\",\"false\",false,\"null\",\"something\",\"true\",true],\"min\": 0,\"max\": 6},{\"attribute\": \"floattype\",\"count\": 4,\"type\": \"number\",\"values\": [0,3,5,5.6],\"min\": 0,\"max\": 5.6},{\"attribute\": \"inttype\",\"count\": 5,\"type\": \"number\",\"values\": [0,0.000000,3.000000,5,6.000000],\"min\": 0,\"max\": 6},{\"attribute\": \"stringtype\",\"count\": 7,\"type\": \"string\",\"values\": [\"2\",\"2.5\",\"[2,3]\",\"false\",\"null\",\"something\",\"true\"]}]}]}}",
 "maxzoom": "0",
 "minzoom": "0",

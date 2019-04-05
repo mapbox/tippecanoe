@@ -3,6 +3,7 @@
 "center": "22.500000,20.489949,3",
 "description": "tests/geometry/out/-z3.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/geometry/out/-z3.json.check.mbtiles -z3 tests/geometry/bare.json tests/geometry/geometrycollection.json tests/geometry/multipoint.json tests/geometry/onebare.json",
 "json": "{\"vector_layers\": [ { \"id\": \"bare\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {} }, { \"id\": \"geometrycollection\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"collection\": \"Boolean\"} }, { \"id\": \"multipoint\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {\"point\": \"String\"} }, { \"id\": \"onebare\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 3, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 4,\"layers\": [{\"layer\": \"bare\",\"count\": 4,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"geometrycollection\",\"count\": 2,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"collection\",\"count\": 1,\"type\": \"boolean\",\"values\": [true]}]},{\"layer\": \"multipoint\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 1,\"attributes\": [{\"attribute\": \"point\",\"count\": 1,\"type\": \"string\",\"values\": [\"multi\"]}]},{\"layer\": \"onebare\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "3",
 "minzoom": "0",

@@ -3,6 +3,7 @@
 "center": "-122.156982,37.762029,14",
 "description": "tests/id/out/-Z11.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/id/out/-Z11.json.check.mbtiles -Z11 tests/id/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 11, \"maxzoom\": 14, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 8,\"geometry\": \"LineString\",\"attributeCount\": 4,\"attributes\": [{\"attribute\": \"FULLNAME\",\"count\": 3,\"type\": \"string\",\"values\": [\"Macarthur\",\"Macarthur Blvd\",\"Macarthur Fwy\"]},{\"attribute\": \"LINEARID\",\"count\": 8,\"type\": \"string\",\"values\": [\"1102406970092\",\"1102638069562\",\"1102954918511\",\"1103690483032\",\"1104469713187\",\"1104469713198\",\"1104486090991\",\"1105089465114\"]},{\"attribute\": \"MTFCC\",\"count\": 2,\"type\": \"string\",\"values\": [\"S1100\",\"S1400\"]},{\"attribute\": \"RTTYP\",\"count\": 1,\"type\": \"string\",\"values\": [\"M\"]}]}]}}",
 "maxzoom": "14",
 "minzoom": "11",

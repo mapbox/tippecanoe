@@ -3,6 +3,7 @@
 "center": "-122.167969,37.833010,9",
 "description": "tests/join-population/macarthur.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -f -Z5 -z10 -o tests/join-population/macarthur.mbtiles -l macarthur tests/join-population/macarthur.json; ./tile-join -q -f -Z6 -z9 -X -o tests/join-population/macarthur-6-9-exclude.mbtiles tests/join-population/macarthur.mbtiles",
 "json": "{\"vector_layers\": [ { \"id\": \"macarthur\", \"description\": \"\", \"minzoom\": 6, \"maxzoom\": 9, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"macarthur\",\"count\": 61,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "9",
 "minzoom": "6",
