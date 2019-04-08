@@ -617,6 +617,12 @@ the filename or name specified using `--layer`, like this:
 }
 ```
 
+If your source GeoJSON only has `minzoom`, `maxzoom` and/or `layer` within `properties` you can use [ndjson-cli](https://github.com/mbostock/ndjson-cli/blob/master/README.md) to move them into the required `tippecanoe` object by piping the GeoJSON like this:
+
+```sh
+ndjson-map 'd.tippecanoe = { minzoom: d.properties.minzoom, maxzoom: d.properties.maxzoom, layer: d.properties.layer }, delete d.properties.minzoom, delete d.properties.maxzoom, delete d.properties.layer, d'
+```
+
 Geometric simplifications
 -------------------------
 
