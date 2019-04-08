@@ -781,6 +781,14 @@ the filename or name specified using \fB\fC\-\-layer\fR, like this:
 }
 .fi
 .RE
+.PP
+If your source GeoJSON only has \fB\fCminzoom\fR, \fB\fCmaxzoom\fR and/or \fB\fClayer\fR within \fB\fCproperties\fR you can use ndjson\-cli \[la]https://github.com/mbostock/ndjson-cli/blob/master/README.md\[ra] to move them into the required \fB\fCtippecanoe\fR object by piping the GeoJSON like this:
+.PP
+.RS
+.nf
+ndjson\-map 'd.tippecanoe = { minzoom: d.properties.minzoom, maxzoom: d.properties.maxzoom, layer: d.properties.layer }, delete d.properties.minzoom, delete d.properties.maxzoom, delete d.properties.layer, d'
+.fi
+.RE
 .SH Geometric simplifications
 .PP
 At every zoom level, line and polygon features are subjected to Douglas\-Peucker
