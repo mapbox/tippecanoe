@@ -3,6 +3,7 @@
 "center": "45.000000,33.256630,2",
 "description": "tests/curve/out/-z2_--no-duplication.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/curve/out/-z2_--no-duplication.json.check.mbtiles -z2 --no-duplication tests/curve/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 2, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 2,\"geometry\": \"Polygon\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "2",
 "minzoom": "0",

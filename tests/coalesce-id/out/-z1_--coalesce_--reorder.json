@@ -3,6 +3,7 @@
 "center": "90.000000,42.525564,1",
 "description": "tests/coalesce-id/out/-z1_--coalesce_--reorder.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/coalesce-id/out/-z1_--coalesce_--reorder.json.check.mbtiles -z1 --coalesce --reorder tests/coalesce-id/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 1, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 177,\"geometry\": \"Polygon\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "1",
 "minzoom": "0",

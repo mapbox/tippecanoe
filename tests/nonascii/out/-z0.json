@@ -3,6 +3,7 @@
 "center": "0.000000,0.000000,0",
 "description": "tests/nonascii/out/-z0.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/nonascii/out/-z0.json.check.mbtiles -z0 tests/nonascii/@@@.json 'tests/nonascii/堤防.json'",
 "json": "{\"vector_layers\": [ { \"id\": \"unknown0\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} }, { \"id\": \"堤防\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 2,\"layers\": [{\"layer\": \"unknown0\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []},{\"layer\": \"堤防\",\"count\": 1,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "0",
 "minzoom": "0",

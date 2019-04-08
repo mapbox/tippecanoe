@@ -3,6 +3,7 @@
 "center": "0.065918,-0.065918,11",
 "description": "tests/grid-aligned/out/-z11_-D7_--grid-low-zooms.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/grid-aligned/out/-z11_-D7_--grid-low-zooms.json.check.mbtiles -z11 -D7 --grid-low-zooms tests/grid-aligned/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 11, \"fields\": {\"x\": \"Number\", \"y\": \"Number\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1024,\"geometry\": \"Polygon\",\"attributeCount\": 2,\"attributes\": [{\"attribute\": \"x\",\"count\": 32,\"type\": \"number\",\"values\": [16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],\"min\": 16,\"max\": 47},{\"attribute\": \"y\",\"count\": 32,\"type\": \"number\",\"values\": [16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],\"min\": 16,\"max\": 47}]}]}}",
 "maxzoom": "11",
 "minzoom": "0",

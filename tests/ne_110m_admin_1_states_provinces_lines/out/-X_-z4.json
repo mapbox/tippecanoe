@@ -3,6 +3,7 @@
 "center": "-78.750000,31.461472,4",
 "description": "tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/ne_110m_admin_1_states_provinces_lines/out/-X_-z4.json.check.mbtiles -X -z4 tests/ne_110m_admin_1_states_provinces_lines/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 4, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 110,\"geometry\": \"LineString\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "4",
 "minzoom": "0",

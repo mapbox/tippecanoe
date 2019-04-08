@@ -3,6 +3,7 @@
 "center": "1.000000,1.000000,0",
 "description": "tests/stringid/out/-z0_-aI_--use-attribute-for-id_special.json.check.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/stringid/out/-z0_-aI_--use-attribute-for-id_special.json.check.mbtiles -z0 -aI --use-attribute-for-id special tests/stringid/in.json",
 "json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {\"something\": \"Boolean\", \"special\": \"Number\", \"yes\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 12,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"something\",\"count\": 1,\"type\": \"boolean\",\"values\": [false]},{\"attribute\": \"special\",\"count\": 2,\"type\": \"number\",\"values\": [27.5,9.823748927348929e+55],\"min\": 27.5,\"max\": 9.823748927348929e+55},{\"attribute\": \"yes\",\"count\": 1,\"type\": \"string\",\"values\": [\"no\"]}]}]}}",
 "maxzoom": "0",
 "minzoom": "0",

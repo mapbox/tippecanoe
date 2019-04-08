@@ -3,6 +3,7 @@
 "center": "-179.989014,85.051129,14",
 "description": "tests/raw-tiles/nothing",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -f -e tests/raw-tiles/nothing tests/raw-tiles/nothing.geojson",
 "json": "{\"vector_layers\": [ { \"id\": \"nothing\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"nothing\",\"count\": 1,\"geometry\": \"Point\",\"attributeCount\": 0,\"attributes\": []}]}}",
 "maxzoom": "14",
 "minzoom": "0",

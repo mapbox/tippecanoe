@@ -3,6 +3,7 @@
 "center": "-122.167969,37.833010,10",
 "description": "tests/join-population/macarthur.mbtiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -f -Z5 -z10 -o tests/join-population/macarthur.mbtiles -l macarthur tests/join-population/macarthur.json; ./tile-join -q -f -c tests/join-population/windows.csv -o tests/join-population/windows.mbtiles tests/join-population/macarthur.mbtiles",
 "json": "{\"vector_layers\": [ { \"id\": \"macarthur\", \"description\": \"\", \"minzoom\": 5, \"maxzoom\": 10, \"fields\": {\"FULLNAME\": \"String\", \"LINEARID\": \"String\", \"MTFCC\": \"String\", \"RTTYP\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"macarthur\",\"count\": 90,\"geometry\": \"LineString\",\"attributeCount\": 4,\"attributes\": [{\"attribute\": \"FULLNAME\",\"count\": 3,\"type\": \"string\",\"values\": [\"Macarthur\",\"Macarthur Fwy\",\"W Macarthur\"]},{\"attribute\": \"LINEARID\",\"count\": 4,\"type\": \"string\",\"values\": [\"1102156510290\",\"1104486392881\",\"first\",\"second\"]},{\"attribute\": \"MTFCC\",\"count\": 2,\"type\": \"string\",\"values\": [\"S1100\",\"S1400\"]},{\"attribute\": \"RTTYP\",\"count\": 1,\"type\": \"string\",\"values\": [\"M\"]}]}]}}",
 "maxzoom": "10",
 "minzoom": "5",
