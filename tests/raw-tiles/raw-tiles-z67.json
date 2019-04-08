@@ -3,6 +3,7 @@
 "center": "-122.662354,45.514045,14",
 "description": "tests/raw-tiles/raw-tiles",
 "format": "pbf",
+"generator_options": "./tippecanoe -q -f -e tests/raw-tiles/raw-tiles -r1 -pC tests/raw-tiles/hackspots.geojson",
 "json": "{\"vector_layers\": [ { \"id\": \"hackspots\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 14, \"fields\": {\"Address\": \"String\", \"Name\": \"String\", \"Notes\": \"String\"} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"hackspots\",\"count\": 4,\"geometry\": \"Point\",\"attributeCount\": 3,\"attributes\": [{\"attribute\": \"Address\",\"count\": 4,\"type\": \"string\",\"values\": [\"1507 N Rosa Parks Way  Portland, OR 97217\",\"201 SE 12th Ave, Portland, OR 97214\",\"4637 N Albina Ave  Portland, OR 97217\",\"915 SE Hawthorne Blvd. Portland, OR 97214\"]},{\"attribute\": \"Name\",\"count\": 4,\"type\": \"string\",\"values\": [\"Albina Press\",\"Arbor Lodge\",\"Lucky Labrador Brew Pub\",\"Three Friends Coffeehouse\"]},{\"attribute\": \"Notes\",\"count\": 3,\"type\": \"string\",\"values\": [\"\",\"Dog friendly\",\"usually busy, outlets on side wall only\"]}]}]}}",
 "maxzoom": "14",
 "minzoom": "0",
