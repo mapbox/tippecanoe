@@ -1,3 +1,9 @@
+## 1.34.1
+
+* Don't run shell filters if the current zoom is below the minzoom
+* Fix -Z and -z for tile directories in tile-join and tippecanoe-decode
+* Return a successful error status for --help and --version
+
 ## 1.34.0
 
 * Record the command line options in the tileset metadata
