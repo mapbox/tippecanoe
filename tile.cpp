@@ -1786,6 +1786,11 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		FILE *prefilter_read_fp = NULL;
 		json_pull *prefilter_jp = NULL;
 
+		if (z < minzoom) {
+			prefilter = NULL;
+			postfilter = NULL;
+		}
+
 		if (prefilter != NULL) {
 			setup_filter(prefilter, &prefilter_write, &prefilter_read, &prefilter_pid, z, tx, ty);
 			prefilter_fp = fdopen(prefilter_write, "w");
