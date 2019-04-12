@@ -1,0 +1,1 @@
+{ "type": "FeatureCollection", "features": [ { "type": "Feature", "properties": { "hpa": 103200 }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [254,35], [204,35], [204,30], [254,30], [254,35] ] ] } } ] }
