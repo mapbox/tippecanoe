@@ -22,12 +22,17 @@ void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
 
 	int lat_class = fpclassify(lat);
 	int lon_class = fpclassify(lon);
+	bool bad_lon = false;
 
 	if (lat_class == FP_INFINITE || lat_class == FP_NAN) {
 		lat = 89.9;
 	}
 	if (lon_class == FP_INFINITE || lon_class == FP_NAN) {
-		lon = 360;
+		// Keep these far enough from the plane that they don't get
+		// moved back into it by 360-degree offsetting
+
+		lon = 720;
+		bad_lon = true;
 	}
 
 	// Must limit latitude somewhere to prevent overflow.
@@ -40,10 +45,10 @@ void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
 		lat = 89.9;
 	}
 
-	if (lon < -360) {
+	if (lon < -360 && !bad_lon) {
 		lon = -360;
 	}
-	if (lon > 360) {
+	if (lon > 360 && !bad_lon) {
 		lon = 360;
 	}
 

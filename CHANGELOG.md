@@ -1,3 +1,8 @@
+## 1.34.2
+
+* Be more consistent about when longitudes beyond 180 are allowed.
+  Now if the entire feature is beyond 180, it will still appear.
+
 ## 1.34.1
 
 * Don't run shell filters if the current zoom is below the minzoom

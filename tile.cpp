@@ -1214,9 +1214,6 @@ struct write_tile_args {
 
 bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 	int quick = quick_check(sf.bbox, z, buffer);
-	if (quick == 0) {
-		return true;
-	}
 
 	if (z == 0) {
 		if (sf.bbox[0] <= (1LL << 32) * buffer / 256 || sf.bbox[2] >= (1LL << 32) - ((1LL << 32) * buffer / 256)) {
@@ -1242,6 +1239,10 @@ bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
 
 			quick = -1;
 		}
+	}
+
+	if (quick == 0) {
+		return true;
 	}
 
 	// Can't accept the quick check if guaranteeing no duplication, since the
