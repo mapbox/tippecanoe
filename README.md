@@ -351,27 +351,28 @@ Parallel processing will also be automatic if the input file is in Geobuf format
    the single specified tile at that zoom level.
 
 If you know the precision to which you want your data to be represented,
-this table shows the approximate precision corresponding to various
+or the map scale of a corresponding printed map,
+this table shows the approximate precision and scale corresponding to various
 `-z` options if you use the default `-d` detail of 12:
 
-zoom level | precision (ft) | precision (m)
----------- | -------------- | -------------
-`-z0` | 32000 ft | 10000 m
-`-z1` | 16000 ft | 5000 m
-`-z2` | 8000 ft | 2500 m
-`-z3` | 4000 ft | 1250 m
-`-z4` | 2000 ft | 600 m
-`-z5` | 1000 ft | 300 m
-`-z6` | 500 ft | 150 m
-`-z7` | 250 ft | 80 m
-`-z8` | 125 ft | 40 m
-`-z9` | 64 ft | 20 m
-`-z10` | 32 ft | 10 m
-`-z11` | 16 ft | 5 m
-`-z12` | 8 ft | 2 m
-`-z13` | 4 ft | 1 m
-`-z14` | 2 ft | 0.5 m
-`-z15` | 1 ft | 0.25 m
+zoom level | precision (ft) | precision (m) | map scale
+---------- | -------------- | ------------- | ---------
+`-z0` | 32000 ft | 10000 m | 1:320,000,000
+`-z1` | 16000 ft | 5000 m | 1:160,000,000
+`-z2` | 8000 ft | 2500 m | 1:80,000,000
+`-z3` | 4000 ft | 1250 m | 1:40,000,000
+`-z4` | 2000 ft | 600 m | 1:20,000,000
+`-z5` | 1000 ft | 300 m | 1:10,000,000
+`-z6` | 500 ft | 150 m | 1:5,000,000
+`-z7` | 250 ft | 80 m | 1:2,500,000
+`-z8` | 125 ft | 40 m | 1:1,250,000
+`-z9` | 64 ft | 20 m | 1:640,000
+`-z10` | 32 ft | 10 m | 1:320,000
+`-z11` | 16 ft | 5 m | 1:160,000
+`-z12` | 8 ft | 2 m | 1:80,000
+`-z13` | 4 ft | 1 m | 1:40,000
+`-z14` | 2 ft | 0.5 m | 1:20,000
+`-z15` | 1 ft | 0.25 m | 1:10,000
 
 ### Tile resolution
 
