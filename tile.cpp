@@ -381,6 +381,7 @@ struct partial_arg {
 	std::vector<struct partial> *partials = NULL;
 	int task = 0;
 	int tasks = 0;
+	drawvec *shared_nodes;
 };
 
 drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
@@ -464,7 +465,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (!already_marked) {
-					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0);
+					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, *(a->shared_nodes));
 
 					if (t != VT_POLYGON || ngeom.size() >= 3) {
 						geom = ngeom;
@@ -898,7 +899,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 			}
 		}
 		if (!(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 4);
+			simplified_arcs[ai->second] = simplify_lines(dv, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, 4, drawvec());
 		} else {
 			simplified_arcs[ai->second] = dv;
 		}
@@ -1763,6 +1764,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		std::vector<long long> extents;
 		std::map<std::string, accum_state> attribute_accum_state;
 		double coalesced_area = 0;
+		drawvec shared_nodes;
 
 		int within[child_shards];
 		std::atomic<long long> geompos[child_shards];
@@ -1962,6 +1964,12 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			if (sf.geometry.size() > 0) {
+				if (prevent[P_SIMPLIFY_SHARED_NODES]) {
+					for (auto &g : sf.geometry) {
+						shared_nodes.push_back(g);
+					}
+				}
+
 				partial p;
 				p.geoms.push_back(sf.geometry);
 				p.layer = sf.layer;
@@ -1989,6 +1997,25 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 			merge_previndex = sf.index;
 			coalesced_area = 0;
+		}
+
+		{
+			drawvec just_shared_nodes;
+			std::sort(shared_nodes.begin(), shared_nodes.end());
+
+			for (size_t i = 0; i + 1 < shared_nodes.size(); i++) {
+				if (shared_nodes[i] == shared_nodes[i + 1]) {
+					just_shared_nodes.push_back(shared_nodes[i]);
+
+					draw d = shared_nodes[i];
+					i++;
+					while (i + 1 < shared_nodes.size() && shared_nodes[i + 1] == d) {
+						i++;
+					}
+				}
+			}
+
+			shared_nodes = just_shared_nodes;
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
@@ -2073,6 +2100,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			args[i].task = i;
 			args[i].tasks = tasks;
 			args[i].partials = &partials;
+			args[i].shared_nodes = &shared_nodes;
 
 			if (tasks > 1) {
 				if (pthread_create(&pthreads[i], NULL, partial_feature_worker, &args[i]) != 0) {
@@ -2186,7 +2214,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				if (layer_features[x].coalesced && layer_features[x].type == VT_LINE) {
 					layer_features[x].geom = remove_noop(layer_features[x].geom, layer_features[x].type, 0);
 					layer_features[x].geom = simplify_lines(layer_features[x].geom, 32, 0,
-										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, layer_features[x].type == VT_POLYGON ? 4 : 0);
+										!(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), simplification, layer_features[x].type == VT_POLYGON ? 4 : 0, shared_nodes);
 				}
 
 				if (layer_features[x].type == VT_POLYGON) {

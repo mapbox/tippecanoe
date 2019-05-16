@@ -28,6 +28,7 @@
 
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')
+#define P_SIMPLIFY_SHARED_NODES ((int) 'n')
 #define P_FEATURE_LIMIT ((int) 'f')
 #define P_KILOBYTE_LIMIT ((int) 'k')
 #define P_DYNAMIC_DROP ((int) 'd')

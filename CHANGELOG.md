@@ -1,3 +1,7 @@
+## 1.34.3
+
+* Add an option to keep intersection nodes from being simplified away
+
 ## 1.34.2
 
 * Be more consistent about when longitudes beyond 180 are allowed.

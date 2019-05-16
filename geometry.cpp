@@ -802,7 +802,7 @@ drawvec impose_tile_boundaries(drawvec &geom, long long extent) {
 	return out;
 }
 
-drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain) {
+drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain, drawvec const &shared_nodes) {
 	int res = 1 << (32 - detail - z);
 	long long area = 1LL << (32 - z);
 
@@ -813,6 +813,13 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 			geom[i].necessary = 0;
 		} else {
 			geom[i].necessary = 1;
+		}
+
+		if (prevent[P_SIMPLIFY_SHARED_NODES]) {
+			auto pt = std::lower_bound(shared_nodes.begin(), shared_nodes.end(), geom[i]);
+			if (pt != shared_nodes.end() && *pt == geom[i]) {
+				geom[i].necessary = true;
+			}
 		}
 	}
 
