@@ -7,6 +7,7 @@
 #include <string>
 #include <stack>
 #include <vector>
+#include <exception>
 #include <map>
 #include <set>
 #include <algorithm>
@@ -375,6 +376,8 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	char *stringpool;
+	long long *pool_off;
 };
 
 struct partial_arg {
@@ -494,7 +497,30 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before = geoms[g];
-				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+				try {
+					geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+				} catch (const std::exception& e) {
+					struct partial *p = &((*partials)[i]);
+
+					fprintf(stderr, "Failing feature:\n");
+
+					if (p->has_id) {
+						fprintf(stderr, "id %lld\n", p->id);
+					}
+
+					for (size_t ii = 0; ii < p->full_keys.size(); ii++) {
+						fprintf(stderr, "%s: %s\n", p->full_keys[ii].c_str(), p->full_values[ii].s.c_str());
+					}
+					for (size_t ii = 0; ii < p->keys.size(); ii++) {
+						fprintf(stderr, "%s: %s\n",
+						        p->stringpool + p->pool_off[p->segment] + p->keys[ii] + 1,
+						        p->stringpool + p->pool_off[p->segment] + p->values[ii] + 1);
+					}
+
+					fflush(stderr);
+					throw(e);
+				}
+
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g]);
 				}
@@ -1992,6 +2018,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.stringpool = stringpool;
+				p.pool_off = pool_off;
 				partials.push_back(p);
 			}
 
