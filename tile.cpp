@@ -1710,6 +1710,58 @@ static bool line_is_too_small(drawvec const &geometry, int z, int detail) {
 	return true;
 }
 
+serial_val json_to_serial_val(json_object *o) {
+	serial_val sv;
+
+	if (o->type == JSON_NULL) {
+		sv.type = mvt_null;
+		sv.s = "null";
+	} else if (o->type == JSON_TRUE) {
+		sv.type = mvt_bool;
+		sv.s = "true";
+	} else if (o->type == JSON_FALSE) {
+		sv.type = mvt_bool;
+		sv.s = "false";
+	} else if (o->type == JSON_STRING) {
+		sv.type = mvt_string;
+		sv.s = o->string;
+	} else if (o->type == JSON_NUMBER) {
+		sv.type = mvt_double;
+		sv.s = o->string;
+	} else if (o->type == JSON_HASH || o->type == JSON_ARRAY) {
+		char *s = json_stringify(o);
+		sv.type = mvt_string;
+		sv.s = s;
+		free(s);
+	} else {
+		fprintf(stderr, "Can't happen converting JSON object %s\n", json_stringify(o));
+		exit(EXIT_FAILURE);
+	}
+
+	return sv;
+}
+
+serial_val get_zoom_element(int zoom, std::string key, std::string value) {
+	json_pull *jp = json_begin_string(value.c_str());
+	json_object *o = json_read_tree(jp);
+
+	if (o == NULL || o->type != JSON_ARRAY || o->length == 0) {
+		fprintf(stderr, "Can't parse JSON array \"%s\" for --zoom-element=\"%s\"\n", value.c_str(), key.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	if ((size_t) zoom >= o->length) {
+		zoom = o->length - 1;
+	}
+
+	serial_val sv = json_to_serial_val(o->array[zoom]);
+
+	json_free(o);
+	json_end(jp);
+
+	return sv;
+}
+
 long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1863,6 +1915,29 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				break;
 			}
 
+			std::set<std::string> need_tilestats;
+			if (zoom_elements.size() > 0) {
+				for (size_t ii = 0; ii < sf.full_keys.size(); ii++) {
+					if (zoom_elements.count(sf.full_keys[ii]) != 0) {
+						serial_val val = get_zoom_element(z, sf.full_keys[ii], sf.full_values[ii].s);
+						sf.full_values[ii] = val;
+						need_tilestats.insert(sf.full_keys[ii]);
+					}
+				}
+				for (ssize_t ii = sf.keys.size() - 1; ii >= 0; ii--) {
+					char *key = stringpool + pool_off[sf.segment] + sf.keys[ii] + 1;
+					if (zoom_elements.count(key) != 0) {
+						serial_val val = get_zoom_element(z, key, std::string(stringpool + pool_off[sf.segment] + sf.values[ii] + 1));
+						sf.full_keys.push_back(key);
+						sf.full_values.push_back(val);
+
+						sf.keys.erase(sf.keys.begin() + ii);
+						sf.values.erase(sf.values.begin() + ii);
+						need_tilestats.insert(key);
+					}
+				}
+			}
+
 			if (sf.dropped) {
 				if (find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
@@ -1992,6 +2067,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+				p.need_tilestats = need_tilestats;
 				partials.push_back(p);
 			}
 
