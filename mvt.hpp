@@ -69,7 +69,7 @@ struct mvt_feature {
 	std::vector<unsigned long> node_attributes{};
 
 	// For use during decoding
-	std::vector<int> elevations{};
+	std::vector<long> elevations{};
 
 	mvt_feature() {
 		has_id = false;

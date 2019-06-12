@@ -362,7 +362,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 						case 7: /* elevations */
 						{
-							auto pi = feature_reader.get_packed_sint32();
+							auto pi = feature_reader.get_packed_sint64();
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.elevations.push_back(*it);
 							}
@@ -436,7 +436,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 
 			for (size_t i = 0; i < layer.features.size(); i++) {
 				std::vector<mvt_geometry> &geom = layer.features[i].geometry;
-				std::vector<int> &elevations = layer.features[i].elevations;
+				std::vector<long> &elevations = layer.features[i].elevations;
 
 				long current_elevation = layer.elevation_scaling.offset;
 				size_t off = 0;
