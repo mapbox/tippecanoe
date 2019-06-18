@@ -1,3 +1,7 @@
+## 1.34.4
+
+* Be careful to avoid undefined behavior from shifting negative numbers
+
 ## 1.34.3
 
 * Add an option to keep intersection nodes from being simplified away

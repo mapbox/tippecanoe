@@ -48,6 +48,10 @@ extern "C" {
 
 #define CMD_BITS 3
 
+// Offset coordinates to keep them positive
+#define COORD_OFFSET (4LL << 32)
+#define SHIFT_RIGHT(a) ((((a) + COORD_OFFSET) >> geometry_scale) - (COORD_OFFSET >> geometry_scale))
+
 #define XSTRINGIFY(s) STRINGIFY(s)
 #define STRINGIFY(s) #s
 
@@ -284,7 +288,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 
 		drawvec geom2;
 		for (size_t i = 0; i < geom.size(); i++) {
-			geom2.push_back(draw(geom[i].op, (geom[i].x + sx) >> geometry_scale, (geom[i].y + sy) >> geometry_scale));
+			geom2.push_back(draw(geom[i].op, SHIFT_RIGHT(geom[i].x + sx), SHIFT_RIGHT(geom[i].y + sy)));
 		}
 
 		for (xo = bbox2[0]; xo <= bbox2[2]; xo++) {
@@ -344,7 +348,7 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 						}
 					}
 
-					serialize_feature(geomfile[j], &sf, &geompos[j], fname, initial_x[segment] >> geometry_scale, initial_y[segment] >> geometry_scale, true);
+					serialize_feature(geomfile[j], &sf, &geompos[j], fname, SHIFT_RIGHT(initial_x[segment]), SHIFT_RIGHT(initial_y[segment]), true);
 				}
 			}
 		}
