@@ -60,7 +60,7 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 void to_tile_scale(drawvec &geom, int z, int detail);
 drawvec remove_noop(drawvec geom, int type, int shift);
 drawvec clip_point(drawvec &geom, int z, long long buffer);
-drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip);
+drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip, bool even_odd);
 drawvec simple_clip_poly(drawvec &geom, int z, int buffer);
 drawvec close_poly(drawvec &geom);
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
