@@ -493,6 +493,10 @@ void *partial_feature_worker(void *v) {
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
 
+		if (t == VT_POLYGON && polygon_split > 0) {
+			geoms = chop_polygon(geoms, polygon_split);
+		}
+
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
