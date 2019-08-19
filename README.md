@@ -373,6 +373,13 @@ zoom level | precision (ft) | precision (m) | map scale
 `-z13` | 4 ft | 1 m | 1:40,000
 `-z14` | 2 ft | 0.5 m | 1:20,000
 `-z15` | 1 ft | 0.25 m | 1:10,000
+`-z16` | 6 in | 15 cm | 1:5000
+`-z17` | 3 in | 8 cm | 1:2500
+`-z18` | 1.5 in | 4 cm | 1:1250
+`-z19` | 0.8 in | 2 cm | 1:600
+`-z20` | 0.4 in | 1 cm | 1:300
+`-z21` | 0.2 in | 0.5 cm | 1:150
+`-z22` | 0.1 in | 0.25 cm | 1:75
 
 ### Tile resolution
 
