@@ -293,6 +293,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
  * `-o` _file_`.mbtiles` or `--output=`_file_`.mbtiles`: Name the output file.
  * `-e` _directory_ or `--output-to-directory`=_directory_: Write tiles to the specified *directory* instead of to an mbtiles file.
+ * `--output-to-tar`: Write tiles in `tar` format to the standard output instead of to an mbtiles file.
  * `-f` or `--force`: Delete the mbtiles file if it already exists instead of giving an error
  * `-F` or `--allow-existing`: Proceed (without deleting existing data) if the metadata or tiles table already exists
    or if metadata fields can't be set. You probably don't want to use this.

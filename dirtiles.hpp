@@ -6,6 +6,9 @@
 #define DIRTILES_HPP
 
 void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf);
+void tar_write_tile(int z, int tx, int ty, std::string const &pbf);
+void tar_write(std::string const &name, std::string const &data, bool dir);
+void tar_close();
 
 void check_dir(const char *d, char **argv, bool force, bool forcetable);
 
