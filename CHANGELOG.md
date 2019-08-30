@@ -1,3 +1,7 @@
+## 1.34.5
+
+* Fix line numbers in GeoJSON feature parsing error messages
+
 ## 1.34.4
 
 * Be careful to avoid undefined behavior from shifting negative numbers

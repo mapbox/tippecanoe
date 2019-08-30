@@ -269,6 +269,7 @@ struct json_serialize_action : json_feature_action {
 	std::string layername;
 
 	int add_feature(json_object *geometry, bool geometrycollection, json_object *properties, json_object *id, json_object *tippecanoe, json_object *feature) {
+		sst->line = geometry->parser->line;
 		if (geometrycollection) {
 			int ret = 1;
 			for (size_t g = 0; g < geometry->length; g++) {
