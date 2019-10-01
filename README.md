@@ -517,7 +517,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `-O` _features_ or `--maximum-tile-features=`_features_: Use the specified number of _features_ as the maximum in a tile instead of 200,000.
  * `-pf` or `--no-feature-limit`: Don't limit tiles to 200,000 features
  * `-pk` or `--no-tile-size-limit`: Don't limit tiles to 500K bytes
- * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
+ * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data. If you are getting "Unimplemented type 3" error messages from a renderer, it is probably because it expects uncompressed tiles using this option rather than the normal gzip-compressed tiles.
  * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
  * `--tile-stats-attributes-limit=`*count*: Include `tilestats` information about at most *count* attributes instead of the default 1000.
  * `--tile-stats-sample-values-limit=`*count*: Calculate `tilestats` attribute statistics based on *count* values instead of the default 1000.
