@@ -73,7 +73,7 @@ Try this first
 If you aren't sure what options to use, try this:
 
 ```sh
-$ tippecanoe -o out.mbtiles -zg --drop-densest-as-needed in.geojson
+$ tippecanoe -zg -o out.mbtiles --drop-densest-as-needed in.geojson
 ```
 
 The `-zg` option will make Tippecanoe choose a maximum zoom level that should be
