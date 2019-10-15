@@ -11,6 +11,7 @@ void (*decode_index)(unsigned long long index, unsigned *wx, unsigned *wy) = NUL
 struct projection projections[] = {
 	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84"},
 	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857"},
+    {"EPSG:28992", epsg28992totile, tiletoepsg28992, "urn:ogc:def:crs:EPSG::28992"},
 	{NULL, NULL, NULL, NULL},
 };
 
@@ -99,6 +100,28 @@ void tiletoepsg3857(long long ix, long long iy, int zoom, double *ox, double *oy
 
 	*ox = (ix - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
 	*oy = ((1LL << 32) - 1 - iy - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
+}
+
+void epsg28992totile(double ix, double iy, int zoom, long long *x, long long *y) {
+    // these tiles adhere to the epsg28992 tiling scheme
+    // extent (in epgs28992) = { minx = -285401.920, miny = 22598.080, maxx = 595401.920, maxy = 903401.920 }
+    // resolution at zoom level 0: 3440.640
+    // width and heigth: 256 pixels
+
+    double resolution = 880803.84 / (1LL << zoom);
+    *x = (ix + 285401.920) / resolution;
+    *y = (903401.920 - iy) / resolution;
+}
+
+void tiletoepsg28992(long long ix, long long iy, int zoom, double *ox, double *oy) {
+    // these tiles adhere to the epsg28992 tiling scheme
+    // extent (in epgs28992) = { minx = -285401.920, miny = 22598.080, maxx = 595401.920, maxy = 903401.920 }
+    // resolution at zoom level 0: 3440.640
+    // width and heigth: 256 pixels
+
+    double resolution = 880803.84 / (1LL << zoom);
+    *ox = ix * resolution - 285401.920;
+    *oy = 903401.920 + iy * resolution;
 }
 
 // https://en.wikipedia.org/wiki/Hilbert_curve
