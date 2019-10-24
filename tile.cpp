@@ -2126,6 +2126,55 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 		}
 
+		bool remove_filled = false;
+		if (prevent[P_FILLED]) {
+			remove_filled = true;
+
+			for (size_t i = 0; i < partials.size(); i++) {
+				if (partials[i].t != VT_POLYGON ||
+				    partials[i].geoms.size() != 1 ||
+				    partials[i].geoms[0].size() != 5) {
+					remove_filled = false;
+					break;
+				}
+
+				// It is a polygon with four sides.
+				// Are they all outside the tile boundary?
+
+				for (size_t j = 0; j + 1 < partials[i].geoms[0].size(); j++) {
+					if (partials[i].geoms[0][j].x == partials[i].geoms[0][j + 1].x &&
+					    (partials[i].geoms[0][j].x < 0 || partials[i].geoms[0][j].x > partials[i].extent)) {
+						// vertical line, outside the edge of the tile
+
+						if (!((partials[i].geoms[0][j].y < 0 &&
+						       partials[i].geoms[0][j + 1].y > partials[i].extent) ||
+						      (partials[i].geoms[0][j + 1].y < 0 &&
+						       partials[i].geoms[0][j].y > partials[i].extent))) {
+							remove_filled = false;
+							break;
+						}
+					} else if (partials[i].geoms[0][j].y == partials[i].geoms[0][j + 1].y &&
+						   (partials[i].geoms[0][j].y < 0 || partials[i].geoms[0][j].y > partials[i].extent)) {
+						// horizontal line, outside the edge of the tile
+
+						if (!((partials[i].geoms[0][j].x < 0 &&
+						       partials[i].geoms[0][j + 1].x > partials[i].extent) ||
+						      (partials[i].geoms[0][j + 1].x < 0 &&
+						       partials[i].geoms[0][j].x > partials[i].extent))) {
+							remove_filled = false;
+							break;
+						}
+					} else {
+						remove_filled = false;
+						break;
+					}
+				}
+			}
+		}
+		if (remove_filled) {
+			partials.clear();
+		}
+
 		for (size_t i = 0; i < partials.size(); i++) {
 			std::vector<drawvec> &pgeoms = partials[i].geoms;
 			signed char t = partials[i].t;
