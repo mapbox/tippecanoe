@@ -565,12 +565,12 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.index = 0;
 	}
 
-	if (sst->layermap->count(sf.layername) == 0) {
-		sst->layermap->insert(std::pair<std::string, layermap_entry>(sf.layername, layermap_entry(sst->layermap->size())));
+	if (sst->tilestat->count(sf.layername) == 0) {
+		sst->tilestat->insert(std::pair<std::string, tilestats_entry>(sf.layername, tilestats_entry(sst->tilestat->size())));
 	}
 
-	auto ai = sst->layermap->find(sf.layername);
-	if (ai != sst->layermap->end()) {
+	auto ai = sst->tilestat->find(sf.layername);
+	if (ai != sst->tilestat->end()) {
 		sf.layer = ai->second.id;
 
 		if (!sst->filters) {
@@ -642,12 +642,12 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	if (!sst->filters) {
 		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			type_and_string attrib;
+			tilestats_attributes_entry attrib;
 			attrib.type = sf.full_values[i].type;
 			attrib.string = sf.full_values[i].s;
 
-			auto fk = sst->layermap->find(sf.layername);
-			add_to_file_keys(fk->second.file_keys, sf.full_keys[i], attrib);
+			auto ts = sst->tilestat->find(sf.layername);
+			add_to_tilestats(ts->second.tilestats, sf.full_keys[i], attrib);
 		}
 	}
 

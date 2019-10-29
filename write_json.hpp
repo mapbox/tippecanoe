@@ -5,7 +5,7 @@
 #include <vector>
 #include <stdio.h>
 
-enum json_write_tok {
+enum write_tok {
 	JSON_WRITE_HASH,
 	JSON_WRITE_HASH_KEY,
 	JSON_WRITE_HASH_VALUE,
@@ -15,15 +15,15 @@ enum json_write_tok {
 };
 
 struct json_writer {
-	std::vector<json_write_tok> state;
+	std::vector<write_tok> jw;
 	bool nospace = false;
 	bool wantnl = false;
 	FILE *f = NULL;
 	std::string *s = NULL;
 
 	~json_writer() {
-		if (state.size() > 0) {
-			if (state.size() != 1 || state[0] != JSON_WRITE_TOP) {
+		if (jw.size() > 0) {
+			if (jw.size() != 1 || jw[0] != JSON_WRITE_TOP) {
 				fprintf(stderr, "JSON not closed at end\n");
 				exit(EXIT_FAILURE);
 			}
@@ -38,19 +38,19 @@ struct json_writer {
 		s = out;
 	}
 
-	void json_write_array();
-	void json_end_array();
-	void json_write_hash();
-	void json_end_hash();
-	void json_write_string(std::string const &s);
-	void json_write_number(double d);
-	void json_write_float(double d);
-	void json_write_unsigned(unsigned long long v);
-	void json_write_signed(long long v);
-	void json_write_stringified(std::string const &s);
-	void json_write_bool(bool b);
-	void json_write_null();
-	void json_write_newline();
+	void begin_array();
+	void end_array();
+	void begin_hash();
+	void end_hash();
+	void write_string(std::string const &s);
+	void write_number(double d);
+	void write_float(double d);
+	void write_unsigned(unsigned long long v);
+	void write_signed(long long v);
+	void write_stringified(std::string const &s);
+	void write_bool(bool b);
+	void write_null();
+	void write_newline();
 	void json_comma_newline();
 
        private:
@@ -60,7 +60,7 @@ struct json_writer {
 	void adds(std::string const &s);
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state);
+void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &jw);
 void fprintq(FILE *f, const char *s);
 
 #endif
