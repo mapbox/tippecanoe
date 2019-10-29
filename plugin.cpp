@@ -51,9 +51,9 @@ void *run_writer(void *a) {
 		exit(EXIT_FAILURE);
 	}
 
-	json_writer state(fp);
+	json_writer jw(fp);
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state);
+		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, jw);
 	}
 
 	if (fclose(fp) != 0) {
@@ -84,7 +84,7 @@ static std::vector<mvt_geometry> to_feature(drawvec &geom) {
 }
 
 // Reads from the postfilter
-std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::vector<std::map<std::string, tilestats_entry>> *tilestats, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	std::map<std::string, mvt_layer> ret;
 
 	FILE *f = fdopen(fd, "r");
@@ -220,13 +220,13 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				feature.has_id = true;
 			}
 
-			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
-			if (layermap.count(layername) == 0) {
-				layermap_entry lme = layermap_entry(layermap.size());
+			std::map<std::string, tilestats_entry> &tilestat = (*tilestats)[tiling_seg];
+			if (tilestat.count(layername) == 0) {
+				tilestats_entry lme = tilestats_entry(tilestat.size());
 				lme.minzoom = z;
 				lme.maxzoom = z;
 
-				layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+				tilestat.insert(std::pair<std::string, tilestats_entry>(layername, lme));
 
 				if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
 					(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
@@ -234,24 +234,24 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				}
 			}
 
-			auto fk = layermap.find(layername);
-			if (fk == layermap.end()) {
+			auto ts = tilestat.find(layername);
+			if (ts == tilestat.end()) {
 				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
 				exit(EXIT_FAILURE);
 			}
-			if (z < fk->second.minzoom) {
-				fk->second.minzoom = z;
+			if (z < ts->second.minzoom) {
+				ts->second.minzoom = z;
 			}
-			if (z > fk->second.maxzoom) {
-				fk->second.maxzoom = z;
+			if (z > ts->second.maxzoom) {
+				ts->second.maxzoom = z;
 			}
 
 			if (feature.type == mvt_point) {
-				fk->second.points++;
+				ts->second.points++;
 			} else if (feature.type == mvt_linestring) {
-				fk->second.lines++;
+				ts->second.lines++;
 			} else if (feature.type == mvt_polygon) {
-				fk->second.polygons++;
+				ts->second.polygons++;
 			}
 
 			for (size_t i = 0; i < properties->length; i++) {
@@ -267,11 +267,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
 					l->second.tag(feature, std::string(properties->keys[i]->string), v);
 
-					type_and_string attrib;
+					tilestats_attributes_entry attrib;
 					attrib.type = tp;
 					attrib.string = s;
 
-					add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+					add_to_tilestats(ts->second.tilestats, std::string(properties->keys[i]->string), attrib);
 				}
 			}
 
@@ -295,7 +295,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 }
 
 // Reads from the prefilter
-serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
+serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::vector<std::map<std::string, tilestats_entry>> *tilestats, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, bool postfilter) {
 	serial_feature sf;
 
 	while (1) {
@@ -452,14 +452,14 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				sf.has_id = true;
 			}
 
-			std::map<std::string, layermap_entry> &layermap = (*layermaps)[tiling_seg];
+			std::map<std::string, tilestats_entry> &tilestat = (*tilestats)[tiling_seg];
 
-			if (layermap.count(layername) == 0) {
-				layermap_entry lme = layermap_entry(layermap.size());
+			if (tilestat.count(layername) == 0) {
+				tilestats_entry lme = tilestats_entry(tilestat.size());
 				lme.minzoom = z;
 				lme.maxzoom = z;
 
-				layermap.insert(std::pair<std::string, layermap_entry>(layername, lme));
+				tilestat.insert(std::pair<std::string, tilestats_entry>(layername, lme));
 
 				if (lme.id >= (*layer_unmaps)[tiling_seg].size()) {
 					(*layer_unmaps)[tiling_seg].resize(lme.id + 1);
@@ -467,27 +467,27 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				}
 			}
 
-			auto fk = layermap.find(layername);
-			if (fk == layermap.end()) {
+			auto ts = tilestat.find(layername);
+			if (ts == tilestat.end()) {
 				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
 				exit(EXIT_FAILURE);
 			}
-			sf.layer = fk->second.id;
+			sf.layer = ts->second.id;
 
-			if (z < fk->second.minzoom) {
-				fk->second.minzoom = z;
+			if (z < ts->second.minzoom) {
+				ts->second.minzoom = z;
 			}
-			if (z > fk->second.maxzoom) {
-				fk->second.maxzoom = z;
+			if (z > ts->second.maxzoom) {
+				ts->second.maxzoom = z;
 			}
 
 			if (!postfilter) {
 				if (sf.t == mvt_point) {
-					fk->second.points++;
+					ts->second.points++;
 				} else if (sf.t == mvt_linestring) {
-					fk->second.lines++;
+					ts->second.lines++;
 				} else if (sf.t == mvt_polygon) {
-					fk->second.polygons++;
+					ts->second.polygons++;
 				}
 			}
 
@@ -504,12 +504,12 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					sf.full_keys.push_back(std::string(properties->keys[i]->string));
 					sf.full_values.push_back(v);
 
-					type_and_string attrib;
+					tilestats_attributes_entry attrib;
 					attrib.string = v.s;
 					attrib.type = v.type;
 
 					if (!postfilter) {
-						add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+						add_to_tilestats(ts->second.tilestats, std::string(properties->keys[i]->string), attrib);
 					}
 				}
 			}
@@ -618,7 +618,7 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	}
 }
 
-std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, layermap_entry>> *layermaps, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
+std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> &layers, unsigned z, unsigned x, unsigned y, std::vector<std::map<std::string, tilestats_entry>> *tilestats, size_t tiling_seg, std::vector<std::vector<std::string>> *layer_unmaps, int extent) {
 	int write_to, read_from;
 	pid_t pid;
 	setup_filter(filter, &write_to, &read_from, &pid, z, x, y);
@@ -637,7 +637,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 		exit(EXIT_FAILURE);
 	}
 
-	std::vector<mvt_layer> nlayers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
+	std::vector<mvt_layer> nlayers = parse_layers(read_from, z, x, y, tilestats, tiling_seg, layer_unmaps, extent);
 
 	while (1) {
 		int stat_loc;

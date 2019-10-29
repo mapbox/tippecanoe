@@ -27,29 +27,29 @@ int minzoom = 0;
 int maxzoom = 32;
 bool force = false;
 
-void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y, json_writer &state) {
-	state.json_write_hash();
+void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, unsigned y, json_writer &jw) {
+	jw.begin_hash();
 
-	state.json_write_string("zoom");
-	state.json_write_signed(z);
+	jw.write_string("zoom");
+	jw.write_signed(z);
 
-	state.json_write_string("x");
-	state.json_write_unsigned(x);
+	jw.write_string("x");
+	jw.write_unsigned(x);
 
-	state.json_write_string("y");
-	state.json_write_unsigned(y);
+	jw.write_string("y");
+	jw.write_unsigned(y);
 
-	state.json_write_string("bytes");
-	state.json_write_unsigned(size);
+	jw.write_string("bytes");
+	jw.write_unsigned(size);
 
-	state.json_write_string("compressed");
-	state.json_write_bool(compressed);
+	jw.write_string("compressed");
+	jw.write_bool(compressed);
 
-	state.json_write_string("layers");
-	state.json_write_hash();
+	jw.write_string("layers");
+	jw.begin_hash();
 
 	for (size_t i = 0; i < tile.layers.size(); i++) {
-		state.json_write_string(tile.layers[i].name);
+		jw.write_string(tile.layers[i].name);
 
 		size_t points = 0, lines = 0, polygons = 0;
 		for (size_t j = 0; j < tile.layers[i].features.size(); j++) {
@@ -62,30 +62,30 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 			}
 		}
 
-		state.json_write_hash();
+		jw.begin_hash();
 
-		state.json_write_string("points");
-		state.json_write_unsigned(points);
+		jw.write_string("points");
+		jw.write_unsigned(points);
 
-		state.json_write_string("lines");
-		state.json_write_unsigned(lines);
+		jw.write_string("lines");
+		jw.write_unsigned(lines);
 
-		state.json_write_string("polygons");
-		state.json_write_unsigned(polygons);
+		jw.write_string("polygons");
+		jw.write_unsigned(polygons);
 
-		state.json_write_string("extent");
-		state.json_write_signed(tile.layers[i].extent);
+		jw.write_string("extent");
+		jw.write_signed(tile.layers[i].extent);
 
-		state.json_end_hash();
+		jw.end_hash();
 	}
 
-	state.json_end_hash();
-	state.json_end_hash();
+	jw.end_hash();
+	jw.end_hash();
 
-	state.json_write_newline();
+	jw.write_newline();
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &state) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::string> const &to_decode, bool pipeline, bool stats, json_writer &jw) {
 	mvt_tile tile;
 	bool was_compressed;
 
@@ -100,57 +100,57 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 	}
 
 	if (stats) {
-		do_stats(tile, message.size(), was_compressed, z, x, y, state);
+		do_stats(tile, message.size(), was_compressed, z, x, y, jw);
 		return;
 	}
 
 	if (!pipeline) {
-		state.json_write_hash();
+		jw.begin_hash();
 
-		state.json_write_string("type");
-		state.json_write_string("FeatureCollection");
+		jw.write_string("type");
+		jw.write_string("FeatureCollection");
 
 		if (true) {
-			state.json_write_string("properties");
-			state.json_write_hash();
+			jw.write_string("properties");
+			jw.begin_hash();
 
-			state.json_write_string("zoom");
-			state.json_write_signed(z);
+			jw.write_string("zoom");
+			jw.write_signed(z);
 
-			state.json_write_string("x");
-			state.json_write_signed(x);
+			jw.write_string("x");
+			jw.write_signed(x);
 
-			state.json_write_string("y");
-			state.json_write_signed(y);
+			jw.write_string("y");
+			jw.write_signed(y);
 
 			if (!was_compressed) {
-				state.json_write_string("compressed");
-				state.json_write_bool(false);
+				jw.write_string("compressed");
+				jw.write_bool(false);
 			}
 
-			state.json_end_hash();
+			jw.end_hash();
 
 			if (projection != projections) {
-				state.json_write_string("crs");
-				state.json_write_hash();
+				jw.write_string("crs");
+				jw.begin_hash();
 
-				state.json_write_string("type");
-				state.json_write_string("name");
+				jw.write_string("type");
+				jw.write_string("name");
 
-				state.json_write_string("properties");
-				state.json_write_hash();
+				jw.write_string("properties");
+				jw.begin_hash();
 
-				state.json_write_string("name");
-				state.json_write_string(projection->alias);
+				jw.write_string("name");
+				jw.write_string(projection->alias);
 
-				state.json_end_hash();
-				state.json_end_hash();
+				jw.end_hash();
+				jw.end_hash();
 			}
 		}
 
-		state.json_write_string("features");
-		state.json_write_array();
-		state.json_write_newline();
+		jw.write_string("features");
+		jw.begin_array();
+		jw.write_newline();
 	}
 
 	bool first_layer = true;
@@ -169,32 +169,32 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 		if (!pipeline) {
 			if (true) {
 				if (!first_layer) {
-					state.json_comma_newline();
+					jw.json_comma_newline();
 				}
 
-				state.json_write_hash();
+				jw.begin_hash();
 
-				state.json_write_string("type");
-				state.json_write_string("FeatureCollection");
+				jw.write_string("type");
+				jw.write_string("FeatureCollection");
 
-				state.json_write_string("properties");
-				state.json_write_hash();
+				jw.write_string("properties");
+				jw.begin_hash();
 
-				state.json_write_string("layer");
-				state.json_write_string(layer.name);
+				jw.write_string("layer");
+				jw.write_string(layer.name);
 
-				state.json_write_string("version");
-				state.json_write_signed(layer.version);
+				jw.write_string("version");
+				jw.write_signed(layer.version);
 
-				state.json_write_string("extent");
-				state.json_write_signed(layer.extent);
+				jw.write_string("extent");
+				jw.write_signed(layer.extent);
 
-				state.json_end_hash();
+				jw.end_hash();
 
-				state.json_write_string("features");
-				state.json_write_array();
+				jw.write_string("features");
+				jw.begin_array();
 
-				state.json_write_newline();
+				jw.write_newline();
 				first_layer = false;
 			}
 		}
@@ -205,21 +205,21 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 			exit(EXIT_FAILURE);
 		}
 
-		layer_to_geojson(layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force, state);
+		layer_to_geojson(layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force, jw);
 
 		if (!pipeline) {
 			if (true) {
-				state.json_end_array();
-				state.json_end_hash();
-				state.json_write_newline();
+				jw.end_array();
+				jw.end_hash();
+				jw.write_newline();
 			}
 		}
 	}
 
 	if (!pipeline) {
-		state.json_end_array();
-		state.json_end_hash();
-		state.json_write_newline();
+		jw.end_array();
+		jw.end_hash();
+		jw.write_newline();
 	}
 }
 
@@ -228,7 +228,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 	bool isdir = false;
 	int oz = z;
 	unsigned ox = x, oy = y;
-	json_writer state(stdout);
+	json_writer jw(stdout);
 
 	int fd = open(fname, O_RDONLY | O_CLOEXEC);
 	if (fd >= 0) {
@@ -240,7 +240,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					if (strcmp(map, "SQLite format 3") != 0) {
 						if (z >= 0) {
 							std::string s = std::string(map, st.st_size);
-							handle(s, z, x, y, to_decode, pipeline, stats, state);
+							handle(s, z, x, y, to_decode, pipeline, stats, jw);
 							munmap(map, st.st_size);
 							return;
 						} else {
@@ -286,14 +286,14 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 		int within = 0;
 
 		if (!pipeline && !stats) {
-			state.json_write_hash();
+			jw.begin_hash();
 
-			state.json_write_string("type");
-			state.json_write_string("FeatureCollection");
+			jw.write_string("type");
+			jw.write_string("FeatureCollection");
 
-			state.json_write_string("properties");
-			state.json_write_hash();
-			state.json_write_newline();
+			jw.write_string("properties");
+			jw.begin_hash();
+			jw.write_newline();
 
 			const char *sql2 = "SELECT name, value from metadata order by name;";
 			sqlite3_stmt *stmt2;
@@ -308,7 +308,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 
 				if (exclude_meta.count((char *) name) == 0) {
 					if (within) {
-						state.json_comma_newline();
+						jw.json_comma_newline();
 					}
 					within = 1;
 
@@ -317,28 +317,28 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 						exit(EXIT_FAILURE);
 					}
 
-					state.json_write_string((char *) name);
-					state.json_write_string((char *) value);
+					jw.write_string((char *) name);
+					jw.write_string((char *) value);
 				}
 			}
 
-			state.json_write_newline();
-			state.wantnl = false;  // XXX
+			jw.write_newline();
+			jw.wantnl = false;  // XXX
 
 			sqlite3_finalize(stmt2);
 		}
 
 		if (stats) {
-			state.json_write_array();
-			state.json_write_newline();
+			jw.begin_array();
+			jw.write_newline();
 		}
 
 		if (!pipeline && !stats) {
-			state.json_end_hash();
+			jw.end_hash();
 
-			state.json_write_string("features");
-			state.json_write_array();
-			state.json_write_newline();
+			jw.write_string("features");
+			jw.begin_array();
+			jw.write_newline();
 		}
 
 		if (isdir) {
@@ -346,13 +346,13 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			for (size_t i = 0; i < tiles.size(); i++) {
 				if (!pipeline && !stats) {
 					if (within) {
-						state.json_comma_newline();
+						jw.json_comma_newline();
 					}
 					within = 1;
 				}
 				if (stats) {
 					if (within) {
-						state.json_comma_newline();
+						jw.json_comma_newline();
 					}
 					within = 1;
 				}
@@ -372,7 +372,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				}
 				fclose(f);
 
-				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, state);
+				handle(s, tiles[i].z, tiles[i].x, tiles[i].y, to_decode, pipeline, stats, jw);
 			}
 		} else {
 			const char *sql = "SELECT tile_data, zoom_level, tile_column, tile_row from tiles where zoom_level between ? and ? order by zoom_level, tile_column, tile_row;";
@@ -389,13 +389,13 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				if (!pipeline && !stats) {
 					if (within) {
-						state.json_comma_newline();
+						jw.json_comma_newline();
 					}
 					within = 1;
 				}
 				if (stats) {
 					if (within) {
-						state.json_comma_newline();
+						jw.json_comma_newline();
 					}
 					within = 1;
 				}
@@ -413,23 +413,23 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				ty = (1LL << tz) - 1 - ty;
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
-				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state);
+				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, jw);
 			}
 
 			sqlite3_finalize(stmt);
 		}
 
 		if (!pipeline && !stats) {
-			state.json_end_array();
-			state.json_end_hash();
-			state.json_write_newline();
+			jw.end_array();
+			jw.end_hash();
+			jw.write_newline();
 		}
 		if (stats) {
-			state.json_end_array();
-			state.json_write_newline();
+			jw.end_array();
+			jw.write_newline();
 		}
 		if (pipeline) {
-			state.json_write_newline();
+			jw.write_newline();
 		}
 	} else {
 		int handled = 0;
@@ -453,7 +453,7 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);
 				}
 
-				handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, state);
+				handle(std::string(s, len), z, x, y, to_decode, pipeline, stats, jw);
 				handled = 1;
 			}
 

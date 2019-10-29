@@ -394,7 +394,7 @@ void *run_sort(void *v) {
 	return NULL;
 }
 
-void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > *layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void do_read_parallel(char *map, long long len, long long initial_offset, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int source, std::vector<std::map<std::string, tilestats_entry> > *tilestats, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	long long segs[CPUS + 1];
 	segs[0] = 0;
 	segs[CPUS] = len;
@@ -424,10 +424,10 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 	sst.resize(CPUS);
 
 	pthread_t pthreads[CPUS];
-	std::vector<std::set<type_and_string> > file_subkeys;
+	std::vector<std::set<tilestats_attributes_entry> > file_subkeys;
 
 	for (size_t i = 0; i < CPUS; i++) {
-		file_subkeys.push_back(std::set<type_and_string>());
+		file_subkeys.push_back(std::set<tilestats_attributes_entry>());
 	}
 
 	for (size_t i = 0; i < CPUS; i++) {
@@ -446,7 +446,7 @@ void do_read_parallel(char *map, long long len, long long initial_offset, const 
 		sst[i].maxzoom = maxzoom;
 		sst[i].uses_gamma = uses_gamma;
 		sst[i].filters = filters;
-		sst[i].layermap = &(*layermaps)[i];
+		sst[i].tilestat = &(*tilestats)[i];
 		sst[i].exclude = exclude;
 		sst[i].include = include;
 		sst[i].exclude_all = exclude_all;
@@ -585,7 +585,7 @@ struct read_parallel_arg {
 	int maxzoom = 0;
 	int basezoom = 0;
 	int source = 0;
-	std::vector<std::map<std::string, layermap_entry> > *layermaps = NULL;
+	std::vector<std::map<std::string, tilestats_entry> > *tilestats = NULL;
 	int *initialized = NULL;
 	unsigned *initial_x = NULL;
 	unsigned *initial_y = NULL;
@@ -617,7 +617,7 @@ void *run_read_parallel(void *v) {
 	}
 	madvise(map, rpa->len, MADV_RANDOM);  // sequential, but from several pointers at once
 
-	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->readers, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->basezoom, rpa->source, rpa->layermaps, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator, rpa->dist_sum, rpa->dist_count, rpa->want_dist, rpa->filters);
+	do_read_parallel(map, rpa->len, rpa->offset, rpa->reading, rpa->readers, rpa->progress_seq, rpa->exclude, rpa->include, rpa->exclude_all, rpa->basezoom, rpa->source, rpa->tilestats, rpa->initialized, rpa->initial_x, rpa->initial_y, rpa->maxzoom, rpa->layername, rpa->uses_gamma, rpa->attribute_types, rpa->separator, rpa->dist_sum, rpa->dist_count, rpa->want_dist, rpa->filters);
 
 	madvise(map, rpa->len, MADV_DONTNEED);
 	if (munmap(map, rpa->len) != 0) {
@@ -634,7 +634,7 @@ void *run_read_parallel(void *v) {
 	return NULL;
 }
 
-void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int source, std::vector<std::map<std::string, layermap_entry> > &layermaps, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
+void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::atomic<int> *is_parsing, pthread_t *parallel_parser, bool &parser_created, const char *reading, std::vector<struct reader> *readers, std::atomic<long long> *progress_seq, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, int basezoom, int source, std::vector<std::map<std::string, tilestats_entry> > &tilestats, int *initialized, unsigned *initial_x, unsigned *initial_y, int maxzoom, std::string layername, bool uses_gamma, std::map<std::string, int> const *attribute_types, int separator, double *dist_sum, size_t *dist_count, bool want_dist, bool filters) {
 	// This has to kick off an intermediate thread to start the parser threads,
 	// so the main thread can get back to reading the next input stage while
 	// the intermediate thread waits for the completion of the parser threads.
@@ -662,7 +662,7 @@ void start_parsing(int fd, STREAM *fp, long long offset, long long len, std::ato
 	rpa->exclude_all = exclude_all;
 	rpa->basezoom = basezoom;
 	rpa->source = source;
-	rpa->layermaps = &layermaps;
+	rpa->tilestats = &tilestats;
 	rpa->initialized = initialized;
 	rpa->initial_x = initial_x;
 	rpa->initial_y = initial_y;
@@ -1303,16 +1303,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 	}
 
-	std::map<std::string, layermap_entry> layermap;
+	std::map<std::string, tilestats_entry> tilestat;
 	for (size_t l = 0; l < nlayers; l++) {
-		layermap_entry e = layermap_entry(l);
+		tilestats_entry e = tilestats_entry(l);
 		e.description = sources[l].description;
-		layermap.insert(std::pair<std::string, layermap_entry>(sources[l].layer, e));
+		tilestat.insert(std::pair<std::string, tilestats_entry>(sources[l].layer, e));
 	}
 
-	std::vector<std::map<std::string, layermap_entry> > layermaps;
+	std::vector<std::map<std::string, tilestats_entry> > tilestats;
 	for (size_t l = 0; l < CPUS; l++) {
-		layermaps.push_back(layermap);
+		tilestats.push_back(tilestat);
 	}
 
 	long overall_offset = 0;
@@ -1346,8 +1346,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
-		auto a = layermap.find(sources[source].layer);
-		if (a == layermap.end()) {
+		auto a = tilestat.find(sources[source].layer);
+		if (a == tilestat.end()) {
 			fprintf(stderr, "Internal error: couldn't find layer %s", sources[source].layer.c_str());
 			exit(EXIT_FAILURE);
 		}
@@ -1393,7 +1393,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].maxzoom = maxzoom;
 				sst[i].filters = prefilter != NULL || postfilter != NULL;
 				sst[i].uses_gamma = uses_gamma;
-				sst[i].layermap = &layermaps[i];
+				sst[i].tilestat = &tilestats[i];
 				sst[i].exclude = exclude;
 				sst[i].include = include;
 				sst[i].exclude_all = exclude_all;
@@ -1451,7 +1451,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].maxzoom = maxzoom;
 				sst[i].filters = prefilter != NULL || postfilter != NULL;
 				sst[i].uses_gamma = uses_gamma;
-				sst[i].layermap = &layermaps[i];
+				sst[i].tilestat = &tilestats[i];
 				sst[i].exclude = exclude;
 				sst[i].include = include;
 				sst[i].exclude_all = exclude_all;
@@ -1508,7 +1508,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (map != NULL && map != MAP_FAILED && read_parallel_this) {
-			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, &layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+			do_read_parallel(map, st.st_size - off, overall_offset, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, &tilestats, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, uses_gamma, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 			overall_offset += st.st_size - off;
 			checkdisk(&readers);
 
@@ -1586,7 +1586,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 							}
 
 							fflush(readfp);
-							start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+							start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, tilestats, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 							initial_offset += ahead;
 							overall_offset += ahead;
@@ -1623,7 +1623,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				fflush(readfp);
 
 				if (ahead > 0) {
-					start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, layermaps, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
+					start_parsing(readfd, streamfpopen(readfp), initial_offset, ahead, &is_parsing, &parallel_parser, parser_created, reading.c_str(), &readers, &progress_seq, exclude, include, exclude_all, basezoom, layer, tilestats, initialized, initial_x, initial_y, maxzoom, sources[layer].layer, gamma != 0, attribute_types, read_parallel_this, &dist_sum, &dist_count, guess_maxzoom, prefilter != NULL || postfilter != NULL);
 
 					if (parser_created) {
 						if (pthread_join(parallel_parser, NULL) != 0) {
@@ -1657,7 +1657,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst.maxzoom = maxzoom;
 				sst.filters = prefilter != NULL || postfilter != NULL;
 				sst.uses_gamma = uses_gamma;
-				sst.layermap = &layermaps[0];
+				sst.tilestat = &tilestats[0];
 				sst.exclude = exclude;
 				sst.include = include;
 				sst.exclude_all = exclude_all;
@@ -2267,7 +2267,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, tilestats, prefilter, postfilter, attribute_accum, filter);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2322,7 +2322,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		midlon = maxlon;
 	}
 
-	std::map<std::string, layermap_entry> merged_lm = merge_layermaps(layermaps);
+	std::map<std::string, tilestats_entry> merged_lm = merge_layermaps(tilestats);
 
 	for (auto ai = merged_lm.begin(); ai != merged_lm.end(); ++ai) {
 		ai->second.minzoom = minzoom;

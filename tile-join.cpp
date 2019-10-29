@@ -70,7 +70,7 @@ void aprintf(std::string *buf, const char *format, ...) {
 	free(tmp);
 }
 
-void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, layermap_entry> &layermap, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
+void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::string, tilestats_entry> &tilestat, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, int ifmatched, mvt_tile &outtile, json_object *filter) {
 	mvt_tile tile;
 	int features_added = 0;
 	bool was_compressed;
@@ -125,7 +125,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 		}
 
-		auto file_keys = layermap.find(layer.name);
+		auto tilestats = tilestat.find(layer.name);
 
 		for (size_t f = 0; f < layer.features.size(); f++) {
 			mvt_feature feat = layer.features[f];
@@ -181,7 +181,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				outfeature.id = feat.id;
 			}
 
-			std::map<std::string, std::pair<mvt_value, type_and_string>> attributes;
+			std::map<std::string, std::pair<mvt_value, tilestats_attributes_entry>> attributes;
 			std::vector<std::string> key_order;
 
 			for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
@@ -220,11 +220,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				}
 
 				if (!exclude_all && exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
-					type_and_string tas;
+					tilestats_attributes_entry tas;
 					tas.type = type;
 					tas.string = value;
 
-					attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(key, std::pair<mvt_value, type_and_string>(val, tas)));
+					attributes.insert(std::pair<std::string, std::pair<mvt_value, tilestats_attributes_entry>>(key, std::pair<mvt_value, tilestats_attributes_entry>(val, tas)));
 					key_order.push_back(key);
 				}
 
@@ -267,14 +267,14 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 									attributes.erase(fa);
 								}
 
-								type_and_string tas;
+								tilestats_attributes_entry tas;
 								tas.type = outval.type;
 								tas.string = joinval;
 
 								// Convert from double to int if the joined attribute is an integer
 								outval = stringified_to_mvt_value(outval.type, joinval.c_str());
 
-								attributes.insert(std::pair<std::string, std::pair<mvt_value, type_and_string>>(joinkey, std::pair<mvt_value, type_and_string>(outval, tas)));
+								attributes.insert(std::pair<std::string, std::pair<mvt_value, tilestats_attributes_entry>>(joinkey, std::pair<mvt_value, tilestats_attributes_entry>(outval, tas)));
 								key_order.push_back(joinkey);
 							}
 						}
@@ -283,11 +283,11 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 			}
 
 			if (matched || !ifmatched) {
-				if (file_keys == layermap.end()) {
-					layermap.insert(std::pair<std::string, layermap_entry>(layer.name, layermap_entry(layermap.size())));
-					file_keys = layermap.find(layer.name);
-					file_keys->second.minzoom = z;
-					file_keys->second.maxzoom = z;
+				if (tilestats == tilestat.end()) {
+					tilestat.insert(std::pair<std::string, tilestats_entry>(layer.name, tilestats_entry(tilestat.size())));
+					tilestats = tilestat.find(layer.name);
+					tilestats->second.minzoom = z;
+					tilestats->second.maxzoom = z;
 				}
 
 				// To keep attributes in their original order instead of alphabetical
@@ -296,7 +296,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 
 					if (fa != attributes.end()) {
 						outlayer.tag(outfeature, k, fa->second.first);
-						add_to_file_keys(file_keys->second.file_keys, k, fa->second.second);
+						add_to_tilestats(tilestats->second.tilestats, k, fa->second.second);
 						attributes.erase(fa);
 					}
 				}
@@ -314,19 +314,19 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 				features_added++;
 				outlayer.features.push_back(outfeature);
 
-				if (z < file_keys->second.minzoom) {
-					file_keys->second.minzoom = z;
+				if (z < tilestats->second.minzoom) {
+					tilestats->second.minzoom = z;
 				}
-				if (z > file_keys->second.maxzoom) {
-					file_keys->second.maxzoom = z;
+				if (z > tilestats->second.maxzoom) {
+					tilestats->second.maxzoom = z;
 				}
 
 				if (feat.type == mvt_point) {
-					file_keys->second.points++;
+					tilestats->second.points++;
 				} else if (feat.type == mvt_linestring) {
-					file_keys->second.lines++;
+					tilestats->second.lines++;
 				} else if (feat.type == mvt_polygon) {
-					file_keys->second.polygons++;
+					tilestats->second.polygons++;
 				}
 			}
 		}
@@ -472,7 +472,7 @@ struct arg {
 	std::map<zxy, std::vector<std::string>> inputs{};
 	std::map<zxy, std::string> outputs{};
 
-	std::map<std::string, layermap_entry> *layermap = NULL;
+	std::map<std::string, tilestats_entry> *tilestat = NULL;
 
 	std::vector<std::string> *header = NULL;
 	std::map<std::string, std::vector<std::string>> *mapping = NULL;
@@ -490,7 +490,7 @@ void *join_worker(void *v) {
 		mvt_tile tile;
 
 		for (size_t i = 0; i < ai->second.size(); i++) {
-			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->layermap), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile, a->filter);
+			handle(ai->second[i], ai->first.z, ai->first.x, ai->first.y, *(a->tilestat), *(a->header), *(a->mapping), *(a->exclude), *(a->keep_layers), *(a->remove_layers), a->ifmatched, tile, a->filter);
 		}
 
 		ai->second.clear();
@@ -525,14 +525,14 @@ void *join_worker(void *v) {
 	return NULL;
 }
 
-void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
+void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, tilestats_entry>> &tilestats, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
 	pthread_t pthreads[CPUS];
 	std::vector<arg> args;
 
 	for (size_t i = 0; i < CPUS; i++) {
 		args.push_back(arg());
 
-		args[i].layermap = &layermaps[i];
+		args[i].tilestat = &tilestats[i];
 		args[i].header = &header;
 		args[i].mapping = &mapping;
 		args[i].exclude = &exclude;
@@ -581,7 +581,7 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	}
 }
 
-void handle_vector_layers(json_object *vector_layers, std::map<std::string, layermap_entry> &layermap, std::map<std::string, std::string> &attribute_descriptions) {
+void handle_vector_layers(json_object *vector_layers, std::map<std::string, tilestats_entry> &tilestat, std::map<std::string, std::string> &attribute_descriptions) {
 	if (vector_layers != NULL && vector_layers->type == JSON_ARRAY) {
 		for (size_t i = 0; i < vector_layers->length; i++) {
 			if (vector_layers->array[i]->type == JSON_HASH) {
@@ -593,8 +593,8 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 					std::string sdesc = desc->string;
 
 					if (sdesc.size() != 0) {
-						auto f = layermap.find(sid);
-						if (f != layermap.end()) {
+						auto f = tilestat.find(sid);
+						if (f != tilestat.end()) {
 							f->second.description = sdesc;
 						}
 					}
@@ -620,10 +620,10 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 	}
 }
 
-void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter, std::map<std::string, std::string> &attribute_descriptions, std::string &generator_options) {
-	std::vector<std::map<std::string, layermap_entry>> layermaps;
+void decode(struct reader *readers, std::map<std::string, tilestats_entry> &tilestat, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter, std::map<std::string, std::string> &attribute_descriptions, std::string &generator_options) {
+	std::vector<std::map<std::string, tilestats_entry>> tilestats;
 	for (size_t i = 0; i < CPUS; i++) {
-		layermaps.push_back(std::map<std::string, layermap_entry>());
+		tilestats.push_back(std::map<std::string, tilestats_entry>());
 	}
 
 	std::map<zxy, std::vector<std::string>> tasks;
@@ -665,7 +665,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
 			if (tasks.size() > 100 * CPUS) {
-				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
+				handle_tasks(tasks, tilestats, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 				tasks.clear();
 			}
 		}
@@ -714,8 +714,8 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 	st->minlat = min(minlat, st->minlat);
 	st->maxlat = max(maxlat, st->maxlat);
 
-	handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
-	layermap = merge_layermaps(layermaps);
+	handle_tasks(tasks, tilestats, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
+	tilestat = merge_layermaps(tilestats);
 
 	struct reader *next;
 	for (struct reader *r = readers; r != NULL; r = next) {
@@ -815,7 +815,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 					if (o != NULL && o->type == JSON_HASH) {
 						json_object *vector_layers = json_hash_get(o, "vector_layers");
 
-						handle_vector_layers(vector_layers, layermap, attribute_descriptions);
+						handle_vector_layers(vector_layers, tilestat, attribute_descriptions);
 						json_free(o);
 					}
 
@@ -1074,7 +1074,7 @@ int main(int argc, char **argv) {
 	st.minzoom = st.minlat = st.minlon = INT_MAX;
 	st.maxzoom = st.maxlat = st.maxlon = INT_MIN;
 
-	std::map<std::string, layermap_entry> layermap;
+	std::map<std::string, tilestats_entry> tilestat;
 	std::string attribution;
 	std::string description;
 	std::string name;
@@ -1098,7 +1098,7 @@ int main(int argc, char **argv) {
 	std::map<std::string, std::string> attribute_descriptions;
 	std::string generator_options;
 
-	decode(readers, layermap, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, filter, attribute_descriptions, generator_options);
+	decode(readers, tilestat, outdb, out_dir, &st, header, mapping, exclude, ifmatched, attribution, description, keep_layers, remove_layers, name, filter, attribute_descriptions, generator_options);
 
 	if (set_attribution.size() != 0) {
 		attribution = set_attribution;
@@ -1115,7 +1115,7 @@ int main(int argc, char **argv) {
 	}
 	generator_options.append(commandline);
 
-	for (auto &l : layermap) {
+	for (auto &l : tilestat) {
 		if (l.second.minzoom < st.minzoom) {
 			st.minzoom = l.second.minzoom;
 		}
@@ -1124,7 +1124,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, attribute_descriptions, "tile-join", generator_options);
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, tilestat, true, description.c_str(), !pg, attribute_descriptions, "tile-join", generator_options);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

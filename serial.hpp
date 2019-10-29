@@ -157,7 +157,7 @@ struct serialization_state {
 	bool filters = false;
 	bool uses_gamma = false;
 
-	std::map<std::string, layermap_entry> *layermap = NULL;
+	std::map<std::string, tilestats_entry> *tilestat = NULL;
 
 	std::map<std::string, int> const *attribute_types = NULL;
 	std::set<std::string> *exclude = NULL;

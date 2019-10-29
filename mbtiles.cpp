@@ -94,7 +94,7 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	}
 }
 
-bool type_and_string::operator<(const type_and_string &o) const {
+bool tilestats_attributes_entry::operator<(const tilestats_attributes_entry &o) const {
 	if (string < o.string) {
 		return true;
 	}
@@ -104,7 +104,7 @@ bool type_and_string::operator<(const type_and_string &o) const {
 	return false;
 }
 
-bool type_and_string::operator!=(const type_and_string &o) const {
+bool tilestats_attributes_entry::operator!=(const tilestats_attributes_entry &o) const {
 	if (type != o.type) {
 		return true;
 	}
@@ -114,36 +114,36 @@ bool type_and_string::operator!=(const type_and_string &o) const {
 	return false;
 }
 
-void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t elements, json_writer &state) {
+void tilestats(std::map<std::string, tilestats_entry> const &layermap1, size_t elements, json_writer &jw) {
 	// Consolidate layers/attributes whose names are truncated
-	std::vector<std::map<std::string, layermap_entry>> lmv;
+	std::vector<std::map<std::string, tilestats_entry>> lmv;
 	lmv.push_back(layermap1);
-	std::map<std::string, layermap_entry> layermap = merge_layermaps(lmv, true);
+	std::map<std::string, tilestats_entry> tilestat = merge_layermaps(lmv, true);
 
-	state.json_write_hash();
+	jw.begin_hash();
 
-	state.nospace = true;
-	state.json_write_string("layerCount");
-	state.json_write_unsigned(layermap.size());
+	jw.nospace = true;
+	jw.write_string("layerCount");
+	jw.write_unsigned(tilestat.size());
 
-	state.nospace = true;
-	state.json_write_string("layers");
-	state.json_write_array();
+	jw.nospace = true;
+	jw.write_string("layers");
+	jw.begin_array();
 
 	bool first = true;
-	for (auto layer : layermap) {
+	for (auto layer : tilestat) {
 		first = false;
 
-		state.nospace = true;
-		state.json_write_hash();
+		jw.nospace = true;
+		jw.begin_hash();
 
-		state.nospace = true;
-		state.json_write_string("layer");
-		state.json_write_string(layer.first);
+		jw.nospace = true;
+		jw.write_string("layer");
+		jw.write_string(layer.first);
 
-		state.nospace = true;
-		state.json_write_string("count");
-		state.json_write_unsigned(layer.second.points + layer.second.lines + layer.second.polygons);
+		jw.nospace = true;
+		jw.write_string("count");
+		jw.write_unsigned(layer.second.points + layer.second.lines + layer.second.polygons);
 
 		std::string geomtype = "Polygon";
 		if (layer.second.points >= layer.second.lines && layer.second.points >= layer.second.polygons) {
@@ -152,46 +152,46 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 			geomtype = "LineString";
 		}
 
-		state.nospace = true;
-		state.json_write_string("geometry");
-		state.json_write_string(geomtype);
+		jw.nospace = true;
+		jw.write_string("geometry");
+		jw.write_string(geomtype);
 
-		size_t attrib_count = layer.second.file_keys.size();
+		size_t attrib_count = layer.second.tilestats.size();
 		if (attrib_count > max_tilestats_attributes) {
 			attrib_count = max_tilestats_attributes;
 		}
 
-		state.nospace = true;
-		state.json_write_string("attributeCount");
-		state.json_write_unsigned(attrib_count);
+		jw.nospace = true;
+		jw.write_string("attributeCount");
+		jw.write_unsigned(attrib_count);
 
-		state.nospace = true;
-		state.json_write_string("attributes");
-		state.nospace = true;
-		state.json_write_array();
+		jw.nospace = true;
+		jw.write_string("attributes");
+		jw.nospace = true;
+		jw.begin_array();
 
 		size_t attrs = 0;
-		for (auto attribute : layer.second.file_keys) {
+		for (auto attribute : layer.second.tilestats) {
 			if (attrs == elements) {
 				break;
 			}
 			attrs++;
 
-			state.nospace = true;
-			state.json_write_hash();
+			jw.nospace = true;
+			jw.begin_hash();
 
-			state.nospace = true;
-			state.json_write_string("attribute");
-			state.json_write_string(attribute.first);
+			jw.nospace = true;
+			jw.write_string("attribute");
+			jw.write_string(attribute.first);
 
 			size_t val_count = attribute.second.sample_values.size();
 			if (val_count > max_tilestats_sample_values) {
 				val_count = max_tilestats_sample_values;
 			}
 
-			state.nospace = true;
-			state.json_write_string("count");
-			state.json_write_unsigned(val_count);
+			jw.nospace = true;
+			jw.write_string("count");
+			jw.write_unsigned(val_count);
 
 			int type = 0;
 			for (auto s : attribute.second.sample_values) {
@@ -210,13 +210,13 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 				type_str = "mixed";
 			}
 
-			state.nospace = true;
-			state.json_write_string("type");
-			state.json_write_string(type_str);
+			jw.nospace = true;
+			jw.write_string("type");
+			jw.write_string(type_str);
 
-			state.nospace = true;
-			state.json_write_string("values");
-			state.json_write_array();
+			jw.nospace = true;
+			jw.write_string("values");
+			jw.begin_array();
 
 			size_t vals = 0;
 			for (auto value : attribute.second.sample_values) {
@@ -224,53 +224,53 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 					break;
 				}
 
-				state.nospace = true;
+				jw.nospace = true;
 
 				if (value.type == mvt_double || value.type == mvt_bool) {
 					vals++;
 
-					state.json_write_stringified(value.string);
+					jw.write_stringified(value.string);
 				} else {
 					std::string trunc = truncate16(value.string, 256);
 
 					if (trunc.size() == value.string.size()) {
 						vals++;
 
-						state.json_write_string(value.string);
+						jw.write_string(value.string);
 					}
 				}
 			}
 
-			state.nospace = true;
-			state.json_end_array();
+			jw.nospace = true;
+			jw.end_array();
 
 			if ((type & (1 << mvt_double)) != 0) {
-				state.nospace = true;
-				state.json_write_string("min");
-				state.json_write_number(attribute.second.min);
+				jw.nospace = true;
+				jw.write_string("min");
+				jw.write_number(attribute.second.min);
 
-				state.nospace = true;
-				state.json_write_string("max");
-				state.json_write_number(attribute.second.max);
+				jw.nospace = true;
+				jw.write_string("max");
+				jw.write_number(attribute.second.max);
 			}
 
-			state.nospace = true;
-			state.json_end_hash();
+			jw.nospace = true;
+			jw.end_hash();
 		}
 
-		state.nospace = true;
-		state.json_end_array();
-		state.nospace = true;
-		state.json_end_hash();
+		jw.nospace = true;
+		jw.end_array();
+		jw.nospace = true;
+		jw.end_hash();
 	}
 
-	state.nospace = true;
-	state.json_end_array();
-	state.nospace = true;
-	state.json_end_hash();
+	jw.nospace = true;
+	jw.end_array();
+	jw.nospace = true;
+	jw.end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, tilestats_entry> const &tilestat, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -401,46 +401,46 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		std::string buf;
 
 		{
-			json_writer state(&buf);
+			json_writer jw(&buf);
 
-			state.json_write_hash();
-			state.nospace = true;
+			jw.begin_hash();
+			jw.nospace = true;
 
-			state.json_write_string("vector_layers");
-			state.json_write_array();
+			jw.write_string("vector_layers");
+			jw.begin_array();
 
 			std::vector<std::string> lnames;
-			for (auto ai = layermap.begin(); ai != layermap.end(); ++ai) {
+			for (auto ai = tilestat.begin(); ai != tilestat.end(); ++ai) {
 				lnames.push_back(ai->first);
 			}
 
 			for (size_t i = 0; i < lnames.size(); i++) {
-				auto fk = layermap.find(lnames[i]);
-				state.json_write_hash();
+				auto ts = tilestat.find(lnames[i]);
+				jw.begin_hash();
 
-				state.json_write_string("id");
-				state.json_write_string(lnames[i]);
+				jw.write_string("id");
+				jw.write_string(lnames[i]);
 
-				state.json_write_string("description");
-				state.json_write_string(fk->second.description);
+				jw.write_string("description");
+				jw.write_string(ts->second.description);
 
-				state.json_write_string("minzoom");
-				state.json_write_signed(fk->second.minzoom);
+				jw.write_string("minzoom");
+				jw.write_signed(ts->second.minzoom);
 
-				state.json_write_string("maxzoom");
-				state.json_write_signed(fk->second.maxzoom);
+				jw.write_string("maxzoom");
+				jw.write_signed(ts->second.maxzoom);
 
-				state.json_write_string("fields");
-				state.json_write_hash();
-				state.nospace = true;
+				jw.write_string("fields");
+				jw.begin_hash();
+				jw.nospace = true;
 
 				bool first = true;
-				for (auto j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
+				for (auto j = ts->second.tilestats.begin(); j != ts->second.tilestats.end(); ++j) {
 					if (first) {
 						first = false;
 					}
 
-					state.json_write_string(j->first);
+					jw.write_string(j->first);
 
 					auto f = attribute_descriptions.find(j->first);
 					if (f == attribute_descriptions.end()) {
@@ -450,34 +450,34 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 						}
 
 						if (type == (1 << mvt_double)) {
-							state.json_write_string("Number");
+							jw.write_string("Number");
 						} else if (type == (1 << mvt_bool)) {
-							state.json_write_string("Boolean");
+							jw.write_string("Boolean");
 						} else if (type == (1 << mvt_string)) {
-							state.json_write_string("String");
+							jw.write_string("String");
 						} else {
-							state.json_write_string("Mixed");
+							jw.write_string("Mixed");
 						}
 					} else {
-						state.json_write_string(f->second);
+						jw.write_string(f->second);
 					}
 				}
 
-				state.nospace = true;
-				state.json_end_hash();
-				state.json_end_hash();
+				jw.nospace = true;
+				jw.end_hash();
+				jw.end_hash();
 			}
 
-			state.json_end_array();
+			jw.end_array();
 
 			if (do_tilestats && elements > 0) {
-				state.nospace = true;
-				state.json_write_string("tilestats");
-				tilestats(layermap, elements, state);
+				jw.nospace = true;
+				jw.write_string("tilestats");
+				tilestats(tilestat, elements, jw);
 			}
 
-			state.nospace = true;
-			state.json_end_hash();
+			jw.nospace = true;
+			jw.end_hash();
 		}
 
 		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
@@ -503,10 +503,10 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				exit(EXIT_FAILURE);
 			}
 
-			json_writer state(fp);
+			json_writer jw(fp);
 
-			state.json_write_hash();
-			state.json_write_newline();
+			jw.begin_hash();
+			jw.write_newline();
 
 			sqlite3_stmt *stmt;
 			bool first = true;
@@ -521,17 +521,17 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 						exit(EXIT_FAILURE);
 					}
 
-					state.json_comma_newline();
-					state.json_write_string(k);
-					state.json_write_string(v);
+					jw.json_comma_newline();
+					jw.write_string(k);
+					jw.write_string(v);
 					first = false;
 				}
 				sqlite3_finalize(stmt);
 			}
 
-			state.json_write_newline();
-			state.json_end_hash();
-			state.json_write_newline();
+			jw.write_newline();
+			jw.end_hash();
+			jw.write_newline();
 			fclose(fp);
 		}
 	}
@@ -557,12 +557,12 @@ void mbtiles_close(sqlite3 *outdb, const char *pgm) {
 	}
 }
 
-std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry>> const &maps) {
+std::map<std::string, tilestats_entry> merge_layermaps(std::vector<std::map<std::string, tilestats_entry>> const &maps) {
 	return merge_layermaps(maps, false);
 }
 
-std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::string, layermap_entry>> const &maps, bool trunc) {
-	std::map<std::string, layermap_entry> out;
+std::map<std::string, tilestats_entry> merge_layermaps(std::vector<std::map<std::string, tilestats_entry>> const &maps, bool trunc) {
+	std::map<std::string, tilestats_entry> out;
 
 	for (size_t i = 0; i < maps.size(); i++) {
 		for (auto map = maps[i].begin(); map != maps[i].end(); ++map) {
@@ -576,7 +576,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 			}
 
 			if (out.count(layername) == 0) {
-				out.insert(std::pair<std::string, layermap_entry>(layername, layermap_entry(out.size())));
+				out.insert(std::pair<std::string, tilestats_entry>(layername, tilestats_entry(out.size())));
 				auto out_entry = out.find(layername);
 				out_entry->second.minzoom = map->second.minzoom;
 				out_entry->second.maxzoom = map->second.maxzoom;
@@ -589,18 +589,18 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 				exit(EXIT_FAILURE);
 			}
 
-			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
-				std::string attribname = fk->first;
+			for (auto ts = map->second.tilestats.begin(); ts != map->second.tilestats.end(); ++ts) {
+				std::string attribname = ts->first;
 				if (trunc) {
 					attribname = truncate16(attribname, 256);
 				}
 
-				auto fk2 = out_entry->second.file_keys.find(attribname);
+				auto fk2 = out_entry->second.tilestats.find(attribname);
 
-				if (fk2 == out_entry->second.file_keys.end()) {
-					out_entry->second.file_keys.insert(std::pair<std::string, type_and_string_stats>(attribname, fk->second));
+				if (fk2 == out_entry->second.tilestats.end()) {
+					out_entry->second.tilestats.insert(std::pair<std::string, tilestats_attributes>(attribname, ts->second));
 				} else {
-					for (auto val : fk->second.sample_values) {
+					for (auto val : ts->second.sample_values) {
 						auto pt = std::lower_bound(fk2->second.sample_values.begin(), fk2->second.sample_values.end(), val);
 						if (pt == fk2->second.sample_values.end() || *pt != val) {  // not found
 							fk2->second.sample_values.insert(pt, val);
@@ -611,13 +611,13 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 						}
 					}
 
-					fk2->second.type |= fk->second.type;
+					fk2->second.type |= ts->second.type;
 
-					if (fk->second.min < fk2->second.min) {
-						fk2->second.min = fk->second.min;
+					if (ts->second.min < fk2->second.min) {
+						fk2->second.min = ts->second.min;
 					}
-					if (fk->second.max > fk2->second.max) {
-						fk2->second.max = fk->second.max;
+					if (ts->second.max > fk2->second.max) {
+						fk2->second.max = ts->second.max;
 					}
 				}
 			}
@@ -638,18 +638,18 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 	return out;
 }
 
-void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, std::string const &attrib, type_and_string const &val) {
+void add_to_tilestats(std::map<std::string, tilestats_attributes> &tilestats, std::string const &attrib, tilestats_attributes_entry const &val) {
 	if (val.type == mvt_null) {
 		return;
 	}
 
-	auto fka = file_keys.find(attrib);
-	if (fka == file_keys.end()) {
-		file_keys.insert(std::pair<std::string, type_and_string_stats>(attrib, type_and_string_stats()));
-		fka = file_keys.find(attrib);
+	auto tsa = tilestats.find(attrib);
+	if (tsa == tilestats.end()) {
+		tilestats.insert(std::pair<std::string, tilestats_attributes>(attrib, tilestats_attributes()));
+		tsa = tilestats.find(attrib);
 	}
 
-	if (fka == file_keys.end()) {
+	if (tsa == tilestats.end()) {
 		fprintf(stderr, "Can't happen (tilestats)\n");
 		exit(EXIT_FAILURE);
 	}
@@ -657,22 +657,22 @@ void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, s
 	if (val.type == mvt_double) {
 		double d = atof(val.string.c_str());
 
-		if (d < fka->second.min) {
-			fka->second.min = d;
+		if (d < tsa->second.min) {
+			tsa->second.min = d;
 		}
-		if (d > fka->second.max) {
-			fka->second.max = d;
-		}
-	}
-
-	auto pt = std::lower_bound(fka->second.sample_values.begin(), fka->second.sample_values.end(), val);
-	if (pt == fka->second.sample_values.end() || *pt != val) {  // not found
-		fka->second.sample_values.insert(pt, val);
-
-		if (fka->second.sample_values.size() > max_tilestats_sample_values) {
-			fka->second.sample_values.pop_back();
+		if (d > tsa->second.max) {
+			tsa->second.max = d;
 		}
 	}
 
-	fka->second.type |= (1 << val.type);
+	auto pt = std::lower_bound(tsa->second.sample_values.begin(), tsa->second.sample_values.end(), val);
+	if (pt == tsa->second.sample_values.end() || *pt != val) {  // not found
+		tsa->second.sample_values.insert(pt, val);
+
+		if (tsa->second.sample_values.size() > max_tilestats_sample_values) {
+			tsa->second.sample_values.pop_back();
+		}
+	}
+
+	tsa->second.type |= (1 << val.type);
 }
