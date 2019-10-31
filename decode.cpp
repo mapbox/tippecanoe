@@ -306,16 +306,16 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				const unsigned char *name = sqlite3_column_text(stmt2, 0);
 				const unsigned char *value = sqlite3_column_text(stmt2, 1);
 
+				if (name == NULL || value == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+					exit(EXIT_FAILURE);
+				}
+
 				if (exclude_meta.count((char *) name) == 0) {
 					if (within) {
 						state.json_comma_newline();
 					}
 					within = 1;
-
-					if (name == NULL || value == NULL) {
-						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-						exit(EXIT_FAILURE);
-					}
 
 					state.json_write_string((char *) name);
 					state.json_write_string((char *) value);
@@ -413,6 +413,11 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 				ty = (1LL << tz) - 1 - ty;
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
 
+				if (s == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null entry in tiles table\n");
+					exit(EXIT_FAILURE);
+				}
+
 				handle(std::string(s, len), tz, tx, ty, to_decode, pipeline, stats, state);
 			}
 
@@ -448,6 +453,11 @@ void decode(char *fname, int z, unsigned x, unsigned y, std::set<std::string> co
 			while (sqlite3_step(stmt) == SQLITE_ROW) {
 				int len = sqlite3_column_bytes(stmt, 0);
 				const char *s = (const char *) sqlite3_column_blob(stmt, 0);
+
+				if (s == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null entry in tiles table\n");
+					exit(EXIT_FAILURE);
+				}
 
 				if (z != oz) {
 					fprintf(stderr, "%s: Warning: using tile %d/%u/%u instead of %d/%u/%u\n", fname, z, x, y, oz, ox, oy);

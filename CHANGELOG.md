@@ -1,3 +1,7 @@
+## 1.34.6
+
+* Fix crash when there are null entries in the metadata table
+
 ## 1.34.5
 
 * Fix line numbers in GeoJSON feature parsing error messages
