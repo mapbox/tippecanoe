@@ -1312,7 +1312,44 @@ void remove_attributes(serial_feature &sf, std::set<std::string> const &exclude_
 	}
 }
 
-serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, std::atomic<long long> *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, std::atomic<long long> *geompos, std::atomic<double> *oprogress, double todo, const char *fname, int child_shards, struct json_object *filter, const char *stringpool, long long *pool_off, std::vector<std::vector<std::string>> *layer_unmaps) {
+bool is_filled(serial_feature &sf, int z) {
+	long long extent = 1LL << (32 - z);
+
+	if (prevent[P_FILLED]) {
+		if (sf.t != VT_POLYGON || sf.geometry.size() != 5) {
+			return false;
+		}
+
+		// It is a polygon with four sides.
+		// Are they all outside the tile boundary?
+
+		for (size_t j = 0; j + 1 < sf.geometry.size(); j++) {
+			if (sf.geometry[j].x == sf.geometry[j + 1].x && (sf.geometry[j].x < 0 || sf.geometry[j].x > extent)) {
+				// vertical line, outside the edge of the tile
+
+				if (!((sf.geometry[j].y < 0 && sf.geometry[j + 1].y > extent) ||
+				      (sf.geometry[j + 1].y < 0 && sf.geometry[j].y > extent))) {
+					return false;
+				}
+			} else if (sf.geometry[j].y == sf.geometry[j + 1].y && (sf.geometry[j].y < 0 || sf.geometry[j].y > extent)) {
+				// horizontal line, outside the edge of the tile
+
+				if (!((sf.geometry[j].x < 0 && sf.geometry[j + 1].x > extent) ||
+				      (sf.geometry[j + 1].x < 0 && sf.geometry[j].x > extent))) {
+					return false;
+				}
+			} else {
+				return false;
+			}
+		}
+
+		return true;
+	} else {
+		return false;
+	}
+}
+
+serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, int z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y, long long *original_features, long long *unclipped_features, int nextzoom, int maxzoom, int minzoom, int max_zoom_increment, size_t pass, size_t passes, std::atomic<long long> *along, long long alongminus, int buffer, int *within, bool *first_time, FILE **geomfile, std::atomic<long long> *geompos, std::atomic<double> *oprogress, double todo, const char *fname, int child_shards, struct json_object *filter, const char *stringpool, long long *pool_off, std::vector<std::vector<std::string>> *layer_unmaps, std::vector<serial_feature> *rewrite_queue, bool *is_rewriting) {
 	while (1) {
 		serial_feature sf = deserialize_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y);
 		if (sf.t < 0) {
@@ -1339,7 +1376,26 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 
 		if (*first_time && pass == 1) { /* only write out the next zoom once, even if we retry */
 			if (sf.tippecanoe_maxzoom == -1 || sf.tippecanoe_maxzoom >= nextzoom) {
-				rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				if (!*is_rewriting) {
+					if (is_filled(sf, z)) {
+						rewrite_queue->push_back(sf);
+					} else {
+						// Found a feature that we need to keep, so also push out all the
+						// filled features that we weren't sure about before.
+
+						*is_rewriting = true;
+
+						for (auto &rsf : *rewrite_queue) {
+							rewrite(rsf.geometry, z, nextzoom, maxzoom, rsf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, rsf.t, rsf.layer, rsf.metapos, rsf.feature_minzoom, child_shards, max_zoom_increment, rsf.seq, rsf.tippecanoe_minzoom, rsf.tippecanoe_maxzoom, rsf.segment, initial_x, initial_y, rsf.keys, rsf.values, rsf.has_id, rsf.id, rsf.index, rsf.extent);
+						}
+
+						rewrite_queue->clear();
+					}
+				}
+
+				if (*is_rewriting) {
+					rewrite(sf.geometry, z, nextzoom, maxzoom, sf.bbox, tx, ty, buffer, within, geompos, geomfile, fname, sf.t, sf.layer, sf.metapos, sf.feature_minzoom, child_shards, max_zoom_increment, sf.seq, sf.tippecanoe_minzoom, sf.tippecanoe_maxzoom, sf.segment, initial_x, initial_y, sf.keys, sf.values, sf.has_id, sf.id, sf.index, sf.extent);
+				}
 			}
 		}
 
@@ -1473,6 +1529,8 @@ struct run_prefilter_args {
 	long long *pool_off = NULL;
 	FILE *prefilter_fp = NULL;
 	struct json_object *filter = NULL;
+	std::vector<serial_feature> *rewrite_queue;
+	bool *is_rewriting;
 };
 
 void *run_prefilter(void *v) {
@@ -1480,7 +1538,7 @@ void *run_prefilter(void *v) {
 	json_writer state(rpa->prefilter_fp);
 
 	while (1) {
-		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards, rpa->filter, rpa->stringpool, rpa->pool_off, rpa->layer_unmaps);
+		serial_feature sf = next_feature(rpa->geoms, rpa->geompos_in, rpa->metabase, rpa->meta_off, rpa->z, rpa->tx, rpa->ty, rpa->initial_x, rpa->initial_y, rpa->original_features, rpa->unclipped_features, rpa->nextzoom, rpa->maxzoom, rpa->minzoom, rpa->max_zoom_increment, rpa->pass, rpa->passes, rpa->along, rpa->alongminus, rpa->buffer, rpa->within, rpa->first_time, rpa->geomfile, rpa->geompos, rpa->oprogress, rpa->todo, rpa->fname, rpa->child_shards, rpa->filter, rpa->stringpool, rpa->pool_off, rpa->layer_unmaps, rpa->rewrite_queue, rpa->is_rewriting);
 		if (sf.t < 0) {
 			break;
 		}
@@ -1746,6 +1804,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 	bool has_polygons = false;
 
 	bool first_time = true;
+	std::vector<serial_feature> rewrite_queue;
+	bool is_rewriting = false;
+
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
@@ -1839,6 +1900,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			rpa.stringpool = stringpool;
 			rpa.pool_off = pool_off;
 			rpa.filter = filter;
+			rpa.rewrite_queue = &rewrite_queue;
+			rpa.is_rewriting = &is_rewriting;
 
 			if (pthread_create(&prefilter_writer, NULL, run_prefilter, &rpa) != 0) {
 				perror("pthread_create (prefilter writer)");
@@ -1858,7 +1921,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			ssize_t which_partial = -1;
 
 			if (prefilter == NULL) {
-				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards, filter, stringpool, pool_off, layer_unmaps);
+				sf = next_feature(geoms, geompos_in, metabase, meta_off, z, tx, ty, initial_x, initial_y, &original_features, &unclipped_features, nextzoom, maxzoom, minzoom, max_zoom_increment, pass, passes, along, alongminus, buffer, within, &first_time, geomfile, geompos, &oprogress, todo, fname, child_shards, filter, stringpool, pool_off, layer_unmaps, &rewrite_queue, &is_rewriting);
 			} else {
 				sf = parse_feature(prefilter_jp, z, tx, ty, layermaps, tiling_seg, layer_unmaps, postfilter != NULL);
 			}
@@ -2124,55 +2187,6 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					perror("pthread_join");
 				}
 			}
-		}
-
-		bool remove_filled = false;
-		if (prevent[P_FILLED]) {
-			remove_filled = true;
-
-			for (size_t i = 0; i < partials.size(); i++) {
-				if (partials[i].t != VT_POLYGON ||
-				    partials[i].geoms.size() != 1 ||
-				    partials[i].geoms[0].size() != 5) {
-					remove_filled = false;
-					break;
-				}
-
-				// It is a polygon with four sides.
-				// Are they all outside the tile boundary?
-
-				for (size_t j = 0; j + 1 < partials[i].geoms[0].size(); j++) {
-					if (partials[i].geoms[0][j].x == partials[i].geoms[0][j + 1].x &&
-					    (partials[i].geoms[0][j].x < 0 || partials[i].geoms[0][j].x > partials[i].extent)) {
-						// vertical line, outside the edge of the tile
-
-						if (!((partials[i].geoms[0][j].y < 0 &&
-						       partials[i].geoms[0][j + 1].y > partials[i].extent) ||
-						      (partials[i].geoms[0][j + 1].y < 0 &&
-						       partials[i].geoms[0][j].y > partials[i].extent))) {
-							remove_filled = false;
-							break;
-						}
-					} else if (partials[i].geoms[0][j].y == partials[i].geoms[0][j + 1].y &&
-						   (partials[i].geoms[0][j].y < 0 || partials[i].geoms[0][j].y > partials[i].extent)) {
-						// horizontal line, outside the edge of the tile
-
-						if (!((partials[i].geoms[0][j].x < 0 &&
-						       partials[i].geoms[0][j + 1].x > partials[i].extent) ||
-						      (partials[i].geoms[0][j + 1].x < 0 &&
-						       partials[i].geoms[0][j].x > partials[i].extent))) {
-							remove_filled = false;
-							break;
-						}
-					} else {
-						remove_filled = false;
-						break;
-					}
-				}
-			}
-		}
-		if (remove_filled) {
-			partials.clear();
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {
