@@ -1215,6 +1215,7 @@ struct write_tile_args {
 	int wrote_zoom = 0;
 	size_t tiling_seg = 0;
 	struct json_object *filter = NULL;
+	bool removed_filled = false;
 };
 
 bool clip_to_tile(serial_feature &sf, int z, long long buffer) {
@@ -2148,6 +2149,10 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 		}
 
+		if (first_time && pass == 1 && !is_rewriting) {
+			arg->removed_filled = true;
+		}
+
 		first_time = false;
 		bool merge_successful = true;
 
@@ -2710,7 +2715,7 @@ void *run_thread(void *vargs) {
 	return NULL;
 }
 
-int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum, struct json_object *filter) {
+int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpool, std::atomic<unsigned> *midx, std::atomic<unsigned> *midy, int &maxzoom, int minzoom, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, const char *tmpdir, double gamma, int full_detail, int low_detail, int min_detail, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, double simplification, std::vector<std::map<std::string, layermap_entry>> &layermaps, const char *prefilter, const char *postfilter, std::map<std::string, attribute_op> const *attribute_accum, struct json_object *filter, int *fillzoom) {
 	last_progress = 0;
 
 	// The existing layermaps are one table per input thread.
@@ -2907,6 +2912,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].passes = 2 - start;
 				args[thread].wrote_zoom = -1;
 				args[thread].still_dropping = false;
+				args[thread].removed_filled = false;
 
 				if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 					perror("pthread_create");
@@ -2945,6 +2951,12 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 				if (additional[A_EXTEND_ZOOMS] && i == maxzoom && args[thread].still_dropping && maxzoom < MAX_ZOOM) {
 					maxzoom++;
+				}
+
+				if (args[thread].removed_filled && *fillzoom < 0) {
+					// Removing filled means that there will be tiles missing
+					// at the *next* zoom, so this zoom is OK to overzoom from
+					*fillzoom = i;
 				}
 			}
 		}
