@@ -2149,7 +2149,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 		}
 
-		if (first_time && pass == 1 && !is_rewriting) {
+		if (first_time && pass == 1 && !is_rewriting && prevent[P_FILLED]) {
 			arg->removed_filled = true;
 		}
 
