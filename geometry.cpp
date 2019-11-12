@@ -268,8 +268,11 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 	}
 
 	mapbox::geometry::multi_polygon<long long> result;
+#if 0
 	try {
+#endif
 		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
+#if 0
 	} catch (std::runtime_error e) {
 		FILE *f = fopen("/tmp/wagyu.log", "w");
 		fprintf(f, "%s\n", e.what());
@@ -318,6 +321,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 		fprintf(stderr, "Internal error: Polygon cleaning failed. Log in /tmp/wagyu.log\n");
 		exit(EXIT_FAILURE);
 	}
+#endif
 
 	drawvec ret;
 	decode_clipped(result, ret);
