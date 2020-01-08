@@ -1,3 +1,7 @@
+## 1.34.7
+
+* Limit the length of the generator_options in the tileset metadata
+
 ## 1.34.6
 
 * Fix crash when there are null entries in the metadata table
