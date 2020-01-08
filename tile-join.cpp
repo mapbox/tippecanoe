@@ -830,8 +830,13 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 				const unsigned char *s = sqlite3_column_text(r->stmt, 0);
 				if (s != NULL) {
 					if (generator_options.size() != 0) {
-						generator_options.append("; ");
-						generator_options.append((const char *) s);
+						if (generator_options.size() + strlen((const char *) s) > 500) {
+							generator_options = "...; ";
+							generator_options.append((const char *) s);
+						} else {
+							generator_options.append("; ");
+							generator_options.append((const char *) s);
+						}
 					} else {
 						generator_options = (const char *) s;
 					}
