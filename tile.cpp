@@ -355,6 +355,11 @@ void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, u
 	}
 }
 
+struct accum_state {
+	double sum = 0;
+	double count = 0;
+};
+
 struct partial {
 	std::vector<drawvec> geoms = std::vector<drawvec>();
 	std::vector<long long> keys = std::vector<long long>();
@@ -379,6 +384,7 @@ struct partial {
 	long long extent = 0;
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
+	std::map<std::string, accum_state> attribute_accum_state;
 };
 
 struct partial_arg {
@@ -1560,12 +1566,7 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
-struct accum_state {
-	double sum = 0;
-	double count = 0;
-};
-
-void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &, char *stringpool, long long *pool_off, std::string &key, serial_val &val, partial &p) {
+void preserve_attribute(attribute_op op, serial_feature &, char *stringpool, long long *pool_off, std::string &key, serial_val &val, partial &p) {
 	if (p.need_tilestats.count(key) == 0) {
 		p.need_tilestats.insert(key);
 	}
@@ -1623,12 +1624,12 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 			}
 
 			case op_mean: {
-				auto state = attribute_accum_state.find(key);
-				if (state == attribute_accum_state.end()) {
+				auto state = p.attribute_accum_state.find(key);
+				if (state == p.attribute_accum_state.end()) {
 					accum_state s;
 					s.sum = atof(p.full_values[i].s.c_str()) + atof(val.s.c_str());
 					s.count = 2;
-					attribute_accum_state.insert(std::pair<std::string, accum_state>(key, s));
+					p.attribute_accum_state.insert(std::pair<std::string, accum_state>(key, s));
 
 					p.full_values[i].s = milo::dtoa_milo(s.sum / s.count);
 				} else {
@@ -1654,7 +1655,7 @@ void preserve_attribute(attribute_op op, std::map<std::string, accum_state> &att
 	}
 }
 
-void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, accum_state> &attribute_accum_state, serial_feature &sf, char *stringpool, long long *pool_off, partial &p) {
+void preserve_attributes(std::map<std::string, attribute_op> const *attribute_accum, serial_feature &sf, char *stringpool, long long *pool_off, partial &p) {
 	for (size_t i = 0; i < sf.keys.size(); i++) {
 		std::string key = stringpool + pool_off[sf.segment] + sf.keys[i] + 1;
 
@@ -1664,7 +1665,7 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, pool_off, key, sv, p);
+			preserve_attribute(f->second, sf, stringpool, pool_off, key, sv, p);
 		}
 	}
 	for (size_t i = 0; i < sf.full_keys.size(); i++) {
@@ -1673,7 +1674,7 @@ void preserve_attributes(std::map<std::string, attribute_op> const *attribute_ac
 
 		auto f = attribute_accum->find(key);
 		if (f != attribute_accum->end()) {
-			preserve_attribute(f->second, attribute_accum_state, sf, stringpool, pool_off, key, sv, p);
+			preserve_attribute(f->second, sf, stringpool, pool_off, key, sv, p);
 		}
 	}
 }
@@ -1766,7 +1767,6 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		std::map<std::string, std::vector<coalesce>> layers;
 		std::vector<unsigned long long> indices;
 		std::vector<long long> extents;
-		std::map<std::string, accum_state> attribute_accum_state;
 		double coalesced_area = 0;
 		drawvec shared_nodes;
 
@@ -1869,14 +1869,14 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 			if (sf.dropped) {
 				if (find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
 
 			if (gamma > 0) {
 				if (manage_gap(sf.index, &previndex, scale, gamma, &gap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1898,13 +1898,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 						partials[which_partial].geoms[0][0].y = y / (partials[which_partial].clustered + 1);
 					}
 
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
@@ -1912,13 +1912,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial, layer_unmaps)) {
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
@@ -1926,7 +1926,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
-					preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
 			}
@@ -1949,7 +1949,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					partials[which_partial].geoms.push_back(sf.geometry);
 					coalesced_area += sf.extent;
 				}
-				preserve_attributes(arg->attribute_accum, attribute_accum_state, sf, stringpool, pool_off, partials[which_partial]);
+				preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 				continue;
 			}
 			fraction_accum -= 1;
