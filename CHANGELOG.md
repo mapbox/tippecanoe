@@ -1,3 +1,7 @@
+## 1.35.0
+
+* Fix calculation of mean when accumulating attributes in clusters
+
 ## 1.34.6
 
 * Fix crash when there are null entries in the metadata table
