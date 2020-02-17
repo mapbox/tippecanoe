@@ -101,7 +101,7 @@ void checkdisk(std::vector<struct reader> *r) {
 	for (size_t i = 0; i < r->size(); i++) {
 		// Meta, pool, and tree are used once.
 		// Geometry and index will be duplicated during sorting and tiling.
-		used += (*r)[i].metapos + 2 * (*r)[i].geompos + 2 * (*r)[i].indexpos + (*r)[i].poolfile->len + (*r)[i].treefile->len;
+		used +=  2 * (*r)[i].geompos + 2 * (*r)[i].indexpos + (*r)[i].poolfile->len + (*r)[i].treefile->len;
 	}
 
 	static int warned = 0;
@@ -1143,23 +1143,16 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	for (size_t i = 0; i < CPUS; i++) {
 		struct reader *r = &readers[i];
 
-		char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
 		char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
 		char treename[strlen(tmpdir) + strlen("/tree.XXXXXXXX") + 1];
 		char geomname[strlen(tmpdir) + strlen("/geom.XXXXXXXX") + 1];
 		char indexname[strlen(tmpdir) + strlen("/index.XXXXXXXX") + 1];
 
-		sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
 		sprintf(poolname, "%s%s", tmpdir, "/pool.XXXXXXXX");
 		sprintf(treename, "%s%s", tmpdir, "/tree.XXXXXXXX");
 		sprintf(geomname, "%s%s", tmpdir, "/geom.XXXXXXXX");
 		sprintf(indexname, "%s%s", tmpdir, "/index.XXXXXXXX");
 
-		r->metafd = mkstemp_cloexec(metaname);
-		if (r->metafd < 0) {
-			perror(metaname);
-			exit(EXIT_FAILURE);
-		}
 		r->poolfd = mkstemp_cloexec(poolname);
 		if (r->poolfd < 0) {
 			perror(poolname);
@@ -1181,11 +1174,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			exit(EXIT_FAILURE);
 		}
 
-		r->metafile = fopen_oflag(metaname, "wb", O_WRONLY | O_CLOEXEC);
-		if (r->metafile == NULL) {
-			perror(metaname);
-			exit(EXIT_FAILURE);
-		}
 		r->poolfile = memfile_open(r->poolfd);
 		if (r->poolfile == NULL) {
 			perror(poolname);
@@ -1206,11 +1194,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			perror(indexname);
 			exit(EXIT_FAILURE);
 		}
-		r->metapos = 0;
 		r->geompos = 0;
 		r->indexpos = 0;
 
-		unlink(metaname);
 		unlink(poolname);
 		unlink(treename);
 		unlink(geomname);
@@ -1221,8 +1207,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			struct stringpool p;
 			memfile_write(r->treefile, &p, sizeof(struct stringpool));
 		}
-		// Keep metadata file from being completely empty if no attributes
-		serialize_int(r->metafile, 0, &r->metapos, "meta");
 
 		r->file_bbox[0] = r->file_bbox[1] = UINT_MAX;
 		r->file_bbox[2] = r->file_bbox[3] = 0;
@@ -1699,10 +1683,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	}
 
 	for (size_t i = 0; i < CPUS; i++) {
-		if (fclose(readers[i].metafile) != 0) {
-			perror("fclose meta");
-			exit(EXIT_FAILURE);
-		}
 		if (fclose(readers[i].geomfile) != 0) {
 			perror("fclose geom");
 			exit(EXIT_FAILURE);
@@ -1717,10 +1697,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			perror("stat geom\n");
 			exit(EXIT_FAILURE);
 		}
-		if (fstat(readers[i].metafd, &readers[i].metast) != 0) {
-			perror("stat meta\n");
-			exit(EXIT_FAILURE);
-		}
 	}
 
 	// Create a combined string pool and a combined metadata file
@@ -1729,9 +1705,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	// 2 * CPUS: One per input thread, one per tiling thread
 	long long pool_off[2 * CPUS];
-	long long meta_off[2 * CPUS];
 	for (size_t i = 0; i < 2 * CPUS; i++) {
-		pool_off[i] = meta_off[i] = 0;
+		pool_off[i] = 0;
 	}
 
 	char poolname[strlen(tmpdir) + strlen("/pool.XXXXXXXX") + 1];
@@ -1751,51 +1726,9 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	unlink(poolname);
 
-	char metaname[strlen(tmpdir) + strlen("/meta.XXXXXXXX") + 1];
-	sprintf(metaname, "%s%s", tmpdir, "/meta.XXXXXXXX");
-
-	int metafd = mkstemp_cloexec(metaname);
-	if (metafd < 0) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	FILE *metafile = fopen_oflag(metaname, "wb", O_WRONLY | O_CLOEXEC);
-	if (metafile == NULL) {
-		perror(metaname);
-		exit(EXIT_FAILURE);
-	}
-
-	unlink(metaname);
-
-	std::atomic<long long> metapos(0);
 	std::atomic<long long> poolpos(0);
 
 	for (size_t i = 0; i < CPUS; i++) {
-		if (readers[i].metapos > 0) {
-			void *map = mmap(NULL, readers[i].metapos, PROT_READ, MAP_PRIVATE, readers[i].metafd, 0);
-			if (map == MAP_FAILED) {
-				perror("mmap unmerged meta");
-				exit(EXIT_FAILURE);
-			}
-			madvise(map, readers[i].metapos, MADV_SEQUENTIAL);
-			madvise(map, readers[i].metapos, MADV_WILLNEED);
-			if (fwrite(map, readers[i].metapos, 1, metafile) != 1) {
-				perror("Reunify meta");
-				exit(EXIT_FAILURE);
-			}
-			madvise(map, readers[i].metapos, MADV_DONTNEED);
-			if (munmap(map, readers[i].metapos) != 0) {
-				perror("unmap unmerged meta");
-			}
-		}
-
-		meta_off[i] = metapos;
-		metapos += readers[i].metapos;
-		if (close(readers[i].metafd) != 0) {
-			perror("close unmerged meta");
-		}
-
 		if (readers[i].poolfile->off > 0) {
 			if (fwrite(readers[i].poolfile->map, readers[i].poolfile->off, 1, poolfile) != 1) {
 				perror("Reunify string pool");
@@ -1812,17 +1745,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		perror("fclose pool");
 		exit(EXIT_FAILURE);
 	}
-	if (fclose(metafile) != 0) {
-		perror("fclose meta");
-		exit(EXIT_FAILURE);
-	}
-
-	char *meta = (char *) mmap(NULL, metapos, PROT_READ, MAP_PRIVATE, metafd, 0);
-	if (meta == MAP_FAILED) {
-		perror("mmap meta");
-		exit(EXIT_FAILURE);
-	}
-	madvise(meta, metapos, MADV_RANDOM);
 
 	char *stringpool = NULL;
 	if (poolpos > 0) {  // Will be 0 if -X was specified
@@ -1907,9 +1829,8 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	if (!quiet) {
 		long long s = progress_seq;
 		long long geompos_print = geompos;
-		long long metapos_print = metapos;
 		long long poolpos_print = poolpos;
-		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of separate metadata, %lld bytes of string pool\n", s, geompos_print, metapos_print, poolpos_print);
+		fprintf(stderr, "%lld features, %lld bytes of geometry, %lld bytes of string pool\n", s, geompos_print, poolpos_print);
 	}
 
 	if (indexpos == 0) {
@@ -2267,7 +2188,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
+	int written = traverse_zooms(fd, size, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2278,14 +2199,6 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			fprintf(stderr, "%s: No zoom levels were successfully written\n", *av);
 			exit(EXIT_FAILURE);
 		}
-	}
-
-	madvise(meta, metapos, MADV_DONTNEED);
-	if (munmap(meta, metapos) != 0) {
-		perror("munmap meta");
-	}
-	if (close(metafd) < 0) {
-		perror("close meta");
 	}
 
 	if (poolpos > 0) {
