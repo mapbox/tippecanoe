@@ -220,7 +220,7 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 	}
 }
 
-drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
+drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip, bool even_odd) {
 	mapbox::geometry::wagyu::wagyu<long long> wagyu;
 
 	geom = remove_noop(geom, VT_POLYGON, 0);
@@ -269,7 +269,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 
 	mapbox::geometry::multi_polygon<long long> result;
 	try {
-		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, mapbox::geometry::wagyu::fill_type_positive, mapbox::geometry::wagyu::fill_type_positive);
+		wagyu.execute(mapbox::geometry::wagyu::clip_type_union, result, even_odd ? mapbox::geometry::wagyu::fill_type_even_odd : mapbox::geometry::wagyu::fill_type_positive, even_odd ? mapbox::geometry::wagyu::fill_type_even_odd : mapbox::geometry::wagyu::fill_type_positive);
 	} catch (std::runtime_error e) {
 		FILE *f = fopen("/tmp/wagyu.log", "w");
 		fprintf(f, "%s\n", e.what());
@@ -925,39 +925,66 @@ drawvec fix_polygon(drawvec &geom) {
 				ring.push_back(ring[0]);
 			}
 
-			// Reverse ring if winding order doesn't match
-			// inner/outer expectation
-
-			bool reverse_ring = false;
-			if (prevent[P_USE_SOURCE_POLYGON_WINDING]) {
-				// GeoJSON winding is reversed from vector winding
-				reverse_ring = true;
-			} else if (prevent[P_REVERSE_SOURCE_POLYGON_WINDING]) {
-				// GeoJSON winding is reversed from vector winding
-				reverse_ring = false;
-			} else {
-				double area = get_area(ring, 0, ring.size());
-				if ((area > 0) != outer) {
-					reverse_ring = true;
-				}
+			// Don't clean if we need the borders to exactly match between polygons
+			// or if the user has asked to keep their own winding
+			if (!additional[A_DETECT_SHARED_BORDERS] && !prevent[P_USE_SOURCE_POLYGON_WINDING] && !prevent[P_REVERSE_SOURCE_POLYGON_WINDING]) {
+				ring = clean_or_clip_poly(ring, 0, 0, false, true);
 			}
 
-			if (reverse_ring) {
-				drawvec tmp;
-				for (int a = ring.size() - 1; a >= 0; a--) {
-					tmp.push_back(ring[a]);
-				}
-				ring = tmp;
-			}
+			// This may have produced multiple output rings
 
-			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
-			// reversal or closing
+			for (size_t ii = 0; ii < ring.size(); ii++) {
+				if (ring[ii].op == VT_MOVETO) {
+					// Find the end of the ring
+					size_t jj;
+					for (jj = ii + 1; jj < ring.size(); jj++) {
+						if (ring[jj].op == VT_MOVETO) {
+							break;
+						}
+					}
 
-			for (size_t a = 0; a < ring.size(); a++) {
-				if (a == 0) {
-					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
-				} else {
-					out.push_back(draw(VT_LINETO, ring[a].x, ring[a].y));
+					drawvec ring2;
+					for (size_t rr = ii; rr < jj; rr++) {
+						ring2.push_back(ring[rr]);
+					}
+
+					// Reverse ring if winding order doesn't match
+					// inner/outer expectation
+
+					bool reverse_ring = false;
+					if (prevent[P_USE_SOURCE_POLYGON_WINDING]) {
+						// GeoJSON winding is reversed from vector winding
+						reverse_ring = true;
+					} else if (prevent[P_REVERSE_SOURCE_POLYGON_WINDING]) {
+						// GeoJSON winding is reversed from vector winding
+						reverse_ring = false;
+					} else {
+						double area = get_area(ring2, 0, ring2.size());
+						if ((area > 0) != outer) {
+							reverse_ring = true;
+						}
+					}
+
+					if (reverse_ring) {
+						drawvec tmp;
+						for (int a = ring2.size() - 1; a >= 0; a--) {
+							tmp.push_back(ring2[a]);
+						}
+						ring2 = tmp;
+					}
+
+					// Copy ring into output, fixing the moveto/lineto ops if necessary because of
+					// reversal or closing
+
+					for (size_t a = 0; a < ring2.size(); a++) {
+						if (a == 0) {
+							out.push_back(draw(VT_MOVETO, ring2[a].x, ring2[a].y));
+						} else {
+							out.push_back(draw(VT_LINETO, ring2[a].x, ring2[a].y));
+						}
+					}
+
+					ii = jj - 1;
 				}
 			}
 

@@ -504,7 +504,7 @@ void *partial_feature_worker(void *v) {
 			// Give Clipper a chance to try to fix it.
 			for (size_t g = 0; g < geoms.size(); g++) {
 				drawvec before = geoms[g];
-				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false, false);
 				if (additional[A_DEBUG_POLYGON]) {
 					check_polygon(geoms[g]);
 				}
@@ -2223,7 +2223,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 				if (layer_features[x].type == VT_POLYGON) {
 					if (layer_features[x].coalesced) {
-						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, false);
+						layer_features[x].geom = clean_or_clip_poly(layer_features[x].geom, 0, 0, false, false);
 					}
 
 					layer_features[x].geom = close_poly(layer_features[x].geom);

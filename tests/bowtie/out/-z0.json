@@ -1,0 +1,19 @@
+{ "type": "FeatureCollection", "properties": {
+"bounds": "-73.125000,-7.710900,37.617000,70.377800",
+"center": "0.000000,0.000000,0",
+"description": "tests/bowtie/out/-z0.json.check.mbtiles",
+"format": "pbf",
+"generator_options": "./tippecanoe -q -a@ -f -o tests/bowtie/out/-z0.json.check.mbtiles -z0 tests/bowtie/in.json",
+"json": "{\"vector_layers\": [ { \"id\": \"in\", \"description\": \"\", \"minzoom\": 0, \"maxzoom\": 0, \"fields\": {} } ],\"tilestats\": {\"layerCount\": 1,\"layers\": [{\"layer\": \"in\",\"count\": 1,\"geometry\": \"Polygon\",\"attributeCount\": 0,\"attributes\": []}]}}",
+"maxzoom": "0",
+"minzoom": "0",
+"name": "tests/bowtie/out/-z0.json.check.mbtiles",
+"type": "overlay",
+"version": "2"
+}, "features": [
+{ "type": "FeatureCollection", "properties": { "zoom": 0, "x": 0, "y": 0 }, "features": [
+{ "type": "FeatureCollection", "properties": { "layer": "in", "version": 2, "extent": 4096 }, "features": [
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "MultiPolygon", "coordinates": [ [ [ [ -73.125000, 70.377854 ], [ -14.150391, 39.504041 ], [ -68.554688, -7.623887 ], [ -73.125000, 70.377854 ] ] ], [ [ [ 37.177734, 66.930060 ], [ 37.529297, -7.275292 ], [ -14.150391, 39.504041 ], [ 37.177734, 66.930060 ] ] ] ] } }
+] }
+] }
+] }
