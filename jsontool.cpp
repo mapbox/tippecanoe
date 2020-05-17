@@ -111,7 +111,7 @@ std::string sort_quote(const char *s) {
 
 	for (size_t i = 0; i < utf32.size(); i++) {
 		if (utf32[i] < 0xD800) {
-			char buf[7];
+			char buf[8];
 			sprintf(buf, "\\u%04lu", utf32[i]);
 			ret.append(std::string(buf));
 		} else {
