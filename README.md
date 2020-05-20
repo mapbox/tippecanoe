@@ -792,7 +792,7 @@ Example
 Imagine you have a tileset of census blocks:
 
 ```sh
-curl -O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
+curl -L -O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
 unzip tl_2010_06001_tabblock10.zip
 ogr2ogr -f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
 ./tippecanoe -o tl_2010_06001_tabblock10.mbtiles tl_2010_06001_tabblock10.json
@@ -801,7 +801,7 @@ ogr2ogr -f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
 and a CSV of their populations:
 
 ```sh
-curl -O http://www2.census.gov/census_2010/01-Redistricting_File--PL_94-171/California/ca2010.pl.zip
+curl -L -O http://www2.census.gov/census_2010/01-Redistricting_File--PL_94-171/California/ca2010.pl.zip
 unzip -p ca2010.pl.zip cageo2010.pl |
 awk 'BEGIN {
     print "GEOID10,population"
