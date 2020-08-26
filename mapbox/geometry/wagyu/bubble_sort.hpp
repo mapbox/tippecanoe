@@ -23,6 +23,6 @@ void bubble_sort(It begin, It end, Compare c, MethodOnSwap m) {
         }
     } while (modified);
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

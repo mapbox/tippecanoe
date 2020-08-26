@@ -45,8 +45,7 @@ using local_minimum_ptr_list_itr = typename local_minimum_ptr_list<T>::iterator;
 
 template <typename T>
 struct local_minimum_sorter {
-    inline bool operator()(local_minimum_ptr<T> const& locMin1,
-                           local_minimum_ptr<T> const& locMin2) {
+    inline bool operator()(local_minimum_ptr<T> const& locMin1, local_minimum_ptr<T> const& locMin2) {
         if (locMin2->y == locMin1->y) {
             return locMin2->minimum_has_horizontal != locMin1->minimum_has_horizontal &&
                    locMin1->minimum_has_horizontal;
@@ -113,6 +112,6 @@ std::string output_all_edges(local_minimum_ptr_list<T> const& lms) {
 }
 
 #endif
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

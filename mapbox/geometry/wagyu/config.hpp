@@ -5,25 +5,22 @@
 #include <list>
 #include <stdexcept>
 
+// GCC 4.8 missing range std::vector::insert (c++11)
+#ifdef __GNUC__
+#if __GNUC__ == 4 && __GNUC_MINOR__ == 8
+#define GCC_MISSING_VECTOR_RANGE_INSERT
+#endif
+#endif
+
 namespace mapbox {
 namespace geometry {
 namespace wagyu {
 
-enum clip_type : std::uint8_t {
-    clip_type_intersection = 0,
-    clip_type_union,
-    clip_type_difference,
-    clip_type_x_or
-};
+enum clip_type : std::uint8_t { clip_type_intersection = 0, clip_type_union, clip_type_difference, clip_type_x_or };
 
 enum polygon_type : std::uint8_t { polygon_type_subject = 0, polygon_type_clip };
 
-enum fill_type : std::uint8_t {
-    fill_type_even_odd = 0,
-    fill_type_non_zero,
-    fill_type_positive,
-    fill_type_negative
-};
+enum fill_type : std::uint8_t { fill_type_even_odd = 0, fill_type_non_zero, fill_type_positive, fill_type_negative };
 
 static double const def_arc_tolerance = 0.25;
 
@@ -48,6 +45,6 @@ enum end_type {
 
 template <typename T>
 using maxima_list = std::list<T>;
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

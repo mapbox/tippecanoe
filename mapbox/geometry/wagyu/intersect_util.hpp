@@ -46,9 +46,7 @@ inline void swap_sides(bound<T>& b1, bound<T>& b2) {
 }
 
 template <typename T1, typename T2>
-bool get_edge_intersection(edge<T1> const& e1,
-                           edge<T1> const& e2,
-                           mapbox::geometry::point<T2>& pt) {
+bool get_edge_intersection(edge<T1> const& e1, edge<T1> const& e2, mapbox::geometry::point<T2>& pt) {
     T2 p0_x = static_cast<T2>(e1.bot.x);
     T2 p0_y = static_cast<T2>(e1.bot.y);
     T2 p1_x = static_cast<T2>(e1.top.x);
@@ -79,8 +77,7 @@ bool get_edge_intersection(edge<T1> const& e1,
 template <typename T>
 struct intersection_compare {
     bool operator()(bound_ptr<T> const& b1, bound_ptr<T> const& b2) {
-        return !(b1->current_x > b2->current_x &&
-                 !slopes_equal(*(b1->current_edge), *(b2->current_edge)));
+        return !(b1->current_x > b2->current_x && !slopes_equal(*(b1->current_edge), *(b2->current_edge)));
     }
 };
 
@@ -301,14 +298,12 @@ void process_intersect_list(intersect_list<T>& intersects,
                             ring_manager<T>& rings,
                             active_bound_list<T>& active_bounds) {
     for (auto node_itr = intersects.begin(); node_itr != intersects.end(); ++node_itr) {
-        auto b1 = std::find_if(active_bounds.begin(), active_bounds.end(),
-                               find_first_bound<T>(*node_itr));
+        auto b1 = std::find_if(active_bounds.begin(), active_bounds.end(), find_first_bound<T>(*node_itr));
         auto b2 = std::next(b1);
         if (!bounds_adjacent(*node_itr, *b2)) {
             auto next_itr = std::next(node_itr);
             while (next_itr != intersects.end()) {
-                auto n1 = std::find_if(active_bounds.begin(), active_bounds.end(),
-                                       find_first_bound<T>(*next_itr));
+                auto n1 = std::find_if(active_bounds.begin(), active_bounds.end(), find_first_bound<T>(*next_itr));
                 auto n2 = std::next(n1);
                 if (bounds_adjacent(*next_itr, *n2)) {
                     b1 = n1;
@@ -323,8 +318,8 @@ void process_intersect_list(intersect_list<T>& intersects,
             std::iter_swap(node_itr, next_itr);
         }
         mapbox::geometry::point<T> pt = round_point<T>(node_itr->pt);
-        intersect_bounds(*(node_itr->bound1), *(node_itr->bound2), pt, cliptype, subject_fill_type,
-                         clip_fill_type, rings, active_bounds);
+        intersect_bounds(*(node_itr->bound1), *(node_itr->bound2), pt, cliptype, subject_fill_type, clip_fill_type,
+                         rings, active_bounds);
         std::iter_swap(b1, b2);
     }
 }
@@ -357,16 +352,14 @@ void process_intersections(T top_y,
     }
 
     // Restore order of active bounds list
-    std::stable_sort(
-        active_bounds.begin(), active_bounds.end(),
-        [](bound_ptr<T> const& b1, bound_ptr<T> const& b2) { return b1->pos < b2->pos; });
+    std::stable_sort(active_bounds.begin(), active_bounds.end(),
+                     [](bound_ptr<T> const& b1, bound_ptr<T> const& b2) { return b1->pos < b2->pos; });
 
     // Sort the intersection list
     std::stable_sort(intersects.begin(), intersects.end(), intersect_list_sorter<T>());
 
-    process_intersect_list(intersects, cliptype, subject_fill_type, clip_fill_type, rings,
-                           active_bounds);
+    process_intersect_list(intersects, cliptype, subject_fill_type, clip_fill_type, rings, active_bounds);
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

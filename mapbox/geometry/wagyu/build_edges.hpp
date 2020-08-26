@@ -85,14 +85,11 @@ bool build_edge_list(mapbox::geometry::linear_ring<T2> const& path_geometry, edg
             }
             if (!edges.empty()) {
                 auto const& back_top = edges.back().top;
-                if (static_cast<T1>(back_pt.x) == back_top.x &&
-                    static_cast<T1>(back_pt.y) == back_top.y) {
+                if (static_cast<T1>(back_pt.x) == back_top.x && static_cast<T1>(back_pt.y) == back_top.y) {
                     auto const& back_bot = edges.back().bot;
-                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_bot.x),
-                                                      static_cast<T2>(back_bot.y));
+                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_bot.x), static_cast<T2>(back_bot.y));
                 } else {
-                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_top.x),
-                                                      static_cast<T2>(back_top.y));
+                    pt1 = mapbox::geometry::point<T2>(static_cast<T2>(back_top.x), static_cast<T2>(back_top.y));
                 }
                 back_pt = pt1;
             } else {
@@ -181,6 +178,6 @@ bool build_edge_list(mapbox::geometry::linear_ring<T2> const& path_geometry, edg
 
     return true;
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

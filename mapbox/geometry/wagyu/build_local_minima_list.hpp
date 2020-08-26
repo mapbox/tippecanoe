@@ -21,6 +21,6 @@ bool add_linear_ring(mapbox::geometry::linear_ring<T2> const& path_geometry,
     add_ring_to_local_minima_list(new_edges, minima_list, p_type);
     return true;
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

@@ -10,9 +10,7 @@ namespace geometry {
 namespace wagyu {
 
 template <typename T1, typename T2>
-void push_ring_to_polygon(mapbox::geometry::polygon<T2>& poly,
-                          ring_ptr<T1> r,
-                          bool reverse_output) {
+void push_ring_to_polygon(mapbox::geometry::polygon<T2>& poly, ring_ptr<T1> r, bool reverse_output) {
     mapbox::geometry::linear_ring<T2> lr;
     lr.reserve(r->size() + 1);
     auto firstPt = r->points;
@@ -34,7 +32,7 @@ void push_ring_to_polygon(mapbox::geometry::polygon<T2>& poly,
 
 template <typename T1, typename T2>
 void build_result_polygons(mapbox::geometry::multi_polygon<T2>& solution,
-                           ring_vector<T1>const& rings,
+                           ring_vector<T1> const& rings,
                            bool reverse_output) {
     for (auto r : rings) {
         if (r == nullptr) {
@@ -62,11 +60,9 @@ void build_result_polygons(mapbox::geometry::multi_polygon<T2>& solution,
 }
 
 template <typename T1, typename T2>
-void build_result(mapbox::geometry::multi_polygon<T2>& solution,
-                  ring_manager<T1>const& rings,
-                  bool reverse_output) {
+void build_result(mapbox::geometry::multi_polygon<T2>& solution, ring_manager<T1> const& rings, bool reverse_output) {
     build_result_polygons(solution, rings.children, reverse_output);
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

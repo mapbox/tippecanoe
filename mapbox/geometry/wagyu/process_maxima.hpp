@@ -3,6 +3,7 @@
 #include <mapbox/geometry/wagyu/active_bound_list.hpp>
 #include <mapbox/geometry/wagyu/config.hpp>
 #include <mapbox/geometry/wagyu/edge.hpp>
+#include <mapbox/geometry/wagyu/interrupt.hpp>
 #include <mapbox/geometry/wagyu/intersect_util.hpp>
 #include <mapbox/geometry/wagyu/local_minimum.hpp>
 #include <mapbox/geometry/wagyu/local_minimum_util.hpp>
@@ -33,16 +34,15 @@ active_bound_list_itr<T> do_maxima(active_bound_list_itr<T>& bnd,
             continue;
         }
         skipped = true;
-        intersect_bounds(*(*bnd), *(*bnd_next), (*bnd)->current_edge->top, cliptype,
-                         subject_fill_type, clip_fill_type, manager, active_bounds);
+        intersect_bounds(*(*bnd), *(*bnd_next), (*bnd)->current_edge->top, cliptype, subject_fill_type, clip_fill_type,
+                         manager, active_bounds);
         std::iter_swap(bnd, bnd_next);
         bnd = bnd_next;
         ++bnd_next;
     }
 
     if ((*bnd)->ring && (*bndMaxPair)->ring) {
-        add_local_maximum_point(*(*bnd), *(*bndMaxPair), (*bnd)->current_edge->top, manager,
-                                active_bounds);
+        add_local_maximum_point(*(*bnd), *(*bndMaxPair), (*bnd)->current_edge->top, manager, active_bounds);
     } else if ((*bnd)->ring || (*bndMaxPair)->ring) {
         throw std::runtime_error("DoMaxima error");
     }
@@ -66,6 +66,7 @@ void process_edges_at_top_of_scanbeam(T top_y,
                                       fill_type clip_fill_type) {
 
     for (auto bnd = active_bounds.begin(); bnd != active_bounds.end();) {
+        interrupt_check(); // Check for interruptions
         if (*bnd == nullptr) {
             ++bnd;
             continue;
@@ -77,12 +78,10 @@ void process_edges_at_top_of_scanbeam(T top_y,
 
         if (is_maxima_edge) {
             auto bnd_max_pair = get_maxima_pair(bnd, active_bounds);
-            is_maxima_edge = ((bnd_max_pair == active_bounds.end() ||
-                               !current_edge_is_horizontal<T>(bnd_max_pair)) &&
+            is_maxima_edge = ((bnd_max_pair == active_bounds.end() || !current_edge_is_horizontal<T>(bnd_max_pair)) &&
                               is_maxima(bnd_max_pair, top_y));
             if (is_maxima_edge) {
-                bnd = do_maxima(bnd, bnd_max_pair, cliptype, subject_fill_type, clip_fill_type,
-                                manager, active_bounds);
+                bnd = do_maxima(bnd, bnd_max_pair, cliptype, subject_fill_type, clip_fill_type, manager, active_bounds);
                 continue;
             }
         }
@@ -101,15 +100,12 @@ void process_edges_at_top_of_scanbeam(T top_y,
         }
         ++bnd;
     }
-    active_bounds.erase(std::remove(active_bounds.begin(), active_bounds.end(), nullptr),
-                        active_bounds.end());
+    active_bounds.erase(std::remove(active_bounds.begin(), active_bounds.end(), nullptr), active_bounds.end());
 
-    insert_horizontal_local_minima_into_ABL(top_y, minima_sorted, current_lm, active_bounds,
-                                            manager, scanbeam, cliptype, subject_fill_type,
-                                            clip_fill_type);
+    insert_horizontal_local_minima_into_ABL(top_y, minima_sorted, current_lm, active_bounds, manager, scanbeam,
+                                            cliptype, subject_fill_type, clip_fill_type);
 
-    process_horizontals(top_y, active_bounds, manager, scanbeam, cliptype, subject_fill_type,
-                        clip_fill_type);
+    process_horizontals(top_y, active_bounds, manager, scanbeam, cliptype, subject_fill_type, clip_fill_type);
 
     // 4. Promote intermediate vertices
 
@@ -122,6 +118,6 @@ void process_edges_at_top_of_scanbeam(T top_y,
         }
     }
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox
