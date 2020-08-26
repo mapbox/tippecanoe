@@ -1,3 +1,7 @@
+## 1.36.0
+
+* Update Wagyu to version 0.5.0
+
 ## 1.35.0
 
 * Fix calculation of mean when accumulating attributes in clusters
