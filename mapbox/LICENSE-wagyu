@@ -1,4 +1,4 @@
-Parts of the code in the Wagyu Library are derived from the version of the 
+Parts of the code in the Wagyu Library are derived from the version of the
 Clipper Library by Angus Johnson listed below.
 
 Author    :  Angus Johnson
@@ -6,13 +6,15 @@ Version   :  6.4.0
 Date      :  2 July 2015
 Website   :  http://www.angusj.com
 
-Copyright for portions of the derived code in the Wagyu library are held 
-by Angus Johnson, 2010-2015. All other copyright for the Wagyu Library are held by 
-Mapbox, 2016. This code is published in accordance with, and retains the same license
-as the Clipper Library by Angus Johnson.
+Copyright for portions of the derived code in the Wagyu library are held
+by Angus Johnson, 2010-2015. Copyright for the "include/mapbox/geometry/wagyu/almost_equal.hpp"
+file is held by Google Inc and its license is listed at the top of that file.
+All other copyright for the Wagyu Library are held by Mapbox, 2016. This code
+is published in accordance with, and retains the same license as the Clipper
+Library by Angus Johnson.
 
 Copyright (c) 2010-2015, Angus Johnson
-Copyright (c) 2016, Mapbox
+Copyright (c) 2016-2020, Mapbox
 
 Permission is hereby granted, free of charge, to any person or organization
 obtaining a copy of the software and accompanying documentation covered by
