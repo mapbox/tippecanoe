@@ -195,8 +195,7 @@ ring_ptr<T> create_new_ring(ring_manager<T>& manager) {
 }
 
 template <typename T>
-point_ptr<T>
-create_new_point(ring_ptr<T> r, mapbox::geometry::point<T> const& pt, ring_manager<T>& rings) {
+point_ptr<T> create_new_point(ring_ptr<T> r, mapbox::geometry::point<T> const& pt, ring_manager<T>& rings) {
     point_ptr<T> point;
     if (rings.storage.size() < rings.storage.capacity()) {
         rings.storage.emplace_back(r, pt);
@@ -252,10 +251,8 @@ void assign_as_child(ring_ptr<T> new_ring, ring_ptr<T> parent, ring_manager<T>& 
     // Assigning as a child assumes that this is
     // a brand new ring. Therefore it does
     // not have any existing relationships
-    if ((parent == nullptr && new_ring->is_hole()) ||
-        (parent != nullptr && new_ring->is_hole() == parent->is_hole())) {
-        throw std::runtime_error(
-            "Trying to assign a child that is the same orientation as the parent");
+    if ((parent == nullptr && new_ring->is_hole()) || (parent != nullptr && new_ring->is_hole() == parent->is_hole())) {
+        throw std::runtime_error("Trying to assign a child that is the same orientation as the parent");
     }
     auto& children = parent == nullptr ? manager.children : parent->children;
     set_to_children(new_ring, children);
@@ -266,10 +263,8 @@ template <typename T>
 void reassign_as_child(ring_ptr<T> ring, ring_ptr<T> parent, ring_manager<T>& manager) {
     // Reassigning a ring assumes it already
     // has an existing parent
-    if ((parent == nullptr && ring->is_hole()) ||
-        (parent != nullptr && ring->is_hole() == parent->is_hole())) {
-        throw std::runtime_error(
-            "Trying to re-assign a child that is the same orientation as the parent");
+    if ((parent == nullptr && ring->is_hole()) || (parent != nullptr && ring->is_hole() == parent->is_hole())) {
+        throw std::runtime_error("Trying to re-assign a child that is the same orientation as the parent");
     }
 
     // Remove the old child relationship
@@ -288,8 +283,7 @@ void assign_as_sibling(ring_ptr<T> new_ring, ring_ptr<T> sibling, ring_manager<T
     // a brand new ring. Therefore it does
     // not have any existing relationships
     if (new_ring->is_hole() != sibling->is_hole()) {
-        throw std::runtime_error(
-            "Trying to assign to be a sibling that is not the same orientation as the sibling");
+        throw std::runtime_error("Trying to assign to be a sibling that is not the same orientation as the sibling");
     }
     auto& children = sibling->parent == nullptr ? manager.children : sibling->parent->children;
     set_to_children(new_ring, children);
@@ -305,8 +299,7 @@ void reassign_as_sibling(ring_ptr<T> ring, ring_ptr<T> sibling, ring_manager<T>&
     // a brand new ring. Therefore it does
     // not have any existing relationships
     if (ring->is_hole() != sibling->is_hole()) {
-        throw std::runtime_error(
-            "Trying to assign to be a sibling that is not the same orientation as the sibling");
+        throw std::runtime_error("Trying to assign to be a sibling that is not the same orientation as the sibling");
     }
     // Remove the old child relationship
     auto& old_children = ring->parent == nullptr ? manager.children : ring->parent->children;
@@ -387,10 +380,7 @@ void remove_ring_and_points(ring_ptr<T> r,
 }
 
 template <typename T>
-void remove_ring(ring_ptr<T> r,
-                 ring_manager<T>& manager,
-                 bool remove_children = true,
-                 bool remove_from_parent = true) {
+void remove_ring(ring_ptr<T> r, ring_manager<T>& manager, bool remove_children = true, bool remove_from_parent = true) {
     // Removes a ring and any children that might be
     // under that ring.
     for (auto& c : r->children) {
@@ -513,8 +503,7 @@ void reverse_ring(point_ptr<T> pp) {
 #ifdef DEBUG
 
 template <class charT, class traits, typename T>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     ring<T>& r) {
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out, ring<T>& r) {
     out << "  ring_index: " << r.ring_index << std::endl;
     if (!r.parent) {
         // out << "  parent_ring ptr: nullptr" << std::endl;
@@ -601,8 +590,7 @@ std::string output_as_polygon(ring_ptr<T> r) {
 }
 
 template <class charT, class traits, typename T>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     ring_vector<T>& rings) {
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out, ring_vector<T>& rings) {
     out << "START RING VECTOR" << std::endl;
     for (auto& r : rings) {
         if (r == nullptr || !r->points) {
@@ -640,6 +628,6 @@ inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, t
     return out;
 }
 #endif
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

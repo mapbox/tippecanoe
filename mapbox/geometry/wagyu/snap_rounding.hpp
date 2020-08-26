@@ -35,9 +35,7 @@ struct hp_intersection_swap {
 };
 
 template <typename T>
-void process_hot_pixel_intersections(T top_y,
-                                     active_bound_list<T>& active_bounds,
-                                     ring_manager<T>& manager) {
+void process_hot_pixel_intersections(T top_y, active_bound_list<T>& active_bounds, ring_manager<T>& manager) {
     if (active_bounds.empty()) {
         return;
     }
@@ -121,8 +119,7 @@ void process_hot_pixel_edges_at_top_of_scanbeam(T top_y,
             ++bnd;
         }
     }
-    active_bounds.erase(std::remove(active_bounds.begin(), active_bounds.end(), nullptr),
-                        active_bounds.end());
+    active_bounds.erase(std::remove(active_bounds.begin(), active_bounds.end(), nullptr), active_bounds.end());
 }
 
 template <typename T>
@@ -144,11 +141,11 @@ void insert_local_minima_into_ABL_hot_pixel(T top_y,
         right_bound.current_x = static_cast<double>(right_bound.current_edge->bot.x);
         auto lb_abl_itr = insert_bound_into_ABL(left_bound, right_bound, active_bounds);
         if (!current_edge_is_horizontal<T>(lb_abl_itr)) {
-            scanbeam.push_back((*lb_abl_itr)->current_edge->top.y);
+            insert_sorted_scanbeam(scanbeam, (*lb_abl_itr)->current_edge->top.y);
         }
         auto rb_abl_itr = std::next(lb_abl_itr);
         if (!current_edge_is_horizontal<T>(rb_abl_itr)) {
-            scanbeam.push_back((*rb_abl_itr)->current_edge->top.y);
+            insert_sorted_scanbeam(scanbeam, (*rb_abl_itr)->current_edge->top.y);
         }
         ++lm;
     }
@@ -182,14 +179,13 @@ void build_hot_pixels(local_minimum_list<T>& minima_list, ring_manager<T>& manag
 
         process_hot_pixel_intersections(scanline_y, active_bounds, manager);
 
-        insert_local_minima_into_ABL_hot_pixel(scanline_y, minima_sorted, current_lm, active_bounds,
-                                               manager, scanbeam);
+        insert_local_minima_into_ABL_hot_pixel(scanline_y, minima_sorted, current_lm, active_bounds, manager, scanbeam);
 
         process_hot_pixel_edges_at_top_of_scanbeam(scanline_y, scanbeam, active_bounds, manager);
     }
     preallocate_point_memory(manager, manager.hot_pixels.size());
     sort_hot_pixels(manager);
 }
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

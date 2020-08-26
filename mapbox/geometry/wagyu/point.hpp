@@ -93,8 +93,7 @@ bool operator!=(point<T> const& lhs, mapbox::geometry::point<T> const& rhs) {
 #ifdef DEBUG
 
 template <class charT, class traits, typename T>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     const point<T>& p) {
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out, const point<T>& p) {
     out << "  point at: " << p.x << ", " << p.y;
     return out;
 }
@@ -106,6 +105,6 @@ inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, t
     return out;
 }
 #endif
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

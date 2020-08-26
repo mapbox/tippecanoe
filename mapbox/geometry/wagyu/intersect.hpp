@@ -21,20 +21,18 @@ struct intersect_node {
     bound_ptr<T> bound2;
     mapbox::geometry::point<double> pt;
 
-    intersect_node(intersect_node<T>&& n)
+    intersect_node(intersect_node<T>&& n) noexcept
         : bound1(std::move(n.bound1)), bound2(std::move(n.bound2)), pt(std::move(n.pt)) {
     }
 
-    intersect_node& operator=(intersect_node<T>&& n) {
+    intersect_node& operator=(intersect_node<T>&& n) noexcept {
         bound1 = std::move(n.bound1);
         bound2 = std::move(n.bound2);
         pt = std::move(n.pt);
         return *this;
     }
 
-    intersect_node(bound_ptr<T> const& bound1_,
-                   bound_ptr<T> const& bound2_,
-                   mapbox::geometry::point<double> const& pt_)
+    intersect_node(bound_ptr<T> const& bound1_, bound_ptr<T> const& bound2_, mapbox::geometry::point<double> const& pt_)
         : bound1(bound1_), bound2(bound2_), pt(pt_) {
     }
 };
@@ -67,6 +65,6 @@ inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, t
 }
 
 #endif
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox

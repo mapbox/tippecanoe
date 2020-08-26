@@ -65,16 +65,14 @@ struct bound {
           side(std::move(b.side)) {
     }
 
-    bound(bound<T>const& b) = delete;
+    bound(bound<T> const& b) = delete;
     bound<T>& operator=(bound<T> const&) = delete;
-
 };
 
 #ifdef DEBUG
 
 template <class charT, class traits, typename T>
-inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out,
-                                                     const bound<T>& bnd) {
+inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, traits>& out, const bound<T>& bnd) {
     out << "    Bound: " << &bnd << std::endl;
     out << "        current_x: " << bnd.current_x << std::endl;
     out << "        last_point: " << bnd.last_point.x << ", " << bnd.last_point.y << std::endl;
@@ -96,6 +94,6 @@ inline std::basic_ostream<charT, traits>& operator<<(std::basic_ostream<charT, t
 }
 
 #endif
-}
-}
-}
+} // namespace wagyu
+} // namespace geometry
+} // namespace mapbox
