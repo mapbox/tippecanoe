@@ -130,9 +130,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_write_string("layers");
 	state.json_write_array();
 
-	bool first = true;
 	for (auto layer : layermap) {
-		first = false;
 
 		state.nospace = true;
 		state.json_write_hash();
@@ -509,7 +507,6 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			state.json_write_newline();
 
 			sqlite3_stmt *stmt;
-			bool first = true;
 			if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
 				while (sqlite3_step(stmt) == SQLITE_ROW) {
 					std::string key, value;
@@ -524,7 +521,6 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 					state.json_comma_newline();
 					state.json_write_string(k);
 					state.json_write_string(v);
-					first = false;
 				}
 				sqlite3_finalize(stmt);
 			}
