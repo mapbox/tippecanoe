@@ -47,6 +47,9 @@ void enumerate(char *fname) {
 	}
 }
 
+#ifdef TARGET_OS_IPHONE
+// TODO: Add ios func's
+#else
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s file.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
@@ -71,3 +74,4 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+#endif

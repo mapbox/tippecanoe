@@ -37,16 +37,16 @@
 #include "jsonpull/jsonpull.h"
 #include "milo/dtoa_milo.h"
 
-int pk = false;
-int pC = false;
-int pg = false;
-int pe = false;
-size_t CPUS;
-int quiet = false;
-int maxzoom = 32;
-int minzoom = 0;
-std::map<std::string, std::string> renames;
-bool exclude_all = false;
+int tile_join_pk = false;
+int tile_join_pC = false;
+int tile_join_pg = false;
+int tile_join_pe = false;
+size_t tile_join_CPUS;
+int tile_join_quiet = false;
+int tile_join_maxzoom = 32;
+int tile_join_minzoom = 0;
+std::map<std::string, std::string> tile_join_renames;
+bool tile_join_exclude_all = false;
 
 struct stats {
 	int minzoom;
@@ -83,8 +83,8 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 	for (size_t l = 0; l < tile.layers.size(); l++) {
 		mvt_layer &layer = tile.layers[l];
 
-		auto found = renames.find(layer.name);
-		if (found != renames.end()) {
+		auto found = tile_join_renames.find(layer.name);
+		if (found != tile_join_renames.end()) {
 			layer.name = found->second;
 		}
 
@@ -219,7 +219,7 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 					continue;
 				}
 
-				if (!exclude_all && exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
+				if (!tile_join_exclude_all && exclude.count(std::string(key)) == 0 && exclude_attributes.count(std::string(key)) == 0) {
 					type_and_string tas;
 					tas.type = type;
 					tas.string = value;
@@ -246,13 +246,13 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::map<std::st
 								} else if (is_number(joinval)) {
 									attr_type = mvt_double;
 								}
-							} else if (pe) {
+							} else if (tile_join_pe) {
 								attr_type = mvt_null;
 							}
 
 							const char *sjoinkey = joinkey.c_str();
 
-							if (!exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
+							if (!tile_join_exclude_all && exclude.count(joinkey) == 0 && exclude_attributes.count(joinkey) == 0 && attr_type != mvt_null) {
 								mvt_value outval;
 								if (attr_type == mvt_string) {
 									outval.type = mvt_string;
@@ -410,7 +410,7 @@ struct reader *begin_reading(char *fname) {
 		r->stmt = NULL;
 		r->next = NULL;
 
-		r->dirtiles = enumerate_dirtiles(fname, minzoom, maxzoom);
+		r->dirtiles = enumerate_dirtiles(fname, tile_join_minzoom, tile_join_maxzoom);
 		r->dirbase = fname;
 
 		if (r->dirtiles.size() == 0) {
@@ -508,13 +508,13 @@ void *join_worker(void *v) {
 			std::string pbf = outtile.encode();
 			std::string compressed;
 
-			if (!pC) {
+			if (!tile_join_pC) {
 				compress(pbf, compressed);
 			} else {
 				compressed = pbf;
 			}
 
-			if (!pk && compressed.size() > 500000) {
+			if (!tile_join_pk && compressed.size() > 500000) {
 				fprintf(stderr, "Tile %lld/%lld/%lld size is %lld, >500000. Skipping this tile\n.", ai->first.z, ai->first.x, ai->first.y, (long long) compressed.size());
 			} else {
 				a->outputs.insert(std::pair<zxy, std::string>(ai->first, compressed));
@@ -526,10 +526,10 @@ void *join_worker(void *v) {
 }
 
 void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<std::map<std::string, layermap_entry>> &layermaps, sqlite3 *outdb, const char *outdir, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, json_object *filter) {
-	pthread_t pthreads[CPUS];
+	pthread_t pthreads[tile_join_CPUS];
 	std::vector<arg> args;
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < tile_join_CPUS; i++) {
 		args.push_back(arg());
 
 		args[i].layermap = &layermaps[i];
@@ -548,23 +548,23 @@ void handle_tasks(std::map<zxy, std::vector<std::string>> &tasks, std::vector<st
 	// the proper allocation than is saved by perfectly balanced threads.
 	for (auto ai = tasks.begin(); ai != tasks.end(); ++ai) {
 		args[count].inputs.insert(*ai);
-		count = (count + 1) % CPUS;
+		count = (count + 1) % tile_join_CPUS;
 
 		if (ai == tasks.begin()) {
-			if (!quiet) {
+			if (!tile_join_quiet) {
 				fprintf(stderr, "%lld/%lld/%lld  \r", ai->first.z, ai->first.x, ai->first.y);
 			}
 		}
 	}
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < tile_join_CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, join_worker, &args[i]) != 0) {
 			perror("pthread_create");
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < tile_join_CPUS; i++) {
 		void *retval;
 
 		if (pthread_join(pthreads[i], &retval) != 0) {
@@ -622,7 +622,7 @@ void handle_vector_layers(json_object *vector_layers, std::map<std::string, laye
 
 void decode(struct reader *readers, std::map<std::string, layermap_entry> &layermap, sqlite3 *outdb, const char *outdir, struct stats *st, std::vector<std::string> &header, std::map<std::string, std::vector<std::string>> &mapping, std::set<std::string> &exclude, int ifmatched, std::string &attribution, std::string &description, std::set<std::string> &keep_layers, std::set<std::string> &remove_layers, std::string &name, json_object *filter, std::map<std::string, std::string> &attribute_descriptions, std::string &generator_options) {
 	std::vector<std::map<std::string, layermap_entry>> layermaps;
-	for (size_t i = 0; i < CPUS; i++) {
+	for (size_t i = 0; i < tile_join_CPUS; i++) {
 		layermaps.push_back(std::map<std::string, layermap_entry>());
 	}
 
@@ -654,7 +654,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		maxlat = max(lat1, maxlat);
 		maxlon = max(lon2, maxlon);
 
-		if (r->zoom >= minzoom && r->zoom <= maxzoom) {
+		if (r->zoom >= tile_join_minzoom && r->zoom <= tile_join_maxzoom) {
 			zxy tile = zxy(r->zoom, r->x, r->y);
 			if (tasks.count(tile) == 0) {
 				tasks.insert(std::pair<zxy, std::vector<std::string>>(tile, std::vector<std::string>()));
@@ -664,7 +664,7 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 		}
 
 		if (readers == NULL || readers->zoom != r->zoom || readers->x != r->x || readers->y != r->y) {
-			if (tasks.size() > 100 * CPUS) {
+			if (tasks.size() > 100 * tile_join_CPUS) {
 				handle_tasks(tasks, layermaps, outdb, outdir, header, mapping, exclude, ifmatched, keep_layers, remove_layers, filter);
 				tasks.clear();
 			}
@@ -730,14 +730,14 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'minzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int minz = max(sqlite3_column_int(r->stmt, 0), minzoom);
+				int minz = max(sqlite3_column_int(r->stmt, 0), tile_join_minzoom);
 				st->minzoom = min(st->minzoom, minz);
 			}
 			sqlite3_finalize(r->stmt);
 		}
 		if (sqlite3_prepare_v2(db, "SELECT value from metadata where name = 'maxzoom'", -1, &r->stmt, NULL) == SQLITE_OK) {
 			if (sqlite3_step(r->stmt) == SQLITE_ROW) {
-				int maxz = min(sqlite3_column_int(r->stmt, 0), maxzoom);
+				int maxz = min(sqlite3_column_int(r->stmt, 0), tile_join_maxzoom);
 
 				if (st->maxzoom >= 0 && maxz != st->maxzoom) {
 					fprintf(stderr, "Warning: mismatched maxzooms: %d in %s vs previous %d\n", maxz, r->name.c_str(), st->maxzoom);
@@ -850,6 +850,9 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 	}
 }
 
+#ifdef TARGET_OS_IPHONE
+// TODO: Add ios func's
+#else
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-X] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
 	exit(EXIT_FAILURE);
@@ -1136,3 +1139,4 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+#endif

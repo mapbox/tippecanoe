@@ -2445,6 +2445,9 @@ void parse_json_source(const char *arg, struct source &src) {
 	json_end(jp);
 }
 
+#ifdef TARGET_OS_IPHONE
+// TODO: Add func's
+#else
 int main(int argc, char **argv) {
 #ifdef MTRACE
 	mtrace();
@@ -3203,6 +3206,7 @@ int main(int argc, char **argv) {
 
 	return ret;
 }
+#endif
 
 int mkstemp_cloexec(char *name) {
 	int fd = mkstemp(name);
