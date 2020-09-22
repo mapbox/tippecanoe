@@ -23,48 +23,48 @@ size_t max_tilestats_attributes = 1000;
 size_t max_tilestats_sample_values = 1000;
 size_t max_tilestats_values = 100;
 
-sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
+sqlite3 *mbtiles_open(char *dbname, const char *runner, int forcetable) {
 	sqlite3 *outdb;
 
 	if (sqlite3_open(dbname, &outdb) != SQLITE_OK) {
-		fprintf(stderr, "%s: %s: %s\n", argv[0], dbname, sqlite3_errmsg(outdb));
+		fprintf(stderr, "%s: %s: %s\n", runner, dbname, sqlite3_errmsg(outdb));
 		exit(EXIT_FAILURE);
 	}
 
 	char *err = NULL;
 	if (sqlite3_exec(outdb, "PRAGMA synchronous=0", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		fprintf(stderr, "%s: async: %s\n", runner, err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "PRAGMA locking_mode=EXCLUSIVE", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		fprintf(stderr, "%s: async: %s\n", runner, err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "PRAGMA journal_mode=DELETE", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: async: %s\n", argv[0], err);
+		fprintf(stderr, "%s: async: %s\n", runner, err);
 		exit(EXIT_FAILURE);
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", argv[0], dbname);
-		fprintf(stderr, "%s: %s\n", argv[0], err);
+		fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", runner, dbname);
+		fprintf(stderr, "%s: %s\n", runner, err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: create tiles table: %s\n", argv[0], err);
+		fprintf(stderr, "%s: create tiles table: %s\n", runner, err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (sqlite3_exec(outdb, "create unique index name on metadata (name);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
+		fprintf(stderr, "%s: index metadata: %s\n", runner, err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (sqlite3_exec(outdb, "create unique index tile_index on tiles (zoom_level, tile_column, tile_row);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
+		fprintf(stderr, "%s: index tiles: %s\n", runner, err);
 		if (!forcetable) {
 			exit(EXIT_FAILURE);
 		}

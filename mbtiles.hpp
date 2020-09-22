@@ -41,7 +41,7 @@ struct layermap_entry {
 	}
 };
 
-sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);
+sqlite3 *mbtiles_open(char *dbname, const char *runner, int forcetable);
 
 void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size);
 

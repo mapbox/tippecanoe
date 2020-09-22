@@ -153,7 +153,7 @@ long long atoll_require(const char *s, const char *what) {
 	return ret;
 }
 
-void init_cpus() {
+void init_cpus(const char *tmpdir, long long max_files) {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
 	if (TIPPECANOE_MAX_THREADS != NULL) {
@@ -184,8 +184,8 @@ void init_cpus() {
 
 	// Don't really want too many temporary files, because the file system
 	// will start to bog down eventually
-	if (MAX_FILES > 2000) {
-		MAX_FILES = 2000;
+	if (MAX_FILES > max_files) {
+		MAX_FILES = max_files;
 	}
 
 	// MacOS can run out of system file descriptors
@@ -194,7 +194,7 @@ void init_cpus() {
 	long long fds[MAX_FILES];
 	long long i;
 	for (i = 0; i < MAX_FILES; i++) {
-		fds[i] = open("/dev/null", O_RDONLY | O_CLOEXEC);
+		fds[i] = open(tmpdir, O_RDONLY | O_CLOEXEC);
 		if (fds[i] < 0) {
 			break;
 		}
@@ -2446,15 +2446,19 @@ void parse_json_source(const char *arg, struct source &src) {
 }
 
 #ifdef TARGET_OS_IPHONE
-// TODO: Add func's
+int tippecanoe_main(int argc, char **argv, const char *tmp, double *persent) {
 #else
 int main(int argc, char **argv) {
+    const char *tmp = "/dev/null";
+    double *persent = NULL;
+#endif
+
 #ifdef MTRACE
 	mtrace();
 #endif
 
 	av = argv;
-	init_cpus();
+	init_cpus(tmp, 2000);
 
 	extern int optind;
 	extern char *optarg;
@@ -2475,7 +2479,13 @@ int main(int argc, char **argv) {
 	double droprate = 2.5;
 	double gamma = 0;
 	int buffer = 5;
+
+    #ifdef TARGET_OS_IPHONE
+    const char *tmpdir = tmp;
+    #else
 	const char *tmpdir = "/tmp";
+    #endif
+
 	const char *attribution = NULL;
 	std::vector<source> sources;
 	const char *prefilter = NULL;
@@ -3071,9 +3081,9 @@ int main(int argc, char **argv) {
 
 	signal(SIGPIPE, SIG_IGN);
 
-	files_open_at_start = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	files_open_at_start = open(tmp, O_RDONLY | O_CLOEXEC);
 	if (files_open_at_start < 0) {
-		perror("open /dev/null");
+		perror("open tmp");
 		exit(EXIT_FAILURE);
 	}
 	if (close(files_open_at_start) != 0) {
@@ -3153,7 +3163,7 @@ int main(int argc, char **argv) {
 			unlink(out_mbtiles);
 		}
 
-		outdb = mbtiles_open(out_mbtiles, argv, forcetable);
+		outdb = mbtiles_open(out_mbtiles, "tippecanoe", forcetable);
 	}
 	if (out_dir != NULL) {
 		check_dir(out_dir, argv, force, forcetable);
@@ -3193,7 +3203,7 @@ int main(int argc, char **argv) {
 	muntrace();
 #endif
 
-	i = open("/dev/null", O_RDONLY | O_CLOEXEC);
+	i = open(tmp, O_RDONLY | O_CLOEXEC);
 	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
@@ -3206,7 +3216,6 @@ int main(int argc, char **argv) {
 
 	return ret;
 }
-#endif
 
 int mkstemp_cloexec(char *name) {
 	int fd = mkstemp(name);

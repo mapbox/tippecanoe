@@ -14,8 +14,7 @@ struct index {
 	unsigned long long seq : (64 - 18);  // pack with segment and t to stay in 32 bytes
 
 	index()
-	    : t(0),
-	      seq(0) {
+    : t(0),	    seq(0) {
 	}
 };
 
@@ -33,6 +32,9 @@ struct clipbbox {
 
 extern std::vector<clipbbox> clipbboxes;
 
+#ifdef TARGET_OS_IPHONE
+int tippecanoe_main(int argc, char **argv, const char *tmp, double *persent);
+#endif
 void checkdisk(std::vector<struct reader> *r);
 
 extern int geometry_scale;
