@@ -33,7 +33,7 @@ struct clipbbox {
 extern std::vector<clipbbox> clipbboxes;
 
 #ifdef TARGET_OS_IPHONE
-int tippecanoe_main(int argc, char **argv, const char *tmp, double *persent);
+int tippecanoe_main(int argc, char **argv, double *persent);
 #endif
 void checkdisk(std::vector<struct reader> *r);
 

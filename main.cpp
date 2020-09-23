@@ -153,7 +153,7 @@ long long atoll_require(const char *s, const char *what) {
 	return ret;
 }
 
-void init_cpus(const char *tmpdir, long long max_files) {
+void init_cpus() {
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 
 	if (TIPPECANOE_MAX_THREADS != NULL) {
@@ -184,8 +184,8 @@ void init_cpus(const char *tmpdir, long long max_files) {
 
 	// Don't really want too many temporary files, because the file system
 	// will start to bog down eventually
-	if (MAX_FILES > max_files) {
-		MAX_FILES = max_files;
+	if (MAX_FILES > 2000) {
+		MAX_FILES = 2000;
 	}
 
 	// MacOS can run out of system file descriptors
@@ -194,7 +194,7 @@ void init_cpus(const char *tmpdir, long long max_files) {
 	long long fds[MAX_FILES];
 	long long i;
 	for (i = 0; i < MAX_FILES; i++) {
-		fds[i] = open(tmpdir, O_RDONLY | O_CLOEXEC);
+		fds[i] = open("/dev/null", O_RDONLY | O_CLOEXEC);
 		if (fds[i] < 0) {
 			break;
 		}
@@ -1135,7 +1135,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions, std::string const &commandline) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions, std::string const &commandline, double *persent) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2267,7 +2267,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter, persent);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2446,10 +2446,9 @@ void parse_json_source(const char *arg, struct source &src) {
 }
 
 #ifdef TARGET_OS_IPHONE
-int tippecanoe_main(int argc, char **argv, const char *tmp, double *persent) {
+int tippecanoe_main(int argc, char **argv, double *persent) {
 #else
 int main(int argc, char **argv) {
-    const char *tmp = "/dev/null";
     double *persent = NULL;
 #endif
 
@@ -2458,9 +2457,10 @@ int main(int argc, char **argv) {
 #endif
 
 	av = argv;
-	init_cpus(tmp, 2000);
+	init_cpus();
 
 	extern int optind;
+    optind = 1; // opt index reset
 	extern char *optarg;
 	int i;
 
@@ -2479,13 +2479,7 @@ int main(int argc, char **argv) {
 	double droprate = 2.5;
 	double gamma = 0;
 	int buffer = 5;
-
-    #ifdef TARGET_OS_IPHONE
-    const char *tmpdir = tmp;
-    #else
 	const char *tmpdir = "/tmp";
-    #endif
-
 	const char *attribution = NULL;
 	std::vector<source> sources;
 	const char *prefilter = NULL;
@@ -3081,9 +3075,9 @@ int main(int argc, char **argv) {
 
 	signal(SIGPIPE, SIG_IGN);
 
-	files_open_at_start = open(tmp, O_RDONLY | O_CLOEXEC);
+	files_open_at_start = open("/dev/null", O_RDONLY | O_CLOEXEC);
 	if (files_open_at_start < 0) {
-		perror("open tmp");
+		perror("open /dev/null");
 		exit(EXIT_FAILURE);
 	}
 	if (close(files_open_at_start) != 0) {
@@ -3193,7 +3187,7 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline, persent);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
@@ -3203,7 +3197,7 @@ int main(int argc, char **argv) {
 	muntrace();
 #endif
 
-	i = open(tmp, O_RDONLY | O_CLOEXEC);
+	i = open("/dev/null", O_RDONLY | O_CLOEXEC);
 	// i < files_open_at_start is not an error, because reading from a pipe closes stdin
 	if (i > files_open_at_start) {
 		fprintf(stderr, "Internal error: did not close all files: %d\n", i);
