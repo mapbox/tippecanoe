@@ -401,7 +401,7 @@ struct reader {
 };
 
 struct reader *begin_reading(char *fname) {
-	struct reader *r = new reader;
+    struct reader *r = (reader*)calloc(1, sizeof(reader));
 	r->name = fname;
 
 	struct stat st;
@@ -846,19 +846,21 @@ void decode(struct reader *readers, std::map<std::string, layermap_entry> &layer
 			exit(EXIT_FAILURE);
 		}
 
-		delete r;
+        free(r);
 	}
 }
 
 #ifdef TARGET_OS_IPHONE
-// TODO: Add ios func's
+int tile_join_main(int argc, char **argv) {
 #else
+
 void usage(char **argv) {
-	fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-X] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
-	exit(EXIT_FAILURE);
+    fprintf(stderr, "Usage: %s [-f] [-i] [-pk] [-pC] [-c joins.csv] [-X] [-x exclude ...] -o new.mbtiles source.mbtiles ...\n", argv[0]);
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv) {
+#endif
 	char *out_mbtiles = NULL;
 	char *out_dir = NULL;
 	sqlite3 *outdb = NULL;
@@ -867,14 +869,14 @@ int main(int argc, char **argv) {
 	int ifmatched = 0;
 	json_object *filter = NULL;
 
-	CPUS = sysconf(_SC_NPROCESSORS_ONLN);
+    tile_join_CPUS = sysconf(_SC_NPROCESSORS_ONLN);
 
 	const char *TIPPECANOE_MAX_THREADS = getenv("TIPPECANOE_MAX_THREADS");
 	if (TIPPECANOE_MAX_THREADS != NULL) {
-		CPUS = atoi(TIPPECANOE_MAX_THREADS);
+        tile_join_CPUS = atoi(TIPPECANOE_MAX_THREADS);
 	}
-	if (CPUS < 1) {
-		CPUS = 1;
+	if (tile_join_CPUS < 1) {
+        tile_join_CPUS = 1;
 	}
 
 	std::vector<std::string> header;
@@ -907,10 +909,10 @@ int main(int argc, char **argv) {
 		{"feature-filter", required_argument, 0, 'j'},
 		{"rename-layer", required_argument, 0, 'R'},
 
-		{"no-tile-size-limit", no_argument, &pk, 1},
-		{"no-tile-compression", no_argument, &pC, 1},
-		{"empty-csv-columns-are-null", no_argument, &pe, 1},
-		{"no-tile-stats", no_argument, &pg, 1},
+		{"no-tile-size-limit", no_argument, &tile_join_pk, 1},
+		{"no-tile-compression", no_argument, &tile_join_pC, 1},
+		{"empty-csv-columns-are-null", no_argument, &tile_join_pe, 1},
+		{"no-tile-stats", no_argument, &tile_join_pg, 1},
 
 		{0, 0, 0, 0},
 	};
@@ -927,6 +929,7 @@ int main(int argc, char **argv) {
 	}
 
 	extern int optind;
+    optind = 1;
 	extern char *optarg;
 	int i;
 
@@ -966,11 +969,11 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'z':
-			maxzoom = atoi(optarg);
+            tile_join_maxzoom = atoi(optarg);
 			break;
 
 		case 'Z':
-			minzoom = atoi(optarg);
+            tile_join_minzoom = atoi(optarg);
 			break;
 
 		case 'J':
@@ -983,13 +986,13 @@ int main(int argc, char **argv) {
 
 		case 'p':
 			if (strcmp(optarg, "k") == 0) {
-				pk = true;
+                tile_join_pk = true;
 			} else if (strcmp(optarg, "C") == 0) {
-				pC = true;
+                tile_join_pC = true;
 			} else if (strcmp(optarg, "g") == 0) {
-				pg = true;
+                tile_join_pg = true;
 			} else if (strcmp(optarg, "e") == 0) {
-				pe = true;
+                tile_join_pe = true;
 			} else {
 				fprintf(stderr, "%s: Unknown option for -p%s\n", argv[0], optarg);
 				exit(EXIT_FAILURE);
@@ -1011,7 +1014,7 @@ int main(int argc, char **argv) {
 			break;
 
 		case 'X':
-			exclude_all = true;
+            tile_join_exclude_all = true;
 			break;
 
 		case 'l':
@@ -1030,35 +1033,37 @@ int main(int argc, char **argv) {
 			}
 			std::string before = std::string(optarg).substr(0, cp - optarg);
 			std::string after = std::string(cp + 1);
-			renames.insert(std::pair<std::string, std::string>(before, after));
+            tile_join_renames.insert(std::pair<std::string, std::string>(before, after));
 			break;
 		}
 
 		case 'q':
-			quiet = true;
+            tile_join_quiet = true;
 			break;
 
 		default:
-			usage(argv);
+            fprintf(stderr, "Incorect args1\n");
+            exit(EXIT_FAILURE);
 		}
 	}
 
 	if (argc - optind < 1) {
-		usage(argv);
+        fprintf(stderr, "Incorect args2\n");
+        exit(EXIT_FAILURE);
 	}
 
 	if (out_mbtiles == NULL && out_dir == NULL) {
 		fprintf(stderr, "%s: must specify -o out.mbtiles or -e directory\n", argv[0]);
-		usage(argv);
+        exit(EXIT_FAILURE);
 	}
 
 	if (out_mbtiles != NULL && out_dir != NULL) {
 		fprintf(stderr, "%s: Options -o and -e cannot be used together\n", argv[0]);
-		usage(argv);
+        exit(EXIT_FAILURE);
 	}
 
-	if (minzoom > maxzoom) {
-		fprintf(stderr, "%s: Minimum zoom -Z%d cannot be greater than maxzoom -z%d\n", argv[0], minzoom, maxzoom);
+	if (tile_join_minzoom > tile_join_maxzoom) {
+		fprintf(stderr, "%s: Minimum zoom -Z%d cannot be greater than maxzoom -z%d\n", argv[0], tile_join_minzoom, tile_join_maxzoom);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1066,7 +1071,7 @@ int main(int argc, char **argv) {
 		if (force) {
 			unlink(out_mbtiles);
 		}
-		outdb = mbtiles_open(out_mbtiles, argv, 0);
+		outdb = mbtiles_open(out_mbtiles, argv[0], 0);
 	}
 	if (out_dir != NULL) {
 		check_dir(out_dir, argv, force, false);
@@ -1127,7 +1132,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !pg, attribute_descriptions, "tile-join", generator_options);
+	mbtiles_write_metadata(outdb, out_dir, name.c_str(), st.minzoom, st.maxzoom, st.minlat, st.minlon, st.maxlat, st.maxlon, st.midlat, st.midlon, 0, attribution.size() != 0 ? attribution.c_str() : NULL, layermap, true, description.c_str(), !tile_join_pg, attribute_descriptions, "tile-join", generator_options);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);
@@ -1139,4 +1144,3 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-#endif
