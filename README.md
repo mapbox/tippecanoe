@@ -1,6 +1,14 @@
 tippecanoe
 ==========
 
+Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
+[like these](MADE_WITH.md).
+
+![Mapbox Tippecanoe](https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG)
+
+[![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
+[![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
+
 ### :warning: Mapbox has a new service for creating vector tilesets! :warning: 
 
 [Mapbox Tiling Service (MTS)](https://docs.mapbox.com/mapbox-tiling-service/overview/) is a hosted, data processing service that allows you to integrate custom datasets of any scale into your maps faster, cheaper, and with more flexibility and control than previously possible.
@@ -15,14 +23,6 @@ Customers like AllTrails, Plume Labs, and Ookla have noted that MTS helps them:
 - get updated data to their users faster—in some cases up to 90% faster than previous tools
 
 Learn more about [MTS](https://blog.mapbox.com/introducing-mapbox-tiling-service-df1df636c7cf).
-
-Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
-[like these](MADE_WITH.md).
-
-![Mapbox Tippecanoe](https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG)
-
-[![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
-[![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
 
 Intent
 ------
