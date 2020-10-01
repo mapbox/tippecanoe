@@ -9,7 +9,7 @@ Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from l
 [![Build Status](https://travis-ci.org/mapbox/tippecanoe.svg)](https://travis-ci.org/mapbox/tippecanoe)
 [![Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg)](https://codecov.io/gh/mapbox/tippecanoe)
 
-### :warning: Mapbox has a new service for creating vector tilesets! :warning: 
+### :zap: Mapbox has a new service for creating vector tilesets! :zap:
 
 [Mapbox Tiling Service (MTS)](https://docs.mapbox.com/mapbox-tiling-service/overview/) is a hosted, data processing service that allows you to integrate custom datasets of any scale into your maps faster, cheaper, and with more flexibility and control than previously possible.
 
