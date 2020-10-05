@@ -270,7 +270,7 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline) {
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, bool out_tar, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -490,49 +490,56 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		sqlite3_free(sql);
 	}
 
-	if (outdir != NULL) {
-		std::string metadata = std::string(outdir) + "/metadata.json";
+	if (outdir != NULL || out_tar) {
+		std::string out;
+		json_writer state(&out);
 
-		struct stat st;
-		if (stat(metadata.c_str(), &st) == 0) {
-			// Leave existing metadata in place with --allow-existing
-		} else {
-			FILE *fp = fopen(metadata.c_str(), "w");
-			if (fp == NULL) {
-				perror(metadata.c_str());
-				exit(EXIT_FAILURE);
-			}
+		state.json_write_hash();
+		state.json_write_newline();
 
-			json_writer state(fp);
+		sqlite3_stmt *stmt;
+		bool first = true;
+		if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
+			while (sqlite3_step(stmt) == SQLITE_ROW) {
+				std::string key, value;
 
-			state.json_write_hash();
-			state.json_write_newline();
-
-			sqlite3_stmt *stmt;
-			bool first = true;
-			if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
-				while (sqlite3_step(stmt) == SQLITE_ROW) {
-					std::string key, value;
-
-					const char *k = (const char *) sqlite3_column_text(stmt, 0);
-					const char *v = (const char *) sqlite3_column_text(stmt, 1);
-					if (k == NULL || v == NULL) {
-						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-						exit(EXIT_FAILURE);
-					}
-
-					state.json_comma_newline();
-					state.json_write_string(k);
-					state.json_write_string(v);
-					first = false;
+				const char *k = (const char *) sqlite3_column_text(stmt, 0);
+				const char *v = (const char *) sqlite3_column_text(stmt, 1);
+				if (k == NULL || v == NULL) {
+					fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
+					exit(EXIT_FAILURE);
 				}
-				sqlite3_finalize(stmt);
-			}
 
-			state.json_write_newline();
-			state.json_end_hash();
-			state.json_write_newline();
-			fclose(fp);
+				state.json_comma_newline();
+				state.json_write_string(k);
+				state.json_write_string(v);
+				first = false;
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		state.json_write_newline();
+		state.json_end_hash();
+		state.json_write_newline();
+
+		if (outdir != NULL) {
+			std::string metadata = std::string(outdir) + "/metadata.json";
+
+			struct stat st;
+			if (stat(metadata.c_str(), &st) == 0) {
+				// Leave existing metadata in place with --allow-existing
+			} else {
+				FILE *fp = fopen(metadata.c_str(), "w");
+				if (fp == NULL) {
+					perror(metadata.c_str());
+					exit(EXIT_FAILURE);
+				}
+
+				fprintf(fp, "%s", out.c_str());
+				fclose(fp);
+			}
+		} else if (out_tar) {
+			tar_write("metadata.json", out, false);
 		}
 	}
 

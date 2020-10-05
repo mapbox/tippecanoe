@@ -2,12 +2,14 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <set>
 #include <algorithm>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
 #include "jsonpull/jsonpull.h"
@@ -41,6 +43,81 @@ void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const
 	std::ofstream pbfFile(newdir, std::ios::out | std::ios::binary);
 	pbfFile.write(pbf.data(), pbf.size());
 	pbfFile.close();
+}
+
+void tar_write(std::string const &name, std::string const &data, bool dir) {
+	time_t now = time(NULL);
+
+	int mode = 0644;
+	if (dir) {
+		mode = 0755;
+	}
+
+	char buf[512];
+	memset(buf, ' ', 512);
+	sprintf(buf + 0, "%s", name.c_str()); // name
+	sprintf(buf + 100, "%o", mode); // mode
+	sprintf(buf + 108, "%o", 0); // uid
+	sprintf(buf + 116, "%o", 0); // gid
+	sprintf(buf + 124, "%lo", (long) data.size()); // size
+	sprintf(buf + 136, "%lo", (long) now); // mtime
+
+	if (dir) {
+		buf[156] = '5'; // typeflag
+	} else {
+		buf[156] = '0'; // typeflag
+	}
+
+	sprintf(buf + 157, "%s", ""); // linkname
+	sprintf(buf + 257, "%s", "ustar"); // magic
+	buf[263] = '0'; // version
+	buf[264] = '0'; // version
+	sprintf(buf + 265, "%s", "root"); // uname
+	sprintf(buf + 297, "%s", "wheel"); // gname
+	sprintf(buf + 345, "%s", ""); // prefix
+
+	long sum = 0;
+	for (size_t i = 0; i < 512; i++) {
+		sum += (unsigned char) buf[i];
+	}
+
+	sprintf(buf + 148, "%lo", sum); // chksum
+	fwrite(buf, sizeof(char), 512, stdout);
+
+	for (size_t i = 0; i < data.size(); i += 512) {
+		for (size_t j = 0; j < 512; j++) {
+			if (i + j < data.size()) {
+				buf[j] = data[i + j];
+			} else {
+				buf[j] = '\0';
+			}
+		}
+
+		fwrite(buf, sizeof(char), 512, stdout);
+	}
+}
+
+void tar_mkdir(std::string const &dir) {
+	static std::set<std::string> existing;
+	if (existing.count(dir) == 0) {
+		existing.insert(dir);
+		tar_write(dir + "/", "", true);
+	}
+}
+
+void tar_write_tile(int z, int tx, int ty, std::string const &pbf) {
+	tar_mkdir(std::to_string(z));
+	tar_mkdir(std::to_string(z) + "/" + std::to_string(tx));
+
+	std::string fname = std::to_string(z) + "/" + std::to_string(tx) + "/" + std::to_string(ty) + ".pbf";
+	tar_write(fname, pbf, false);
+}
+
+void tar_close() {
+	char buf[512];
+	memset(buf, '\0', 512);
+	fwrite(buf, sizeof(char), 512, stdout);
+	fwrite(buf, sizeof(char), 512, stdout);
 }
 
 static bool numeric(const char *s) {

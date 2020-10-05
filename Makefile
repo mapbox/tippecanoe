@@ -140,7 +140,7 @@ parallel-test:
 
 raw-tiles-test:
 	./tippecanoe -q -f -e tests/raw-tiles/raw-tiles -r1 -pC tests/raw-tiles/hackspots.geojson
-	./tippecanoe-decode -x generator tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles.json.check
+	./tippecanoe-decode -x generator_options -x generator tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles.json.check
 	cmp tests/raw-tiles/raw-tiles.json.check tests/raw-tiles/raw-tiles.json
 	# Test that -z and -Z work in tippecanoe-decode
 	./tippecanoe-decode -x generator -Z6 -z7 tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles-z67.json.check
@@ -149,6 +149,12 @@ raw-tiles-test:
 	./tile-join -q -f -Z6 -z7 -e tests/raw-tiles/raw-tiles-z67 tests/raw-tiles/raw-tiles
 	./tippecanoe-decode -x generator tests/raw-tiles/raw-tiles-z67 > tests/raw-tiles/raw-tiles-z67-join.json.check
 	cmp tests/raw-tiles/raw-tiles-z67-join.json.check tests/raw-tiles/raw-tiles-z67-join.json
+        # Test that writing to tar does basically the same thing as -e
+	rm -r tests/raw-tiles/raw-tiles
+	mkdir -p tests/raw-tiles/raw-tiles
+	./tippecanoe -q --output-to-tar -r1 -pC --name tests/raw-tiles/raw-tiles --description tests/raw-tiles/raw-tiles tests/raw-tiles/hackspots.geojson | (cd tests/raw-tiles/raw-tiles && tar xf -)
+	./tippecanoe-decode -x generator_options -x generator tests/raw-tiles/raw-tiles > tests/raw-tiles/raw-tiles.json.check
+	cmp tests/raw-tiles/raw-tiles.json.check tests/raw-tiles/raw-tiles.json
 	rm -rf tests/raw-tiles/raw-tiles tests/raw-tiles/raw-tiles-z67 tests/raw-tiles/raw-tiles.json.check raw-tiles-z67.json.check tests/raw-tiles/raw-tiles-z67-join.json.check
 	# Test that metadata.json is created even if all features are clipped away
 	./tippecanoe -q -f -e tests/raw-tiles/nothing tests/raw-tiles/nothing.geojson
