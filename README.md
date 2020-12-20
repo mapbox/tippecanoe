@@ -63,6 +63,14 @@ $ make -j
 $ make install
 ```
 
+On OpenBSD 
+```sh
+$ git clone https://github.com/mapbox/tippecanoe.git
+$ cd tippecanoe
+$ gmake
+$ doas gmake install
+```
+
 See [Development](#development) below for how to upgrade your
 C++ compiler or install prerequisite packages if you get
 compiler errors.
