@@ -4,6 +4,11 @@
 #include <math.h>
 #include <atomic>
 #include "projection.hpp"
+#include "Mercator.h"
+#include "GeodeticCoordinates.h"
+#include "MapProjectionCoordinates.h"
+#include "CoordinateConversionException.h"
+
 
 unsigned long long (*encode_index)(unsigned int wx, unsigned int wy) = NULL;
 void (*decode_index)(unsigned long long index, unsigned *wx, unsigned *wy) = NULL;
@@ -11,10 +16,13 @@ void (*decode_index)(unsigned long long index, unsigned *wx, unsigned *wy) = NUL
 struct projection projections[] = {
 	{"EPSG:4326", lonlat2tile, tile2lonlat, "urn:ogc:def:crs:OGC:1.3:CRS84"},
 	{"EPSG:3857", epsg3857totile, tiletoepsg3857, "urn:ogc:def:crs:EPSG::3857"},
+        {"EPSG:3395", lonlat2epsg3395tile, epsg3395tiletolonlat, "urn:ogc:def:crs:EPSG::3395"},
 	{NULL, NULL, NULL, NULL},
 };
 
 struct projection *projection = &projections[0];
+MSP::CCS::Mercator *pMerc = NULL ;
+
 
 // http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
 void lonlat2tile(double lon, double lat, int zoom, long long *x, long long *y) {
@@ -100,6 +108,114 @@ void tiletoepsg3857(long long ix, long long iy, int zoom, double *ox, double *oy
 	*ox = (ix - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
 	*oy = ((1LL << 32) - 1 - iy - (1LL << 31)) * M_PI * 6378137.0 / (1LL << 31);
 }
+
+void lonlat2epsg3395tile(double lon, double lat, int zoom, long long *x, long long *y) {
+        // Must limit latitude somewhere to prevent overflow.
+        // 89.9 degrees latitude is 0.621 worlds beyond the edge of the flat earth,
+        // hopefully far enough out that there are few expectations about the shape.
+        if (lat < -89.9) {
+                lat = -89.9;
+        }
+        if (lat > 89.9) {
+                lat = 89.9;
+        }
+
+        if (lon < -360) {
+                lon = -360;
+        }
+        if (lon > 360) {
+                lon = 360;
+        }
+        double ellipsoidSemiMajorAxis = 6378137.0 ;
+        double ellipsoidFlattening = 0.00335281066475 ;
+        double scaleFactor = 1.0 ;
+        try {
+            if ( pMerc == NULL ) {
+                pMerc = new MSP::CCS::Mercator(ellipsoidSemiMajorAxis, ellipsoidFlattening, 0.0, 0.0, 0.0,
+                                               0.0, &scaleFactor);
+            }
+            double lat_rad = lat*M_PI/180.0;
+            double lon_rad = lon*M_PI/180.0;
+            MSP::CCS::GeodeticCoordinates *pCoords = new MSP::CCS::GeodeticCoordinates() ;
+
+            pCoords->setLongitude( lon_rad ) ;
+            pCoords->setLatitude( lat_rad ) ;
+            pCoords->setHeight( zoom ) ;
+
+            MSP::CCS::MapProjectionCoordinates *projCoord = pMerc->convertFromGeodetic( pCoords ) ;
+            unsigned long long n = 1LL << zoom;
+
+            double xx = projCoord->easting() ;
+            double yy = projCoord->northing() ;
+
+            // Map to pixels
+            double circumference = 2.0 * M_PI * ellipsoidSemiMajorAxis;
+            double res = circumference / 256.0;
+            res = res / exp2((double)zoom);
+            double originShift = circumference / 2.0;
+            double px = (xx + originShift) / res;
+            double py = (yy + originShift) / res;
+            long long llx = ceil(px/256.0) - 1;
+            long long lly = ceil(py/256.0) - 1 ;
+
+            // Store as Google tile (flip y)
+            *x = llx;
+            *y = (n - 1) - lly;
+        } catch ( MSP::CCS::CoordinateConversionException e ) {
+            fprintf(stderr, "Caught Error %s", e.getMessage()) ;
+        }
+}
+
+
+
+void epsg3395tiletolonlat(long long x, long long y, int zoom, double *lon, double *lat) {
+        unsigned long long n = 1LL << zoom;
+        double ellipsoidSemiMajorAxis = 6378137.0;
+        double ellipsoidFlattening = 0.00335281066475 ;
+        double scaleFactor = 1.0 ;
+
+        // Notes:
+        //
+        // https://epsg.io/3395
+        // double ellipsoidSemiMajorAxis - 6378137,
+        // double ellipsoidFlattening - 298.257223563
+        // double centralMeridian 0.0
+        // double standardParallel 0.0
+        // double falseEasting - 0.0
+        // double falseNorthing - 0.0
+        // double* scaleFactor - 1.0
+
+        if ( pMerc == NULL ) {
+            pMerc = new MSP::CCS::Mercator(ellipsoidSemiMajorAxis, ellipsoidFlattening, 0.0, 0.0, 0.0, 0.0, &scaleFactor);
+        }
+        double circumference = 2.0 * M_PI * ellipsoidSemiMajorAxis;
+
+        // Convert back to TMS from Google tile (flip y)
+        long long ny = (n - 1) - y;
+
+        double res = ellipsoidSemiMajorAxis / 256.0;
+        res = res / n;
+
+        // First unmap back to pixels
+        long long px = (x + 1) * 256;
+        long long py = (ny + 1) * 256;
+
+        // Now back to meters
+        double originShift = circumference / 2.0;
+        double dx = px/res - originShift;
+        double dy = py/res - originShift;
+
+        MSP::CCS::MapProjectionCoordinates *pCoords = new MSP::CCS::MapProjectionCoordinates() ;
+        pCoords->setEasting( dx ) ;
+        pCoords->setNorthing( dy ) ;
+
+        MSP::CCS::GeodeticCoordinates *geodeticCoord = pMerc->convertToGeodetic( pCoords ) ;
+
+        // Back to decimal degrees
+        *lat = geodeticCoord->latitude() * (180.0/M_PI);
+        *lon = geodeticCoord->longitude() * (180.0/M_PI);
+}
+
 
 // https://en.wikipedia.org/wiki/Hilbert_curve
 

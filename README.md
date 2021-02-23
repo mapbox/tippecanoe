@@ -708,6 +708,18 @@ sudo apt-get update -y
 sudo apt-get install -y g++-5
 export CXX=g++-5
 ```
+#### Build with Geotrans3.7 on Centos 7
+<pre>sudo yum install -y centos-release-scl devtoolset-7-gcc* sqlite-devel zlib-devel bash git
+sudo yum update -y
+cd geotrans3.7/CCS/linux_64
+source scl_source enable devtoolset-7
+make
+cp libMSPdtcc.so /lib64
+ldconfig -n -v /lib64
+cd ../../..
+make && make install
+echo 'export PATH="/usr/local/bin:$PATH"' | sudo tee -a ~/.bashrc
+source ~/.bashrc</pre>
 
 Docker Image
 ------------

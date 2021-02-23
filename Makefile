@@ -12,6 +12,9 @@ LDFLAGS := $(LDFLAGS)
 WARNING_FLAGS := -Wall -Wshadow -Wsign-compare -Wextra -Wunreachable-code -Wuninitialized -Wshadow
 RELEASE_FLAGS := -O3 -DNDEBUG
 DEBUG_FLAGS := -O0 -DDEBUG -fno-inline-functions -fno-omit-frame-pointer
+DTCCDIR = geotrans3.7/CCS/src/dtcc/CoordinateSystems
+CCSERVICEDIR = geotrans3.7/CCS/src
+LIBMSPDTCC = MSPdtcc
 
 ifeq ($(BUILDTYPE),Release)
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(RELEASE_FLAGS)
@@ -44,20 +47,68 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
+DTCCINCS = \
+        -I$(DTCCDIR)/threads \
+        -I$(DTCCDIR)/albers \
+        -I$(DTCCDIR)/azeq \
+        -I$(DTCCDIR)/bonne \
+        -I$(DTCCDIR)/bng \
+        -I$(DTCCDIR)/cassini \
+        -I$(DTCCDIR)/cyleqa \
+        -I$(DTCCDIR)/datum \
+        -I$(DTCCDIR)/eckert4 \
+        -I$(DTCCDIR)/eckert6 \
+        -I$(DTCCDIR)/ellipse \
+        -I$(DTCCDIR)/eqdcyl \
+        -I$(DTCCDIR)/gars \
+        -I$(DTCCDIR)/geocent \
+        -I$(DTCCDIR)/geoid \
+        -I$(DTCCDIR)/georef \
+        -I$(DTCCDIR)/gnomonic \
+        -I$(DTCCDIR)/grinten \
+        -I$(DTCCDIR)/lambert \
+        -I$(DTCCDIR)/loccart \
+        -I$(DTCCDIR)/mercator \
+        -I$(DTCCDIR)/misc \
+        -I$(DTCCDIR)/mgrs \
+        -I$(DTCCDIR)/miller \
+        -I$(DTCCDIR)/mollweid \
+        -I$(DTCCDIR)/neys \
+        -I$(DTCCDIR)/nzmg \
+        -I$(DTCCDIR)/omerc \
+        -I$(DTCCDIR)/orthogr \
+        -I$(DTCCDIR)/polarst \
+        -I$(DTCCDIR)/polycon \
+        -I$(DTCCDIR)/sinusoid \
+        -I$(DTCCDIR)/stereogr \
+        -I$(DTCCDIR)/trcyleqa \
+        -I$(DTCCDIR)/tranmerc \
+        -I$(DTCCDIR)/ups \
+        -I$(DTCCDIR)/usng \
+        -I$(DTCCDIR)/utm
+
+CCSINCLUDES = \
+        -I$(CCSERVICEDIR)/dtcc \
+        -I$(CCSERVICEDIR)/CoordinateConversion \
+        -I$(CCSERVICEDIR)/dtcc/CoordinateSystemParameters \
+        -I$(CCSERVICEDIR)/dtcc/CoordinateTuples \
+        -I$(CCSERVICEDIR)/dtcc/Enumerations \
+        -I$(CCSERVICEDIR)/dtcc/Exception
+
+INCLUDES = -I/usr/local/include -I. $(DTCCINCS) $(CCSINCLUDES)
 LIBS = -L/usr/local/lib
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o dirtiles.o plugin.o read_json.o write_json.o geobuf.o evaluator.o geocsv.o csv.o geojson-loop.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lMSPdtcc -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-enumerate: enumerate.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o jsonpull/jsonpull.o dirtiles.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lMSPdtcc -lm -lz -lsqlite3
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o write_json.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lMSPdtcc -lm -lz -lsqlite3 -lpthread
 
 tippecanoe-json-tool: jsontool.o jsonpull/jsonpull.o csv.o text.o geojson-loop.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
