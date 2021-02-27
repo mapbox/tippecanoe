@@ -111,6 +111,42 @@ struct mvt_tile {
 
 	std::string encode();
 	bool decode(std::string &message, bool &was_compressed);
+
+	size_t reader_overhead = 0;
+	size_t reader_overhead_count = 0;
+	size_t layer_read_overhead = 0;
+	size_t layer_read_overhead_count = 0;
+	size_t layer_names = 0;
+	size_t layer_names_count = 0;
+	size_t layer_keys = 0;
+	size_t layer_keys_count = 0;
+	size_t value_overhead = 0;
+	size_t value_overhead_count = 0;
+	size_t string_values = 0;
+	size_t string_values_count = 0;
+	size_t float_values = 0;
+	size_t float_values_count = 0;
+	size_t double_values = 0;
+	size_t double_values_count = 0;
+	size_t int_values = 0;
+	size_t int_values_count = 0;
+	size_t bool_values = 0;
+	size_t bool_values_count = 0;
+	size_t layer_extents = 0;
+	size_t layer_extents_count = 0;
+	size_t layer_versions = 0;
+	size_t layer_versions_count = 0;
+	size_t feature_reader_overhead = 0;
+	size_t feature_reader_overhead_count = 0;
+	size_t ids = 0;
+	size_t ids_count = 0;
+	size_t attribute_refs = 0;
+	size_t attribute_refs_count = 0;
+	size_t feature_types = 0;
+	size_t feature_types_count = 0;
+	size_t feature_geometries = 0;
+	size_t feature_geometries_count = 0;
+	size_t feature_geometries_nodes = 0;
 };
 
 bool is_compressed(std::string const &data);
