@@ -1,3 +1,7 @@
+## 2.0.0
+
+* Fork of [mapbox/tippecanoe 1.36.0](https://github.com/mapbox/tippecanoe/tree/1.36.0) to http://github.com/protomaps/tippecanoe
+
 ## 1.36.0
 
 * Update Wagyu to version 0.5.0
