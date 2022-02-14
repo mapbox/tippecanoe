@@ -53,6 +53,7 @@
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geobuf.hpp"
+#include "flatgeobuf.hpp"
 #include "geocsv.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
