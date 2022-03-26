@@ -36,6 +36,18 @@ uint64_t PackedRTreeSize(const uint64_t numItems, const uint16_t nodeSize)
     return numNodes * sizeof(NodeItem);
 }
 
+drawvec readPoints(const FlatGeobuf::Geometry *geometry) {
+	auto xy = geometry->xy();
+	drawvec dv;
+
+	for (unsigned int i = 0; i < xy->size(); i+=2) {
+		long long x, y;
+		projection->project(xy->Get(i), xy->Get(i+1), 32, &x, &y);
+		dv.push_back(draw(VT_MOVETO, x, y));
+	}
+	return dv;
+}
+
 drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 	auto xy = geometry->xy();
 	auto ends = geometry->ends();
@@ -56,10 +68,12 @@ drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 }
 
 drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryType h_geometry_type) {
-	if (h_geometry_type == FlatGeobuf::GeometryType::LineString) {
-
+	if (h_geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
+		return readPoints(geometry);	
+	} if (h_geometry_type == FlatGeobuf::GeometryType::LineString) {
+		return readLinePart(geometry);
 	} else if (h_geometry_type == FlatGeobuf::GeometryType::MultiLineString) {
-		return readLinePart(geometry); // TODO fixme
+		return readLinePart(geometry);
 	} if (h_geometry_type == FlatGeobuf::GeometryType::Polygon) {
 		return readLinePart(geometry);
 	} else if (h_geometry_type == FlatGeobuf::GeometryType::MultiPolygon) { 
@@ -123,7 +137,7 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 		index_size = PackedRTreeSize(features_count,node_size);
 	}
 	const char* start = src + 8 + 4 + header_size + index_size;
-	
+
 	while (start < src + len) {
 		serial_feature sf;
 
