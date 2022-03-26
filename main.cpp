@@ -1403,7 +1403,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 				sst[i].attribute_types = attribute_types;
 			}
 
-			parse_flatgeobuf(&sst, map, st.st_size, layer, sources[layer].layer);
+			parse_flatgeobuf(&sst, map, layer, sources[layer].layer);
 
 			for (size_t i = 0; i < CPUS; i++) {
 				dist_sum += dist_sums[i];
