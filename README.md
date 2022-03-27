@@ -1,7 +1,7 @@
 tippecanoe
 ==========
 
-Builds [vector tilesets](https://github.com/mapbox/vector-tile-spec/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
+Builds [vector tilesets](https://github.com/mapbox/vector-tile-spec/) from large (or small) collections of [GeoJSON](http://geojson.org/), [FlatGeobuf](https://github.com/flatgeobuf/flatgeobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
 [like these](MADE_WITH.md).
 
 This intends to be an actively maintained fork of [tippecanoe](https://github.com/mapbox/tippecanoe) originally developed by [Erica Fischer](https://github.com/e-n-f) at Mapbox. Version 2.0.0 is equivalent to [1.36.0](https://github.com/mapbox/tippecanoe/tree/1.36.0) in the original repository. Thank you Mapbox and Erica for an incredible tool!
@@ -31,13 +31,7 @@ significant travel corridor.
 Installation
 ------------
 
-The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
-
-```sh
-$ brew install tippecanoe
-```
-
-On Ubuntu it will usually be easiest to build from the source repository:
+For this fork you will need to build from the source repository:
 
 ```sh
 $ git clone https://github.com/mapbox/tippecanoe.git
@@ -54,7 +48,7 @@ Usage
 -----
 
 ```sh
-$ tippecanoe -o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
+$ tippecanoe -o file.mbtiles [options] [file.json file.json.gz file.fgb ...]
 ```
 
 If no files are specified, it reads GeoJSON from the standard input.
@@ -305,7 +299,7 @@ If your input is formatted as newline-delimited GeoJSON, use `-P` to make input 
 
  * _name_`.json` or _name_`.geojson`: Read the named GeoJSON input file into a layer called _name_.
  * _name_`.json.gz` or _name_`.geojson.gz`: Read the named gzipped GeoJSON input file into a layer called _name_.
- * _name_`.geobuf`: Read the named Geobuf input file into a layer called _name_.
+ * _name_`.fgb`: Read the named FlatGeobuf input file into a layer called _name_.
  * _name_`.csv`: Read the named CSV input file into a layer called _name_.
  * `-l` _name_ or `--layer=`_name_: Use the specified layer name instead of deriving a name from the input filename or output tileset. If there are multiple input files
    specified, the files are all merged into the single named layer, even if they try to specify individual names with `-L`.
