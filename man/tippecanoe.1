@@ -1,12 +1,15 @@
 .TH tippecanoe
 .PP
-Builds vector tilesets \[la]https://www.mapbox.com/developers/vector-tiles/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], Geobuf \[la]https://github.com/mapbox/geobuf\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
+Builds vector tilesets \[la]https://github.com/mapbox/vector-tile-spec/\[ra] from large (or small) collections of GeoJSON \[la]http://geojson.org/\[ra], FlatGeobuf \[la]https://github.com/flatgeobuf/flatgeobuf\[ra], or CSV \[la]https://en.wikipedia.org/wiki/Comma-separated_values\[ra] features,
 like these \[la]MADE_WITH.md\[ra]\&.
 .PP
-[Mapbox Tippecanoe](\[la]https://user-images.githubusercontent.com/1951835/36568734-ede27ec0-17df-11e8-8c22-ffaaebb8daf4.JPG\[ra])
+This intends to be an actively maintained fork of tippecanoe \[la]https://github.com/mapbox/tippecanoe\[ra] originally developed by Erica Fischer \[la]https://github.com/e-n-f\[ra] at Mapbox. Version 2.0.0 is equivalent to 1.36.0 \[la]https://github.com/mapbox/tippecanoe/tree/1.36.0\[ra] in the original repository. Thank you Mapbox and Erica for an incredible tool!
 .PP
-[Build Status](https://travis\-ci.org/mapbox/tippecanoe.svg) \[la]https://travis-ci.org/mapbox/tippecanoe\[ra]
-[Coverage Status](https://codecov.io/gh/mapbox/tippecanoe/branch/master/graph/badge.svg) \[la]https://codecov.io/gh/mapbox/tippecanoe\[ra]
+Key features of this fork include:
+.RS
+.IP \(bu 2
+Support for FlatGeobuf \[la]https://github.com/flatgeobuf/flatgeobuf\[ra] input which is more compact and 5\-10x faster than GeoJsonSeq input.
+.RE
 .SH Intent
 .PP
 The goal of Tippecanoe is to enable making a scale\-independent view of your data,
@@ -28,19 +31,11 @@ see the shape and relative popularity of every point of interest and every
 significant travel corridor.
 .SH Installation
 .PP
-The easiest way to install tippecanoe on OSX is with Homebrew \[la]http://brew.sh/\[ra]:
+For this fork you will need to build from the source repository:
 .PP
 .RS
 .nf
-$ brew install tippecanoe
-.fi
-.RE
-.PP
-On Ubuntu it will usually be easiest to build from the source repository:
-.PP
-.RS
-.nf
-$ git clone https://github.com/mapbox/tippecanoe.git
+$ git clone https://github.com/protomaps/tippecanoe.git
 $ cd tippecanoe
 $ make \-j
 $ make install
@@ -54,7 +49,7 @@ compiler errors.
 .PP
 .RS
 .nf
-$ tippecanoe \-o file.mbtiles [options] [file.json file.json.gz file.geobuf ...]
+$ tippecanoe \-o file.mbtiles [options] [file.json file.json.gz file.fgb ...]
 .fi
 .RE
 .PP
@@ -71,7 +66,7 @@ If you aren't sure what options to use, try this:
 .PP
 .RS
 .nf
-$ tippecanoe \-o out.mbtiles \-zg \-\-drop\-densest\-as\-needed in.geojson
+$ tippecanoe \-zg \-o out.mbtiles \-\-drop\-densest\-as\-needed in.geojson
 .fi
 .RE
 .PP
@@ -357,7 +352,7 @@ or if metadata fields can't be set. You probably don't want to use this.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.json.gz\fR or \fIname\fP\fB\fC\&.geojson.gz\fR: Read the named gzipped GeoJSON input file into a layer called \fIname\fP\&.
 .IP \(bu 2
-\fIname\fP\fB\fC\&.geobuf\fR: Read the named Geobuf input file into a layer called \fIname\fP\&.
+\fIname\fP\fB\fC\&.fgb\fR: Read the named FlatGeobuf input file into a layer called \fIname\fP\&.
 .IP \(bu 2
 \fIname\fP\fB\fC\&.csv\fR: Read the named CSV input file into a layer called \fIname\fP\&.
 .IP \(bu 2
@@ -366,7 +361,7 @@ specified, the files are all merged into the single named layer, even if they tr
 .IP \(bu 2
 \fB\fC\-L\fR \fIname\fP\fB\fC:\fR\fIfile.json\fP or \fB\fC\-\-named\-layer=\fR\fIname\fP\fB\fC:\fR\fIfile.json\fP: Specify layer names for individual files. If your shell supports it, you can use a subshell redirect like \fB\fC\-L\fR \fIname\fP\fB\fC:<(cat dir/*.json)\fR to specify a layer name for the output of streamed input.
 .IP \(bu 2
-\fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. (If the \fB\fC"file"\fR key is an empty string, it means to read from the standard input stream.) It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata, and/or a \fB\fC"format"\fR field to specify \fB\fCcsv\fR or \fB\fCgeobuf\fR file format if it is not obvious from the \fB\fCname\fR\&. Example:
+\fB\fC\-L{\fR\fIlayer\-json\fP\fB\fC}\fR or \fB\fC\-\-named\-layer={\fR\fIlayer\-json\fP\fB\fC}\fR: Specify an input file and layer options by a JSON object. The JSON object must contain a \fB\fC"file"\fR key to specify the filename to read from. (If the \fB\fC"file"\fR key is an empty string, it means to read from the standard input stream.) It may also contain a \fB\fC"layer"\fR field to specify the name of the layer, and/or a \fB\fC"description"\fR field to specify the layer's description in the tileset metadata, and/or a \fB\fC"format"\fR field to specify \fB\fCcsv\fR or \fB\fCfgb\fR file format if it is not obvious from the \fB\fCname\fR\&. Example:
 .RE
 .PP
 .RS
@@ -391,7 +386,7 @@ If the input file begins with the RFC 8142 \[la]https://tools.ietf.org/html/rfc8
 parallel processing of input will be invoked automatically, splitting at record separators rather
 than at all newlines.
 .PP
-Parallel processing will also be automatic if the input file is in Geobuf format.
+Parallel processing will also be automatic if the input file is in FlatGeobuf format.
 .SS Projection of input
 .RS
 .IP \(bu 2
@@ -415,45 +410,60 @@ the single specified tile at that zoom level.
 .RE
 .PP
 If you know the precision to which you want your data to be represented,
-this table shows the approximate precision corresponding to various
+or the map scale of a corresponding printed map,
+this table shows the approximate precision and scale corresponding to various
 \fB\fC\-z\fR options if you use the default \fB\fC\-d\fR detail of 12:
 .TS
 allbox;
-cb cb cb
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
-l l l
+cb cb cb cb
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
+l l l l
 .
-zoom level	precision (ft)	precision (m)
-\fB\fC\-z0\fR	32000 ft	10000 m
-\fB\fC\-z1\fR	16000 ft	5000 m
-\fB\fC\-z2\fR	8000 ft	2500 m
-\fB\fC\-z3\fR	4000 ft	1250 m
-\fB\fC\-z4\fR	2000 ft	600 m
-\fB\fC\-z5\fR	1000 ft	300 m
-\fB\fC\-z6\fR	500 ft	150 m
-\fB\fC\-z7\fR	250 ft	80 m
-\fB\fC\-z8\fR	125 ft	40 m
-\fB\fC\-z9\fR	64 ft	20 m
-\fB\fC\-z10\fR	32 ft	10 m
-\fB\fC\-z11\fR	16 ft	5 m
-\fB\fC\-z12\fR	8 ft	2 m
-\fB\fC\-z13\fR	4 ft	1 m
-\fB\fC\-z14\fR	2 ft	0.5 m
-\fB\fC\-z15\fR	1 ft	0.25 m
+zoom level	precision (ft)	precision (m)	map scale
+\fB\fC\-z0\fR	32000 ft	10000 m	1:320,000,000
+\fB\fC\-z1\fR	16000 ft	5000 m	1:160,000,000
+\fB\fC\-z2\fR	8000 ft	2500 m	1:80,000,000
+\fB\fC\-z3\fR	4000 ft	1250 m	1:40,000,000
+\fB\fC\-z4\fR	2000 ft	600 m	1:20,000,000
+\fB\fC\-z5\fR	1000 ft	300 m	1:10,000,000
+\fB\fC\-z6\fR	500 ft	150 m	1:5,000,000
+\fB\fC\-z7\fR	250 ft	80 m	1:2,500,000
+\fB\fC\-z8\fR	125 ft	40 m	1:1,250,000
+\fB\fC\-z9\fR	64 ft	20 m	1:640,000
+\fB\fC\-z10\fR	32 ft	10 m	1:320,000
+\fB\fC\-z11\fR	16 ft	5 m	1:160,000
+\fB\fC\-z12\fR	8 ft	2 m	1:80,000
+\fB\fC\-z13\fR	4 ft	1 m	1:40,000
+\fB\fC\-z14\fR	2 ft	0.5 m	1:20,000
+\fB\fC\-z15\fR	1 ft	0.25 m	1:10,000
+\fB\fC\-z16\fR	6 in	15 cm	1:5000
+\fB\fC\-z17\fR	3 in	8 cm	1:2500
+\fB\fC\-z18\fR	1.5 in	4 cm	1:1250
+\fB\fC\-z19\fR	0.8 in	2 cm	1:600
+\fB\fC\-z20\fR	0.4 in	1 cm	1:300
+\fB\fC\-z21\fR	0.2 in	0.5 cm	1:150
+\fB\fC\-z22\fR	0.1 in	0.25 cm	1:75
 .TE
 .SS Tile resolution
 .RS
@@ -571,7 +581,7 @@ compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most 
 .IP \(bu 2
 \fB\fC\-pd\fR or \fB\fC\-\-force\-feature\-limit\fR: Dynamically drop some fraction of features from large tiles to keep them under the 500K size limit. It will probably look ugly at the tile boundaries. (This is like \fB\fC\-ad\fR but applies to each tile individually, not to the entire zoom level.) You probably don't want to use this.
 .IP \(bu 2
-\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"cluster": true\fR attribute to indicate that it represents a cluster, a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it, and a \fB\fC"sqrt_point_count"\fR attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
+\fB\fC\-aC\fR or \fB\fC\-\-cluster\-densest\-as\-needed\fR: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group.  The remaining feature will be given a \fB\fC"clustered": true\fR attribute to indicate that it represents a cluster, a \fB\fC"point_count"\fR attribute to indicate the number of features that were clustered into it, and a \fB\fC"sqrt_point_count"\fR attribute to indicate the relative width of a feature to represent the cluster. If the features being clustered are points, the representative feature will be located at the average of the original points' locations; otherwise, one of the original features will be left as the representative.
 .RE
 .SS Dropping tightly overlapping features
 .RS
@@ -589,6 +599,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-ps\fR or \fB\fC\-\-no\-line\-simplification\fR: Don't simplify lines and polygons
 .IP \(bu 2
 \fB\fC\-pS\fR or \fB\fC\-\-simplify\-only\-low\-zooms\fR: Don't simplify lines and polygons at maxzoom (but do simplify at lower zooms)
+.IP \(bu 2
+\fB\fC\-pn\fR or \fB\fC\-\-no\-simplification\-of\-shared\-nodes\fR: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use \fB\fC\-\-coalesce\fR or \fB\fC\-\-detect\-shared\-borders\fR\&.)
 .IP \(bu 2
 \fB\fC\-pt\fR or \fB\fC\-\-no\-tiny\-polygon\-reduction\fR: Don't combine the area of very small polygons into small squares that represent their combined area.
 .RE
@@ -650,7 +662,7 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pk\fR or \fB\fC\-\-no\-tile\-size\-limit\fR: Don't limit tiles to 500K bytes
 .IP \(bu 2
-\fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data.
+\fB\fC\-pC\fR or \fB\fC\-\-no\-tile\-compression\fR: Don't compress the PBF vector tile data. If you are getting "Unimplemented type 3" error messages from a renderer, it is probably because it expects uncompressed tiles using this option rather than the normal gzip\-compressed tiles.
 .IP \(bu 2
 \fB\fC\-pg\fR or \fB\fC\-\-no\-tile\-stats\fR: Don't generate the \fB\fCtilestats\fR row in the tileset metadata. Uploads without tilestats \[la]https://github.com/mapbox/mapbox-geostats\[ra] will take longer to process.
 .IP \(bu 2
@@ -974,7 +986,7 @@ Imagine you have a tileset of census blocks:
 .PP
 .RS
 .nf
-curl \-O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
+curl \-L \-O http://www2.census.gov/geo/tiger/TIGER2010/TABBLOCK/2010/tl_2010_06001_tabblock10.zip
 unzip tl_2010_06001_tabblock10.zip
 ogr2ogr \-f GeoJSON tl_2010_06001_tabblock10.json tl_2010_06001_tabblock10.shp
 \&./tippecanoe \-o tl_2010_06001_tabblock10.mbtiles tl_2010_06001_tabblock10.json
@@ -985,7 +997,7 @@ and a CSV of their populations:
 .PP
 .RS
 .nf
-curl \-O http://www2.census.gov/census_2010/01\-Redistricting_File\-\-PL_94\-171/California/ca2010.pl.zip
+curl \-L \-O http://www2.census.gov/census_2010/01\-Redistricting_File\-\-PL_94\-171/California/ca2010.pl.zip
 unzip \-p ca2010.pl.zip cageo2010.pl |
 awk 'BEGIN {
     print "GEOID10,population"
