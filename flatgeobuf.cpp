@@ -69,7 +69,9 @@ drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 }
 
 drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryType h_geometry_type) {
-	if (h_geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
+	if (h_geometry_type == FlatGeobuf::GeometryType::Point) {
+		return readPoints(geometry);
+	} if (h_geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
 		return readPoints(geometry);	
 	} if (h_geometry_type == FlatGeobuf::GeometryType::LineString) {
 		return readLinePart(geometry);
