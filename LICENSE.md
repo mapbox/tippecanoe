@@ -1,3 +1,4 @@
+Copyright (c) 2022, Protomaps LLC
 Copyright (c) 2014, Mapbox Inc.  
 All rights reserved.
 
