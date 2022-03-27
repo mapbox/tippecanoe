@@ -53,6 +53,7 @@
 #include "main.hpp"
 #include "geojson.hpp"
 #include "geobuf.hpp"
+#include "flatgeobuf.hpp"
 #include "geocsv.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
@@ -1352,6 +1353,76 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			exit(EXIT_FAILURE);
 		}
 		size_t layer = a->second.id;
+
+		// geobuf
+		if (sources[source].format == "fgb" || (sources[source].file.size() > 4 && sources[source].file.substr(sources[source].file.size() - 4) == std::string(".fgb"))) {
+			struct stat st;
+			if (fstat(fd, &st) != 0) {
+				perror("fstat");
+				perror(sources[source].file.c_str());
+				exit(EXIT_FAILURE);
+			}
+
+			char *map = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+			if (map == MAP_FAILED) {
+				fprintf(stderr, "%s: mmap: %s: %s\n", *av, reading.c_str(), strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+
+			std::atomic<long long> layer_seq[CPUS];
+			double dist_sums[CPUS];
+			size_t dist_counts[CPUS];
+			std::vector<struct serialization_state> sst;
+			sst.resize(CPUS);
+
+			for (size_t i = 0; i < CPUS; i++) {
+				layer_seq[i] = overall_offset;
+				dist_sums[i] = 0;
+				dist_counts[i] = 0;
+
+				sst[i].fname = reading.c_str();
+				sst[i].line = 0;
+				sst[i].layer_seq = &layer_seq[i];
+				sst[i].progress_seq = &progress_seq;
+				sst[i].readers = &readers;
+				sst[i].segment = i;
+				sst[i].initial_x = &initial_x[i];
+				sst[i].initial_y = &initial_y[i];
+				sst[i].initialized = &initialized[i];
+				sst[i].dist_sum = &dist_sums[i];
+				sst[i].dist_count = &dist_counts[i];
+				sst[i].want_dist = guess_maxzoom;
+				sst[i].maxzoom = maxzoom;
+				sst[i].filters = prefilter != NULL || postfilter != NULL;
+				sst[i].uses_gamma = uses_gamma;
+				sst[i].layermap = &layermaps[i];
+				sst[i].exclude = exclude;
+				sst[i].include = include;
+				sst[i].exclude_all = exclude_all;
+				sst[i].basezoom = basezoom;
+				sst[i].attribute_types = attribute_types;
+			}
+
+			parse_flatgeobuf(&sst, map, st.st_size, layer, sources[layer].layer);
+
+			for (size_t i = 0; i < CPUS; i++) {
+				dist_sum += dist_sums[i];
+				dist_count += dist_counts[i];
+			}
+
+			if (munmap(map, st.st_size) != 0) {
+				perror("munmap source file");
+				exit(EXIT_FAILURE);
+			}
+			if (close(fd) != 0) {
+				perror("close");
+				exit(EXIT_FAILURE);
+			}
+
+			overall_offset = layer_seq[0];
+			checkdisk(&readers);
+			continue;
+		}
 
 		if (sources[source].format == "geobuf" || (sources[source].file.size() > 7 && sources[source].file.substr(sources[source].file.size() - 7) == std::string(".geobuf"))) {
 			struct stat st;
