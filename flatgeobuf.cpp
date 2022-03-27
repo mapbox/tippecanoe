@@ -7,7 +7,7 @@
 #include "milo/dtoa_milo.h"
 #include "main.hpp"
 
-using namespace std;
+static constexpr uint8_t magicbytes[8] = { 0x66, 0x67, 0x62, 0x03, 0x66, 0x67, 0x62, 0x01 };
 
 struct NodeItem {
     double minX;
@@ -58,7 +58,7 @@ drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 	for (unsigned int i = 0; i < xy->size(); i+=2) {
 		long long x, y;
 		projection->project(xy->Get(i), xy->Get(i+1), 32, &x, &y);
-		if (i == 0 || (ends != nullptr && current_end < ends->size() && i == ends->Get(current_end)*2)) {
+		if (i == 0 || (ends != NULL && current_end < ends->size() && i == ends->Get(current_end)*2)) {
 			dv.push_back(draw(VT_MOVETO, x, y));
 			if (i > 0) current_end++;
 		} else {
@@ -94,7 +94,7 @@ drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryT
 	}
 }
 
-void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const vector<string> &h_column_names, const vector<FlatGeobuf::ColumnType> &h_column_types, struct serialization_state *sst, int layer, std::string layername) {
+void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, struct serialization_state *sst, int layer, std::string layername) {
 	drawvec dv = readGeometry(feature->geometry(), h_geometry_type);
 
 	int drawvec_type = -1;
@@ -132,8 +132,8 @@ void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_
 	sf.geometry = dv;
 	sf.t = drawvec_type;
 
-	vector<string> full_keys;
-	vector<serial_val> full_values;
+	std::vector<std::string> full_keys;
+	std::vector<serial_val> full_values;
 
 	// assume tabular schema with columns in header
 	size_t p_pos = 0;
@@ -147,28 +147,28 @@ void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_
 		if (col_type == FlatGeobuf::ColumnType::Int) {
 			sv.type = mvt_double; // this is quirky
 			int32_t int_val;
-			memcpy(&int_val, feature->properties()->data() + p_pos + 2, sizeof(int_val));
-			sv.s = to_string(int_val);
-			p_pos += 2 + sizeof(int_val);
+			memcpy(&int_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(int_val));
+			sv.s = std::to_string(int_val);
+			p_pos += sizeof(uint16_t) + sizeof(int_val);
 		} else if (col_type == FlatGeobuf::ColumnType::Long) {
 			sv.type = mvt_double; // this is quirky
 			uint64_t long_val;
-			memcpy(&long_val, feature->properties()->data() + p_pos + 2, sizeof(long_val));
-			sv.s = to_string(long_val);
-			p_pos += 2 + sizeof(long_val);
+			memcpy(&long_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(long_val));
+			sv.s = std::to_string(long_val);
+			p_pos += sizeof(uint16_t) + sizeof(long_val);
 		} else if (col_type == FlatGeobuf::ColumnType::Double) {
 			sv.type = mvt_double;
 			double double_val;
-			memcpy(&double_val, feature->properties()->data() + p_pos + 2, sizeof(double_val));
+			memcpy(&double_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(double_val));
 			sv.s = milo::dtoa_milo(double_val);
-			p_pos += 2 + sizeof(double_val);
+			p_pos += sizeof(uint16_t) + sizeof(double_val);
 		} else if (col_type == FlatGeobuf::ColumnType::String) {
 			sv.type = mvt_string;
 			uint32_t str_len;
-			memcpy(&str_len, feature->properties()->data() + p_pos + 2, sizeof(str_len));
-			string s{reinterpret_cast<const char*>(feature->properties()->data() + p_pos + 2 + 4), str_len};
+			memcpy(&str_len, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(str_len));
+			std::string s{reinterpret_cast<const char*>(feature->properties()->data() + p_pos + sizeof(uint16_t) + sizeof(uint32_t)), str_len};
 			sv.s = s;
-			p_pos += 2 + 4 + str_len;
+			p_pos += sizeof(uint16_t) + sizeof(uint32_t) + str_len;
 		} else {
 			fprintf(stderr, "flatgeobuf has unsupported column type %u\n", (unsigned int)col_type);
 			exit(EXIT_FAILURE);
@@ -186,9 +186,9 @@ void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_
 struct queued_feature {
 	const FlatGeobuf::Feature *feature = NULL;
 	FlatGeobuf::GeometryType h_geometry_type = FlatGeobuf::GeometryType::Unknown;
-	const vector<std::string> *h_column_names = NULL;
-	const vector<FlatGeobuf::ColumnType> *h_column_types = NULL;
-	vector<struct serialization_state> *sst = NULL;
+	const std::vector<std::string> *h_column_names = NULL;
+	const std::vector<FlatGeobuf::ColumnType> *h_column_types = NULL;
+	std::vector<struct serialization_state> *sst = NULL;
 	int layer = 0;
 	std::string layername = "";
 };
@@ -256,7 +256,7 @@ void fgbRunQueue() {
 	feature_queue.clear();
 }
 
-void queueFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const vector<string> &h_column_names, const vector<FlatGeobuf::ColumnType> &h_column_types, std::vector<struct serialization_state> *sst, int layer, string layername) {
+void queueFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	struct queued_feature qf;
 	qf.feature = feature;
 	qf.h_geometry_type = h_geometry_type;
@@ -274,16 +274,27 @@ void queueFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h
 }
 
 void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *src, size_t len, int layer, std::string layername) {
-	auto header_size = flatbuffers::GetPrefixedSize((const uint8_t *)src + 8);
-	auto header = FlatGeobuf::GetSizePrefixedHeader(src + 8);
+	auto header_size = flatbuffers::GetPrefixedSize((const uint8_t *)src + sizeof(magicbytes));
+
+	flatbuffers::Verifier v((const uint8_t *)src+sizeof(magicbytes),header_size+sizeof(uint32_t));
+	const auto ok = FlatGeobuf::VerifySizePrefixedHeaderBuffer(v);
+	if (!ok) {
+		fprintf(stderr, "flatgeobuf header header verification failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	auto header = FlatGeobuf::GetSizePrefixedHeader(src + sizeof(magicbytes));
 	auto features_count = header->features_count();
 	auto node_size = header->index_node_size();
 
-	vector<string> h_column_names;
-	vector<FlatGeobuf::ColumnType> h_column_types;
-	for (size_t i = 0; i < header->columns()->size(); i++) {
-		h_column_names.push_back(header->columns()->Get(i)->name()->c_str());
-		h_column_types.push_back(header->columns()->Get(i)->type());
+	std::vector<std::string> h_column_names;
+	std::vector<FlatGeobuf::ColumnType> h_column_types;
+
+	if (header->columns() != NULL) {
+		for (size_t i = 0; i < header->columns()->size(); i++) {
+			h_column_names.push_back(header->columns()->Get(i)->name()->c_str());
+			h_column_types.push_back(header->columns()->Get(i)->type());
+		}
 	}
 
 	auto h_geometry_type = header->geometry_type();
@@ -292,14 +303,24 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 	if (node_size > 0) {
 		index_size = PackedRTreeSize(features_count,node_size);
 	}
-	const char* start = src + 8 + 4 + header_size + index_size;
+	const char* start = src + sizeof(magicbytes) + sizeof(uint32_t) + header_size + index_size;
 
 	while (start < src + len) {
 		auto feature_size = flatbuffers::GetPrefixedSize((const uint8_t *)start);
+
+		flatbuffers::Verifier v2((const uint8_t *)start,feature_size+sizeof(uint32_t));
+		const auto ok2 = FlatGeobuf::VerifySizePrefixedFeatureBuffer(v2);
+		if (!ok2) {
+			fprintf(stderr, "flatgeobuf feature buffer verification failed\n");
+			exit(EXIT_FAILURE);
+		}
+
 		auto feature = FlatGeobuf::GetSizePrefixedFeature(start);
 
 		queueFeature(feature, h_geometry_type, h_column_names, h_column_types, sst, layer, layername);
 
-		start += 4 + feature_size;
+		start += sizeof(uint32_t) + feature_size;
 	}
+
+	fgbRunQueue();
 }
