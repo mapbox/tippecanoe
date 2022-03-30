@@ -96,7 +96,7 @@ drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryT
 	}
 }
 
-void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, struct serialization_state *sst, int layer, std::string layername) {
+void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_id, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, struct serialization_state *sst, int layer, std::string layername) {
 	drawvec dv = readGeometry(feature->geometry(), h_geometry_type);
 
 	int drawvec_type = -1;
@@ -126,7 +126,12 @@ void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_
 	sf.layer = layer;
 	sf.layername = layername;
 	sf.segment = sst->segment;
-	sf.has_id = false;
+	if (feature_sequence_id >= 0) {
+		sf.has_id = true;
+	} else {
+		sf.has_id = false;
+	}
+	sf.id = feature_sequence_id;
 	sf.has_tippecanoe_minzoom = false;
 	sf.has_tippecanoe_maxzoom = false;
 	sf.feature_minzoom = false;
@@ -187,6 +192,7 @@ void readFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_
 
 struct queued_feature {
 	const FlatGeobuf::Feature *feature = NULL;
+	long long feature_sequence_id = -1;
 	FlatGeobuf::GeometryType h_geometry_type = FlatGeobuf::GeometryType::Unknown;
 	const std::vector<std::string> *h_column_names = NULL;
 	const std::vector<FlatGeobuf::ColumnType> *h_column_types = NULL;
@@ -212,7 +218,7 @@ void *fgb_run_parse_feature(void *v) {
 
 	for (size_t i = qra->start; i < qra->end; i++) {
 		struct queued_feature &qf = feature_queue[i];
-		readFeature(qf.feature, qf.h_geometry_type, *qf.h_column_names, *qf.h_column_types, &(*qf.sst)[qra->segment], qf.layer, qf.layername);
+		readFeature(qf.feature, qf.feature_sequence_id, qf.h_geometry_type, *qf.h_column_names, *qf.h_column_types, &(*qf.sst)[qra->segment], qf.layer, qf.layername);
 	}
 
 	return NULL;
@@ -258,9 +264,10 @@ void fgbRunQueue() {
 	feature_queue.clear();
 }
 
-void queueFeature(const FlatGeobuf::Feature *feature, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
+void queueFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_id, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
 	struct queued_feature qf;
 	qf.feature = feature;
+	qf.feature_sequence_id = feature_sequence_id;
 	qf.h_geometry_type = h_geometry_type;
 	qf.h_column_names = &h_column_names;
 	qf.h_column_types = &h_column_types;
@@ -301,9 +308,12 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 
 	auto h_geometry_type = header->geometry_type();
 
+	long long feature_sequence_id = -1;
 	int index_size = 0;
 	if (node_size > 0) {
+		fprintf(stderr, "detected indexed FlatGeobuf: assigning feature IDs by sequence\n");
 		index_size = PackedRTreeSize(features_count,node_size);
+		feature_sequence_id = 0;
 	}
 	const char* start = src + sizeof(magicbytes) + sizeof(uint32_t) + header_size + index_size;
 
@@ -319,8 +329,9 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 
 		auto feature = FlatGeobuf::GetSizePrefixedFeature(start);
 
-		queueFeature(feature, h_geometry_type, h_column_names, h_column_types, sst, layer, layername);
+		queueFeature(feature, feature_sequence_id, h_geometry_type, h_column_names, h_column_types, sst, layer, layername);
 
+		if (feature_sequence_id >= 0) feature_sequence_id ++;
 		start += sizeof(uint32_t) + feature_size;
 	}
 
