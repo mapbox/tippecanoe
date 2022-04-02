@@ -154,6 +154,9 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 		uint16_t col_idx;
 		memcpy(&col_idx, feature->properties()->data() + p_pos, sizeof(col_idx));
 
+		// https://github.com/protomaps/tippecanoe/issues/7
+		// check if column name is tippecanoe:minzoom, tippecanoe:maxzoom or tippecanoe:layer
+
 		FlatGeobuf::ColumnType col_type = h_column_types[col_idx];
 
 		serial_val sv;
@@ -294,7 +297,7 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 	flatbuffers::Verifier v((const uint8_t *)src+sizeof(magicbytes),header_size+sizeof(uint32_t));
 	const auto ok = FlatGeobuf::VerifySizePrefixedHeaderBuffer(v);
 	if (!ok) {
-		fprintf(stderr, "flatgeobuf header header verification failed\n");
+		fprintf(stderr, "flatgeobuf header verification failed\n");
 		exit(EXIT_FAILURE);
 	}
 
