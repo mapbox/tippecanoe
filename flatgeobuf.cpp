@@ -69,17 +69,20 @@ drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 }
 
 drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryType h_geometry_type) {
-	if (h_geometry_type == FlatGeobuf::GeometryType::Point) {
+	FlatGeobuf::GeometryType geometry_type = h_geometry_type;
+	if (h_geometry_type == FlatGeobuf::GeometryType::Unknown) geometry_type = geometry->type();
+
+	if (geometry_type == FlatGeobuf::GeometryType::Point) {
 		return readPoints(geometry);
-	} if (h_geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
+	} if (geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
 		return readPoints(geometry);	
-	} if (h_geometry_type == FlatGeobuf::GeometryType::LineString) {
+	} if (geometry_type == FlatGeobuf::GeometryType::LineString) {
 		return readLinePart(geometry);
 	} else if (h_geometry_type == FlatGeobuf::GeometryType::MultiLineString) {
 		return readLinePart(geometry);
-	} if (h_geometry_type == FlatGeobuf::GeometryType::Polygon) {
+	} if (geometry_type == FlatGeobuf::GeometryType::Polygon) {
 		return readLinePart(geometry);
-	} else if (h_geometry_type == FlatGeobuf::GeometryType::MultiPolygon) { 
+	} else if (geometry_type == FlatGeobuf::GeometryType::MultiPolygon) {
 	// if it is a GeometryCollection, parse Parts, ignore XY
 		drawvec dv;
 		for (size_t part = 0; part < geometry->parts()->size(); part++) {
@@ -101,7 +104,10 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 
 	int drawvec_type = -1;
 
-	switch (h_geometry_type) {
+	FlatGeobuf::GeometryType geometry_type = h_geometry_type;
+	if (h_geometry_type == FlatGeobuf::GeometryType::Unknown) geometry_type = feature->geometry()->type();
+
+	switch (geometry_type) {
 		case FlatGeobuf::GeometryType::Point :
 		case FlatGeobuf::GeometryType::MultiPoint :
 			drawvec_type = 1;
