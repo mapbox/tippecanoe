@@ -248,7 +248,7 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 	serialize_feature(sst, sf);
 }
 
-struct queued_feature {
+struct fgb_queued_feature {
 	const FlatGeobuf::Feature *feature = NULL;
 	long long feature_sequence_id = -1;
 	FlatGeobuf::GeometryType h_geometry_type = FlatGeobuf::GeometryType::Unknown;
@@ -259,7 +259,7 @@ struct queued_feature {
 	std::string layername = "";
 };
 
-static std::vector<queued_feature> feature_queue;
+static std::vector<fgb_queued_feature> feature_queue;
 
 struct queue_run_arg {
 	size_t start;
@@ -275,7 +275,7 @@ void *fgb_run_parse_feature(void *v) {
 	struct queue_run_arg *qra = (struct queue_run_arg *) v;
 
 	for (size_t i = qra->start; i < qra->end; i++) {
-		struct queued_feature &qf = feature_queue[i];
+		struct fgb_queued_feature &qf = feature_queue[i];
 		readFeature(qf.feature, qf.feature_sequence_id, qf.h_geometry_type, *qf.h_column_names, *qf.h_column_types, &(*qf.sst)[qra->segment], qf.layer, qf.layername);
 	}
 
@@ -323,7 +323,7 @@ void fgbRunQueue() {
 }
 
 void queueFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_id, FlatGeobuf::GeometryType h_geometry_type, const std::vector<std::string> &h_column_names, const std::vector<FlatGeobuf::ColumnType> &h_column_types, std::vector<struct serialization_state> *sst, int layer, std::string layername) {
-	struct queued_feature qf;
+	struct fgb_queued_feature qf;
 	qf.feature = feature;
 	qf.feature_sequence_id = feature_sequence_id;
 	qf.h_geometry_type = h_geometry_type;
