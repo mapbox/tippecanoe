@@ -1330,6 +1330,9 @@ serial_feature next_feature(FILE *geoms, std::atomic<long long> *geompos_in, cha
 			if (!quiet && !quiet_progress && progress_time()) {
 				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
 			}
+			if (logger.json_enabled && progress_time()) {
+				logger.progress_tile(progress);
+			}
 			*oprogress = progress;
 		}
 
@@ -2324,6 +2327,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		if (progress >= oprogress + 0.1) {
 			if (!quiet && !quiet_progress && progress_time()) {
 				fprintf(stderr, "  %3.1f%%  %d/%u/%u  \r", progress, z, tx, ty);
+			}
+			if (logger.json_enabled && progress_time()) {
+				logger.progress_tile(progress);
 			}
 			oprogress = progress;
 		}

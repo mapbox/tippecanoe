@@ -69,6 +69,7 @@ static int min_detail = 7;
 
 int quiet = 0;
 int quiet_progress = 0;
+json_logger logger;
 double progress_interval = 0;
 std::atomic<double> last_progress(0);
 int geometry_scale = 0;
@@ -2690,6 +2691,7 @@ int main(int argc, char **argv) {
 		{"quiet", no_argument, 0, 'q'},
 		{"no-progress-indicator", no_argument, 0, 'Q'},
 		{"progress-interval", required_argument, 0, 'U'},
+		{"json-progress", no_argument, 0, 'u'},
 		{"version", no_argument, 0, 'v'},
 
 		{"", 0, 0, 0},
@@ -3001,6 +3003,11 @@ int main(int argc, char **argv) {
 
 		case 'Q':
 			quiet_progress = 1;
+			break;
+
+		case 'u':
+			quiet = 1;
+			logger.json_enabled = true;
 			break;
 
 		case 'U':

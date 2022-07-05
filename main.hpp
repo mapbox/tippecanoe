@@ -5,6 +5,8 @@
 #include <atomic>
 #include <string>
 
+#include "json_logger.hpp"
+
 struct index {
 	long long start = 0;
 	long long end = 0;
@@ -38,6 +40,7 @@ void checkdisk(std::vector<struct reader> *r);
 extern int geometry_scale;
 extern int quiet;
 extern int quiet_progress;
+extern json_logger logger;
 extern double progress_interval;
 extern std::atomic<double> last_progress;
 
