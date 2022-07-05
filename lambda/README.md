@@ -8,3 +8,23 @@
 2. Create a ZIP archive with the `tippecanoe` binary at `bin/tippecanoe` and upload as a Lambda layer
 3. Copy [lambda_function.py](lambda_function.py) (python 3.9 runtime)
 4. set the environment variable `OUTPUT_BUCKET` to your output bucket; give lambda IAM role access to input/output buckets
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowGet",
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::tippecanoe-lambda-input/*"
+        },
+        {
+            "Sid": "AllowPut",
+            "Effect": "Allow",
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::tippecanoe-lambda-output/*"
+        }
+    ]
+}
+```
