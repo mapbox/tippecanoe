@@ -3,9 +3,10 @@ import json
 import subprocess
 import sys
 import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
+
 # if the input bucket is publicly readable
-# from botocore import UNSIGNED
-# from botocore.config import Config
 #s3 = boto3.client('s3',config=Config(signature_version=UNSIGNED))
 
 def lambda_handler(event, context):
@@ -36,7 +37,7 @@ def run_tippecanoe(executable, tmpdir, bucket_name, input_key):
     for line in p.stderr:
         try:
             j = json.loads(line)
-            s3.put_object(Body=json.dumps(j),Bucket=os.environ['OUTPUT_BUCKET'],Key=root + ".progress")
+            s3.put_object(Body=json.dumps(j),Bucket=os.environ['OUTPUT_BUCKET'],Key=root + ".progress",ACL="public-read",ContentType="application/json",ContentDisposition="inline")
         except json.decoder.JSONDecodeError:
             pass
     s3.upload_file(output_path,os.environ['OUTPUT_BUCKET'],root + ".mbtiles")
