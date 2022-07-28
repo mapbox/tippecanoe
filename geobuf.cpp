@@ -190,7 +190,7 @@ drawvec readMultiPolygon(std::vector<long long> &coords, std::vector<int> &lengt
 			}
 		}
 
-		dv.push_back(draw(VT_CLOSEPATH, 0, 0));  // mark that the next ring is outer
+		dv.push_back(draw(VT_CLOSEPATH, 0, 0));	 // mark that the next ring is outer
 	}
 
 	return dv;

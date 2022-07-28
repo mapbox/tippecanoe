@@ -14,20 +14,30 @@
 #include "milo/dtoa_milo.h"
 
 const char *geometry_names[GEOM_TYPES] = {
-	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
+	"Point",
+	"MultiPoint",
+	"LineString",
+	"MultiLineString",
+	"Polygon",
+	"MultiPolygon",
 };
 
 int geometry_within[GEOM_TYPES] = {
 	-1,		 /* point */
-	GEOM_POINT,      /* multipoint */
-	GEOM_POINT,      /* linestring */
+	GEOM_POINT,	 /* multipoint */
+	GEOM_POINT,	 /* linestring */
 	GEOM_LINESTRING, /* multilinestring */
 	GEOM_LINESTRING, /* polygon */
-	GEOM_POLYGON,    /* multipolygon */
+	GEOM_POLYGON,	 /* multipolygon */
 };
 
 int mb_geometry[GEOM_TYPES] = {
-	VT_POINT, VT_POINT, VT_LINE, VT_LINE, VT_POLYGON, VT_POLYGON,
+	VT_POINT,
+	VT_POINT,
+	VT_LINE,
+	VT_LINE,
+	VT_POLYGON,
+	VT_POLYGON,
 };
 
 void json_context(json_object *j) {

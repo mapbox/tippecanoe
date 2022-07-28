@@ -223,7 +223,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	sf.has_tippecanoe_maxzoom = (tippecanoe_maxzoom != -1);
 	sf.tippecanoe_maxzoom = tippecanoe_maxzoom;
 	sf.geometry = dv;
-	sf.feature_minzoom = 0;  // Will be filled in during index merging
+	sf.feature_minzoom = 0;	 // Will be filled in during index merging
 	sf.seq = *(sst->layer_seq);
 
 	if (tippecanoe_layername.size() != 0) {

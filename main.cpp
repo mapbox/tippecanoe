@@ -1046,7 +1046,7 @@ void radix(std::vector<struct reader> &readers, int nreaders, FILE *geomfile, FI
 		mem = 8192;
 	}
 
-	long long availfiles = MAX_FILES - 2 * nreaders  // each reader has a geom and an index
+	long long availfiles = MAX_FILES - 2 * nreaders	 // each reader has a geom and an index
 			       - 4			 // pool, meta, mbtiles, mbtiles journal
 			       - 4			 // top-level geom and index output, both FILE and fd
 			       - 3;			 // stdin, stdout, stderr
@@ -3246,7 +3246,7 @@ int main(int argc, char **argv) {
 	if (sources.size() == 0) {
 		struct source src;
 		src.layer = "";
-		src.file = "";  // standard input
+		src.file = "";	// standard input
 		sources.push_back(src);
 	}
 
@@ -3258,7 +3258,9 @@ int main(int argc, char **argv) {
 
 	long long file_bbox[4] = {UINT_MAX, UINT_MAX, 0, 0};
 
-	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles : out_dir, maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline);
+	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles
+							    : out_dir,
+			 maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

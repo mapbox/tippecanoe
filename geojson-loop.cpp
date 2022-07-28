@@ -16,7 +16,12 @@
 // XXX duplicated
 #define GEOM_TYPES 6
 static const char *geometry_names[GEOM_TYPES] = {
-	"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon",
+	"Point",
+	"MultiPoint",
+	"LineString",
+	"MultiLineString",
+	"Polygon",
+	"MultiPolygon",
 };
 
 // XXX duplicated

@@ -464,7 +464,7 @@ void *partial_feature_worker(void *v) {
 		}
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			if (1 /* !reduced */) {  // XXX why did this not simplify if reduced?
+			if (1 /* !reduced */) {	 // XXX why did this not simplify if reduced?
 				if (t == VT_LINE) {
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
@@ -1792,7 +1792,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		pid_t prefilter_pid = 0;
 		FILE *prefilter_fp = NULL;
 		pthread_t prefilter_writer;
-		run_prefilter_args rpa;  // here so it stays in scope until joined
+		run_prefilter_args rpa;	 // here so it stays in scope until joined
 		FILE *prefilter_read_fp = NULL;
 		json_pull *prefilter_jp = NULL;
 
@@ -2345,7 +2345,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					if (!quiet) {
 						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 					continue;
 				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
@@ -2362,7 +2362,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 					continue;
 				} else if (mingap < ULONG_MAX && (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED])) {
 					mingap_fraction = mingap_fraction * max_tile_features / totalsize * 0.90;
@@ -2413,7 +2413,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					} else if (prevent[P_DYNAMIC_DROP]) {
 						arg->still_dropping = true;
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 					continue;
 				} else {
 					fprintf(stderr, "Try using --drop-fraction-as-needed or --drop-densest-as-needed.\n");
@@ -2440,7 +2440,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					if (!quiet) {
 						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 				} else if (additional[A_INCREASE_GAMMA_AS_NEEDED] && gamma < 10) {
 					if (gamma < 1) {
 						gamma = 1;
@@ -2456,7 +2456,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					if (!quiet) {
 						fprintf(stderr, "Going to try gamma of %0.3f to make it fit\n", gamma);
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 				} else if (mingap < ULONG_MAX && (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED])) {
 					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
@@ -2511,7 +2511,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					} else if (prevent[P_DYNAMIC_DROP]) {
 						arg->still_dropping = true;
 					}
-					line_detail++;  // to keep it the same when the loop decrements it
+					line_detail++;	// to keep it the same when the loop decrements it
 				}
 			} else {
 				if (pass == 1) {

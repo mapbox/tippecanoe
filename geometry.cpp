@@ -1100,7 +1100,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 
 			// Now find the intersection point;
 			// use formulas y = y0 + slope * (x - x0), x = x0 + (1 / slope) * (y - y0)
-			if (outcodeOut & TOP) {  // point is above the clip rectangle
+			if (outcodeOut & TOP) {	 // point is above the clip rectangle
 				x = *x0 + (*x1 - *x0) * (ymax - *y0) / (*y1 - *y0);
 				y = ymax;
 			} else if (outcodeOut & BOTTOM) {  // point is below the clip rectangle
@@ -1109,7 +1109,7 @@ static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, dou
 			} else if (outcodeOut & RIGHT) {  // point is to the right of clip rectangle
 				y = *y0 + (*y1 - *y0) * (xmax - *x0) / (*x1 - *x0);
 				x = xmax;
-			} else if (outcodeOut & LEFT) {  // point is to the left of clip rectangle
+			} else if (outcodeOut & LEFT) {	 // point is to the left of clip rectangle
 				y = *y0 + (*y1 - *y0) * (xmin - *x0) / (*x1 - *x0);
 				x = xmin;
 			}
