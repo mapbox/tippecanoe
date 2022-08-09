@@ -8,6 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/epsg-3857/out/-yNAME_-z5_-sEPSG@3857.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 240 }, { \"dropped_by_rate\": 262 }, { \"dropped_by_rate\": 239 }, { \"dropped_by_rate\": 208 }, { \"dropped_by_rate\": 121 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

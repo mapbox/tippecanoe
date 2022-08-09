@@ -8,6 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/accumulate/out/-z5_-Ethesum@sum_-Etheproduct@product_-Ethemax@max_-Ethemin@min_-Ethemean@mean_-Etheconcat@concat_-Ethecomma@comma.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 83 }, { \"dropped_by_rate\": 89 }, { \"dropped_by_rate\": 69 }, { \"dropped_by_rate\": 39 }, { \"dropped_by_rate\": 11 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

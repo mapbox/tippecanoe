@@ -8,6 +8,7 @@
 "maxzoom": "20",
 "minzoom": "0",
 "name": "tests/highzoom/out/-z30.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 1 }, { \"dropped_by_rate\": 1 }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

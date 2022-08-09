@@ -8,6 +8,7 @@
 "maxzoom": "0",
 "minzoom": "0",
 "name": "tests/loop/out/-z0_-O200_--cluster-densest-as-needed.json.check.mbtiles",
+"strategies": "[ { \"coalesced_as_needed\": 999 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

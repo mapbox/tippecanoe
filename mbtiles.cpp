@@ -267,7 +267,57 @@ void tilestats(std::map<std::string, layermap_entry> const &layermap1, size_t el
 	state.json_end_hash();
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline) {
+std::string stringify_strategies(std::vector<strategy> const &strategies) {
+	std::string out;
+	json_writer state(&out);
+	bool any = false;
+
+	state.json_write_array();
+	for (size_t i = 0; i < strategies.size(); i++) {
+		state.json_write_hash();
+
+		if (strategies[i].dropped_by_rate > 0) {
+			state.json_write_string("dropped_by_rate");
+			state.json_write_number(strategies[i].dropped_by_rate);
+			any = true;
+		}
+
+		if (strategies[i].dropped_by_gamma > 0) {
+			state.json_write_string("dropped_by_gamma");
+			state.json_write_number(strategies[i].dropped_by_gamma);
+			any = true;
+		}
+
+		if (strategies[i].dropped_as_needed > 0) {
+			state.json_write_string("dropped_as_needed");
+			state.json_write_number(strategies[i].dropped_as_needed);
+			any = true;
+		}
+
+		if (strategies[i].coalesced_as_needed > 0) {
+			state.json_write_string("coalesced_as_needed");
+			state.json_write_number(strategies[i].coalesced_as_needed);
+			any = true;
+		}
+
+		if (strategies[i].detail_reduced > 0) {
+			state.json_write_string("detail_reduced");
+			state.json_write_number(strategies[i].detail_reduced);
+			any = true;
+		}
+
+		state.json_end_hash();
+	}
+	state.json_end_array();
+
+	if (any) {
+		return out;
+	} else {
+		return "";
+	}
+}
+
+void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
@@ -392,6 +442,18 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		}
 	}
 	sqlite3_free(sql);
+
+	std::string strat = stringify_strategies(strategies);
+	if (strat.size() > 0) {
+		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('strategies', %Q);", strat.c_str());
+		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+			fprintf(stderr, "set strategies: %s\n", err);
+			if (!forcetable) {
+				exit(EXIT_FAILURE);
+			}
+		}
+		sqlite3_free(sql);
+	}
 
 	if (vector) {
 		size_t elements = max_tilestats_values;

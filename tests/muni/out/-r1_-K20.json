@@ -8,6 +8,7 @@
 "maxzoom": "14",
 "minzoom": "0",
 "name": "tests/muni/out/-r1_-K20.json.check.mbtiles",
+"strategies": "[ { \"coalesced_as_needed\": 4608 }, { \"coalesced_as_needed\": 4608 }, { \"coalesced_as_needed\": 4608 }, { \"coalesced_as_needed\": 4608 }, { \"coalesced_as_needed\": 4608 }, { \"coalesced_as_needed\": 4607 }, { \"coalesced_as_needed\": 4607 }, { \"coalesced_as_needed\": 4606 }, { \"coalesced_as_needed\": 6005 }, { \"coalesced_as_needed\": 5393 }, { \"coalesced_as_needed\": 5012 }, { \"coalesced_as_needed\": 4727 }, { \"coalesced_as_needed\": 4576 }, { \"coalesced_as_needed\": 4003 }, { \"coalesced_as_needed\": 3002 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

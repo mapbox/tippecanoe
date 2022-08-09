@@ -8,6 +8,7 @@
 "maxzoom": "4",
 "minzoom": "0",
 "name": "tests/ne_110m_populated_places/out/-yNAME_-z4_-C.%tests%filter%remove.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 236 }, { \"dropped_by_rate\": 247 }, { \"dropped_by_rate\": 216 }, { \"dropped_by_rate\": 146 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

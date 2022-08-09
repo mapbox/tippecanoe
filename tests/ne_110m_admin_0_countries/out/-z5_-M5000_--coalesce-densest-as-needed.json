@@ -8,6 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_0_countries/out/-z5_-M5000_--coalesce-densest-as-needed.json.check.mbtiles",
+"strategies": "[ { \"coalesced_as_needed\": 704, \"detail_reduced\": 3 }, { \"coalesced_as_needed\": 211 }, { \"coalesced_as_needed\": 190 }, { \"coalesced_as_needed\": 148 }, { \"coalesced_as_needed\": 58 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

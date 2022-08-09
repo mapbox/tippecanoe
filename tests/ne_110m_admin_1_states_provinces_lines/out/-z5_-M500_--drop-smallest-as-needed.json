@@ -8,6 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
+"strategies": "[ { \"dropped_as_needed\": 92 }, { \"dropped_as_needed\": 97 }, { \"dropped_as_needed\": 115 }, { \"dropped_as_needed\": 113 }, { \"dropped_as_needed\": 106 }, { \"dropped_as_needed\": 102 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

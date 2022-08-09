@@ -531,14 +531,19 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 				}
 			}
 		} else if (sf.t == VT_LINE) {
+			double dist = 0;
 			for (size_t i = 1; i < sf.geometry.size(); i++) {
 				if (sf.geometry[i].op == VT_LINETO) {
 					double xd = sf.geometry[i].x - sf.geometry[i - 1].x;
 					double yd = sf.geometry[i].y - sf.geometry[i - 1].y;
-					extent += sqrt(xd * xd + yd * yd);
+					dist += sqrt(xd * xd + yd * yd);
 				}
 			}
+			// treat lines as having the area of a circle with the line as diameter
+			extent = M_PI * (dist / 2) * (dist / 2);
 		}
+
+		// VT_POINT extent will be calculated in write_tile from the distance between adjacent features.
 	}
 
 	if (extent <= LLONG_MAX) {
@@ -559,7 +564,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
 	bbox_index = encode_index(midx, midy);
 
-	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {
+	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {
 		sf.index = bbox_index;
 	} else {
 		sf.index = 0;

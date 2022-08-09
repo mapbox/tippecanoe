@@ -8,6 +8,7 @@
 "maxzoom": "13",
 "minzoom": "11",
 "name": "tests/muni/out/-Z11_-z13_-Bf2000.json.check.mbtiles",
+"strategies": "[ {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, { \"dropped_by_rate\": 2910 }, {  }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

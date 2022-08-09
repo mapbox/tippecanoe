@@ -8,6 +8,7 @@
 "maxzoom": "7",
 "minzoom": "1",
 "name": "tests/ne_110m_admin_1_states_provinces_lines/out/-lcountries_-P_-Z1_-z7_-b4_-xfeaturecla_-xscalerank_-acrol_-ps.json.check.mbtiles",
+"strategies": "[ {  }, { \"dropped_by_rate\": 109 }, { \"dropped_by_rate\": 125 }, { \"dropped_by_rate\": 140 }, { \"dropped_by_rate\": 125 }, { \"dropped_by_rate\": 123 }, { \"dropped_by_rate\": 98 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

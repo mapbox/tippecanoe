@@ -8,6 +8,7 @@
 "maxzoom": "14",
 "minzoom": "0",
 "name": "tests/ne_110m_populated_places/out/-yNAME.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 242 }, { \"dropped_by_rate\": 268 }, { \"dropped_by_rate\": 255 }, { \"dropped_by_rate\": 248 }, { \"dropped_by_rate\": 207 }, { \"dropped_by_rate\": 139 }, { \"dropped_by_rate\": 78 }, { \"dropped_by_rate\": 33 }, { \"dropped_by_rate\": 13 }, { \"dropped_by_rate\": 5 }, { \"dropped_by_rate\": 4 }, { \"dropped_by_rate\": 2 }, { \"dropped_by_rate\": 1 }, {  }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

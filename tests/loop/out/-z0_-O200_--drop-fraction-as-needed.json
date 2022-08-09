@@ -8,6 +8,7 @@
 "maxzoom": "0",
 "minzoom": "0",
 "name": "tests/loop/out/-z0_-O200_--drop-fraction-as-needed.json.check.mbtiles",
+"strategies": "[ { \"dropped_as_needed\": 811 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

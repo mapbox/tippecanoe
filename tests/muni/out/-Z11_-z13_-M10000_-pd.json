@@ -8,6 +8,7 @@
 "maxzoom": "13",
 "minzoom": "11",
 "name": "tests/muni/out/-Z11_-z13_-M10000_-pd.json.check.mbtiles",
+"strategies": "[ {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, { \"dropped_by_rate\": 7695, \"dropped_as_needed\": 93 }, { \"dropped_by_rate\": 4112, \"dropped_as_needed\": 87 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

@@ -8,6 +8,7 @@
 "maxzoom": "4",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_0_countries/out/-z4_-yname_--drop-polygons.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 172 }, { \"dropped_by_rate\": 203 }, { \"dropped_by_rate\": 188 }, { \"dropped_by_rate\": 153 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

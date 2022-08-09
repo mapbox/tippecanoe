@@ -8,6 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_0_countries/out/-ae_-zg_-M5000_--drop-smallest-as-needed.json.check.mbtiles",
+"strategies": "[ { \"dropped_as_needed\": 173 }, { \"dropped_as_needed\": 197 }, { \"dropped_as_needed\": 183 }, { \"dropped_as_needed\": 156 }, { \"dropped_as_needed\": 62 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

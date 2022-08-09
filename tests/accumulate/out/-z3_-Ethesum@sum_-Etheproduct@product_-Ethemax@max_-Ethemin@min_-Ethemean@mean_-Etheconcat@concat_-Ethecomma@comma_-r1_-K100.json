@@ -8,6 +8,7 @@
 "maxzoom": "3",
 "minzoom": "0",
 "name": "tests/accumulate/out/-z3_-Ethesum@sum_-Etheproduct@product_-Ethemax@max_-Ethemin@min_-Ethemean@mean_-Etheconcat@concat_-Ethecomma@comma_-r1_-K100.json.check.mbtiles",
+"strategies": "[ { \"coalesced_as_needed\": 78 }, { \"coalesced_as_needed\": 65 }, { \"coalesced_as_needed\": 43 }, { \"coalesced_as_needed\": 17 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

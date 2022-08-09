@@ -8,6 +8,7 @@
 "maxzoom": "3",
 "minzoom": "0",
 "name": "tests/ne_110m_populated_places/out/-zg_-K20_-r1_-yNAME.json.check.mbtiles",
+"strategies": "[ { \"coalesced_as_needed\": 207 }, { \"coalesced_as_needed\": 174 }, { \"coalesced_as_needed\": 108 }, { \"coalesced_as_needed\": 51 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

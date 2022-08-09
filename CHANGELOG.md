@@ -1,3 +1,8 @@
+## 2.3.0
+
+* Drop and coalesce points too as part of smallest-as-needed dropping and coalescing
+* Keep statistics in the tileset metadata of what tile size reduction strategies were used at each zoom level
+
 ## 2.2.0
 
 * Reduce memory consumption when parsing large JSON objects

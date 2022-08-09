@@ -8,6 +8,7 @@
 "maxzoom": "3",
 "minzoom": "0",
 "name": "tests/multilayer/out/-ltogether_-z3.json.check.mbtiles",
+"strategies": "[ { \"dropped_by_rate\": 8 }, { \"dropped_by_rate\": 7 }, { \"dropped_by_rate\": 5 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [
