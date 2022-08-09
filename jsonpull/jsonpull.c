@@ -4,7 +4,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 #include "jsonpull.h"
+#include "../milo/milo.h"
 
 #define BUFFER 10000
 
@@ -101,7 +103,7 @@ static inline int read_wrap(json_pull *j) {
 	return c;
 }
 
-#define SIZE_FOR(i, size) ((size_t)((((i) + 31) & ~31) * size))
+#define SIZE_FOR(i, size) ((size_t)((((i) + 7) & ~7) * size))
 
 static json_object *fabricate_object(json_pull *jp, json_object *parent, json_type type) {
 	json_object *o = malloc(sizeof(struct json_object));
@@ -111,11 +113,17 @@ static json_object *fabricate_object(json_pull *jp, json_object *parent, json_ty
 	}
 	o->type = type;
 	o->parent = parent;
-	o->array = NULL;
-	o->keys = NULL;
-	o->values = NULL;
-	o->length = 0;
 	o->parser = jp;
+
+	if (type == JSON_ARRAY) {
+		o->value.array.array = NULL;
+		o->value.array.length = 0;
+	} else if (type == JSON_HASH) {
+		o->value.object.keys = NULL;
+		o->value.object.values = NULL;
+		o->value.object.length = 0;
+	}
+
 	return o;
 }
 
@@ -126,19 +134,19 @@ static json_object *add_object(json_pull *j, json_type type) {
 	if (c != NULL) {
 		if (c->type == JSON_ARRAY) {
 			if (c->expect == JSON_ITEM) {
-				if (SIZE_FOR(c->length + 1, sizeof(json_object *)) != SIZE_FOR(c->length, sizeof(json_object *))) {
-					if (SIZE_FOR(c->length + 1, sizeof(json_object *)) < SIZE_FOR(c->length, sizeof(json_object *))) {
+				if (SIZE_FOR(c->value.array.length + 1, sizeof(json_object *)) != SIZE_FOR(c->value.array.length, sizeof(json_object *))) {
+					if (SIZE_FOR(c->value.array.length + 1, sizeof(json_object *)) < SIZE_FOR(c->value.array.length, sizeof(json_object *))) {
 						fprintf(stderr, "Array size overflow\n");
 						exit(EXIT_FAILURE);
 					}
-					c->array = realloc(c->array, SIZE_FOR(c->length + 1, sizeof(json_object *)));
-					if (c->array == NULL) {
+					c->value.array.array = realloc(c->value.array.array, SIZE_FOR(c->value.array.length + 1, sizeof(json_object *)));
+					if (c->value.array.array == NULL) {
 						perror("Out of memory");
 						exit(EXIT_FAILURE);
 					}
 				}
 
-				c->array[c->length++] = o;
+				c->value.array.array[c->value.array.length++] = o;
 				c->expect = JSON_COMMA;
 			} else {
 				j->error = "Expected a comma, not a list item";
@@ -147,7 +155,7 @@ static json_object *add_object(json_pull *j, json_type type) {
 			}
 		} else if (c->type == JSON_HASH) {
 			if (c->expect == JSON_VALUE) {
-				c->values[c->length - 1] = o;
+				c->value.object.values[c->value.object.length - 1] = o;
 				c->expect = JSON_COMMA;
 			} else if (c->expect == JSON_KEY) {
 				if (type != JSON_STRING) {
@@ -156,22 +164,22 @@ static json_object *add_object(json_pull *j, json_type type) {
 					return NULL;
 				}
 
-				if (SIZE_FOR(c->length + 1, sizeof(json_object *)) != SIZE_FOR(c->length, sizeof(json_object *))) {
-					if (SIZE_FOR(c->length + 1, sizeof(json_object *)) < SIZE_FOR(c->length, sizeof(json_object *))) {
+				if (SIZE_FOR(c->value.object.length + 1, sizeof(json_object *)) != SIZE_FOR(c->value.object.length, sizeof(json_object *))) {
+					if (SIZE_FOR(c->value.object.length + 1, sizeof(json_object *)) < SIZE_FOR(c->value.object.length, sizeof(json_object *))) {
 						fprintf(stderr, "Hash size overflow\n");
 						exit(EXIT_FAILURE);
 					}
-					c->keys = realloc(c->keys, SIZE_FOR(c->length + 1, sizeof(json_object *)));
-					c->values = realloc(c->values, SIZE_FOR(c->length + 1, sizeof(json_object *)));
-					if (c->keys == NULL || c->values == NULL) {
+					c->value.object.keys = realloc(c->value.object.keys, SIZE_FOR(c->value.object.length + 1, sizeof(json_object *)));
+					c->value.object.values = realloc(c->value.object.values, SIZE_FOR(c->value.object.length + 1, sizeof(json_object *)));
+					if (c->value.object.keys == NULL || c->value.object.values == NULL) {
 						perror("Out of memory");
 						exit(EXIT_FAILURE);
 					}
 				}
 
-				c->keys[c->length] = o;
-				c->values[c->length] = NULL;
-				c->length++;
+				c->value.object.keys[c->value.object.length] = o;
+				c->value.object.values[c->value.object.length] = NULL;
+				c->value.object.length++;
 				c->expect = JSON_COLON;
 			} else {
 				j->error = "Expected a comma or colon";
@@ -196,10 +204,10 @@ json_object *json_hash_get(json_object *o, const char *s) {
 	}
 
 	size_t i;
-	for (i = 0; i < o->length; i++) {
-		if (o->keys[i] != NULL && o->keys[i]->type == JSON_STRING) {
-			if (strcmp(o->keys[i]->string, s) == 0) {
-				return o->values[i];
+	for (i = 0; i < o->value.object.length; i++) {
+		if (o->value.object.keys[i] != NULL && o->value.object.keys[i]->type == JSON_STRING) {
+			if (strcmp(o->value.object.keys[i]->value.string.string, s) == 0) {
+				return o->value.object.values[i];
 			}
 		}
 	}
@@ -340,7 +348,7 @@ again:
 		}
 
 		if (j->container->expect != JSON_COMMA) {
-			if (!(j->container->expect == JSON_ITEM && j->container->length == 0)) {
+			if (!(j->container->expect == JSON_ITEM && j->container->value.array.length == 0)) {
 				j->error = "Found ] without final element";
 				return NULL;
 			}
@@ -378,7 +386,7 @@ again:
 		}
 
 		if (j->container->expect != JSON_COMMA) {
-			if (!(j->container->expect == JSON_KEY && j->container->length == 0)) {
+			if (!(j->container->expect == JSON_KEY && j->container->value.object.length == 0)) {
 				j->error = "Found } without final element";
 				return NULL;
 			}
@@ -498,6 +506,7 @@ again:
 	if (c == '-' || (c >= '0' && c <= '9')) {
 		struct string val;
 		string_init(&val);
+		int decimal = 0;
 
 		if (c == '-') {
 			string_append(&val, c);
@@ -518,6 +527,7 @@ again:
 
 		if (peek(j) == '.') {
 			string_append(&val, read_wrap(j));
+			decimal = 1;
 
 			c = peek(j);
 			if (c < '0' || c > '9') {
@@ -534,6 +544,7 @@ again:
 		c = peek(j);
 		if (c == 'e' || c == 'E') {
 			string_append(&val, read_wrap(j));
+			decimal = 1;
 
 			c = peek(j);
 			if (c == '+' || c == '-') {
@@ -554,9 +565,31 @@ again:
 
 		json_object *n = add_object(j, JSON_NUMBER);
 		if (n != NULL) {
-			n->number = atof(val.buf);
-			n->string = val.buf;
-			n->length = val.n;
+			n->value.number.number = atof(val.buf);
+			n->value.number.large_signed = 0;
+			n->value.number.large_unsigned = 0;
+
+#define MAX_SAFE_INTEGER 9007199254740991.0
+#define MIN_SAFE_INTEGER -9007199254740991.0
+
+			if (!decimal && n->value.number.number > MAX_SAFE_INTEGER) {
+				errno = 0;
+				char *err = NULL;
+				unsigned long long ull = strtoull(val.buf, &err, 10);
+				if (errno == 0 && (err == NULL || *err == '\0')) {
+					n->value.number.large_unsigned = ull;
+				}
+			}
+			if (!decimal && n->value.number.number < MIN_SAFE_INTEGER) {
+				errno = 0;
+				char *err = NULL;
+				long long ll = strtoll(val.buf, &err, 10);
+				if (errno == 0 && (err == NULL || *err == '\0')) {
+					n->value.number.large_signed = ll;
+				}
+			}
+
+			string_free(&val);
 		} else {
 			string_free(&val);
 		}
@@ -692,8 +725,7 @@ again:
 
 		json_object *s = add_object(j, JSON_STRING);
 		if (s != NULL) {
-			s->string = val.buf;
-			s->length = val.n;
+			s->value.string.string = val.buf;
 		} else {
 			string_free(&val);
 		}
@@ -730,11 +762,11 @@ void json_free(json_object *o) {
 	// Free any data linked from here
 
 	if (o->type == JSON_ARRAY) {
-		json_object **a = o->array;
-		size_t n = o->length;
+		json_object **a = o->value.array.array;
+		size_t n = o->value.array.length;
 
-		o->array = NULL;
-		o->length = 0;
+		o->value.array.array = NULL;
+		o->value.array.length = 0;
 
 		for (i = 0; i < n; i++) {
 			json_free(a[i]);
@@ -742,13 +774,13 @@ void json_free(json_object *o) {
 
 		free(a);
 	} else if (o->type == JSON_HASH) {
-		json_object **k = o->keys;
-		json_object **v = o->values;
-		size_t n = o->length;
+		json_object **k = o->value.object.keys;
+		json_object **v = o->value.object.values;
+		size_t n = o->value.object.length;
 
-		o->keys = NULL;
-		o->values = NULL;
-		o->length = 0;
+		o->value.object.keys = NULL;
+		o->value.object.values = NULL;
+		o->value.object.length = 0;
 
 		for (i = 0; i < n; i++) {
 			json_free(k[i]);
@@ -757,8 +789,10 @@ void json_free(json_object *o) {
 
 		free(k);
 		free(v);
-	} else if (o->type == JSON_STRING || o->type == JSON_NUMBER) {
-		free(o->string);
+	} else if (o->type == JSON_STRING) {
+		free(o->value.string.string);
+	} else if (o->type == JSON_NUMBER) {
+		;
 	}
 
 	json_disconnect(o);
@@ -769,14 +803,14 @@ void json_free(json_object *o) {
 static void json_disconnect_parser(json_object *o) {
 	if (o->type == JSON_HASH) {
 		size_t i;
-		for (i = 0; i < o->length; i++) {
-			json_disconnect_parser(o->keys[i]);
-			json_disconnect_parser(o->values[i]);
+		for (i = 0; i < o->value.object.length; i++) {
+			json_disconnect_parser(o->value.object.keys[i]);
+			json_disconnect_parser(o->value.object.values[i]);
 		}
 	} else if (o->type == JSON_ARRAY) {
 		size_t i;
-		for (i = 0; i < o->length; i++) {
-			json_disconnect_parser(o->array[i]);
+		for (i = 0; i < o->value.array.length; i++) {
+			json_disconnect_parser(o->value.array.array[i]);
 		}
 	}
 
@@ -791,41 +825,41 @@ void json_disconnect(json_object *o) {
 		if (o->parent->type == JSON_ARRAY) {
 			size_t i;
 
-			for (i = 0; i < o->parent->length; i++) {
-				if (o->parent->array[i] == o) {
+			for (i = 0; i < o->parent->value.array.length; i++) {
+				if (o->parent->value.array.array[i] == o) {
 					break;
 				}
 			}
 
-			if (i < o->parent->length) {
-				memmove(o->parent->array + i, o->parent->array + i + 1, o->parent->length - i - 1);
-				o->parent->length--;
+			if (i < o->parent->value.array.length) {
+				memmove(o->parent->value.array.array + i, o->parent->value.array.array + i + 1, o->parent->value.array.length - i - 1);
+				o->parent->value.array.length--;
 			}
 		}
 
 		if (o->parent->type == JSON_HASH) {
 			size_t i;
 
-			for (i = 0; i < o->parent->length; i++) {
-				if (o->parent->keys[i] == o) {
-					o->parent->keys[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
+			for (i = 0; i < o->parent->value.object.length; i++) {
+				if (o->parent->value.object.keys[i] == o) {
+					o->parent->value.object.keys[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
 					break;
 				}
-				if (o->parent->values[i] == o) {
-					o->parent->values[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
+				if (o->parent->value.object.values[i] == o) {
+					o->parent->value.object.values[i] = fabricate_object(o->parser, o->parent, JSON_NULL);
 					break;
 				}
 			}
 
-			if (i < o->parent->length) {
-				if (o->parent->keys[i] != NULL && o->parent->keys[i]->type == JSON_NULL) {
-					if (o->parent->values[i] != NULL && o->parent->values[i]->type == JSON_NULL) {
-						free(o->parent->keys[i]);
-						free(o->parent->values[i]);
+			if (i < o->parent->value.object.length) {
+				if (o->parent->value.object.keys[i] != NULL && o->parent->value.object.keys[i]->type == JSON_NULL) {
+					if (o->parent->value.object.values[i] != NULL && o->parent->value.object.values[i]->type == JSON_NULL) {
+						free(o->parent->value.object.keys[i]);
+						free(o->parent->value.object.values[i]);
 
-						memmove(o->parent->keys + i, o->parent->keys + i + 1, o->parent->length - i - 1);
-						memmove(o->parent->values + i, o->parent->values + i + 1, o->parent->length - i - 1);
-						o->parent->length--;
+						memmove(o->parent->value.object.keys + i, o->parent->value.object.keys + i + 1, o->parent->value.object.length - i - 1);
+						memmove(o->parent->value.object.values + i, o->parent->value.object.values + i + 1, o->parent->value.object.length - i - 1);
+						o->parent->value.object.length--;
 					}
 				}
 			}
@@ -847,7 +881,7 @@ static void json_print_one(struct string *val, json_object *o) {
 		string_append(val, '\"');
 
 		char *cp;
-		for (cp = o->string; *cp != '\0'; cp++) {
+		for (cp = o->value.string.string; *cp != '\0'; cp++) {
 			if (*cp == '\\' || *cp == '"') {
 				string_append(val, '\\');
 				string_append(val, *cp);
@@ -864,7 +898,19 @@ static void json_print_one(struct string *val, json_object *o) {
 
 		string_append(val, '\"');
 	} else if (o->type == JSON_NUMBER) {
-		string_append_string(val, o->string);
+		if (o->value.number.large_signed != 0) {
+			char s[65];
+			sprintf(s, "%lld", o->value.number.large_signed);
+			string_append_string(val, s);
+		} else if (o->value.number.large_unsigned != 0) {
+			char s[65];
+			sprintf(s, "%llu", o->value.number.large_unsigned);
+			string_append_string(val, s);
+		} else {
+			char *s = dtoa_milo(o->value.number.number);
+			string_append_string(val, s);
+			free(s);
+		}
 	} else if (o->type == JSON_NULL) {
 		string_append_string(val, "null");
 	} else if (o->type == JSON_TRUE) {
@@ -886,11 +932,11 @@ static void json_print(struct string *val, json_object *o) {
 		string_append(val, '{');
 
 		size_t i;
-		for (i = 0; i < o->length; i++) {
-			json_print(val, o->keys[i]);
+		for (i = 0; i < o->value.object.length; i++) {
+			json_print(val, o->value.object.keys[i]);
 			string_append(val, ':');
-			json_print(val, o->values[i]);
-			if (i + 1 < o->length) {
+			json_print(val, o->value.object.values[i]);
+			if (i + 1 < o->value.object.length) {
 				string_append(val, ',');
 			}
 		}
@@ -898,9 +944,9 @@ static void json_print(struct string *val, json_object *o) {
 	} else if (o->type == JSON_ARRAY) {
 		string_append(val, '[');
 		size_t i;
-		for (i = 0; i < o->length; i++) {
-			json_print(val, o->array[i]);
-			if (i + 1 < o->length) {
+		for (i = 0; i < o->value.array.length; i++) {
+			json_print(val, o->value.array.array[i]);
+			if (i + 1 < o->value.array.length) {
 				string_append(val, ',');
 			}
 		}

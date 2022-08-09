@@ -26,18 +26,33 @@ typedef enum json_type {
 } json_type;
 
 typedef struct json_object {
-	json_type type;
 	struct json_object *parent;
 	struct json_pull *parser;
 
-	char *string;
-	double number;
+	union {
+		struct {
+			double number;
+			unsigned long long large_unsigned;
+			long long large_signed;
+		} number;
 
-	struct json_object **array;
-	struct json_object **keys;
-	struct json_object **values;
-	size_t length;
+		struct {
+			char *string;
+		} string;
 
+		struct {
+			struct json_object **array;
+			size_t length;
+		} array;
+
+		struct {
+			struct json_object **keys;
+			struct json_object **values;
+			size_t length;
+		} object;
+	} value;
+
+	json_type type;
 	int expect;
 } json_object;
 

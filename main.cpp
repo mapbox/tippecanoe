@@ -1232,10 +1232,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	struct statfs fsstat;
 	if (fstatfs(readers[0].geomfd, &fsstat) != 0) {
-		perror("fstatfs");
-		exit(EXIT_FAILURE);
+		perror("Warning: fstatfs");
+		fprintf(stderr, "Tippecanoe cannot check whether disk space will run out during tiling.\n");
+		diskfree = LLONG_MAX;
+	} else {
+		diskfree = (long long) fsstat.f_bsize * fsstat.f_bavail;
 	}
-	diskfree = (long long) fsstat.f_bsize * fsstat.f_bavail;
 
 	std::atomic<long long> progress_seq(0);
 
@@ -2496,21 +2498,21 @@ void parse_json_source(const char *arg, struct source &src) {
 		exit(EXIT_FAILURE);
 	}
 
-	src.file = std::string(fname->string);
+	src.file = std::string(fname->value.string.string);
 
 	json_object *layer = json_hash_get(o, "layer");
 	if (layer != NULL && layer->type == JSON_STRING) {
-		src.layer = std::string(layer->string);
+		src.layer = std::string(layer->value.string.string);
 	}
 
 	json_object *description = json_hash_get(o, "description");
 	if (description != NULL && description->type == JSON_STRING) {
-		src.description = std::string(description->string);
+		src.description = std::string(description->value.string.string);
 	}
 
 	json_object *format = json_hash_get(o, "format");
 	if (format != NULL && format->type == JSON_STRING) {
-		src.format = std::string(format->string);
+		src.format = std::string(format->value.string.string);
 	}
 
 	json_free(o);

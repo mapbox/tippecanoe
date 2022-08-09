@@ -19,11 +19,11 @@
 ,
 { "type": "Feature", "properties": { "excess": 2.5 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 2147483648 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": 2147483648, "properties": { "excess": 2147483648 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -2147483648 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 2147483647 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": 2147483647, "properties": { "excess": 2147483647 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -2147483647 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
@@ -31,15 +31,15 @@
 ,
 { "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 18446744073709551615 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": 18446744073709551615, "properties": { "excess": 18446744073709551615 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -18446744073709553000 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": 9223372036854775808, "properties": { "excess": 9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -9223372036854775808 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
-{ "type": "Feature", "properties": { "excess": 9223372036854775807 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
+{ "type": "Feature", "id": 9223372036854775807, "properties": { "excess": 9223372036854775807 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ,
 { "type": "Feature", "properties": { "excess": -9223372036854775807 }, "geometry": { "type": "Point", "coordinates": [ 0.000000, 0.000000 ] } }
 ] }

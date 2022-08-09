@@ -12,7 +12,7 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 			return false;  // string vs non-string
 		}
 
-		return strcmp(one.string_value.c_str(), two->string);
+		return strcmp(one.string_value.c_str(), two->value.string.string);
 	}
 
 	if (one.type == mvt_double || one.type == mvt_float || one.type == mvt_int || one.type == mvt_uint || one.type == mvt_sint) {
@@ -37,9 +37,9 @@ int compare(mvt_value one, json_object *two, bool &fail) {
 			exit(EXIT_FAILURE);
 		}
 
-		if (v < two->number) {
+		if (v < two->value.number.number) {
 			return -1;
-		} else if (v > two->number) {
+		} else if (v > two->value.number.number) {
 			return 1;
 		} else {
 			return 0;
@@ -75,56 +75,56 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 		exit(EXIT_FAILURE);
 	}
 
-	if (f->length < 1) {
+	if (f->value.array.length < 1) {
 		fprintf(stderr, "Array too small in filter: %s\n", json_stringify(f));
 		exit(EXIT_FAILURE);
 	}
 
-	if (f->array[0]->type != JSON_STRING) {
+	if (f->value.array.array[0]->type != JSON_STRING) {
 		fprintf(stderr, "Filter operation is not a string: %s\n", json_stringify(f));
 		exit(EXIT_FAILURE);
 	}
 
-	if (strcmp(f->array[0]->string, "has") == 0 ||
-	    strcmp(f->array[0]->string, "!has") == 0) {
-		if (f->length != 2) {
+	if (strcmp(f->value.array.array[0]->value.string.string, "has") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "!has") == 0) {
+		if (f->value.array.length != 2) {
 			fprintf(stderr, "Wrong number of array elements in filter: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		if (strcmp(f->array[0]->string, "has") == 0) {
-			if (f->array[1]->type != JSON_STRING) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "has") == 0) {
+			if (f->value.array.array[1]->type != JSON_STRING) {
 				fprintf(stderr, "\"has\" key is not a string: %s\n", json_stringify(f));
 				exit(EXIT_FAILURE);
 			}
-			return feature.count(std::string(f->array[1]->string)) != 0;
+			return feature.count(std::string(f->value.array.array[1]->value.string.string)) != 0;
 		}
 
-		if (strcmp(f->array[0]->string, "!has") == 0) {
-			if (f->array[1]->type != JSON_STRING) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "!has") == 0) {
+			if (f->value.array.array[1]->type != JSON_STRING) {
 				fprintf(stderr, "\"!has\" key is not a string: %s\n", json_stringify(f));
 				exit(EXIT_FAILURE);
 			}
-			return feature.count(std::string(f->array[1]->string)) == 0;
+			return feature.count(std::string(f->value.array.array[1]->value.string.string)) == 0;
 		}
 	}
 
-	if (strcmp(f->array[0]->string, "==") == 0 ||
-	    strcmp(f->array[0]->string, "!=") == 0 ||
-	    strcmp(f->array[0]->string, ">") == 0 ||
-	    strcmp(f->array[0]->string, ">=") == 0 ||
-	    strcmp(f->array[0]->string, "<") == 0 ||
-	    strcmp(f->array[0]->string, "<=") == 0) {
-		if (f->length != 3) {
+	if (strcmp(f->value.array.array[0]->value.string.string, "==") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "!=") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, ">") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, ">=") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "<") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "<=") == 0) {
+		if (f->value.array.length != 3) {
 			fprintf(stderr, "Wrong number of array elements in filter: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
-		if (f->array[1]->type != JSON_STRING) {
+		if (f->value.array.array[1]->type != JSON_STRING) {
 			fprintf(stderr, "\"!has\" key is not a string: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		auto ff = feature.find(std::string(f->array[1]->string));
+		auto ff = feature.find(std::string(f->value.array.array[1]->value.string.string));
 		if (ff == feature.end()) {
 			static bool warned = false;
 			if (!warned) {
@@ -133,14 +133,14 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 				free((void *) s);
 				warned = true;
 			}
-			if (strcmp(f->array[0]->string, "!=") == 0) {
+			if (strcmp(f->value.array.array[0]->value.string.string, "!=") == 0) {
 				return true;  //  attributes that aren't found are not equal
 			}
 			return false;  // not found: comparison is false
 		}
 
 		bool fail = false;
-		int cmp = compare(ff->second, f->array[2], fail);
+		int cmp = compare(ff->second, f->value.array.array[2], fail);
 
 		if (fail) {
 			static bool warned = false;
@@ -150,28 +150,28 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 				free((void *) s);
 				warned = true;
 			}
-			if (strcmp(f->array[0]->string, "!=") == 0) {
+			if (strcmp(f->value.array.array[0]->value.string.string, "!=") == 0) {
 				return true;  // mismatched types are not equal
 			}
 			return false;
 		}
 
-		if (strcmp(f->array[0]->string, "==") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "==") == 0) {
 			return cmp == 0;
 		}
-		if (strcmp(f->array[0]->string, "!=") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "!=") == 0) {
 			return cmp != 0;
 		}
-		if (strcmp(f->array[0]->string, ">") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, ">") == 0) {
 			return cmp > 0;
 		}
-		if (strcmp(f->array[0]->string, ">=") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, ">=") == 0) {
 			return cmp >= 0;
 		}
-		if (strcmp(f->array[0]->string, "<") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "<") == 0) {
 			return cmp < 0;
 		}
-		if (strcmp(f->array[0]->string, "<=") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "<=") == 0) {
 			return cmp <= 0;
 		}
 
@@ -179,21 +179,21 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 		exit(EXIT_FAILURE);
 	}
 
-	if (strcmp(f->array[0]->string, "all") == 0 ||
-	    strcmp(f->array[0]->string, "any") == 0 ||
-	    strcmp(f->array[0]->string, "none") == 0) {
+	if (strcmp(f->value.array.array[0]->value.string.string, "all") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "any") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "none") == 0) {
 		bool v;
 
-		if (strcmp(f->array[0]->string, "all") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "all") == 0) {
 			v = true;
 		} else {
 			v = false;
 		}
 
-		for (size_t i = 1; i < f->length; i++) {
-			bool out = eval(feature, f->array[i], exclude_attributes);
+		for (size_t i = 1; i < f->value.array.length; i++) {
+			bool out = eval(feature, f->value.array.array[i], exclude_attributes);
 
-			if (strcmp(f->array[0]->string, "all") == 0) {
+			if (strcmp(f->value.array.array[0]->value.string.string, "all") == 0) {
 				v = v && out;
 				if (!v) {
 					break;
@@ -206,26 +206,26 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 			}
 		}
 
-		if (strcmp(f->array[0]->string, "none") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "none") == 0) {
 			return !v;
 		} else {
 			return v;
 		}
 	}
 
-	if (strcmp(f->array[0]->string, "in") == 0 ||
-	    strcmp(f->array[0]->string, "!in") == 0) {
-		if (f->length < 2) {
+	if (strcmp(f->value.array.array[0]->value.string.string, "in") == 0 ||
+	    strcmp(f->value.array.array[0]->value.string.string, "!in") == 0) {
+		if (f->value.array.length < 2) {
 			fprintf(stderr, "Array too small in filter: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		if (f->array[1]->type != JSON_STRING) {
+		if (f->value.array.array[1]->type != JSON_STRING) {
 			fprintf(stderr, "\"!has\" key is not a string: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		auto ff = feature.find(std::string(f->array[1]->string));
+		auto ff = feature.find(std::string(f->value.array.array[1]->value.string.string));
 		if (ff == feature.end()) {
 			static bool warned = false;
 			if (!warned) {
@@ -234,16 +234,16 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 				free((void *) s);
 				warned = true;
 			}
-			if (strcmp(f->array[0]->string, "!in") == 0) {
+			if (strcmp(f->value.array.array[0]->value.string.string, "!in") == 0) {
 				return true;  // attributes that aren't found are not in
 			}
 			return false;  // not found: comparison is false
 		}
 
 		bool found = false;
-		for (size_t i = 2; i < f->length; i++) {
+		for (size_t i = 2; i < f->value.array.length; i++) {
 			bool fail = false;
-			int cmp = compare(ff->second, f->array[i], fail);
+			int cmp = compare(ff->second, f->value.array.array[i], fail);
 
 			if (fail) {
 				static bool warned = false;
@@ -262,27 +262,27 @@ bool eval(std::map<std::string, mvt_value> const &feature, json_object *f, std::
 			}
 		}
 
-		if (strcmp(f->array[0]->string, "in") == 0) {
+		if (strcmp(f->value.array.array[0]->value.string.string, "in") == 0) {
 			return found;
 		} else {
 			return !found;
 		}
 	}
 
-	if (strcmp(f->array[0]->string, "attribute-filter") == 0) {
-		if (f->length != 3) {
+	if (strcmp(f->value.array.array[0]->value.string.string, "attribute-filter") == 0) {
+		if (f->value.array.length != 3) {
 			fprintf(stderr, "Wrong number of array elements in filter: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		if (f->array[1]->type != JSON_STRING) {
+		if (f->value.array.array[1]->type != JSON_STRING) {
 			fprintf(stderr, "\"attribute-filter\" key is not a string: %s\n", json_stringify(f));
 			exit(EXIT_FAILURE);
 		}
 
-		bool ok = eval(feature, f->array[2], exclude_attributes);
+		bool ok = eval(feature, f->value.array.array[2], exclude_attributes);
 		if (!ok) {
-			exclude_attributes.insert(f->array[1]->string);
+			exclude_attributes.insert(f->value.array.array[1]->value.string.string);
 		}
 
 		return true;

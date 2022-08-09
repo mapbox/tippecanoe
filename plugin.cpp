@@ -113,7 +113,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
-		if (strcmp(type->string, "Feature") != 0) {
+		if (strcmp(type->value.string.string, "Feature") != 0) {
 			continue;
 		}
 
@@ -155,12 +155,12 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
-			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+			if (strcmp(geometry_type->value.string.string, geometry_names[t]) == 0) {
 				break;
 			}
 		}
 		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->value.string.string);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -171,7 +171,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (tippecanoe != NULL) {
 			layer = json_hash_get(tippecanoe, "layer");
 			if (layer != NULL && layer->type == JSON_STRING) {
-				layername = std::string(layer->string);
+				layername = std::string(layer->value.string.string);
 			}
 		}
 
@@ -215,8 +215,11 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			feature.geometry = to_feature(dv);
 
 			json_object *id = json_hash_get(j, "id");
-			if (id != NULL) {
-				feature.id = atoll(id->string);
+			if (id != NULL && id->type == JSON_NUMBER) {
+				feature.id = id->value.number.number;
+				if (id->value.number.large_unsigned > 0) {
+					feature.id = id->value.number.large_unsigned;
+				}
 				feature.has_id = true;
 			}
 
@@ -254,24 +257,24 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				fk->second.polygons++;
 			}
 
-			for (size_t i = 0; i < properties->length; i++) {
+			for (size_t i = 0; i < properties->value.object.length; i++) {
 				int tp = -1;
 				std::string s;
 
-				stringify_value(properties->values[i], tp, s, "Filter output", jp->line, j);
+				stringify_value(properties->value.object.values[i], tp, s, "Filter output", jp->line, j);
 
 				// Nulls can be excluded here because this is the postfilter
 				// and it is nearly time to create the vector representation
 
 				if (tp >= 0 && tp != mvt_null) {
 					mvt_value v = stringified_to_mvt_value(tp, s.c_str());
-					l->second.tag(feature, std::string(properties->keys[i]->string), v);
+					l->second.tag(feature, std::string(properties->value.object.keys[i]->value.string.string), v);
 
 					type_and_string attrib;
 					attrib.type = tp;
 					attrib.string = s;
 
-					add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+					add_to_file_keys(fk->second.file_keys, std::string(properties->value.object.keys[i]->value.string.string), attrib);
 				}
 			}
 
@@ -318,7 +321,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		if (type == NULL || type->type != JSON_STRING) {
 			continue;
 		}
-		if (strcmp(type->string, "Feature") != 0) {
+		if (strcmp(type->value.string.string, "Feature") != 0) {
 			continue;
 		}
 
@@ -360,12 +363,12 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 
 		int t;
 		for (t = 0; t < GEOM_TYPES; t++) {
-			if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+			if (strcmp(geometry_type->value.string.string, geometry_names[t]) == 0) {
 				break;
 			}
 		}
 		if (t >= GEOM_TYPES) {
-			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->string);
+			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->value.string.string);
 			json_context(j);
 			exit(EXIT_FAILURE);
 		}
@@ -405,22 +408,22 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			if (tippecanoe != NULL) {
 				json_object *layer = json_hash_get(tippecanoe, "layer");
 				if (layer != NULL && layer->type == JSON_STRING) {
-					layername = std::string(layer->string);
+					layername = std::string(layer->value.string.string);
 				}
 
 				json_object *index = json_hash_get(tippecanoe, "index");
 				if (index != NULL && index->type == JSON_NUMBER) {
-					sf.index = index->number;
+					sf.index = index->value.number.number;
 				}
 
 				json_object *sequence = json_hash_get(tippecanoe, "sequence");
 				if (sequence != NULL && sequence->type == JSON_NUMBER) {
-					sf.seq = sequence->number;
+					sf.seq = sequence->value.number.number;
 				}
 
 				json_object *extent = json_hash_get(tippecanoe, "extent");
 				if (extent != NULL && extent->type == JSON_NUMBER) {
-					sf.extent = extent->number;
+					sf.extent = extent->value.number.number;
 				}
 
 				json_object *dropped = json_hash_get(tippecanoe, "dropped");
@@ -447,8 +450,11 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			}
 
 			json_object *id = json_hash_get(j, "id");
-			if (id != NULL) {
-				sf.id = atoll(id->string);
+			if (id != NULL && id->type == JSON_NUMBER) {
+				sf.id = id->value.number.number;
+				if (id->value.number.large_unsigned > 0) {
+					sf.id = id->value.number.large_unsigned;
+				}
 				sf.has_id = true;
 			}
 
@@ -491,17 +497,17 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				}
 			}
 
-			for (size_t i = 0; i < properties->length; i++) {
+			for (size_t i = 0; i < properties->value.object.length; i++) {
 				serial_val v;
 				v.type = -1;
 
-				stringify_value(properties->values[i], v.type, v.s, "Filter output", jp->line, j);
+				stringify_value(properties->value.object.values[i], v.type, v.s, "Filter output", jp->line, j);
 
 				// Nulls can be excluded here because the expression evaluation filter
 				// would have already run before prefiltering
 
 				if (v.type >= 0 && v.type != mvt_null) {
-					sf.full_keys.push_back(std::string(properties->keys[i]->string));
+					sf.full_keys.push_back(std::string(properties->value.object.keys[i]->value.string.string));
 					sf.full_values.push_back(v);
 
 					type_and_string attrib;
@@ -509,7 +515,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 					attrib.type = v.type;
 
 					if (!postfilter) {
-						add_to_file_keys(fk->second.file_keys, std::string(properties->keys[i]->string), attrib);
+						add_to_file_keys(fk->second.file_keys, std::string(properties->value.object.keys[i]->value.string.string), attrib);
 					}
 				}
 			}

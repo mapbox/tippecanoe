@@ -1,3 +1,8 @@
+## 2.2.0
+
+* Reduce memory consumption when parsing large JSON objects
+* Don't exit with an error if free disk space can't be determined
+
 ## 2.1.0
 
 * Add barebones support for FlatGeobuf input files

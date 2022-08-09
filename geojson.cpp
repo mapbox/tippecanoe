@@ -38,6 +38,7 @@
 #include "read_json.hpp"
 #include "mvt.hpp"
 #include "geojson-loop.hpp"
+#include "milo/dtoa_milo.h"
 
 int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
@@ -67,12 +68,12 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	int t;
 	for (t = 0; t < GEOM_TYPES; t++) {
-		if (strcmp(geometry_type->string, geometry_names[t]) == 0) {
+		if (strcmp(geometry_type->value.string.string, geometry_names[t]) == 0) {
 			break;
 		}
 	}
 	if (t >= GEOM_TYPES) {
-		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->string);
+		fprintf(stderr, "%s:%d: Can't handle geometry type %s\n", sst->fname, sst->line, geometry_type->value.string.string);
 		json_context(feature);
 		return 0;
 	}
@@ -83,18 +84,18 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	if (tippecanoe != NULL) {
 		json_object *min = json_hash_get(tippecanoe, "minzoom");
-		if (min != NULL && (min->type == JSON_STRING || min->type == JSON_NUMBER)) {
-			tippecanoe_minzoom = integer_zoom(sst->fname, min->string);
+		if (min != NULL && (min->type == JSON_NUMBER)) {
+			tippecanoe_minzoom = integer_zoom(sst->fname, milo::dtoa_milo(min->value.number.number));
 		}
 
 		json_object *max = json_hash_get(tippecanoe, "maxzoom");
-		if (max != NULL && (max->type == JSON_STRING || max->type == JSON_NUMBER)) {
-			tippecanoe_maxzoom = integer_zoom(sst->fname, max->string);
+		if (max != NULL && (max->type == JSON_NUMBER)) {
+			tippecanoe_maxzoom = integer_zoom(sst->fname, milo::dtoa_milo(max->value.number.number));
 		}
 
 		json_object *ln = json_hash_get(tippecanoe, "layer");
-		if (ln != NULL && (ln->type == JSON_STRING || ln->type == JSON_NUMBER)) {
-			tippecanoe_layername = std::string(ln->string);
+		if (ln != NULL && (ln->type == JSON_STRING)) {
+			tippecanoe_layername = std::string(ln->value.string.string);
 		}
 	}
 
@@ -102,22 +103,26 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	unsigned long long id_value = 0;
 	if (id != NULL) {
 		if (id->type == JSON_NUMBER) {
-			if (id->number >= 0) {
+			if (id->value.number.number >= 0) {
 				char *err = NULL;
-				id_value = strtoull(id->string, &err, 10);
+				id_value = strtoull(milo::dtoa_milo(id->value.number.number).c_str(), &err, 10);
+
+				if (id->value.number.large_unsigned != 0) {
+					id_value = id->value.number.large_unsigned;
+				}
 
 				if (err != NULL && *err != '\0') {
 					static bool warned_frac = false;
 
 					if (!warned_frac) {
-						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", milo::dtoa_milo(id->value.number.number).c_str());
 						warned_frac = true;
 					}
-				} else if (std::to_string(id_value) != id->string) {
+				} else if (id->value.number.large_unsigned == 0 && std::to_string(id_value) != milo::dtoa_milo(id->value.number.number)) {
 					static bool warned = false;
 
 					if (!warned) {
-						fprintf(stderr, "Warning: Can't represent too-large feature ID %s\n", id->string);
+						fprintf(stderr, "Warning: Can't represent too-large feature ID %s\n", milo::dtoa_milo(id->value.number.number).c_str());
 						warned = true;
 					}
 				} else {
@@ -127,7 +132,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 				static bool warned_neg = false;
 
 				if (!warned_neg) {
-					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", id->string);
+					fprintf(stderr, "Warning: Can't represent negative feature ID %s\n", milo::dtoa_milo(id->value.number.number).c_str());
 					warned_neg = true;
 				}
 			}
@@ -136,20 +141,20 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 			if (additional[A_CONVERT_NUMERIC_IDS] && id->type == JSON_STRING) {
 				char *err = NULL;
-				id_value = strtoull(id->string, &err, 10);
+				id_value = strtoull(id->value.string.string, &err, 10);
 
 				if (err != NULL && *err != '\0') {
 					static bool warned_frac = false;
 
 					if (!warned_frac) {
-						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->string);
+						fprintf(stderr, "Warning: Can't represent non-integer feature ID %s\n", id->value.string.string);
 						warned_frac = true;
 					}
-				} else if (std::to_string(id_value) != id->string) {
+				} else if (std::to_string(id_value) != id->value.string.string) {
 					static bool warned = false;
 
 					if (!warned) {
-						fprintf(stderr, "Warning: Can't represent too-large feature ID %s\n", id->string);
+						fprintf(stderr, "Warning: Can't represent too-large feature ID %s\n", id->value.string.string);
 						warned = true;
 					}
 				} else {
@@ -173,7 +178,7 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 
 	size_t nprop = 0;
 	if (properties != NULL && properties->type == JSON_HASH) {
-		nprop = properties->length;
+		nprop = properties->value.object.length;
 	}
 
 	std::vector<char *> metakey;
@@ -188,20 +193,20 @@ int serialize_geojson_feature(struct serialization_state *sst, json_object *geom
 	size_t m = 0;
 
 	for (size_t i = 0; i < nprop; i++) {
-		if (properties->keys[i]->type == JSON_STRING) {
-			std::string s(properties->keys[i]->string);
+		if (properties->value.object.keys[i]->type == JSON_STRING) {
+			std::string s(properties->value.object.keys[i]->value.string.string);
 
 			int type = -1;
 			std::string val;
-			stringify_value(properties->values[i], type, val, sst->fname, sst->line, feature);
+			stringify_value(properties->value.object.values[i], type, val, sst->fname, sst->line, feature);
 
 			if (type >= 0) {
-				metakey[m] = properties->keys[i]->string;
+				metakey[m] = properties->value.object.keys[i]->value.string.string;
 				metatype[m] = type;
 				metaval[m] = val;
 				m++;
 			} else {
-				metakey[m] = properties->keys[i]->string;
+				metakey[m] = properties->value.object.keys[i]->value.string.string;
 				metatype[m] = mvt_null;
 				metaval[m] = "null";
 				m++;
@@ -252,9 +257,9 @@ void check_crs(json_object *j, const char *reading) {
 		if (properties != NULL) {
 			json_object *name = json_hash_get(properties, "name");
 			if (name != NULL && name->type == JSON_STRING) {
-				if (strcmp(name->string, projection->alias) != 0) {
+				if (strcmp(name->value.string.string, projection->alias) != 0) {
 					if (!quiet) {
-						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->string, projection->alias);
+						fprintf(stderr, "%s: Warning: GeoJSON specified projection \"%s\", not the expected \"%s\".\n", reading, name->value.string.string, projection->alias);
 						fprintf(stderr, "%s: If \"%s\" is not the expected projection, use -s to specify the right one.\n", reading, projection->alias);
 					}
 				}
@@ -272,8 +277,8 @@ struct json_serialize_action : json_feature_action {
 		sst->line = geometry->parser->line;
 		if (geometrycollection) {
 			int ret = 1;
-			for (size_t g = 0; g < geometry->length; g++) {
-				ret &= serialize_geojson_feature(sst, geometry->array[g], properties, id, layer, tippecanoe, feature, layername);
+			for (size_t g = 0; g < geometry->value.array.length; g++) {
+				ret &= serialize_geojson_feature(sst, geometry->value.array.array[g], properties, id, layer, tippecanoe, feature, layername);
 			}
 			return ret;
 		} else {

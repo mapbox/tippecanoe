@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
+#include "milo/dtoa_milo.h"
+#include "milo/milo.h"
 
 /**
  * Returns an empty string if `s` is valid utf8;
@@ -168,4 +171,15 @@ std::string format_commandline(int argc, char **argv) {
 	}
 
 	return out;
+}
+
+// for jsonpull to call from C
+char *dtoa_milo(double val) {
+        std::string s = milo::dtoa_milo(val);
+        char *dup = strdup(s.c_str());
+        if (dup == NULL) {
+                perror("strdup");
+                exit(EXIT_FAILURE);
+        }
+        return dup;
 }

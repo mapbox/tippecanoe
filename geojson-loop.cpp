@@ -72,7 +72,7 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 			int i;
 			int is_geometry = 0;
 			for (i = 0; i < GEOM_TYPES; i++) {
-				if (strcmp(type->string, geometry_names[i]) == 0) {
+				if (strcmp(type->value.string.string, geometry_names[i]) == 0) {
 					is_geometry = 1;
 					break;
 				}
@@ -124,8 +124,8 @@ void parse_json(json_feature_action *jfa, json_pull *jp) {
 			}
 		}
 
-		if (strcmp(type->string, "Feature") != 0) {
-			if (strcmp(type->string, "FeatureCollection") == 0) {
+		if (strcmp(type->value.string.string, "Feature") != 0) {
+			if (strcmp(type->value.string.string, "FeatureCollection") == 0) {
 				jfa->check_crs(j);
 				json_free(j);
 			}
