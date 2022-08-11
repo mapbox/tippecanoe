@@ -2005,15 +2005,44 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	bool fix_dropping = false;
 
 	if (guess_maxzoom) {
-		double sum = 0;
+		double mean = 0;
 		size_t count = 0;
+		double m2 = 0;
 
 		long long progress = -1;
 		long long ip;
 		for (ip = 1; ip < indices; ip++) {
 			if (map[ip].ix != map[ip - 1].ix) {
+#if 0
+				// This #ifdef block provides data to empirically determine the relationship
+				// between a difference in quadkey index and a ground distance in feet:
+				//
+				// $ ./tippecanoe --no-tile-size-limit -zg -f -o foo.mbtiles ne_10m_populated_places.json > /tmp/points
+				// gnuplot> stats "/tmp/points" using (log($2)):(log($3))
+
+				unsigned wx1, wy1, wx2, wy2;
+				decode_quadkey(map[ip - 1].ix, &wx1, &wy1);
+				decode_quadkey(map[ip].ix, &wx2, &wy2);
+
+				double x1, y1, x2, y2;
+				x1 = (wx1 * 360.0 / UINT_MAX - 180.0) / .00000274;
+				y1 = (wy1 * 360.0 / UINT_MAX - 180.0) / .00000274;
+				x2 = (wx2 * 360.0 / UINT_MAX - 180.0) / .00000274;
+				y2 = (wy2 * 360.0 / UINT_MAX - 180.0) / .00000274;
+				double dx = x1 - x2;
+				double dy = y1 - y2;
+				double d = sqrt(dx * dx + dy * dy);
+
+				printf("%llu %llu %0.2f\n", map[ip].ix, map[ip].ix - map[ip - 1].ix, d);
+#endif
+
+				// https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+				double newValue = log(map[ip].ix - map[ip - 1].ix);
 				count++;
-				sum += log(map[ip].ix - map[ip - 1].ix);
+				double delta = newValue - mean;
+				mean += delta / count;
+				double delta2 = newValue - mean;
+				m2 += delta * delta2;
 			}
 
 			long long nprogress = 100 * ip / indices;
@@ -2034,14 +2063,21 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (count > 0) {
-			// Geometric mean is appropriate because distances between features
-			// are typically lognormally distributed
-			double avg = exp(sum / count);
+			double stddev = sqrt(m2 / count);
 
-			// Convert approximately from tile units to feet
+			// Geometric mean is appropriate because distances between features
+			// are typically lognormally distributed. Two standard deviations
+			// below the mean should be enough to distinguish most features.
+			double avg = exp(mean);
+			double nearby = exp(mean - 2 * stddev);
+
+			// Convert approximately from tile units to feet.
+			// See empirical data above for source
 			double dist_ft = sqrt(avg) / 33;
-			// Factor of 8 (3 zooms) beyond minimum required to distinguish features
-			double want = dist_ft / 8;
+			double nearby_ft = sqrt(nearby) / 33;
+
+			// Go one zoom level beyond what is strictly necessary for nearby features.
+			double want = nearby_ft / 2;
 
 			maxzoom = ceil(log(360 / (.00000274 * want)) / log(2) - full_detail);
 			if (maxzoom < 0) {
@@ -2055,7 +2091,12 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 
 			if (!quiet) {
-				fprintf(stderr, "Choosing a maxzoom of -z%d for features about %d feet (%d meters) apart\n", maxzoom, (int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
+				fprintf(stderr,
+					"Choosing a maxzoom of -z%d for features typically %d feet (%d meters) apart, ",
+					maxzoom,
+					(int) ceil(dist_ft), (int) ceil(dist_ft / 3.28084));
+				fprintf(stderr, "and at least %d feet (%d meters) apart\n",
+					(int) ceil(nearby_ft), (int) ceil(nearby_ft / 3.28084));
 			}
 
 			bool changed = false;
@@ -2074,6 +2115,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		}
 
 		if (dist_count != 0) {
+			// no conversion to pseudo-feet here because that already happened within each feature
 			double want2 = exp(dist_sum / dist_count) / 8;
 			int mz = ceil(log(360 / (.00000274 * want2)) / log(2) - full_detail);
 

@@ -480,6 +480,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		if (n > 0) {
 			double avg = exp(sum / n);
 			// Convert approximately from tile units to feet
+			// See comment about empirical data in main.cpp
 			double dist_ft = sqrt(avg) / 33;
 
 			*(sst->dist_sum) += log(dist_ft) * n;
