@@ -399,6 +399,8 @@ Parallel processing will also be automatic if the input file is in FlatGeobuf fo
 .IP \(bu 2
 \fB\fC\-zg\fR or \fB\fC\-\-maximum\-zoom=g\fR: Guess what is probably a reasonable maxzoom based on the spacing of features.
 .IP \(bu 2
+\fB\fC\-\-smallest\-maximum\-zoom\-guess=\fR\fIzoom\fP: Guess what is probably a reasonable maxzoom based on the spacing of features, but using the specified \fIzoom\fP if a lower maxzoom is guessed.
+.IP \(bu 2
 \fB\fC\-Z\fR \fIzoom\fP or \fB\fC\-\-minimum\-zoom=\fR\fIzoom\fP: Minzoom: the lowest zoom level for which tiles are generated (default 0)
 .IP \(bu 2
 \fB\fC\-ae\fR or \fB\fC\-\-extend\-zooms\-if\-still\-dropping\fR: Increase the maxzoom if features are still being dropped at that zoom level.
@@ -477,7 +479,8 @@ zoom level	precision (ft)	precision (m)	map scale
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If \fImaxzoom\fP + \fIdetail\fP > 32, no additional
-resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP\&.
+resolution is obtained than by using a smaller \fImaxzoom\fP or \fIdetail\fP, and the \fIdetail\fP of tiles will
+be reduced to the maximum that can be used with the specified \fImaxzoom\fP\&.
 .SS Filtering feature attributes
 .RS
 .IP \(bu 2

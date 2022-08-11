@@ -1137,7 +1137,7 @@ void choose_first_zoom(long long *file_bbox, std::vector<struct reader> &readers
 	}
 }
 
-int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions, std::string const &commandline) {
+int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzoom, int basezoom, double basezoom_marker_width, sqlite3 *outdb, const char *outdir, std::set<std::string> *exclude, std::set<std::string> *include, int exclude_all, json_object *filter, double droprate, int buffer, const char *tmpdir, double gamma, int read_parallel, int forcetable, const char *attribution, bool uses_gamma, long long *file_bbox, const char *prefilter, const char *postfilter, const char *description, bool guess_maxzoom, std::map<std::string, int> const *attribute_types, const char *pgm, std::map<std::string, attribute_op> const *attribute_accum, std::map<std::string, std::string> const &attribute_descriptions, std::string const &commandline, int minimum_maxzoom) {
 	int ret = EXIT_SUCCESS;
 
 	std::vector<struct reader> readers;
@@ -2025,7 +2025,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
-		if (count == 0 && dist_count == 0) {
+		if (count == 0 && dist_count == 0 && minimum_maxzoom == 0) {
 			fprintf(stderr, "Can't guess maxzoom (-zg) without at least two distinct feature locations\n");
 			if (outdb != NULL) {
 				mbtiles_close(outdb, pgm);
@@ -2095,8 +2095,17 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
+		if (maxzoom < minimum_maxzoom) {
+			if (!quiet) {
+				fprintf(stderr, "Using minimum maxzoom of -z%d\n", minimum_maxzoom);
+			}
+			maxzoom = minimum_maxzoom;
+		}
+
 		if (maxzoom < minzoom) {
-			fprintf(stderr, "Can't use %d for maxzoom because minzoom is %d\n", maxzoom, minzoom);
+			if (!quiet) {
+				fprintf(stderr, "Can't use %d for maxzoom because minzoom is %d\n", maxzoom, minzoom);
+			}
 			maxzoom = minzoom;
 		}
 
@@ -2553,6 +2562,7 @@ int main(int argc, char **argv) {
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
 	bool guess_maxzoom = false;
+	int minimum_maxzoom = 0;
 
 	std::set<std::string> exclude, include;
 	std::map<std::string, int> attribute_types;
@@ -2593,6 +2603,7 @@ int main(int argc, char **argv) {
 		{"Zoom levels", 0, 0, 0},
 		{"maximum-zoom", required_argument, 0, 'z'},
 		{"minimum-zoom", required_argument, 0, 'Z'},
+		{"smallest-maximum-zoom-guess", required_argument, 0, '~'},
 		{"extend-zooms-if-still-dropping", no_argument, &additional[A_EXTEND_ZOOMS], 1},
 		{"one-tile", required_argument, 0, 'R'},
 
@@ -2773,6 +2784,14 @@ int main(int argc, char **argv) {
 				}
 			} else if (strcmp(opt, "use-attribute-for-id") == 0) {
 				attribute_for_id = optarg;
+			} else if (strcmp(opt, "smallest-maximum-zoom-guess") == 0) {
+				maxzoom = MAX_ZOOM;
+				guess_maxzoom = true;
+				minimum_maxzoom = atoi_require(optarg, "Minimum maxzoom");
+				if (minimum_maxzoom > MAX_ZOOM) {
+					fprintf(stderr, "%s: %s: minimum maxzoom can be at most %d\n", argv[0], optarg, MAX_ZOOM);
+					exit(EXIT_FAILURE);
+				}
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_FAILURE);
@@ -3163,6 +3182,31 @@ int main(int argc, char **argv) {
 		full_detail = 12;
 	}
 
+	if (maxzoom > MAX_ZOOM) {
+		maxzoom = MAX_ZOOM;
+		fprintf(stderr, "Highest supported zoom is -z%d\n", maxzoom);
+	}
+
+	// Need two checks: one for geometry representation, the other for
+	// index traversal when guessing base zoom and drop rate
+
+	// This previously dropped the maxzoom rather than the detail when they were in conflict,
+	// which proved to be annoying.
+	if (!guess_maxzoom) {
+		if (maxzoom > 32 - full_detail) {
+			full_detail = 32 - maxzoom;
+			fprintf(stderr, "Highest supported detail with maxzoom %d is %d\n", maxzoom, full_detail);
+		}
+		if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
+			low_detail = 33 - maxzoom;
+			fprintf(stderr, "Highest supported low detail with maxzoom %d is %d\n", maxzoom, low_detail);
+		}
+	}
+	if (minzoom > maxzoom) {
+		fprintf(stderr, "%s: Minimum zoom -Z%d cannot be greater than maxzoom -z%d\n", argv[0], minzoom, maxzoom);
+		exit(EXIT_FAILURE);
+	}
+
 	if (full_detail < min_detail) {
 		min_detail = full_detail;
 		fprintf(stderr, "%s: Reducing minimum detail to match full detail %d\n", argv[0], min_detail);
@@ -3171,28 +3215,6 @@ int main(int argc, char **argv) {
 	if (low_detail < min_detail) {
 		min_detail = low_detail;
 		fprintf(stderr, "%s: Reducing minimum detail to match low detail %d\n", argv[0], min_detail);
-	}
-
-	// Need two checks: one for geometry representation, the other for
-	// index traversal when guessing base zoom and drop rate
-	if (!guess_maxzoom) {
-		if (maxzoom > 32 - full_detail) {
-			maxzoom = 32 - full_detail;
-			fprintf(stderr, "Highest supported zoom with detail %d is %d\n", full_detail, maxzoom);
-		}
-		if (maxzoom > 33 - low_detail) {  // that is, maxzoom - 1 > 32 - low_detail
-			maxzoom = 33 - low_detail;
-			fprintf(stderr, "Highest supported zoom with low detail %d is %d\n", low_detail, maxzoom);
-		}
-	}
-	if (maxzoom > MAX_ZOOM) {
-		maxzoom = MAX_ZOOM;
-		fprintf(stderr, "Highest supported zoom is %d\n", maxzoom);
-	}
-
-	if (minzoom > maxzoom) {
-		fprintf(stderr, "%s: Minimum zoom -Z%d cannot be greater than maxzoom -z%d\n", argv[0], minzoom, maxzoom);
-		exit(EXIT_FAILURE);
 	}
 
 	if (basezoom == -1) {
@@ -3205,6 +3227,7 @@ int main(int argc, char **argv) {
 	if (geometry_scale < 0) {
 		geometry_scale = 0;
 		if (!guess_maxzoom) {
+			// This shouldn't be able to happen any more. Can it still?
 			fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
 		}
 	}
@@ -3263,7 +3286,7 @@ int main(int argc, char **argv) {
 
 	ret = read_input(sources, name ? name : out_mbtiles ? out_mbtiles
 							    : out_dir,
-			 maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline);
+			 maxzoom, minzoom, basezoom, basezoom_marker_width, outdb, out_dir, &exclude, &include, exclude_all, filter, droprate, buffer, tmpdir, gamma, read_parallel, forcetable, attribution, gamma != 0, file_bbox, prefilter, postfilter, description, guess_maxzoom, &attribute_types, argv[0], &attribute_accum, attribute_descriptions, commandline, minimum_maxzoom);
 
 	if (outdb != NULL) {
 		mbtiles_close(outdb, argv[0]);

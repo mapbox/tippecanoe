@@ -1,3 +1,7 @@
+## 2.3.2
+
+* Add --smallest-maximum-zoom-guess to guess maxzoom starting at some minimum
+
 ## 2.3.1
 
 * Track the desired tile size (the maximum size if no features were dropped) in each zoom level too.

@@ -339,6 +339,7 @@ Parallel processing will also be automatic if the input file is in FlatGeobuf fo
 
  * `-z` _zoom_ or `--maximum-zoom=`_zoom_: Maxzoom: the highest zoom level for which tiles are generated (default 14)
  * `-zg` or `--maximum-zoom=g`: Guess what is probably a reasonable maxzoom based on the spacing of features.
+ * `--smallest-maximum-zoom-guess=`_zoom_: Guess what is probably a reasonable maxzoom based on the spacing of features, but using the specified _zoom_ if a lower maxzoom is guessed.
  * `-Z` _zoom_ or `--minimum-zoom=`_zoom_: Minzoom: the lowest zoom level for which tiles are generated (default 0)
  * `-ae` or `--extend-zooms-if-still-dropping`: Increase the maxzoom if features are still being dropped at that zoom level.
    The detail and simplification options that ordinarily apply only to the maximum zoom level will apply both to the originally
@@ -385,7 +386,8 @@ zoom level | precision (ft) | precision (m) | map scale
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
-resolution is obtained than by using a smaller _maxzoom_ or _detail_.
+resolution is obtained than by using a smaller _maxzoom_ or _detail_, and the _detail_ of tiles will
+be reduced to the maximum that can be used with the specified _maxzoom_.
 
 ### Filtering feature attributes
 
