@@ -8,7 +8,7 @@
 "maxzoom": "1",
 "minzoom": "0",
 "name": "tests/ne_110m_populated_places/out/-z1_-M10000_--drop-smallest-as-needed.json.check.mbtiles",
-"strategies": "[ { \"dropped_by_rate\": 145, \"dropped_as_needed\": 72 }, { \"dropped_as_needed\": 206 } ]",
+"strategies": "[ { \"dropped_by_rate\": 145, \"dropped_as_needed\": 72, \"tile_size_desired\": 34120 }, { \"dropped_as_needed\": 206, \"tile_size_desired\": 46042 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

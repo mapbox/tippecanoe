@@ -8,7 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
-"strategies": "[ { \"dropped_as_needed\": 92 }, { \"dropped_as_needed\": 97 }, { \"dropped_as_needed\": 115 }, { \"dropped_as_needed\": 113 }, { \"dropped_as_needed\": 106 }, { \"dropped_as_needed\": 102 } ]",
+"strategies": "[ { \"dropped_as_needed\": 92, \"tile_size_desired\": 1372 }, { \"dropped_as_needed\": 97, \"tile_size_desired\": 1731 }, { \"dropped_as_needed\": 115, \"tile_size_desired\": 1306 }, { \"dropped_as_needed\": 113, \"tile_size_desired\": 1160 }, { \"dropped_as_needed\": 106, \"tile_size_desired\": 1229 }, { \"dropped_as_needed\": 102, \"tile_size_desired\": 1079 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

@@ -1,3 +1,7 @@
+## 2.3.1
+
+* Track the desired tile size (the maximum size if no features were dropped) in each zoom level too.
+
 ## 2.3.0
 
 * Drop and coalesce points too as part of smallest-as-needed dropping and coalescing

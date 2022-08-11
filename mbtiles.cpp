@@ -306,6 +306,12 @@ std::string stringify_strategies(std::vector<strategy> const &strategies) {
 			any = true;
 		}
 
+		if (strategies[i].tile_size > 0) {
+			state.json_write_string("tile_size_desired");
+			state.json_write_number(strategies[i].tile_size);
+			any = true;
+		}
+
 		state.json_end_hash();
 	}
 	state.json_end_array();

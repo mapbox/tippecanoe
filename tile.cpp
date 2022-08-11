@@ -1214,6 +1214,7 @@ struct write_tile_args {
 	long long minextent_out = 0;
 	double fraction = 0;
 	double fraction_out = 0;
+	size_t tile_size_out = 0;
 	const char *prefilter = NULL;
 	const char *postfilter = NULL;
 	std::map<std::string, attribute_op> const *attribute_accum = NULL;
@@ -2451,6 +2452,10 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
+				if (compressed.size() > arg->tile_size_out) {
+					arg->tile_size_out = compressed.size();
+				}
+
 				if (!quiet) {
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
 				}
@@ -2815,6 +2820,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		unsigned long long zoom_mingap = ((1LL << (32 - i)) / 256 * cluster_distance) * ((1LL << (32 - i)) / 256 * cluster_distance);
 		long long zoom_minextent = 0;
 		double zoom_fraction = 1;
+		size_t zoom_tile_size = 0;
 
 		for (size_t pass = start; pass < 2; pass++) {
 			pthread_t pthreads[threads];
@@ -2843,6 +2849,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				args[thread].minextent_out = zoom_minextent;
 				args[thread].fraction = zoom_fraction;
 				args[thread].fraction_out = zoom_fraction;
+				args[thread].tile_size_out = 0;
 				args[thread].child_shards = TEMP_FILES / threads;
 				args[thread].simplification = simplification;
 
@@ -2904,6 +2911,9 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 				if (args[thread].fraction_out < zoom_fraction) {
 					zoom_fraction = args[thread].fraction_out;
 				}
+				if (args[thread].tile_size_out > zoom_tile_size) {
+					zoom_tile_size = args[thread].tile_size_out;
+				}
 
 				// Zoom counter might be lower than reality if zooms are being skipped
 				if (args[thread].wrote_zoom > i) {
@@ -2918,7 +2928,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			if ((size_t) i >= strategies.size()) {
 				strategies.resize(i + 1);
 			}
-			struct strategy s(strategy);
+			struct strategy s(strategy, zoom_tile_size);
 			strategies[i] = s;
 		}
 

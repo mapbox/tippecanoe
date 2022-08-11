@@ -8,7 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_0_countries/out/-ae_-zg_-M5000_--drop-densest-as-needed.json.check.mbtiles",
-"strategies": "[ { \"dropped_as_needed\": 170 }, { \"dropped_as_needed\": 186 }, { \"dropped_as_needed\": 164 }, { \"dropped_as_needed\": 118 }, { \"dropped_as_needed\": 58 }, {  } ]",
+"strategies": "[ { \"dropped_as_needed\": 170, \"tile_size_desired\": 39574 }, { \"dropped_as_needed\": 186, \"tile_size_desired\": 25463 }, { \"dropped_as_needed\": 164, \"tile_size_desired\": 21446 }, { \"dropped_as_needed\": 118, \"tile_size_desired\": 10933 }, { \"dropped_as_needed\": 58, \"tile_size_desired\": 6702 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [
