@@ -909,6 +909,9 @@ int main(int argc, char **argv) {
 		{"no-tile-compression", no_argument, &pC, 1},
 		{"empty-csv-columns-are-null", no_argument, &pe, 1},
 		{"no-tile-stats", no_argument, &pg, 1},
+		{"tile-stats-attributes-limit", required_argument, 0, '~'},
+		{"tile-stats-sample-values-limit", required_argument, 0, '~'},
+		{"tile-stats-values-limit", required_argument, 0, '~'},
 
 		{0, 0, 0, 0},
 	};
@@ -930,7 +933,8 @@ int main(int argc, char **argv) {
 
 	std::string commandline = format_commandline(argc, argv);
 
-	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, NULL)) != -1) {
+	int option_index = 0;
+	while ((i = getopt_long(argc, argv, getopt_str.c_str(), long_options, &option_index)) != -1) {
 		switch (i) {
 		case 0:
 			break;
@@ -1035,6 +1039,21 @@ int main(int argc, char **argv) {
 		case 'q':
 			quiet = true;
 			break;
+
+		case '~': {
+			const char *opt = long_options[option_index].name;
+			if (strcmp(opt, "tile-stats-attributes-limit") == 0) {
+				max_tilestats_attributes = atoi(optarg);
+			} else if (strcmp(opt, "tile-stats-sample-values-limit") == 0) {
+				max_tilestats_sample_values = atoi(optarg);
+			} else if (strcmp(opt, "tile-stats-values-limit") == 0) {
+				max_tilestats_values = atoi(optarg);
+			} else {
+				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		}
 
 		default:
 			usage(argv);

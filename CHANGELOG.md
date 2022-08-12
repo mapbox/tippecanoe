@@ -1,3 +1,7 @@
+## 2.4.1
+
+* Accept tilestats limiting options in tile-join, not just tippecanoe
+
 ## 2.4.0
 
 * Change maxzoom guessing to take into account the standard deviation of the distances between features, so data with tight clusters will choose a higher maxzoom

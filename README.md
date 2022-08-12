@@ -779,6 +779,9 @@ The options are:
  * `-pk` or `--no-tile-size-limit`: Don't skip tiles larger than 500K.
  * `-pC` or `--no-tile-compression`: Don't compress the PBF vector tile data.
  * `-pg` or `--no-tile-stats`: Don't generate the `tilestats` row in the tileset metadata. Uploads without [tilestats](https://github.com/mapbox/mapbox-geostats) will take longer to process.
+ * `--tile-stats-attributes-limit=`*count*: Include `tilestats` information about at most *count* attributes instead of the default 1000.
+ * `--tile-stats-sample-values-limit=`*count*: Calculate `tilestats` attribute statistics based on *count* values instead of the default 1000.
+ * `--tile-stats-values-limit=`*count*: Report *count* unique attribute values in `tilestats` instead of the default 100.
 
 Because tile-join just copies the geometries to the new .mbtiles without processing them
 (except to rescale the extents if necessary),

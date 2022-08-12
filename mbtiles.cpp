@@ -500,6 +500,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 				state.nospace = true;
 
 				bool first = true;
+				size_t attribute_count = 0;
 				for (auto j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
 					if (first) {
 						first = false;
@@ -525,6 +526,11 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 						}
 					} else {
 						state.json_write_string(f->second);
+					}
+
+					attribute_count++;
+					if (attribute_count >= max_tilestats_attributes) {
+						break;
 					}
 				}
 
