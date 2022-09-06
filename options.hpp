@@ -29,6 +29,7 @@
 #define P_SIMPLIFY ((int) 's')
 #define P_SIMPLIFY_LOW ((int) 'S')
 #define P_SIMPLIFY_SHARED_NODES ((int) 'n')
+#define P_SINGLE_PRECISION ((int) 'N')
 #define P_FEATURE_LIMIT ((int) 'f')
 #define P_KILOBYTE_LIMIT ((int) 'k')
 #define P_DYNAMIC_DROP ((int) 'd')
@@ -42,6 +43,7 @@
 #define P_USE_SOURCE_POLYGON_WINDING ((int) 'w')
 #define P_REVERSE_SOURCE_POLYGON_WINDING ((int) 'W')
 #define P_EMPTY_CSV_COLUMNS ((int) 'e')
+#define P_BASEZOOM_ABOVE_MAXZOOM ((int) 'b')
 
 extern int prevent[256];
 extern int additional[256];

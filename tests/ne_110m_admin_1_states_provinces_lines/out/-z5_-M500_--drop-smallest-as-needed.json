@@ -8,7 +8,7 @@
 "maxzoom": "5",
 "minzoom": "0",
 "name": "tests/ne_110m_admin_1_states_provinces_lines/out/-z5_-M500_--drop-smallest-as-needed.json.check.mbtiles",
-"strategies": "[ { \"dropped_as_needed\": 92, \"tile_size_desired\": 1372 }, { \"dropped_as_needed\": 97, \"tile_size_desired\": 1731 }, { \"dropped_as_needed\": 115, \"tile_size_desired\": 1306 }, { \"dropped_as_needed\": 113, \"tile_size_desired\": 1160 }, { \"dropped_as_needed\": 106, \"tile_size_desired\": 1229 }, { \"dropped_as_needed\": 102, \"tile_size_desired\": 1079 } ]",
+"strategies": "[ { \"dropped_as_needed\": 94, \"tile_size_desired\": 1372 }, { \"dropped_as_needed\": 97, \"tile_size_desired\": 1731 }, { \"dropped_as_needed\": 115, \"tile_size_desired\": 1306 }, { \"dropped_as_needed\": 113, \"tile_size_desired\": 1160 }, { \"dropped_as_needed\": 106, \"tile_size_desired\": 1231 }, { \"dropped_as_needed\": 102, \"tile_size_desired\": 1080 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [
@@ -26,8 +26,6 @@
 ,
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -96.503906, 42.553080 ], [ -97.294922, 42.875964 ], [ -97.998047, 42.811522 ], [ -98.613281, 43.004647 ], [ -104.062500, 43.004647 ] ] } }
 ,
-{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -91.230469, 43.516689 ], [ -91.318359, 43.961191 ], [ -92.812500, 44.777936 ], [ -92.724609, 45.521744 ], [ -92.900391, 45.706179 ], [ -92.812500, 45.890008 ], [ -92.285156, 46.134170 ], [ -92.285156, 46.679594 ], [ -92.021484, 46.739861 ] ] } }
-,
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -120.058594, 42.032974 ], [ -120.058594, 39.027719 ], [ -114.697266, 35.101934 ] ] } }
 ,
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -114.082031, 37.020098 ], [ -114.082031, 42.032974 ] ] } }
@@ -43,8 +41,6 @@
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.658203, 37.020098 ], [ -102.128906, 37.020098 ] ] } }
 ,
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -94.482422, 33.651208 ], [ -95.273438, 33.943360 ], [ -96.328125, 33.797409 ], [ -96.855469, 33.797409 ], [ -97.031250, 33.943360 ], [ -97.119141, 33.797409 ], [ -97.734375, 34.016242 ], [ -97.998047, 33.943360 ], [ -98.173828, 34.161818 ], [ -99.228516, 34.307144 ], [ -99.404297, 34.452218 ], [ -99.667969, 34.379713 ], [ -100.019531, 34.597042 ], [ -100.019531, 36.527295 ], [ -103.007812, 36.527295 ] ] } }
-,
-{ "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -74.707031, 41.376809 ], [ -75.058594, 41.508577 ], [ -75.058594, 41.771312 ], [ -75.410156, 42.032974 ], [ -79.804688, 42.032974 ], [ -79.804688, 42.293564 ] ] } }
 ,
 { "type": "Feature", "properties": { "scalerank": 2, "featurecla": "Admin-1 boundary", "adm0_a3": "USA", "adm0_name": "United States of America", "mapcolor9": 1, "mapcolor13": 1 }, "geometry": { "type": "LineString", "coordinates": [ [ -83.759766, 36.668419 ], [ -88.154297, 36.668419 ], [ -88.154297, 36.527295 ], [ -89.560547, 36.527295 ] ] } }
 ,

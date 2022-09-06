@@ -296,6 +296,19 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	return true;
 }
 
+struct sorted_value {
+	std::string val;
+	size_t orig;
+
+	bool operator<(const sorted_value &sv) const {
+		if (val < sv.val) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
+
 std::string mvt_tile::encode() {
 	std::string data;
 
@@ -312,6 +325,8 @@ std::string mvt_tile::encode() {
 		for (size_t j = 0; j < layers[i].keys.size(); j++) {
 			layer_writer.add_string(3, layers[i].keys[j]); /* key */
 		}
+
+		std::vector<sorted_value> sorted_values;
 
 		for (size_t v = 0; v < layers[i].values.size(); v++) {
 			std::string value_string;
@@ -340,7 +355,19 @@ std::string mvt_tile::encode() {
 				exit(EXIT_FAILURE);
 			}
 
-			layer_writer.add_message(4, value_string);
+			sorted_value sv;
+			sv.val = value_string;
+			sv.orig = v;
+			sorted_values.push_back(sv);
+		}
+
+		std::sort(sorted_values.begin(), sorted_values.end());
+		std::vector<size_t> mapping;
+		mapping.resize(sorted_values.size());
+
+		for (size_t v = 0; v < sorted_values.size(); v++) {
+			mapping[sorted_values[v].orig] = v;
+			layer_writer.add_message(4, sorted_values[v].val);
 		}
 
 		for (size_t f = 0; f < layers[i].features.size(); f++) {
@@ -348,7 +375,12 @@ std::string mvt_tile::encode() {
 			protozero::pbf_writer feature_writer(feature_string);
 
 			feature_writer.add_enum(3, layers[i].features[f].type);
-			feature_writer.add_packed_uint32(2, std::begin(layers[i].features[f].tags), std::end(layers[i].features[f].tags));
+
+			std::vector<unsigned> sorted_tags = layers[i].features[f].tags;
+			for (size_t v = 1; v < sorted_tags.size(); v += 2) {
+				sorted_tags[v] = mapping[sorted_tags[v]];
+			}
+			feature_writer.add_packed_uint32(2, std::begin(sorted_tags), std::end(sorted_tags));
 
 			if (layers[i].features[f].has_id) {
 				feature_writer.add_uint64(1, layers[i].features[f].id);
@@ -458,7 +490,7 @@ static std::string quote(std::string const &s) {
 	return buf;
 }
 
-std::string mvt_value::toString() {
+std::string mvt_value::toString() const {
 	if (type == mvt_string) {
 		return quote(string_value);
 	} else if (type == mvt_int) {

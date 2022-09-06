@@ -8,6 +8,7 @@
 "maxzoom": "2",
 "minzoom": "0",
 "name": "tests/curve/out/-z2.json.check.mbtiles",
+"strategies": "[ {  }, { \"tiny_polygons\": 1 }, { \"tiny_polygons\": 4 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

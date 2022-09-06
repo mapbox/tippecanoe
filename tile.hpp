@@ -25,13 +25,15 @@ struct atomic_strategy {
 	std::atomic<size_t> dropped_as_needed;
 	std::atomic<size_t> coalesced_as_needed;
 	std::atomic<size_t> detail_reduced;
+	std::atomic<size_t> tiny_polygons;
 
-	atomic_strategy() :
-		dropped_by_rate(0),
-		dropped_by_gamma(0),
-		dropped_as_needed(0),
-		coalesced_as_needed(0),
-		detail_reduced(0) {
+	atomic_strategy()
+	    : dropped_by_rate(0),
+	      dropped_by_gamma(0),
+	      dropped_as_needed(0),
+	      coalesced_as_needed(0),
+	      detail_reduced(0),
+	      tiny_polygons(0) {
 	}
 };
 
@@ -42,6 +44,7 @@ struct strategy {
 	size_t coalesced_as_needed = 0;
 	size_t detail_reduced = 0;
 	size_t tile_size = 0;
+	size_t tiny_polygons = 0;
 
 	strategy(const atomic_strategy &s, size_t ts) {
 		dropped_by_rate = s.dropped_by_rate;
@@ -50,6 +53,7 @@ struct strategy {
 		coalesced_as_needed = s.coalesced_as_needed;
 		detail_reduced = s.detail_reduced;
 		tile_size = ts;
+		tiny_polygons = s.tiny_polygons;
 	}
 
 	strategy() = default;

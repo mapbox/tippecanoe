@@ -596,6 +596,15 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
 		coerce_value(sf.full_keys[i], sf.full_values[i].type, sf.full_values[i].s, sst->attribute_types);
 
+		if (prevent[P_SINGLE_PRECISION]) {
+			if (sf.full_values[i].type == mvt_double) {
+				// don't coerce integers to floats, since that is counterproductive
+				if (sf.full_values[i].s.find('.') != std::string::npos) {
+					sf.full_values[i].s = milo::dtoa_milo((float) atof(sf.full_values[i].s.c_str()));
+				}
+			}
+		}
+
 		if (sf.full_keys[i] == attribute_for_id) {
 			if (sf.full_values[i].type != mvt_double && !additional[A_CONVERT_NUMERIC_IDS]) {
 				static bool warned = false;

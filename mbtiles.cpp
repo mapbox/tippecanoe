@@ -306,6 +306,12 @@ std::string stringify_strategies(std::vector<strategy> const &strategies) {
 			any = true;
 		}
 
+		if (strategies[i].tiny_polygons > 0) {
+			state.json_write_string("tiny_polygons");
+			state.json_write_number(strategies[i].tiny_polygons);
+			any = true;
+		}
+
 		if (strategies[i].tile_size > 0) {
 			state.json_write_string("tile_size_desired");
 			state.json_write_number(strategies[i].tile_size);

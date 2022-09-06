@@ -1,3 +1,14 @@
+## 2.5.0
+
+* Add an option to add extra detail at maxzoom that does not factor into guessing
+* Restore the intended behavior that tiny polygons don't get further simplified
+* Add an option to use single-precision floating point in tiles
+* Improve polygon simplification by choosing a better start/end point
+* Sort attribute values in tiles to make them compress a little better
+* Fix dropping of "largest" points when there are duplicate points
+* Add an option to prevent guessing a basezoom higher than the maxzoom
+* Add --order-by and --order-descending options
+
 ## 2.4.1
 
 * Accept tilestats limiting options in tile-join, not just tippecanoe

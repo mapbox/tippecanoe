@@ -81,7 +81,7 @@ struct mvt_value {
 	} numeric_value;
 
 	bool operator<(const mvt_value &o) const;
-	std::string toString();
+	std::string toString() const;
 
 	mvt_value() {
 		this->type = mvt_double;

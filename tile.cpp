@@ -188,9 +188,9 @@ int coalindexcmp(const struct coalesce *c1, const struct coalesce *c2) {
 	return cmp;
 }
 
-mvt_value retrieve_string(long long off, char *stringpool, int *otype) {
+mvt_value retrieve_string(long long off, const char *stringpool, int *otype) {
 	int type = stringpool[off];
-	char *s = stringpool + off + 1;
+	const char *s = stringpool + off + 1;
 
 	if (otype != NULL) {
 		*otype = type;
@@ -247,6 +247,73 @@ static int metacmp(const std::vector<long long> &keys1, const std::vector<long l
 		return 0;
 	}
 }
+
+static mvt_value find_attribute_value(const struct coalesce *c1, std::string key) {
+	const std::vector<long long> &keys1 = c1->keys;
+	const std::vector<long long> &values1 = c1->values;
+	const char *stringpool1 = c1->stringpool;
+
+	for (size_t i = 0; i < keys1.size(); i++) {
+		mvt_value key1 = retrieve_string(keys1[i], stringpool1, NULL);
+		if (key == key1.string_value) {
+			return retrieve_string(values1[i], stringpool1, NULL);
+		}
+	}
+
+	for (size_t i = 0; i < c1->full_keys.size(); i++) {
+		if (c1->full_keys[i] == key) {
+			return stringified_to_mvt_value(c1->full_values[i].type, c1->full_values[i].s.c_str());
+		}
+	}
+
+	mvt_value v;
+	v.type = mvt_null;
+	v.numeric_value.null_value = 0;
+	return v;
+}
+
+static mvt_value coerce_double(mvt_value v) {
+	if (v.type == mvt_int) {
+		v.type = mvt_double;
+		v.numeric_value.double_value = v.numeric_value.int_value;
+	} else if (v.type == mvt_uint) {
+		v.type = mvt_double;
+		v.numeric_value.double_value = v.numeric_value.uint_value;
+	} else if (v.type == mvt_sint) {
+		v.type = mvt_double;
+		v.numeric_value.double_value = v.numeric_value.sint_value;
+	} else if (v.type == mvt_float) {
+		v.type = mvt_double;
+		v.numeric_value.double_value = v.numeric_value.float_value;
+	}
+
+	return v;
+}
+
+struct ordercmp {
+	bool operator()(const struct coalesce &a, const struct coalesce &b) {
+		for (size_t i = 0; i < order_by.size(); i++) {
+			mvt_value v1 = coerce_double(find_attribute_value(&a, order_by[i].name));
+			mvt_value v2 = coerce_double(find_attribute_value(&b, order_by[i].name));
+
+			if (order_by[i].descending) {
+				if (v2 < v1) {
+					return true;
+				} else if (v1 < v2) {
+					return false;
+				}  // else they are equal, so continue to the next attribute
+			} else {
+				if (v1 < v2) {
+					return true;
+				} else if (v2 < v1) {
+					return false;
+				}  // else they are equal, so continue to the next attribute
+			}
+		}
+
+		return false;  // greater than or equal
+	}
+} ordercmp;
 
 void rewrite(drawvec &geom, int z, int nextzoom, int maxzoom, long long *bbox, unsigned tx, unsigned ty, int buffer, int *within, std::atomic<long long> *geompos, FILE **geomfile, const char *fname, signed char t, int layer, long long metastart, signed char feature_minzoom, int child_shards, int max_zoom_increment, long long seq, int tippecanoe_minzoom, int tippecanoe_maxzoom, int segment, unsigned *initial_x, unsigned *initial_y, std::vector<long long> &metakeys, std::vector<long long> &metavals, bool has_id, unsigned long long id, unsigned long long index, long long extent) {
 	if (geom.size() > 0 && (nextzoom <= maxzoom || additional[A_EXTEND_ZOOMS])) {
@@ -374,6 +441,7 @@ struct partial {
 	bool reduced = 0;
 	int z = 0;
 	int line_detail = 0;
+	int extra_detail = 0;
 	int maxzoom = 0;
 	double spacing = 0;
 	double simplification = 0;
@@ -452,6 +520,7 @@ void *partial_feature_worker(void *v) {
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
 		int line_detail = (*partials)[i].line_detail;
+		int out_detail = (*partials)[i].extra_detail;
 		int maxzoom = (*partials)[i].maxzoom;
 
 		if (additional[A_GRID_LOW_ZOOMS] && z < maxzoom) {
@@ -464,8 +533,13 @@ void *partial_feature_worker(void *v) {
 		}
 
 		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			if (1 /* !reduced */) {	 // XXX why did this not simplify if reduced?
+			// Now I finally remember why it doesn't simplify if the feature was reduced:
+			// because it makes square placeholders look like weird triangular placeholders.
+			// Only matters if simplification is set higher than the tiny polygon size.
+			// Tiny polygons that are part of a tiny multipolygon will still get simplified.
+			if (!(*partials)[i].reduced) {
 				if (t == VT_LINE) {
+					// continues to deduplicate to line_detail even if we have extra detail
 					geom = remove_noop(geom, t, 32 - z - line_detail);
 				}
 
@@ -475,6 +549,7 @@ void *partial_feature_worker(void *v) {
 				}
 
 				if (!already_marked) {
+					// continues to simplify to line_detail even if we have extra detail
 					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, *(a->shared_nodes));
 
 					if (t != VT_POLYGON || ngeom.size() >= 3) {
@@ -484,17 +559,11 @@ void *partial_feature_worker(void *v) {
 			}
 		}
 
-#if 0
-		if (t == VT_LINE && z != basezoom) {
-			geom = shrink_lines(geom, z, line_detail, basezoom, &along);
-		}
-#endif
-
 		if (t == VT_LINE && additional[A_REVERSE]) {
 			geom = reorder_lines(geom);
 		}
 
-		to_tile_scale(geom, z, line_detail);
+		to_tile_scale(geom, z, out_detail);
 
 		std::vector<drawvec> geoms;
 		geoms.push_back(geom);
@@ -511,7 +580,8 @@ void *partial_feature_worker(void *v) {
 
 				if (geoms[g].size() < 3) {
 					if (area > 0) {
-						geoms[g] = revive_polygon(before, area / geoms.size(), z, line_detail);
+						// area is in world coordinates, calculated before scaling down
+						geoms[g] = revive_polygon(before, area / geoms.size(), z, out_detail);
 					} else {
 						geoms[g].clear();
 					}
@@ -1721,8 +1791,7 @@ static bool line_is_too_small(drawvec const &geometry, int z, int detail) {
 	return true;
 }
 
-long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg, atomic_strategy *strategy) {
-	int line_detail;
+long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, const int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg, atomic_strategy *strategy) {
 	double merge_fraction = 1;
 	double mingap_fraction = 1;
 	double minextent_fraction = 1;
@@ -1755,6 +1824,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 	bool first_time = true;
 	// This only loops if the tile data didn't fit, in which case the detail
 	// goes down and the progress indicator goes backward for the next try.
+	int line_detail;
 	for (line_detail = detail; line_detail >= min_detail || line_detail == detail; line_detail--, oprogress = 0) {
 		long long count = 0;
 		double accum_area = 0;
@@ -1776,6 +1846,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		std::vector<long long> extents;
 		double coalesced_area = 0;
 		drawvec shared_nodes;
+
+		int tile_detail = line_detail;
 
 		int within[child_shards];
 		std::atomic<long long> geompos[child_shards];
@@ -1875,8 +1947,15 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			if (sf.t == VT_POINT) {
-				double radius = sqrt(sf.index - extent_previndex) / 4.0;
-				sf.extent = M_PI * radius * radius;
+				if (extent_previndex >= sf.index) {
+					sf.extent = 1;
+				} else {
+					double radius = sqrt(sf.index - extent_previndex) / 4.0;
+					sf.extent = M_PI * radius * radius;
+					if (sf.extent < 1) {
+						sf.extent = 1;
+					}
+				}
 
 				extent_previndex = sf.index;
 			}
@@ -1982,6 +2061,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			if (sf.t == VT_POLYGON) {
 				if (!prevent[P_TINY_POLYGON_REDUCTION] && !additional[A_GRID_LOW_ZOOMS]) {
 					sf.geometry = reduce_tiny_poly(sf.geometry, z, line_detail, &reduced, &accum_area);
+					if (reduced) {
+						strategy->tiny_polygons++;
+					}
 				}
 				has_polygons = true;
 			}
@@ -2007,6 +2089,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.reduced = reduced;
 				p.z = z;
 				p.line_detail = line_detail;
+				p.extra_detail = line_detail;
 				p.maxzoom = maxzoom;
 				p.keys = sf.keys;
 				p.values = sf.values;
@@ -2020,6 +2103,17 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				p.renamed = -1;
 				p.extent = sf.extent;
 				p.clustered = 0;
+
+				if (line_detail == detail && extra_detail >= 0 && z == maxzoom) {
+					p.extra_detail = extra_detail;
+					// maximum allowed coordinate delta in geometries is 2^31 - 1
+					// so we need to stay under that, including the buffer
+					if (p.extra_detail >= 30 - z) {
+						p.extra_detail = 30 - z;
+					}
+					tile_detail = p.extra_detail;
+				}
+
 				partials.push_back(p);
 			}
 
@@ -2262,6 +2356,10 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			if (prevent[P_INPUT_ORDER]) {
 				std::sort(layer_features.begin(), layer_features.end(), preservecmp);
 			}
+
+			if (order_by.size() != 0) {
+				std::sort(layer_features.begin(), layer_features.end(), ordercmp);
+			}
 		}
 
 		mvt_tile tile;
@@ -2272,7 +2370,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			mvt_layer layer;
 			layer.name = layer_iterator->first;
 			layer.version = 2;
-			layer.extent = 1 << line_detail;
+			layer.extent = 1 << tile_detail;
 
 			for (size_t x = 0; x < layer_features.size(); x++) {
 				mvt_feature feature;
@@ -2330,7 +2428,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		}
 
 		if (postfilter != NULL) {
-			tile.layers = filter_layers(postfilter, tile.layers, z, tx, ty, layermaps, tiling_seg, layer_unmaps, 1 << line_detail);
+			tile.layers = filter_layers(postfilter, tile.layers, z, tx, ty, layermaps, tiling_seg, layer_unmaps, 1 << tile_detail);
 		}
 
 		if (z == 0 && unclipped_features < original_features / 2 && clipbboxes.size() == 0) {

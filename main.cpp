@@ -66,6 +66,7 @@
 static int low_detail = 12;
 static int full_detail = -1;
 static int min_detail = 7;
+int extra_detail = -1;
 
 int quiet = 0;
 int quiet_progress = 0;
@@ -77,8 +78,12 @@ double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
+int tiny_polygon_size = 2;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
+
+std::vector<order_field> order_by;
+bool order_reverse;
 
 int prevent[256];
 int additional[256];
@@ -2250,6 +2255,10 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 		}
 
+		if (obasezoom < 0 && basezoom > maxzoom && prevent[P_BASEZOOM_ABOVE_MAXZOOM]) {
+			basezoom = maxzoom;
+		}
+
 		if (obasezoom < 0 && basezoom > maxzoom) {
 			fprintf(stderr, "Couldn't find a suitable base zoom. Working from the other direction.\n");
 			if (gamma == 0) {
@@ -2653,6 +2662,7 @@ int main(int argc, char **argv) {
 		{"full-detail", required_argument, 0, 'd'},
 		{"low-detail", required_argument, 0, 'D'},
 		{"minimum-detail", required_argument, 0, 'm'},
+		{"extra-detail", required_argument, 0, '~'},
 
 		{"Filtering feature attributes", 0, 0, 0},
 		{"exclude", required_argument, 0, 'x'},
@@ -2666,6 +2676,7 @@ int main(int argc, char **argv) {
 		{"empty-csv-columns-are-null", no_argument, &prevent[P_EMPTY_CSV_COLUMNS], 1},
 		{"convert-stringified-ids-to-numbers", no_argument, &additional[A_CONVERT_NUMERIC_IDS], 1},
 		{"use-attribute-for-id", required_argument, 0, '~'},
+		{"single-precision", no_argument, &prevent[P_SINGLE_PRECISION], 1},
 
 		{"Filtering features by attributes", 0, 0, 0},
 		{"feature-filter-file", required_argument, 0, 'J'},
@@ -2674,6 +2685,7 @@ int main(int argc, char **argv) {
 		{"Dropping a fixed fraction of features by zoom level", 0, 0, 0},
 		{"drop-rate", required_argument, 0, 'r'},
 		{"base-zoom", required_argument, 0, 'B'},
+		{"limit-base-zoom-to-maximum-zoom", no_argument, &prevent[P_BASEZOOM_ABOVE_MAXZOOM], 1},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
 		{"cluster-distance", required_argument, 0, 'K'},
@@ -2697,6 +2709,7 @@ int main(int argc, char **argv) {
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
 		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
+		{"tiny-polygon-size", required_argument, 0, '~'},
 		{"no-simplification-of-shared-nodes", no_argument, &prevent[P_SIMPLIFY_SHARED_NODES], 1},
 
 		{"Attempts to improve shared polygon boundaries", 0, 0, 0},
@@ -2714,6 +2727,8 @@ int main(int argc, char **argv) {
 		{"coalesce", no_argument, &additional[A_COALESCE], 1},
 		{"reverse", no_argument, &additional[A_REVERSE], 1},
 		{"hilbert", no_argument, &additional[A_HILBERT], 1},
+		{"order-by", required_argument, 0, '~'},
+		{"order-descending-by", required_argument, 0, '~'},
 
 		{"Adding calculated attributes", 0, 0, 0},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
@@ -2834,6 +2849,21 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s: %s: minimum maxzoom can be at most %d\n", argv[0], optarg, MAX_ZOOM);
 					exit(EXIT_FAILURE);
 				}
+			} else if (strcmp(opt, "tiny-polygon-size") == 0) {
+				tiny_polygon_size = atoi(optarg);
+			} else if (strcmp(opt, "extra-detail") == 0) {
+				extra_detail = atoi_require(optarg, "Extra detail");
+				if (extra_detail > 30) {
+					// So the maximum geometry delta of just under 2 tile extents
+					// is less than 2^31
+
+					fprintf(stderr, "%s: --extra-detail can be at most 30\n", argv[0]);
+					exit(EXIT_FAILURE);
+				}
+			} else if (strcmp(opt, "order-by") == 0) {
+				order_by.push_back(order_field(optarg, false));
+			} else if (strcmp(opt, "order-descending-by") == 0) {
+				order_by.push_back(order_field(optarg, true));
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_FAILURE);
@@ -3265,12 +3295,16 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	geometry_scale = 32 - (full_detail + maxzoom);
-	if (geometry_scale < 0) {
+	if (extra_detail >= 0) {
 		geometry_scale = 0;
-		if (!guess_maxzoom) {
-			// This shouldn't be able to happen any more. Can it still?
-			fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
+	} else {
+		geometry_scale = 32 - (full_detail + maxzoom);
+		if (geometry_scale < 0) {
+			geometry_scale = 0;
+			if (!guess_maxzoom) {
+				// This shouldn't be able to happen any more. Can it still?
+				fprintf(stderr, "Full detail + maxzoom > 32, so you are asking for more detail than is available.\n");
+			}
 		}
 	}
 

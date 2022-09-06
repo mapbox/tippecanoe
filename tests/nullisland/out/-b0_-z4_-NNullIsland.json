@@ -8,7 +8,7 @@
 "maxzoom": "4",
 "minzoom": "0",
 "name": "tests/nullisland/out/-b0_-z4_-NNullIsland.json.check.mbtiles",
-"strategies": "[ { \"dropped_by_rate\": 4 }, { \"dropped_by_rate\": 8 }, { \"dropped_by_rate\": 8 }, { \"dropped_by_rate\": 3 }, {  } ]",
+"strategies": "[ { \"dropped_by_rate\": 4 }, { \"dropped_by_rate\": 8, \"tiny_polygons\": 12 }, { \"dropped_by_rate\": 8 }, { \"dropped_by_rate\": 3 }, {  } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

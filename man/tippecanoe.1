@@ -475,6 +475,8 @@ zoom level	precision (ft)	precision (m)	map scale
 \fB\fC\-D\fR \fIdetail\fP or \fB\fC\-\-low\-detail=\fR\fIdetail\fP: Detail at lower zoom levels (default 12, for tile resolution of 2
 .IP \(bu 2
 \fB\fC\-m\fR \fIdetail\fP or \fB\fC\-\-minimum\-detail=\fR\fIdetail\fP: Minimum detail that it will try if tiles are too big at regular detail (default 7)
+.IP \(bu 2
+\fB\fC\-\-extra\-detail=\fR\fIdetail\fP: Generate tiles with even more detail than the "full" detail at the max zoom level, to maximize location precision. These tiles may not work with some rendering software that internally limits detail to 12 or 13. The extra detail does not affect the choice of maxzoom guessing, the amount of simplification, or the "tiny polygon" threshold as \fB\fC\-\-full\-detail\fR does. The tiles should look the same as they did without it, except that they will be more precise when overzoomed.
 .RE
 .PP
 All internal math is done in terms of a 32\-bit tile coordinate system, so 1/(2 of the size of Earth,
@@ -511,6 +513,8 @@ to specify how the named \fIattribute\fP is accumulated onto the attribute of th
 \fB\fC\-aI\fR or \fB\fC\-\-convert\-stringified\-ids\-to\-numbers\fR: If a feature ID is the string representation of a number, convert it to a plain number to use as the feature ID.
 .IP \(bu 2
 \fB\fC\-\-use\-attribute\-for\-id=\fR\fIname\fP: Use the attribute with the specified \fIname\fP as if it were specified as the feature ID. (If this attribute is a stringified number, you must also use \fB\fC\-aI\fR to convert it to a number.)
+.IP \(bu 2
+\fB\fC\-pN\fR or \fB\fC\-\-single\-precision\fR: Write double\-precision numeric attribute values to tiles as single\-precision to reduce tile size.
 .RE
 .SS Filtering features by attributes
 .RS
@@ -561,6 +565,8 @@ If you use \fB\fC\-Bg\fR, it will guess a zoom level that will keep at most 50,0
 You can also specify a marker\-width with \fB\fC\-Bg\fR\fIwidth\fP to allow fewer features in the densest tile to
 compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .IP \(bu 2
+\fB\fC\-\-limit\-base\-zoom\-to\-maximum\-zoom\fR or \fB\fC\-Pb\fR: Limit the guessed base zoom not to exceed the maxzoom, even if this would put more than the requested number of features in a base zoom tile.
+.IP \(bu 2
 \fB\fC\-al\fR or \fB\fC\-\-drop\-lines\fR: Let "dot" dropping at lower zooms apply to lines too
 .IP \(bu 2
 \fB\fC\-ap\fR or \fB\fC\-\-drop\-polygons\fR: Let "dot" dropping at lower zooms apply to polygons too
@@ -606,6 +612,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pn\fR or \fB\fC\-\-no\-simplification\-of\-shared\-nodes\fR: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use \fB\fC\-\-coalesce\fR or \fB\fC\-\-detect\-shared\-borders\fR\&.)
 .IP \(bu 2
 \fB\fC\-pt\fR or \fB\fC\-\-no\-tiny\-polygon\-reduction\fR: Don't combine the area of very small polygons into small squares that represent their combined area.
+.IP \(bu 2
+\fB\fC\-\-tiny\-polygon\-size=\fR\fIsize\fP: Use the specified \fIsize\fP for tiny polygons instead of the default 2. Anything above 6 or so will lead to visible artifacts with the default tile detail.
 .RE
 .SS Attempts to improve shared polygon boundaries
 .RS
@@ -635,6 +643,10 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-ar\fR or \fB\fC\-\-reverse\fR: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
 .IP \(bu 2
 \fB\fC\-ah\fR or \fB\fC\-\-hilbert\fR: Put features in Hilbert Curve order instead of the usual Z\-Order. This improves the odds that spatially adjacent features will be sequentially adjacent, and should improve density calculations and spatial coalescing. It should be the default eventually.
+.IP \(bu 2
+\fB\fC\-\-order\-by=\fR\fIattribute\fP: Order features by the specified \fIattribute\fP, in alphabetical or numerical order. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
+.IP \(bu 2
+\fB\fC\-\-order\-descending\-by=\fR\fIattribute\fP: Order features by the specified \fIattribute\fP, in reverse alphabetical or numerical order. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
 .RE
 .SS Adding calculated attributes
 .RS

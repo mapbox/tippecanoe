@@ -517,7 +517,7 @@ drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
 
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
-	long long pixel = (1 << (32 - detail - z)) * 2;
+	const long long pixel = (1 << (32 - detail - z)) * tiny_polygon_size;
 
 	*reduced = true;
 	bool included_last_outer = false;
@@ -544,6 +544,11 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 				// inner rings must just have their area de-accumulated rather
 				// than being drawn since we don't really know where they are.
 
+				// i.e., this ring (inner or outer) is small enough that we are including it
+				// in a tiny polygon rather than letting it represent itself,
+				// OR it is an inner ring and we haven't output an outer ring for it to be
+				// cut out of, so we are just subtracting its area from the tiny polygon
+				// rather than trying to deal with it geometrically
 				if (std::fabs(area) <= pixel * pixel || (area < 0 && !included_last_outer)) {
 					// printf("area is only %f vs %lld so using square\n", area, pixel * pixel);
 
@@ -552,9 +557,9 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 						// XXX use centroid;
 
 						out.push_back(draw(VT_MOVETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
-						out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y - pixel / 2));
-						out.push_back(draw(VT_LINETO, geom[i].x + pixel / 2, geom[i].y + pixel / 2));
-						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y + pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2 + pixel, geom[i].y - pixel / 2));
+						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2 + pixel, geom[i].y - pixel / 2 + pixel));
+						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2 + pixel));
 						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
 
 						*accum_area -= pixel * pixel;
@@ -563,13 +568,17 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 					if (area > 0) {
 						included_last_outer = false;
 					}
-				} else {
+				}
+				// i.e., this ring is large enough that it gets to represent itself
+				else {
 					// printf("area is %f so keeping instead of %lld\n", area, pixel * pixel);
 
 					for (size_t k = i; k <= j && k < geom.size(); k++) {
 						out.push_back(geom[k]);
 					}
 
+					// which means that the overall polygon has a real geometry,
+					// which means that it gets to be simplified.
 					*reduced = false;
 
 					if (area > 0) {
@@ -950,14 +959,60 @@ drawvec fix_polygon(drawvec &geom) {
 				ring = tmp;
 			}
 
+			// calculate centroid
+			// a + 1 < size() because point 0 is duplicated at the end
+			long long xtotal = 0;
+			long long ytotal = 0;
+			long long count = 0;
+			for (size_t a = 0; a + 1 < ring.size(); a++) {
+				xtotal += ring[a].x;
+				ytotal += ring[a].y;
+				count++;
+			}
+			xtotal /= count;
+			ytotal /= count;
+
+			// figure out which point is furthest from the centroid
+			long long dist2 = 0;
+			long long furthest = 0;
+			for (size_t a = 0; a + 1 < ring.size(); a++) {
+				long long xd = ring[a].x - xtotal;
+				long long yd = ring[a].y - ytotal;
+				long long d2 = xd * xd + yd * yd;
+				if (d2 > dist2) {
+					dist2 = d2;
+					furthest = a;
+				}
+			}
+
+			// then figure out which point is furthest from *that*
+			long long dist2b = 0;
+			long long furthestb = 0;
+			for (size_t a = 0; a + 1 < ring.size(); a++) {
+				long long xd = ring[a].x - ring[furthest].x;
+				long long yd = ring[a].y - ring[furthest].y;
+				long long d2 = xd * xd + yd * yd;
+				if (d2 > dist2b) {
+					dist2b = d2;
+					furthestb = a;
+				}
+			}
+
+			// rotate ring so the furthest point is the duplicated one.
+			// the idea is that simplification will then be more efficient,
+			// never wasting the start and end points, which are always retained,
+			// on a point that has little impact on the shape.
+
 			// Copy ring into output, fixing the moveto/lineto ops if necessary because of
 			// reversal or closing
 
 			for (size_t a = 0; a < ring.size(); a++) {
+				size_t a2 = (a + furthestb) % (ring.size() - 1);
+
 				if (a == 0) {
-					out.push_back(draw(VT_MOVETO, ring[a].x, ring[a].y));
+					out.push_back(draw(VT_MOVETO, ring[a2].x, ring[a2].y));
 				} else {
-					out.push_back(draw(VT_LINETO, ring[a].x, ring[a].y));
+					out.push_back(draw(VT_LINETO, ring[a2].x, ring[a2].y));
 				}
 			}
 

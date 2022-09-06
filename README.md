@@ -383,6 +383,7 @@ zoom level | precision (ft) | precision (m) | map scale
  * `-d` _detail_ or `--full-detail=`_detail_: Detail at max zoom level (default 12, for tile resolution of 2^12=4096)
  * `-D` _detail_ or `--low-detail=`_detail_: Detail at lower zoom levels (default 12, for tile resolution of 2^12=4096)
  * `-m` _detail_ or `--minimum-detail=`_detail_: Minimum detail that it will try if tiles are too big at regular detail (default 7)
+ * `--extra-detail=`_detail_: Generate tiles with even more detail than the "full" detail at the max zoom level, to maximize location precision. These tiles may not work with some rendering software that internally limits detail to 12 or 13. The extra detail does not affect the choice of maxzoom guessing, the amount of simplification, or the "tiny polygon" threshold as `--full-detail` does. The tiles should look the same as they did without it, except that they will be more precise when overzoomed.
 
 All internal math is done in terms of a 32-bit tile coordinate system, so 1/(2^32) of the size of Earth,
 or about 1cm, is the smallest distinguishable distance. If _maxzoom_ + _detail_ > 32, no additional
@@ -410,6 +411,7 @@ be reduced to the maximum that can be used with the specified _maxzoom_.
  * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
  * `-aI` or `--convert-stringified-ids-to-numbers`: If a feature ID is the string representation of a number, convert it to a plain number to use as the feature ID.
  * `--use-attribute-for-id=`*name*: Use the attribute with the specified *name* as if it were specified as the feature ID. (If this attribute is a stringified number, you must also use `-aI` to convert it to a number.)
+ * `-pN` or `--single-precision`: Write double-precision numeric attribute values to tiles as single-precision to reduce tile size.
 
 ### Filtering features by attributes
 
@@ -449,6 +451,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
    If you use `-Bg`, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with `-Bg`*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or `-Bf`*number* to allow at most *number* features in the densest tile.
+ * `--limit-base-zoom-to-maximum-zoom` or `-Pb`: Limit the guessed base zoom not to exceed the maxzoom, even if this would put more than the requested number of features in a base zoom tile.
  * `-al` or `--drop-lines`: Let "dot" dropping at lower zooms apply to lines too
  * `-ap` or `--drop-polygons`: Let "dot" dropping at lower zooms apply to polygons too
  * `-K` _distance_ or `--cluster-distance=`_distance_: Cluster points (as with `--cluster-densest-as-needed`, but without the experimental discovery process) that are approximately within _distance_ of each other. The units are tile coordinates within a nominally 256-pixel tile, so the maximum value of 255 allows only one feature per tile. Values around 10 are probably appropriate for typical marker sizes. See `--cluster-densest-as-needed` below for behavior.
@@ -477,6 +480,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `-pS` or `--simplify-only-low-zooms`: Don't simplify lines and polygons at maxzoom (but do simplify at lower zooms)
  * `-pn` or `--no-simplification-of-shared-nodes`: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use `--coalesce` or `--detect-shared-borders`.)
  * `-pt` or `--no-tiny-polygon-reduction`: Don't combine the area of very small polygons into small squares that represent their combined area.
+ * `--tiny-polygon-size=`_size_: Use the specified _size_ for tiny polygons instead of the default 2. Anything above 6 or so will lead to visible artifacts with the default tile detail.
 
 ### Attempts to improve shared polygon boundaries
 
@@ -496,6 +500,8 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `-ao` or `--reorder`: Reorder features to put ones with the same attributes in sequence (instead of ones that are approximately spatially adjacent), to try to get them to coalesce. You probably want to use this if you use `--coalesce`.
  * `-ar` or `--reverse`: Try reversing the directions of lines to make them coalesce and compress better. You probably don't want to use this.
  * `-ah` or `--hilbert`: Put features in Hilbert Curve order instead of the usual Z-Order. This improves the odds that spatially adjacent features will be sequentially adjacent, and should improve density calculations and spatial coalescing. It should be the default eventually.
+ * `--order-by=`_attribute_: Order features by the specified _attribute_, in alphabetical or numerical order. Multiple `--order-by` and `--order-descending-by` options may be specified, the first being the primary sort key.
+ * `--order-descending-by=`_attribute_: Order features by the specified _attribute_, in reverse alphabetical or numerical order. Multiple `--order-by` and `--order-descending-by` options may be specified, the first being the primary sort key.
 
 ### Adding calculated attributes
 

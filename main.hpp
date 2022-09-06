@@ -43,6 +43,7 @@ extern int quiet_progress;
 extern json_logger logger;
 extern double progress_interval;
 extern std::atomic<double> last_progress;
+extern int extra_detail;
 
 extern size_t CPUS;
 extern size_t TEMP_FILES;
@@ -51,6 +52,19 @@ extern size_t max_tile_size;
 extern size_t max_tile_features;
 extern int cluster_distance;
 extern std::string attribute_for_id;
+extern int tiny_polygon_size;
+
+struct order_field {
+	std::string name;
+	bool descending;
+
+	order_field(std::string _name, bool _descending)
+	    : name(_name),
+	      descending(_descending) {
+	}
+};
+
+extern std::vector<order_field> order_by;
 
 int mkstemp_cloexec(char *name);
 FILE *fopen_oflag(const char *name, const char *mode, int oflag);
