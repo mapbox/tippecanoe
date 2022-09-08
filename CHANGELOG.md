@@ -1,3 +1,10 @@
+## 2.6.0
+
+* Add another drop rate guessing options, from the same metrics -zg uses
+* Reduce maxzooms being guessed a little:
+  * Use 1.5 standard deviations, not 2, as the minimum distinguishable
+  * Give overlapping polygons and linestrings more distinct indices
+
 ## 2.5.0
 
 * Add an option to add extra detail at maxzoom that does not factor into guessing

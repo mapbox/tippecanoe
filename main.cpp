@@ -2074,7 +2074,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			// are typically lognormally distributed. Two standard deviations
 			// below the mean should be enough to distinguish most features.
 			double avg = exp(mean);
-			double nearby = exp(mean - 2 * stddev);
+			double nearby = exp(mean - 1.5 * stddev);
 
 			// Convert approximately from tile units to feet.
 			// See empirical data above for source
@@ -2116,6 +2116,24 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 			}
 			if (changed) {
 				printf("Choosing a maxzoom of -z%d to keep most features distinct with cluster distance %d\n", maxzoom, cluster_distance);
+			}
+
+			if (droprate == -3) {
+				// This mysterious formula is the result of eyeballing the appropriate drop rate
+				// for several point tilesets using -zg and then fitting a curve to the pattern
+				// that emerged. It appears that if the standard deviation of the distances between
+				// features is small, the drop rate should be large because the features are evenly
+				// spaced, and if the standard deviation is large, the drop rate can be small because
+				// the features are in clumps.
+				droprate = exp(-0.7681 * log(stddev) + 1.582);
+
+				if (droprate < 0) {
+					droprate = 0;
+				}
+
+				if (!quiet) {
+					fprintf(stderr, "Choosing a drop rate of %f\n", droprate);
+				}
 			}
 		}
 
@@ -3044,6 +3062,8 @@ int main(int argc, char **argv) {
 		case 'r':
 			if (strcmp(optarg, "g") == 0) {
 				droprate = -2;
+			} else if (strcmp(optarg, "p") == 0) {
+				droprate = -3;
 			} else if (optarg[0] == 'g' || optarg[0] == 'f') {
 				droprate = -2;
 				if (optarg[0] == 'g') {
@@ -3252,6 +3272,11 @@ int main(int argc, char **argv) {
 
 	if (full_detail <= 0) {
 		full_detail = 12;
+	}
+
+	if (droprate == -3 && !guess_maxzoom) {
+		fprintf(stderr, "Can't use -rp without either -zg or --smallest-maximum-zoom-guess\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (maxzoom > MAX_ZOOM) {

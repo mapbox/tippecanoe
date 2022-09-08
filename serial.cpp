@@ -557,12 +557,35 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.seq = 0;
 	}
 
-	long long bbox_index;
+	unsigned long long bbox_index;
+	long long midx, midy;
 
-	// Calculate the center even if off the edge of the plane,
-	// and then mask to bring it back into the addressable area
-	long long midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
-	long long midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
+	if (sf.t == VT_POINT) {
+		// keep old behavior, which loses one bit of precision at the bottom
+		midx = (sf.bbox[0] / 2 + sf.bbox[2] / 2) & ((1LL << 32) - 1);
+		midy = (sf.bbox[1] / 2 + sf.bbox[3] / 2) & ((1LL << 32) - 1);
+	} else {
+		// To reduce the chances of giving multiple polygons or linestrings
+		// the same index, use an arbitrary but predictable point from the
+		// geometry as the index point rather than the bounding box center
+		// as was previously used. The index point chosen comes from a hash
+		// of the overall geometry, so features with the same geometry will
+		// still have the same index. Specifically this avoids guessing
+		// too high a maxzoom for a data source that has a large number of
+		// LineStrings that map essentially the same route but with slight
+		// jitter between them, even though the geometries themselves are
+		// not very detailed.
+		size_t ix = 0;
+		for (size_t i = 0; i < sf.geometry.size(); i++) {
+			ix += sf.geometry[i].x + sf.geometry[i].y;
+		}
+		ix = ix % sf.geometry.size();
+
+		// If off the edge of the plane, mask to bring it back into the addressable area
+		midx = sf.geometry[ix].x & ((1LL << 32) - 1);
+		midy = sf.geometry[ix].y & ((1LL << 32) - 1);
+	}
+
 	bbox_index = encode_index(midx, midy);
 
 	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {

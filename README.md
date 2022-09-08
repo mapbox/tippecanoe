@@ -447,6 +447,8 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
    If you use `-rg`, it will guess a drop rate that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with `-rg`*width* to allow fewer features in the densest tile to
    compensate for the larger marker, or `-rf`*number* to allow at most *number* features in the densest tile.
+   If you use `-rp` with `-zg` or `--smallest-maximum-zoom-guess` it will choose a drop rate from the same
+   distance-between-features metrics as are used to choose the maxzoom.
  * `-B` _zoom_ or `--base-zoom=`_zoom_: Base zoom, the level at and above which all points are included in the tiles (default maxzoom).
    If you use `-Bg`, it will guess a zoom level that will keep at most 50,000 features in the densest tile.
    You can also specify a marker-width with `-Bg`*width* to allow fewer features in the densest tile to
