@@ -68,7 +68,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
 		perror(fn);
-		exit(EXIT_FAILURE);
+		exit(101);
 	}
 
 	std::string s;
@@ -76,7 +76,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fn, err.c_str());
-			exit(EXIT_FAILURE);
+			exit(102);
 		}
 
 		header = csv_split(s.c_str());
@@ -89,7 +89,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fn, err.c_str());
-			exit(EXIT_FAILURE);
+			exit(103);
 		}
 
 		std::vector<std::string> line = csv_split(s.c_str());
@@ -105,7 +105,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 
 	if (fclose(f) != 0) {
 		perror("fclose");
-		exit(EXIT_FAILURE);
+		exit(104);
 	}
 }
 

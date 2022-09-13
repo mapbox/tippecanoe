@@ -35,7 +35,7 @@ void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const
 	struct stat st;
 	if (stat(newdir.c_str(), &st) == 0) {
 		fprintf(stderr, "Can't write tile to already existing %s\n", newdir.c_str());
-		exit(EXIT_FAILURE);
+		exit(123);
 	}
 
 	std::ofstream pbfFile(newdir, std::ios::out | std::ios::binary);
@@ -75,7 +75,7 @@ void check_dir(const char *dir, char **argv, bool force, bool forcetable) {
 			fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", argv[0], dir);
 			fprintf(stderr, "%s: %s: file exists\n", argv[0], meta.c_str());
 			if (!forcetable) {
-				exit(EXIT_FAILURE);
+				exit(124);
 			}
 		}
 	}
@@ -93,11 +93,11 @@ void check_dir(const char *dir, char **argv, bool force, bool forcetable) {
 		if (force) {
 			if (unlink(fn.c_str()) != 0) {
 				perror(fn.c_str());
-				exit(EXIT_FAILURE);
+				exit(125);
 			}
 		} else {
 			fprintf(stderr, "%s: file exists\n", fn.c_str());
-			exit(EXIT_FAILURE);
+			exit(126);
 		}
 	}
 }
@@ -116,7 +116,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname, int minzoom, int maxzoom)
 				DIR *d2 = opendir(z.c_str());
 				if (d2 == NULL) {
 					perror(z.c_str());
-					exit(EXIT_FAILURE);
+					exit(127);
 				}
 
 				struct dirent *dp2;
@@ -128,7 +128,7 @@ std::vector<zxy> enumerate_dirtiles(const char *fname, int minzoom, int maxzoom)
 						DIR *d3 = opendir(x.c_str());
 						if (d3 == NULL) {
 							perror(x.c_str());
-							exit(EXIT_FAILURE);
+							exit(128);
 						}
 
 						struct dirent *dp3;
@@ -165,11 +165,11 @@ sqlite3 *dirmeta2tmp(const char *fname) {
 
 	if (sqlite3_open("", &db) != SQLITE_OK) {
 		fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+		exit(129);
 	}
 	if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "Create metadata table: %s\n", err);
-		exit(EXIT_FAILURE);
+		exit(129);
 	}
 
 	std::string name = fname;
@@ -183,12 +183,12 @@ sqlite3 *dirmeta2tmp(const char *fname) {
 		json_object *o = json_read_tree(jp);
 		if (o == NULL) {
 			fprintf(stderr, "%s: metadata parsing error: %s\n", name.c_str(), jp->error);
-			exit(EXIT_FAILURE);
+			exit(130);
 		}
 
 		if (o->type != JSON_HASH) {
 			fprintf(stderr, "%s: bad metadata format\n", name.c_str());
-			exit(EXIT_FAILURE);
+			exit(131);
 		}
 
 		for (size_t i = 0; i < o->value.object.length; i++) {

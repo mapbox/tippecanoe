@@ -943,3 +943,45 @@ Join block geometries to employment attributes:
 ```
 $ tippecanoe-json-tool -c in_wac_S000_JT00_2015.csv tl_2010_18157_tabblock10.sort.json > blocks-wac.json
 ```
+
+Error returns
+=============
+
+* 101: CSV file not found
+* 102: UTF-8 decoding error in CSV file header
+* 103: UTF-8 decoding error in CSV file body
+* 104: Error closing CSV file
+* 105: Error decoding vector tile
+* 106: Error decoding protocol buffer while decoding vector tile
+* 107: Impossible (<= 0) extent in vector tile
+* 108: Impossible tile number for zoom level in vector tile
+* 109: Non-archive file specified for decode without z/x/y
+* 110: Error closing tile after decoding
+* 111: Error opening mbtiles file with sqlite
+* 112: Error performing sqlite integrity check on mbtiles file
+* 113: Error selecting metadata from mbtiles file
+* 114: Null key or value in mbtiles metadata table
+* 115: Error opening file in directory of tiles
+* 116: Error selecting tiles from mbtiles file
+* 117: Impossible zoom level in mbtiles file
+* 118: Null tile in mbtiles tiles table
+* 119: Error selecting a single tile from the mbtiles tiles table
+* 120: Null single tile in mbtiles tiles table
+* 121: Error closing mbtiles file
+* 122: Unrecognized command line option in tippecanoe-decode
+* 123: Directory of tiles to be written already exists
+* 124: metadata.json file already exists in directory of tiles
+* 125: Tile can't be deleted from directory of tiles
+* 126: Tile to be written already exists in directory of tiles
+* 127: Zoom level directory can't be opened
+* 128: X coordinate directory can't be opened
+* 128: Can't create temporary sqlite database for metadata
+* 129: Can't create metadata table in temporary sqlite database
+* 130: JSON parsing error reading metadata.json
+* 131: Top level of metadata.json is not a JSON object
+* 132: Can't open mbtiles file for tippecanoe-enumerate
+* 133: Error performing sqlite integrity check on mbtiles file
+* 134: Error selecting from tiles table in mbtiles file
+* 135: Impossible zoom level in mbtiles file
+* 136: Can't close mbtiles file after enumerating
+* 137: Unrecognized command line option for tippecanoe-enumerate
