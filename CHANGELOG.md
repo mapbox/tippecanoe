@@ -1,3 +1,7 @@
+## 2.6.1
+
+Upgrade protozero to version 1.7.1
+
 ## 2.6.0
 
 * Add another drop rate guessing options, from the same metrics -zg uses

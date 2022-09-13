@@ -16,9 +16,10 @@ documentation.
  * @brief Contains low-level varint and zigzag encoding and decoding functions.
  */
 
-#include <cstdint>
+#include "buffer_tmpl.hpp"
+#include "exception.hpp"
 
-#include <protozero/exception.hpp>
+#include <cstdint>
 
 namespace protozero {
 
@@ -31,34 +32,34 @@ namespace detail {
 
     // from https://github.com/facebook/folly/blob/master/folly/Varint.h
     inline uint64_t decode_varint_impl(const char** data, const char* end) {
-        const int8_t* begin = reinterpret_cast<const int8_t*>(*data);
-        const int8_t* iend = reinterpret_cast<const int8_t*>(end);
+        const auto* begin = reinterpret_cast<const int8_t*>(*data);
+        const auto* iend = reinterpret_cast<const int8_t*>(end);
         const int8_t* p = begin;
         uint64_t val = 0;
 
         if (iend - begin >= max_varint_length) {  // fast path
             do {
-                int64_t b;
-                b = *p++; val  = uint64_t((b & 0x7f)      ); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) <<  7); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 14); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 21); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 28); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 35); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 42); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 49); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 56); if (b >= 0) break;
-                b = *p++; val |= uint64_t((b & 0x7f) << 63); if (b >= 0) break;
-                throw varint_too_long_exception();
+                int64_t b = *p++;
+                          val  = ((uint64_t(b) & 0x7fU)       ); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) <<  7U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 14U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 21U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 28U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 35U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 42U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 49U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x7fU) << 56U); if (b >= 0) { break; }
+                b = *p++; val |= ((uint64_t(b) & 0x01U) << 63U); if (b >= 0) { break; }
+                throw varint_too_long_exception{};
             } while (false);
         } else {
-            int shift = 0;
+            unsigned int shift = 0;
             while (p != iend && *p < 0) {
-                val |= uint64_t(*p++ & 0x7f) << shift;
+                val |= (uint64_t(*p++) & 0x7fU) << shift;
                 shift += 7;
             }
             if (p == iend) {
-                throw end_of_buffer_exception();
+                throw end_of_buffer_exception{};
             }
             val |= uint64_t(*p++) << shift;
         }
@@ -88,8 +89,8 @@ namespace detail {
  */
 inline uint64_t decode_varint(const char** data, const char* end) {
     // If this is a one-byte varint, decode it here.
-    if (end != *data && ((**data & 0x80) == 0)) {
-        uint64_t val = uint64_t(**data);
+    if (end != *data && ((static_cast<uint64_t>(**data) & 0x80U) == 0)) {
+        const auto val = static_cast<uint64_t>(**data);
         ++(*data);
         return val;
     }
@@ -110,20 +111,20 @@ inline uint64_t decode_varint(const char** data, const char* end) {
  *         before the end of the varint.
  */
 inline void skip_varint(const char** data, const char* end) {
-    const int8_t* begin = reinterpret_cast<const int8_t*>(*data);
-    const int8_t* iend = reinterpret_cast<const int8_t*>(end);
+    const auto* begin = reinterpret_cast<const int8_t*>(*data);
+    const auto* iend = reinterpret_cast<const int8_t*>(end);
     const int8_t* p = begin;
 
     while (p != iend && *p < 0) {
         ++p;
     }
 
-    if (p >= begin + max_varint_length) {
-        throw varint_too_long_exception();
+    if (p - begin >= max_varint_length) {
+        throw varint_too_long_exception{};
     }
 
     if (p == iend) {
-        throw end_of_buffer_exception();
+        throw end_of_buffer_exception{};
     }
 
     ++p;
@@ -138,18 +139,75 @@ inline void skip_varint(const char** data, const char* end) {
  * @param data Output iterator the varint encoded value will be written to
  *             byte by byte.
  * @param value The integer that will be encoded.
+ * @returns the number of bytes written
  * @throws Any exception thrown by increment or dereference operator on data.
+ * @deprecated Use add_varint_to_buffer() instead.
  */
 template <typename T>
 inline int write_varint(T data, uint64_t value) {
     int n = 1;
 
-    while (value >= 0x80) {
-        *data++ = char((value & 0x7f) | 0x80);
-        value >>= 7;
+    while (value >= 0x80U) {
+        *data++ = char((value & 0x7fU) | 0x80U);
+        value >>= 7U;
         ++n;
     }
-    *data++ = char(value);
+    *data = char(value);
+
+    return n;
+}
+
+/**
+ * Varint encode a 64 bit integer.
+ *
+ * @tparam TBuffer A buffer type.
+ * @param buffer Output buffer the varint will be written to.
+ * @param value The integer that will be encoded.
+ * @returns the number of bytes written
+ * @throws Any exception thrown by calling the buffer_push_back() function.
+ */
+template <typename TBuffer>
+inline void add_varint_to_buffer(TBuffer* buffer, uint64_t value) {
+    while (value >= 0x80U) {
+        buffer_customization<TBuffer>::push_back(buffer, char((value & 0x7fU) | 0x80U));
+        value >>= 7U;
+    }
+    buffer_customization<TBuffer>::push_back(buffer, char(value));
+}
+
+/**
+ * Varint encode a 64 bit integer.
+ *
+ * @param data Where to add the varint. There must be enough space available!
+ * @param value The integer that will be encoded.
+ * @returns the number of bytes written
+ */
+inline int add_varint_to_buffer(char* data, uint64_t value) noexcept {
+    int n = 1;
+
+    while (value >= 0x80U) {
+        *data++ = char((value & 0x7fU) | 0x80U);
+        value >>= 7U;
+        ++n;
+    }
+    *data = char(value);
+
+    return n;
+}
+
+/**
+ * Get the length of the varint the specified value would produce.
+ *
+ * @param value The integer to be encoded.
+ * @returns the number of bytes the varint would have if we created it.
+ */
+inline int length_of_varint(uint64_t value) noexcept {
+    int n = 1;
+
+    while (value >= 0x80U) {
+        value >>= 7U;
+        ++n;
+    }
 
     return n;
 }
@@ -158,28 +216,28 @@ inline int write_varint(T data, uint64_t value) {
  * ZigZag encodes a 32 bit integer.
  */
 inline constexpr uint32_t encode_zigzag32(int32_t value) noexcept {
-    return (static_cast<uint32_t>(value) << 1) ^ (static_cast<uint32_t>(value >> 31));
+    return (static_cast<uint32_t>(value) << 1U) ^ static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(value) >> 31U));
 }
 
 /**
  * ZigZag encodes a 64 bit integer.
  */
 inline constexpr uint64_t encode_zigzag64(int64_t value) noexcept {
-    return (static_cast<uint64_t>(value) << 1) ^ (static_cast<uint64_t>(value >> 63));
+    return (static_cast<uint64_t>(value) << 1U) ^ static_cast<uint64_t>(-static_cast<int64_t>(static_cast<uint64_t>(value) >> 63U));
 }
 
 /**
  * Decodes a 32 bit ZigZag-encoded integer.
  */
 inline constexpr int32_t decode_zigzag32(uint32_t value) noexcept {
-    return static_cast<int32_t>(value >> 1) ^ -static_cast<int32_t>(value & 1);
+    return static_cast<int32_t>((value >> 1U) ^ static_cast<uint32_t>(-static_cast<int32_t>(value & 1U)));
 }
 
 /**
  * Decodes a 64 bit ZigZag-encoded integer.
  */
 inline constexpr int64_t decode_zigzag64(uint64_t value) noexcept {
-    return static_cast<int64_t>(value >> 1) ^ -static_cast<int64_t>(value & 1);
+    return static_cast<int64_t>((value >> 1U) ^ static_cast<uint64_t>(-static_cast<int64_t>(value & 1U)));
 }
 
 } // end namespace protozero
