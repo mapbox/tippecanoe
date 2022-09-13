@@ -19,7 +19,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		f = fopen(fname.c_str(), "r");
 		if (f == NULL) {
 			perror(fname.c_str());
-			exit(EXIT_FAILURE);
+			exit(171);
 		}
 	}
 
@@ -31,7 +31,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fname.c_str(), err.c_str());
-			exit(EXIT_FAILURE);
+			exit(172);
 		}
 
 		header = csv_split(s.c_str());
@@ -53,7 +53,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 	if (latcol < 0 || loncol < 0) {
 		fprintf(stderr, "%s: Can't find \"lat\" and \"lon\" columns\n", fname.c_str());
-		exit(EXIT_FAILURE);
+		exit(173);
 	}
 
 	size_t seq = 0;
@@ -61,7 +61,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fname.c_str(), err.c_str());
-			exit(EXIT_FAILURE);
+			exit(174);
 		}
 
 		seq++;
@@ -69,7 +69,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 
 		if (line.size() != header.size()) {
 			fprintf(stderr, "%s:%zu: Mismatched column count: %zu in line, %zu in header\n", fname.c_str(), seq + 1, line.size(), header.size());
-			exit(EXIT_FAILURE);
+			exit(175);
 		}
 
 		if (line[loncol].empty() || line[latcol].empty()) {
@@ -133,7 +133,7 @@ void parse_geocsv(std::vector<struct serialization_state> &sst, std::string fnam
 	if (fname.size() != 0) {
 		if (fclose(f) != 0) {
 			perror("fclose");
-			exit(EXIT_FAILURE);
+			exit(176);
 		}
 	}
 }

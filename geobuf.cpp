@@ -37,7 +37,7 @@ static std::vector<queued_feature> feature_queue;
 void ensureDim(size_t dim) {
 	if (dim < 2) {
 		fprintf(stderr, "Geometry has fewer than 2 dimensions: %zu\n", dim);
-		exit(EXIT_FAILURE);
+		exit(164);
 	}
 }
 
@@ -117,7 +117,7 @@ drawvec readLinePart(std::vector<long long> &coords, size_t dim, double e, size_
 	for (size_t i = start; i + dim - 1 < end; i += dim) {
 		if (i + dim - 1 >= coords.size()) {
 			fprintf(stderr, "Internal error: line segment %zu vs %zu\n", i + dim - 1, coords.size());
-			exit(EXIT_FAILURE);
+			exit(165);
 		}
 
 		for (size_t d = 0; d < dim; d++) {
@@ -328,12 +328,12 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 			for (size_t i = 0; i + 1 < properties.size(); i += 2) {
 				if (properties[i] >= keys.size()) {
 					fprintf(stderr, "Out of bounds key: %zu in %zu\n", properties[i], keys.size());
-					exit(EXIT_FAILURE);
+					exit(166);
 				}
 
 				if (properties[i + 1] >= values.size()) {
 					fprintf(stderr, "Out of bounds value: %zu in %zu\n", properties[i + 1], values.size());
-					exit(EXIT_FAILURE);
+					exit(167);
 				}
 
 				full_keys.push_back(keys[properties[i]]);
@@ -354,12 +354,12 @@ void readFeature(protozero::pbf_reader &pbf, size_t dim, double e, std::vector<s
 			for (size_t i = 0; i + 1 < misc.size(); i += 2) {
 				if (misc[i] >= keys.size()) {
 					fprintf(stderr, "Out of bounds key: %zu in %zu\n", misc[i], keys.size());
-					exit(EXIT_FAILURE);
+					exit(168);
 				}
 
 				if (misc[i + 1] >= values.size()) {
 					fprintf(stderr, "Out of bounds value: %zu in %zu\n", misc[i + 1], values.size());
-					exit(EXIT_FAILURE);
+					exit(169);
 				}
 
 				other.insert(std::pair<std::string, serial_val>(keys[misc[i]], values[misc[i + 1]]));
@@ -466,7 +466,7 @@ void runQueue() {
 	for (size_t i = 0; i < CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, run_parse_feature, &qra[i]) != 0) {
 			perror("pthread_create");
-			exit(EXIT_FAILURE);
+			exit(170);
 		}
 	}
 

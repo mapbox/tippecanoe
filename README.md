@@ -985,3 +985,42 @@ Error returns
 * 135: Impossible zoom level in mbtiles file
 * 136: Can't close mbtiles file after enumerating
 * 137: Unrecognized command line option for tippecanoe-enumerate
+* 138: Corrupt attribute type in expression evaluation
+* 139: Corrupt attribute type in expression evaluation
+* 140: Filter is not in the form of an array
+* 141: Filter is in the form of an empty array
+* 142: Filter operation is not a string
+* 143: Wrong number of arguments for "has" filter operation
+* 144: Has filter key is not a string
+* 145: !Has filter key is not a string
+* 146: Wrong number of arguments for comparison filter operation
+* 147: Comparison filter key is not a string
+* 148: Impossible filter comparison operation
+* 149: Wrong number of arguments for "in" filter operation
+* 150: In filter key is not a string
+* 151: Wrong number arguments for attribute-filter filter operation
+* 152: Attribute-filter key is not a string
+* 153: Unknown filter operation
+* 154: List of filters is not a JSON object
+* 155: Error opening filter file
+* 156: Error reading JSON from filter file
+* 157: Error parsing JSON from filter string
+* 158: Unsupported geometry type in flatgeobuf file
+* 159: Unsupported geometry type in flatgeobuf file
+* 160: Flatgeobuf attribute type can't be represented in vector tiles
+* 161: Error creating feature parsing thread for flatgeobuf features
+* 162: Flatgeobuf header has the wrong magic number
+* 163: Flatgeobuf feature can't be verified
+* 164: Geobuf geometry has fewer than 2 dimensions
+* 165: Impossible geobuf line segment index
+* 166: Out-of-bounds geobuf key index
+* 167: Out-of-bounds geobuf value index
+* 168: Out-of-bounds geobuf key index
+* 169: Out-of-bounds geobuf value index
+* 170: Error creating geobuf feature parsing thread
+* 171: Error opening file of CSV features
+* 172: UTF-8 parsing error in header of CSV feature file
+* 173: Can't find latitude and longitude columns in CSV feature file
+* 174: UTF-8 parsing error in body of CSV feature file
+* 175: Inconsistent number of columns in CSV feature file
+* 176: Can't close CSV feature file

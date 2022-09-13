@@ -95,7 +95,7 @@ drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryT
 		return dv;
 	} else {
 		fprintf(stderr, "flatgeobuf has unsupported geometry type %u\n", (unsigned int)h_geometry_type);
-		exit(EXIT_FAILURE);
+		exit(158);
 	}
 }
 
@@ -124,7 +124,7 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 		case FlatGeobuf::GeometryType::GeometryCollection :
 		default:
 			fprintf(stderr, "flatgeobuf has unsupported geometry type %u\n", (unsigned int)h_geometry_type);
-			exit(EXIT_FAILURE);
+			exit(159);
 	}
 
 	serial_feature sf;
@@ -236,7 +236,7 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 		} else {
 			// Binary is not representable in MVT
 			fprintf(stderr, "flatgeobuf has unsupported column type %u\n", (unsigned int)col_type);
-			exit(EXIT_FAILURE);
+			exit(160);
 		}
 		full_keys.push_back(h_column_names[col_idx]);
 		full_values.push_back(sv);
@@ -304,7 +304,7 @@ void fgbRunQueue() {
 	for (size_t i = 0; i < CPUS; i++) {
 		if (pthread_create(&pthreads[i], NULL, fgb_run_parse_feature, &qra[i]) != 0) {
 			perror("pthread_create");
-			exit(EXIT_FAILURE);
+			exit(161);
 		}
 	}
 
@@ -347,7 +347,7 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 	const auto ok = FlatGeobuf::VerifySizePrefixedHeaderBuffer(v);
 	if (!ok) {
 		fprintf(stderr, "flatgeobuf header verification failed\n");
-		exit(EXIT_FAILURE);
+		exit(162);
 	}
 
 	auto header = FlatGeobuf::GetSizePrefixedHeader(src + sizeof(magicbytes));
@@ -384,7 +384,7 @@ void parse_flatgeobuf(std::vector<struct serialization_state> *sst, const char *
 		const auto ok2 = FlatGeobuf::VerifySizePrefixedFeatureBuffer(v2);
 		if (!ok2) {
 			fprintf(stderr, "flatgeobuf feature buffer verification failed\n");
-			exit(EXIT_FAILURE);
+			exit(163);
 		}
 
 		auto feature = FlatGeobuf::GetSizePrefixedFeature(start);
