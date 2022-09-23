@@ -38,7 +38,7 @@ Installation
 For this fork you will need to build from the source repository:
 
 ```sh
-$ git clone https://github.com/protomaps/tippecanoe.git
+$ git clone https://github.com/felt/tippecanoe.git
 $ cd tippecanoe
 $ make -j
 $ make install
