@@ -12,6 +12,7 @@
 #include "text.hpp"
 #include "mvt.hpp"
 #include "milo/dtoa_milo.h"
+#include "errors.hpp"
 
 const char *geometry_names[GEOM_TYPES] = {
 	"Point",
@@ -95,7 +96,7 @@ void parse_geometry(int t, json_object *j, drawvec &out, int op, const char *fna
 			fprintf(stderr, "%s:%d: malformed point\n", fname, line);
 			json_context(j);
 			json_context(feature);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 	}
 
@@ -147,7 +148,7 @@ void stringify_value(json_object *value, int &type, std::string &stringified, co
 			if (err != "") {
 				fprintf(stderr, "%s:%d: %s\n", reading, line, err.c_str());
 				json_context(feature);
-				exit(EXIT_FAILURE);
+				exit(EXIT_UTF8);
 			}
 		} else if (vt == JSON_NUMBER) {
 			type = mvt_double;

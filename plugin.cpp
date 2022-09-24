@@ -24,6 +24,7 @@
 #include "projection.hpp"
 #include "geometry.hpp"
 #include "serial.hpp"
+#include "errors.hpp"
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
@@ -48,12 +49,12 @@ void *run_writer(void *a) {
 	FILE *fp = fdopen(wa->write_to, "w");
 	if (fp == NULL) {
 		perror("fdopen (pipe writer)");
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 
 	json_writer state(fp);
 	for (size_t i = 0; i < wa->layers->size(); i++) {
-		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state);
+		layer_to_geojson((*(wa->layers))[i], wa->z, wa->x, wa->y, false, true, false, true, 0, 0, 0, true, state, 0);
 	}
 
 	if (fclose(fp) != 0) {
@@ -65,7 +66,7 @@ void *run_writer(void *a) {
 			}
 		} else {
 			perror("fclose output to filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 	}
 
@@ -90,7 +91,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 	FILE *f = fdopen(fd, "r");
 	if (f == NULL) {
 		perror("fdopen filter output");
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 	json_pull *jp = json_begin_file(f);
 
@@ -102,7 +103,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
-				exit(EXIT_FAILURE);
+				exit(EXIT_JSON);
 			}
 
 			json_free(jp->root);
@@ -122,7 +123,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			fprintf(stderr, "Filter output:%d: filtered feature with no geometry\n", jp->line);
 			json_context(j);
 			json_free(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
@@ -130,27 +131,27 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			fprintf(stderr, "Filter output:%d: feature without properties hash\n", jp->line);
 			json_context(j);
 			json_free(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
 			fprintf(stderr, "Filter output:%d: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		if (geometry_type->type != JSON_STRING) {
 			fprintf(stderr, "Filter output:%d: geometry type is not a string\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 			fprintf(stderr, "Filter output:%d: feature without coordinates array\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		int t;
@@ -162,7 +163,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 		if (t >= GEOM_TYPES) {
 			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->value.string.string);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		std::string layername = "unknown";
@@ -240,7 +241,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 			auto fk = layermap.find(layername);
 			if (fk == layermap.end()) {
 				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 			if (z < fk->second.minzoom) {
 				fk->second.minzoom = z;
@@ -287,7 +288,7 @@ std::vector<mvt_layer> parse_layers(int fd, int z, unsigned x, unsigned y, std::
 	json_end(jp);
 	if (fclose(f) != 0) {
 		perror("fclose postfilter output");
-		exit(EXIT_FAILURE);
+		exit(EXIT_CLOSE);
 	}
 
 	std::vector<mvt_layer> final;
@@ -309,7 +310,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 				if (jp->root != NULL) {
 					json_context(jp->root);
 				}
-				exit(EXIT_FAILURE);
+				exit(EXIT_JSON);
 			}
 
 			json_free(jp->root);
@@ -330,7 +331,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			fprintf(stderr, "Filter output:%d: filtered feature with no geometry\n", jp->line);
 			json_context(j);
 			json_free(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *properties = json_hash_get(j, "properties");
@@ -338,27 +339,27 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			fprintf(stderr, "Filter output:%d: feature without properties hash\n", jp->line);
 			json_context(j);
 			json_free(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *geometry_type = json_hash_get(geometry, "type");
 		if (geometry_type == NULL) {
 			fprintf(stderr, "Filter output:%d: null geometry (additional not reported)\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		if (geometry_type->type != JSON_STRING) {
 			fprintf(stderr, "Filter output:%d: geometry type is not a string\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		json_object *coordinates = json_hash_get(geometry, "coordinates");
 		if (coordinates == NULL || coordinates->type != JSON_ARRAY) {
 			fprintf(stderr, "Filter output:%d: feature without coordinates array\n", jp->line);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		int t;
@@ -370,7 +371,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 		if (t >= GEOM_TYPES) {
 			fprintf(stderr, "Filter output:%d: Can't handle geometry type %s\n", jp->line, geometry_type->value.string.string);
 			json_context(j);
-			exit(EXIT_FAILURE);
+			exit(EXIT_JSON);
 		}
 
 		drawvec dv;
@@ -476,7 +477,7 @@ serial_feature parse_feature(json_pull *jp, int z, unsigned x, unsigned y, std::
 			auto fk = layermap.find(layername);
 			if (fk == layermap.end()) {
 				fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 			sf.layer = fk->second.id;
 
@@ -539,17 +540,17 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 
 	if (pthread_mutex_lock(&pipe_lock) != 0) {
 		perror("pthread_mutex_lock (pipe)");
-		exit(EXIT_FAILURE);
+		exit(EXIT_PTHREAD);
 	}
 
 	int pipe_orig[2], pipe_filtered[2];
 	if (pipe(pipe_orig) < 0) {
 		perror("pipe (original features)");
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 	if (pipe(pipe_filtered) < 0) {
 		perror("pipe (filtered features)");
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 
 	std::string z_str = std::to_string(z);
@@ -559,64 +560,64 @@ void setup_filter(const char *filter, int *write_to, int *read_from, pid_t *pid,
 	*pid = fork();
 	if (*pid < 0) {
 		perror("fork");
-		exit(EXIT_FAILURE);
+		exit(EXIT_PTHREAD);
 	} else if (*pid == 0) {
 		// child
 
 		if (dup2(pipe_orig[0], 0) < 0) {
 			perror("dup child stdin");
-			exit(EXIT_FAILURE);
+			exit(EXIT_OPEN);
 		}
 		if (dup2(pipe_filtered[1], 1) < 0) {
 			perror("dup child stdout");
-			exit(EXIT_FAILURE);
+			exit(EXIT_OPEN);
 		}
 		if (close(pipe_orig[1]) != 0) {
 			perror("close output to filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (close(pipe_filtered[0]) != 0) {
 			perror("close input from filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (close(pipe_orig[0]) != 0) {
 			perror("close dup input of filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (close(pipe_filtered[1]) != 0) {
 			perror("close dup output of filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 
 		// XXX close other fds?
 
 		if (execlp("sh", "sh", "-c", filter, "sh", z_str.c_str(), x_str.c_str(), y_str.c_str(), NULL) != 0) {
 			perror("exec");
-			exit(EXIT_FAILURE);
+			exit(EXIT_PTHREAD);
 		}
 	} else {
 		// parent
 
 		if (close(pipe_orig[0]) != 0) {
 			perror("close filter-side reader");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (close(pipe_filtered[1]) != 0) {
 			perror("close filter-side writer");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (fcntl(pipe_orig[1], F_SETFD, FD_CLOEXEC) != 0) {
 			perror("cloxec output to filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 		if (fcntl(pipe_filtered[0], F_SETFD, FD_CLOEXEC) != 0) {
 			perror("cloxec input from filter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 
 		if (pthread_mutex_unlock(&pipe_lock) != 0) {
 			perror("pthread_mutex_unlock (pipe_lock)");
-			exit(EXIT_FAILURE);
+			exit(EXIT_PTHREAD);
 		}
 
 		*write_to = pipe_orig[1];
@@ -640,7 +641,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 	pthread_t writer;
 	if (pthread_create(&writer, NULL, run_writer, &wa) != 0) {
 		perror("pthread_create (filter writer)");
-		exit(EXIT_FAILURE);
+		exit(EXIT_PTHREAD);
 	}
 
 	std::vector<mvt_layer> nlayers = parse_layers(read_from, z, x, y, layermaps, tiling_seg, layer_unmaps, extent);
@@ -649,7 +650,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 		int stat_loc;
 		if (waitpid(pid, &stat_loc, 0) < 0) {
 			perror("waitpid for filter\n");
-			exit(EXIT_FAILURE);
+			exit(EXIT_PTHREAD);
 		}
 		if (WIFEXITED(stat_loc) || WIFSIGNALED(stat_loc)) {
 			break;
@@ -659,7 +660,7 @@ std::vector<mvt_layer> filter_layers(const char *filter, std::vector<mvt_layer> 
 	void *ret;
 	if (pthread_join(writer, &ret) != 0) {
 		perror("pthread_join filter writer");
-		exit(EXIT_FAILURE);
+		exit(EXIT_PTHREAD);
 	}
 
 	return nlayers;

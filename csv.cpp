@@ -1,5 +1,6 @@
 #include "csv.hpp"
 #include "text.hpp"
+#include "errors.hpp"
 
 std::vector<std::string> csv_split(const char *s) {
 	std::vector<std::string> ret;
@@ -68,7 +69,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 	FILE *f = fopen(fn, "r");
 	if (f == NULL) {
 		perror(fn);
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 
 	std::string s;
@@ -76,7 +77,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fn, err.c_str());
-			exit(EXIT_FAILURE);
+			exit(EXIT_UTF8);
 		}
 
 		header = csv_split(s.c_str());
@@ -89,7 +90,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 		std::string err = check_utf8(s);
 		if (err != "") {
 			fprintf(stderr, "%s: %s\n", fn, err.c_str());
-			exit(EXIT_FAILURE);
+			exit(EXIT_UTF8);
 		}
 
 		std::vector<std::string> line = csv_split(s.c_str());
@@ -105,7 +106,7 @@ void readcsv(const char *fn, std::vector<std::string> &header, std::map<std::str
 
 	if (fclose(f) != 0) {
 		perror("fclose");
-		exit(EXIT_FAILURE);
+		exit(EXIT_CLOSE);
 	}
 }
 

@@ -4,6 +4,7 @@
 #include <math.h>
 #include <atomic>
 #include "projection.hpp"
+#include "errors.hpp"
 
 unsigned long long (*encode_index)(unsigned int wx, unsigned int wy) = NULL;
 void (*decode_index)(unsigned long long index, unsigned *wx, unsigned *wy) = NULL;
@@ -212,6 +213,6 @@ void set_projection_or_exit(const char *optarg) {
 	}
 	if (p->name == NULL) {
 		fprintf(stderr, "Unknown projection (-s): %s\n", optarg);
-		exit(EXIT_FAILURE);
+		exit(EXIT_ARGS);
 	}
 }

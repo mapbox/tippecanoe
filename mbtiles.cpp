@@ -18,6 +18,7 @@
 #include "milo/dtoa_milo.h"
 #include "write_json.hpp"
 #include "version.hpp"
+#include "errors.hpp"
 
 size_t max_tilestats_attributes = 1000;
 size_t max_tilestats_sample_values = 1000;
@@ -28,45 +29,45 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 
 	if (sqlite3_open(dbname, &outdb) != SQLITE_OK) {
 		fprintf(stderr, "%s: %s: %s\n", argv[0], dbname, sqlite3_errmsg(outdb));
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 
 	char *err = NULL;
 	if (sqlite3_exec(outdb, "PRAGMA synchronous=0", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: async: %s\n", argv[0], err);
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_exec(outdb, "PRAGMA locking_mode=EXCLUSIVE", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: async: %s\n", argv[0], err);
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_exec(outdb, "PRAGMA journal_mode=DELETE", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: async: %s\n", argv[0], err);
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: Tileset \"%s\" already exists. You can use --force if you want to delete the old tileset.\n", argv[0], dbname);
 		fprintf(stderr, "%s: %s\n", argv[0], err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_EXISTS);
 		}
 	}
 	if (sqlite3_exec(outdb, "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create tiles table: %s\n", argv[0], err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_EXISTS);
 		}
 	}
 	if (sqlite3_exec(outdb, "create unique index name on metadata (name);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_EXISTS);
 		}
 	}
 	if (sqlite3_exec(outdb, "create unique index tile_index on tiles (zoom_level, tile_column, tile_row);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_EXISTS);
 		}
 	}
 
@@ -78,7 +79,7 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
 	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
 		fprintf(stderr, "sqlite3 insert prep failed\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 
 	sqlite3_bind_int(stmt, 1, z);
@@ -336,11 +337,11 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (outdb == NULL) {
 		if (sqlite3_open("", &db) != SQLITE_OK) {
 			fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
-			exit(EXIT_FAILURE);
+			exit(EXIT_OPEN);
 		}
 		if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "Create metadata table: %s\n", err);
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 
@@ -348,7 +349,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set name in metadata: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -357,7 +358,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set description in metadata: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -366,7 +367,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set version : %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -375,7 +376,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set minzoom: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -384,7 +385,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set maxzoom: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -393,7 +394,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set center: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -402,7 +403,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set bounds: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -411,7 +412,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set type: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -421,7 +422,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set type: %s\n", err);
 			if (!forcetable) {
-				exit(EXIT_FAILURE);
+				exit(EXIT_SQLITE);
 			}
 		}
 		sqlite3_free(sql);
@@ -431,7 +432,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set format: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -441,7 +442,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set version: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -450,7 +451,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "set commandline: %s\n", err);
 		if (!forcetable) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_SQLITE);
 		}
 	}
 	sqlite3_free(sql);
@@ -461,7 +462,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set strategies: %s\n", err);
 			if (!forcetable) {
-				exit(EXIT_FAILURE);
+				exit(EXIT_SQLITE);
 			}
 		}
 		sqlite3_free(sql);
@@ -561,7 +562,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
 			fprintf(stderr, "set json: %s\n", err);
 			if (!forcetable) {
-				exit(EXIT_FAILURE);
+				exit(EXIT_SQLITE);
 			}
 		}
 		sqlite3_free(sql);
@@ -577,7 +578,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 			FILE *fp = fopen(metadata.c_str(), "w");
 			if (fp == NULL) {
 				perror(metadata.c_str());
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 
 			json_writer state(fp);
@@ -594,7 +595,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 					const char *v = (const char *) sqlite3_column_text(stmt, 1);
 					if (k == NULL || v == NULL) {
 						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-						exit(EXIT_FAILURE);
+						exit(EXIT_SQLITE);
 					}
 
 					state.json_comma_newline();
@@ -614,7 +615,7 @@ void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fnam
 	if (outdb == NULL) {
 		if (sqlite3_close(db) != SQLITE_OK) {
 			fprintf(stderr, "Could not close temp database: %s\n", sqlite3_errmsg(db));
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 	}
 }
@@ -624,11 +625,11 @@ void mbtiles_close(sqlite3 *outdb, const char *pgm) {
 
 	if (sqlite3_exec(outdb, "ANALYZE;", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: ANALYZE failed: %s\n", pgm, err);
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_close(outdb) != SQLITE_OK) {
 		fprintf(stderr, "%s: could not close database: %s\n", pgm, sqlite3_errmsg(outdb));
-		exit(EXIT_FAILURE);
+		exit(EXIT_CLOSE);
 	}
 }
 
@@ -661,7 +662,7 @@ std::map<std::string, layermap_entry> merge_layermaps(std::vector<std::map<std::
 			auto out_entry = out.find(layername);
 			if (out_entry == out.end()) {
 				fprintf(stderr, "Internal error merging layers\n");
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 
 			for (auto fk = map->second.file_keys.begin(); fk != map->second.file_keys.end(); ++fk) {
@@ -726,7 +727,7 @@ void add_to_file_keys(std::map<std::string, type_and_string_stats> &file_keys, s
 
 	if (fka == file_keys.end()) {
 		fprintf(stderr, "Can't happen (tilestats)\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 
 	if (val.type == mvt_double) {

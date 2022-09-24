@@ -13,6 +13,7 @@
 #include "protozero/pbf_reader.hpp"
 #include "protozero/pbf_writer.hpp"
 #include "milo/dtoa_milo.h"
+#include "errors.hpp"
 
 mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 	this->op = nop;
@@ -115,7 +116,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	if (is_compressed(message)) {
 		std::string uncompressed;
 		if (decompress(message, uncompressed) == 0) {
-			exit(EXIT_FAILURE);
+			exit(EXIT_MVT);
 		}
 		src = uncompressed;
 		was_compressed = true;
@@ -349,10 +350,10 @@ std::string mvt_tile::encode() {
 				value_writer.add_bool(7, pbv.numeric_value.bool_value);
 			} else if (pbv.type == mvt_null) {
 				fprintf(stderr, "Internal error: trying to write null attribute to tile\n");
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			} else {
 				fprintf(stderr, "Internal error: trying to write undefined attribute type to tile\n");
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 
 			sorted_value sv;
@@ -418,7 +419,7 @@ std::string mvt_tile::encode() {
 
 					if (dx < INT_MIN || dx > INT_MAX || dy < INT_MIN || dy > INT_MAX) {
 						fprintf(stderr, "Internal error: Geometry delta is too big: %lld,%lld\n", dx, dy);
-						exit(EXIT_FAILURE);
+						exit(EXIT_IMPOSSIBLE);
 					}
 
 					geometry.push_back(protozero::encode_zigzag32(dx));
@@ -431,7 +432,7 @@ std::string mvt_tile::encode() {
 					length++;
 				} else {
 					fprintf(stderr, "\nInternal error: corrupted geometry\n");
-					exit(EXIT_FAILURE);
+					exit(EXIT_IMPOSSIBLE);
 				}
 			}
 

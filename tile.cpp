@@ -39,6 +39,7 @@
 #include "write_json.hpp"
 #include "milo/dtoa_milo.h"
 #include "evaluator.hpp"
+#include "errors.hpp"
 
 extern "C" {
 #include "jsonpull/jsonpull.h"
@@ -819,7 +820,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 								if (e1.first == e1.second || e2.first == e2.second) {
 									fprintf(stderr, "Internal error: polygon edge lookup failed for %lld,%lld to %lld,%lld or %lld,%lld to %lld,%lld\n", left[0].x, left[0].y, left[1].x, left[1].y, right[0].x, right[0].y, right[1].x, right[1].y);
-									exit(EXIT_FAILURE);
+									exit(EXIT_IMPOSSIBLE);
 								}
 
 								if (!edges_same(e1, e2)) {
@@ -896,7 +897,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 
 							if (tmp.size() != l - k) {
 								fprintf(stderr, "internal error shifting ring\n");
-								exit(EXIT_FAILURE);
+								exit(EXIT_IMPOSSIBLE);
 							}
 
 							for (size_t m = 0; m < tmp.size(); m++) {
@@ -916,7 +917,7 @@ bool find_common_edges(std::vector<partial> &partials, int z, int line_detail, d
 						for (size_t m = k; m < l; m++) {
 							if (!g[m].necessary) {
 								fprintf(stderr, "internal error in arc building\n");
-								exit(EXIT_FAILURE);
+								exit(EXIT_IMPOSSIBLE);
 							}
 
 							drawvec arc;
@@ -1596,7 +1597,7 @@ void *run_prefilter(void *v) {
 		decode_meta(sf.keys, sf.values, rpa->stringpool + rpa->pool_off[sf.segment], tmp_layer, tmp_feature);
 		tmp_layer.features.push_back(tmp_feature);
 
-		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state);
+		layer_to_geojson(tmp_layer, 0, 0, 0, false, true, false, true, sf.index, sf.seq, sf.extent, true, state, 0);
 	}
 
 	if (fclose(rpa->prefilter_fp) != 0) {
@@ -1608,7 +1609,7 @@ void *run_prefilter(void *v) {
 			}
 		} else {
 			perror("fclose output to prefilter");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 	}
 	return NULL;
@@ -1632,7 +1633,7 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	auto fk = layermap.find(layername);
 	if (fk == layermap.end()) {
 		fprintf(stderr, "Internal error: layer %s not found\n", layername.c_str());
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 
 	type_and_string attrib;
@@ -1803,11 +1804,11 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 	int max_zoom_increment = std::log(child_shards) / std::log(4);
 	if (child_shards < 4 || max_zoom_increment < 1) {
 		fprintf(stderr, "Internal error: %d shards, max zoom increment %d\n", child_shards, max_zoom_increment);
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 	if ((((child_shards - 1) << 1) & child_shards) != child_shards) {
 		fprintf(stderr, "Internal error: %d shards not a power of 2\n", child_shards);
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 
 	int nextzoom = z + 1;
@@ -1848,6 +1849,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		drawvec shared_nodes;
 
 		int tile_detail = line_detail;
+		size_t skipped = 0;
+		size_t kept = 0;
 
 		int within[child_shards];
 		std::atomic<long long> geompos[child_shards];
@@ -1859,7 +1862,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		if (*geompos_in != og) {
 			if (fseek(geoms, og, SEEK_SET) != 0) {
 				perror("fseek geom");
-				exit(EXIT_FAILURE);
+				exit(EXIT_SEEK);
 			}
 			*geompos_in = og;
 		}
@@ -1882,7 +1885,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			prefilter_fp = fdopen(prefilter_write, "w");
 			if (prefilter_fp == NULL) {
 				perror("freopen prefilter");
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 
 			rpa.geoms = geoms;
@@ -1921,13 +1924,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 			if (pthread_create(&prefilter_writer, NULL, run_prefilter, &rpa) != 0) {
 				perror("pthread_create (prefilter writer)");
-				exit(EXIT_FAILURE);
+				exit(EXIT_PTHREAD);
 			}
 
 			prefilter_read_fp = fdopen(prefilter_read, "r");
 			if (prefilter_read_fp == NULL) {
 				perror("fdopen prefilter output");
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 			prefilter_jp = json_begin_file(prefilter_read_fp);
 		}
@@ -2074,47 +2077,55 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			if (sf.geometry.size() > 0) {
-				if (prevent[P_SIMPLIFY_SHARED_NODES]) {
-					for (auto &g : sf.geometry) {
-						shared_nodes.push_back(g);
+				if (partials.size() > max_tile_size) {
+					// Even being maximally conservative, each feature is still going to be
+					// at least one byte in the output tile, so this can't possibly work.
+					skipped++;
+				} else {
+					kept++;
+
+					if (prevent[P_SIMPLIFY_SHARED_NODES]) {
+						for (auto &g : sf.geometry) {
+							shared_nodes.push_back(g);
+						}
 					}
-				}
 
-				partial p;
-				p.geoms.push_back(sf.geometry);
-				p.layer = sf.layer;
-				p.t = sf.t;
-				p.segment = sf.segment;
-				p.original_seq = sf.seq;
-				p.reduced = reduced;
-				p.z = z;
-				p.line_detail = line_detail;
-				p.extra_detail = line_detail;
-				p.maxzoom = maxzoom;
-				p.keys = sf.keys;
-				p.values = sf.values;
-				p.full_keys = sf.full_keys;
-				p.full_values = sf.full_values;
-				p.spacing = spacing;
-				p.simplification = simplification;
-				p.id = sf.id;
-				p.has_id = sf.has_id;
-				p.index = sf.index;
-				p.renamed = -1;
-				p.extent = sf.extent;
-				p.clustered = 0;
+					partial p;
+					p.geoms.push_back(sf.geometry);
+					p.layer = sf.layer;
+					p.t = sf.t;
+					p.segment = sf.segment;
+					p.original_seq = sf.seq;
+					p.reduced = reduced;
+					p.z = z;
+					p.line_detail = line_detail;
+					p.extra_detail = line_detail;
+					p.maxzoom = maxzoom;
+					p.keys = sf.keys;
+					p.values = sf.values;
+					p.full_keys = sf.full_keys;
+					p.full_values = sf.full_values;
+					p.spacing = spacing;
+					p.simplification = simplification;
+					p.id = sf.id;
+					p.has_id = sf.has_id;
+					p.index = sf.index;
+					p.renamed = -1;
+					p.extent = sf.extent;
+					p.clustered = 0;
 
-				if (line_detail == detail && extra_detail >= 0 && z == maxzoom) {
-					p.extra_detail = extra_detail;
-					// maximum allowed coordinate delta in geometries is 2^31 - 1
-					// so we need to stay under that, including the buffer
-					if (p.extra_detail >= 30 - z) {
-						p.extra_detail = 30 - z;
+					if (line_detail == detail && extra_detail >= 0 && z == maxzoom) {
+						p.extra_detail = extra_detail;
+						// maximum allowed coordinate delta in geometries is 2^31 - 1
+						// so we need to stay under that, including the buffer
+						if (p.extra_detail >= 30 - z) {
+							p.extra_detail = 30 - z;
+						}
+						tile_detail = p.extra_detail;
 					}
-					tile_detail = p.extra_detail;
-				}
 
-				partials.push_back(p);
+					partials.push_back(p);
+				}
 			}
 
 			merge_previndex = sf.index;
@@ -2184,13 +2195,13 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			json_end(prefilter_jp);
 			if (fclose(prefilter_read_fp) != 0) {
 				perror("close output from prefilter");
-				exit(EXIT_FAILURE);
+				exit(EXIT_CLOSE);
 			}
 			while (1) {
 				int stat_loc;
 				if (waitpid(prefilter_pid, &stat_loc, 0) < 0) {
 					perror("waitpid for prefilter\n");
-					exit(EXIT_FAILURE);
+					exit(EXIT_PTHREAD);
 				}
 				if (WIFEXITED(stat_loc) || WIFSIGNALED(stat_loc)) {
 					break;
@@ -2199,7 +2210,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			void *ret;
 			if (pthread_join(prefilter_writer, &ret) != 0) {
 				perror("pthread_join prefilter writer");
-				exit(EXIT_FAILURE);
+				exit(EXIT_PTHREAD);
 			}
 		}
 
@@ -2227,7 +2238,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			if (tasks > 1) {
 				if (pthread_create(&pthreads[i], NULL, partial_feature_worker, &args[i]) != 0) {
 					perror("pthread_create");
-					exit(EXIT_FAILURE);
+					exit(EXIT_PTHREAD);
 				}
 			} else {
 				partial_feature_worker(&args[i]);
@@ -2282,7 +2293,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 						fprintf(stderr, "Internal error: couldn't find layer %s\n", layername.c_str());
 						fprintf(stderr, "segment %d\n", partials[i].segment);
 						fprintf(stderr, "layer %lld\n", partials[i].layer);
-						exit(EXIT_FAILURE);
+						exit(EXIT_IMPOSSIBLE);
 					}
 					l->second.push_back(c);
 				}
@@ -2504,7 +2515,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					line_detail++;
 					continue;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
-					minextent_fraction = minextent_fraction * max_tile_features / totalsize * 0.90;
+					minextent_fraction = minextent_fraction * max_tile_features / totalsize * 0.75;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
 						minextent = m;
@@ -2550,16 +2561,26 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			if (compressed.size() > max_tile_size && !prevent[P_KILOBYTE_LIMIT]) {
+				// Estimate how big it really should have been compressed
+				// from how many features were kept vs skipped for already being
+				// over the threshold
+
+				double kept_adjust = (skipped + kept) / (double) kept;
+
 				if (compressed.size() > arg->tile_size_out) {
-					arg->tile_size_out = compressed.size();
+					arg->tile_size_out = compressed.size() * kept_adjust;
 				}
 
 				if (!quiet) {
-					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
+					if (skipped > 0) {
+						fprintf(stderr, "tile %d/%u/%u size is %lld (probably really %lld) with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), (long long) (compressed.size() * kept_adjust), line_detail, max_tile_size);
+					} else {
+						fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
+					}
 				}
 
 				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
-					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
+					merge_fraction = merge_fraction * max_tile_size / (kept_adjust * compressed.size()) * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
 					}
@@ -2581,7 +2602,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					}
 					line_detail++;	// to keep it the same when the loop decrements it
 				} else if (mingap < ULONG_MAX && (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED])) {
-					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
+					mingap_fraction = mingap_fraction * max_tile_size / (kept_adjust * compressed.size()) * 0.90;
 					unsigned long long mg = choose_mingap(indices, mingap_fraction);
 					if (mg <= mingap) {
 						double nmg = (mingap + 1) * 1.5;
@@ -2606,7 +2627,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					}
 					line_detail++;
 				} else if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
-					minextent_fraction = minextent_fraction * max_tile_size / compressed.size() * 0.90;
+					minextent_fraction = minextent_fraction * max_tile_size / (kept_adjust * compressed.size()) * 0.75;
 					long long m = choose_minextent(extents, minextent_fraction);
 					if (m != minextent) {
 						minextent = m;
@@ -2624,7 +2645,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					// The 95% is a guess to avoid too many retries
 					// and probably actually varies based on how much duplicated metadata there is
 
-					fraction = fraction * max_tile_size / compressed.size() * 0.95;
+					fraction = fraction * max_tile_size / (kept_adjust * compressed.size()) * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
 					}
@@ -2642,7 +2663,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				if (pass == 1) {
 					if (pthread_mutex_lock(&db_lock) != 0) {
 						perror("pthread_mutex_lock");
-						exit(EXIT_FAILURE);
+						exit(EXIT_PTHREAD);
 					}
 
 					if (outdb != NULL) {
@@ -2653,7 +2674,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 					if (pthread_mutex_unlock(&db_lock) != 0) {
 						perror("pthread_mutex_unlock");
-						exit(EXIT_FAILURE);
+						exit(EXIT_PTHREAD);
 					}
 				}
 
@@ -2692,8 +2713,8 @@ void *run_thread(void *vargs) {
 
 		FILE *geom = fdopen(arg->geomfd[j], "rb");
 		if (geom == NULL) {
-			perror("mmap geom");
-			exit(EXIT_FAILURE);
+			perror("open geom");
+			exit(EXIT_OPEN);
 		}
 
 		std::atomic<long long> geompos(0);
@@ -2723,7 +2744,7 @@ void *run_thread(void *vargs) {
 
 			if (pthread_mutex_lock(&var_lock) != 0) {
 				perror("pthread_mutex_lock");
-				exit(EXIT_FAILURE);
+				exit(EXIT_PTHREAD);
 			}
 
 			if (z == arg->maxzoom) {
@@ -2748,7 +2769,7 @@ void *run_thread(void *vargs) {
 
 			if (pthread_mutex_unlock(&var_lock) != 0) {
 				perror("pthread_mutex_unlock");
-				exit(EXIT_FAILURE);
+				exit(EXIT_PTHREAD);
 			}
 		}
 
@@ -2759,18 +2780,18 @@ void *run_thread(void *vargs) {
 			int newfd = dup(arg->geomfd[j]);
 			if (newfd < 0) {
 				perror("dup geometry");
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 			if (lseek(newfd, 0, SEEK_SET) < 0) {
 				perror("lseek geometry");
-				exit(EXIT_FAILURE);
+				exit(EXIT_SEEK);
 			}
 			arg->geomfd[j] = newfd;
 		}
 
 		if (fclose(geom) != 0) {
 			perror("close geom");
-			exit(EXIT_FAILURE);
+			exit(EXIT_CLOSE);
 		}
 	}
 
@@ -2815,12 +2836,12 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			// printf("%s\n", geomname);
 			if (subfd[j] < 0) {
 				perror(geomname);
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 			sub[j] = fopen_oflag(geomname, "wb", O_WRONLY | O_CLOEXEC);
 			if (sub[j] == NULL) {
 				perror(geomname);
-				exit(EXIT_FAILURE);
+				exit(EXIT_OPEN);
 			}
 			unlink(geomname);
 		}
@@ -2982,7 +3003,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 
 				if (pthread_create(&pthreads[thread], NULL, run_thread, &args[thread]) != 0) {
 					perror("pthread_create");
-					exit(EXIT_FAILURE);
+					exit(EXIT_PTHREAD);
 				}
 			}
 
@@ -3035,18 +3056,18 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 			if (geomfd[j] >= 0) {
 				if (close(geomfd[j]) != 0) {
 					perror("close geom");
-					exit(EXIT_FAILURE);
+					exit(EXIT_CLOSE);
 				}
 			}
 			if (fclose(sub[j]) != 0) {
 				perror("close subfile");
-				exit(EXIT_FAILURE);
+				exit(EXIT_CLOSE);
 			}
 
 			struct stat geomst;
 			if (fstat(subfd[j], &geomst) != 0) {
 				perror("stat geom\n");
-				exit(EXIT_FAILURE);
+				exit(EXIT_STAT);
 			}
 
 			geomfd[j] = subfd[j];
@@ -3063,7 +3084,7 @@ int traverse_zooms(int *geomfd, off_t *geom_size, char *metabase, char *stringpo
 		if (geomfd[j] >= 0) {
 			if (close(geomfd[j]) != 0) {
 				perror("close geom");
-				exit(EXIT_FAILURE);
+				exit(EXIT_CLOSE);
 			}
 		}
 	}

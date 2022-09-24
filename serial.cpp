@@ -20,6 +20,7 @@
 #include "projection.hpp"
 #include "evaluator.hpp"
 #include "milo/dtoa_milo.h"
+#include "errors.hpp"
 
 // Offset coordinates to keep them positive
 #define COORD_OFFSET (4LL << 32)
@@ -30,7 +31,7 @@ size_t fwrite_check(const void *ptr, size_t size, size_t nitems, FILE *stream, c
 	size_t w = fwrite(ptr, size, nitems, stream);
 	if (w != nitems) {
 		fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-		exit(EXIT_FAILURE);
+		exit(EXIT_WRITE);
 	}
 	return w;
 }
@@ -52,14 +53,14 @@ void serialize_ulong_long(FILE *out, unsigned long long zigzag, std::atomic<long
 			b |= 0x80;
 			if (putc(b, out) == EOF) {
 				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
+				exit(EXIT_WRITE);
 			}
 			*fpos += 1;
 			zigzag >>= 7;
 		} else {
 			if (putc(b, out) == EOF) {
 				fprintf(stderr, "%s: Write to temporary file failed: %s\n", fname, strerror(errno));
-				exit(EXIT_FAILURE);
+				exit(EXIT_WRITE);
 			}
 			*fpos += 1;
 			break;
@@ -509,7 +510,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 				if (extent > 10000) {
 					fprintf(stderr, "Exiting because this can't be right.\n");
-					exit(EXIT_FAILURE);
+					exit(EXIT_IMPOSSIBLE);
 				}
 			}
 		}
@@ -613,7 +614,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	} else {
 		fprintf(stderr, "Internal error: can't find layer name %s\n", sf.layername.c_str());
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 
 	for (ssize_t i = (ssize_t) sf.full_keys.size() - 1; i >= 0; i--) {
@@ -772,7 +773,7 @@ void coerce_value(std::string const &key, int &vt, std::string &val, std::map<st
 			}
 		} else {
 			fprintf(stderr, "Can't happen: attribute type %d\n", a->second);
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 	}
 }

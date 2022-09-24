@@ -5,6 +5,7 @@
 #include <math.h>
 #include "memfile.hpp"
 #include "pool.hpp"
+#include "errors.hpp"
 
 int swizzlecmp(const char *a, const char *b) {
 	ssize_t alen = strlen(a);
@@ -63,11 +64,11 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 			long long off = poolfile->off;
 			if (memfile_write(poolfile, &type, 1) < 0) {
 				perror("memfile write");
-				exit(EXIT_FAILURE);
+				exit(EXIT_WRITE);
 			}
 			if (memfile_write(poolfile, (void *) s, strlen(s) + 1) < 0) {
 				perror("memfile write");
-				exit(EXIT_FAILURE);
+				exit(EXIT_WRITE);
 			}
 			return off;
 		}
@@ -84,11 +85,11 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	long long off = poolfile->off;
 	if (memfile_write(poolfile, &type, 1) < 0) {
 		perror("memfile write");
-		exit(EXIT_FAILURE);
+		exit(EXIT_WRITE);
 	}
 	if (memfile_write(poolfile, (void *) s, strlen(s) + 1) < 0) {
 		perror("memfile write");
-		exit(EXIT_FAILURE);
+		exit(EXIT_WRITE);
 	}
 
 	if (off >= LONG_MAX || treefile->off >= LONG_MAX) {
@@ -109,7 +110,7 @@ long long addpool(struct memfile *poolfile, struct memfile *treefile, const char
 	long long p = treefile->off;
 	if (memfile_write(treefile, &tsp, sizeof(struct stringpool)) < 0) {
 		perror("memfile write");
-		exit(EXIT_FAILURE);
+		exit(EXIT_WRITE);
 	}
 
 	if (ssp == -1) {

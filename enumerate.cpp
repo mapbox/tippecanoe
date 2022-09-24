@@ -2,19 +2,20 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sqlite3.h>
+#include "errors.hpp"
 
 void enumerate(char *fname) {
 	sqlite3 *db;
 
 	if (sqlite3_open(fname, &db) != SQLITE_OK) {
 		fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+		exit(EXIT_OPEN);
 	}
 
 	char *err = NULL;
 	if (sqlite3_exec(db, "PRAGMA integrity_check;", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: integrity_check: %s\n", fname, err);
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 
 	const char *sql = "SELECT zoom_level, tile_column, tile_row from tiles order by zoom_level, tile_column, tile_row;";
@@ -22,7 +23,7 @@ void enumerate(char *fname) {
 	sqlite3_stmt *stmt;
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
 		fprintf(stderr, "%s: select failed: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+		exit(EXIT_SQLITE);
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -32,7 +33,7 @@ void enumerate(char *fname) {
 
 		if (zoom < 0 || zoom > 31) {
 			fprintf(stderr, "Corrupt mbtiles file: impossible zoom level %lld\n", zoom);
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 
 		y = (1LL << zoom) - 1 - y;
@@ -43,13 +44,13 @@ void enumerate(char *fname) {
 
 	if (sqlite3_close(db) != SQLITE_OK) {
 		fprintf(stderr, "%s: could not close database: %s\n", fname, sqlite3_errmsg(db));
-		exit(EXIT_FAILURE);
+		exit(EXIT_CLOSE);
 	}
 }
 
 void usage(char **argv) {
 	fprintf(stderr, "Usage: %s file.mbtiles ...\n", argv[0]);
-	exit(EXIT_FAILURE);
+	exit(EXIT_ARGS);
 }
 
 int main(int argc, char **argv) {

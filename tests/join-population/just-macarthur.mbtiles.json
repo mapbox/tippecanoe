@@ -9,6 +9,7 @@
 "maxzoom": "12",
 "minzoom": "0",
 "name": "macarthur name",
+"strategies": "[ { \"tiny_polygons\": 260 }, { \"tiny_polygons\": 260 }, { \"tiny_polygons\": 260 }, { \"tiny_polygons\": 260 }, { \"tiny_polygons\": 258 }, { \"tiny_polygons\": 255 }, { \"tiny_polygons\": 248 }, { \"tiny_polygons\": 152 }, { \"tiny_polygons\": 76 }, { \"tiny_polygons\": 46 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

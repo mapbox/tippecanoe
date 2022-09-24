@@ -880,6 +880,8 @@ resolutions.
  * `-c` or `--tag-layer-and-zoom`: Include each feature's layer and zoom level as part of its `tippecanoe` object rather than as a FeatureCollection wrapper
  * `-S` or `--stats`: Just report statistics about each tile's size and the number of features in it, as a JSON structure.
  * `-f` or `--force`: Decode tiles even if polygon ring order or closure problems are detected
+ * `-I` or `--integer`: Report coordinates in integer tile coordinates
+ * `-F` or `--fraction`: Report coordinates as a fraction of the tile extent
 
 tippecanoe-json-tool
 ====================

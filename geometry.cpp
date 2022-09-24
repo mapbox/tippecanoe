@@ -20,6 +20,7 @@
 #include "serial.hpp"
 #include "main.hpp"
 #include "options.hpp"
+#include "errors.hpp"
 
 static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
@@ -39,7 +40,7 @@ drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsi
 
 		if (!deserialize_byte_io(meta, &d.op, geompos)) {
 			fprintf(stderr, "Internal error: Unexpected end of file in geometry\n");
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 		if (d.op == VT_END) {
 			break;
@@ -210,7 +211,7 @@ static void decode_clipped(mapbox::geometry::multi_polygon<long long> &t, drawve
 
 			if ((j == 0 && area < 0) || (j != 0 && area > 0)) {
 				fprintf(stderr, "Ring area has wrong sign: %f for %zu\n", area, j);
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 
 			for (size_t k = 0; k < ring.size(); k++) {
@@ -316,7 +317,7 @@ drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip) {
 
 		fclose(f);
 		fprintf(stderr, "Internal error: Polygon cleaning failed. Log in /tmp/wagyu.log\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_IMPOSSIBLE);
 	}
 
 	drawvec ret;
@@ -501,7 +502,7 @@ drawvec simple_clip_poly(drawvec &geom, long long minx, long long miny, long lon
 			i = j - 1;
 		} else {
 			fprintf(stderr, "Unexpected operation in polygon %d\n", (int) geom[i].op);
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 	}
 
@@ -1023,7 +1024,7 @@ drawvec fix_polygon(drawvec &geom) {
 			outer = 0;
 		} else {
 			fprintf(stderr, "Internal error: polygon ring begins with %d, not moveto\n", geom[i].op);
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 	}
 
@@ -1266,7 +1267,7 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 			// out.push_back(draw(VT_LINETO, xx, yy));
 		} else {
 			fprintf(stderr, "Can't happen: stairstepping lineto with no moveto\n");
-			exit(EXIT_FAILURE);
+			exit(EXIT_IMPOSSIBLE);
 		}
 	}
 

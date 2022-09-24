@@ -39,6 +39,7 @@
 #include "mvt.hpp"
 #include "geojson-loop.hpp"
 #include "milo/dtoa_milo.h"
+#include "errors.hpp"
 
 int serialize_geojson_feature(struct serialization_state *sst, json_object *geometry, json_object *properties, json_object *id, int layer, json_object *tippecanoe, json_object *feature, std::string layername) {
 	json_object *geometry_type = json_hash_get(geometry, "type");
@@ -332,7 +333,7 @@ struct json_pull *json_begin_map(char *map, long long len) {
 	struct jsonmap *jm = new jsonmap;
 	if (jm == NULL) {
 		perror("Out of memory");
-		exit(EXIT_FAILURE);
+		exit(EXIT_MEMORY);
 	}
 
 	jm->map = map;

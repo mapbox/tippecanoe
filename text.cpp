@@ -5,6 +5,7 @@
 #include <string.h>
 #include "milo/dtoa_milo.h"
 #include "milo/milo.h"
+#include "errors.hpp"
 
 /**
  * Returns an empty string if `s` is valid utf8;
@@ -132,7 +133,7 @@ int integer_zoom(std::string where, std::string text) {
 	double d = atof(text.c_str());
 	if (!isfinite(d) || d != floor(d) || d < 0 || d > 32) {
 		fprintf(stderr, "%s: Expected integer zoom level in \"tippecanoe\" GeoJSON extension, not %s\n", where.c_str(), text.c_str());
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 	return d;
 }
@@ -179,7 +180,7 @@ char *dtoa_milo(double val) {
 	char *dup = strdup(s.c_str());
 	if (dup == NULL) {
 		perror("strdup");
-		exit(EXIT_FAILURE);
+		exit(EXIT_MEMORY);
 	}
 	return dup;
 }

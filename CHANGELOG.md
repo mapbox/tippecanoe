@@ -1,6 +1,12 @@
+## 2.6.2
+
+* Stop adding features to a tile if it can't possibly work, to limit memory use
+* Add --integer and --fraction options to tippecanoe-decode
+* Carry `strategies` field from tileset metadata through tile-join
+
 ## 2.6.1
 
-Upgrade protozero to version 1.7.1
+* Upgrade protozero to version 1.7.1
 
 ## 2.6.0
 

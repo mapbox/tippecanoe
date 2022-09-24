@@ -14,6 +14,7 @@
 #include "mvt.hpp"
 #include "write_json.hpp"
 #include "milo/dtoa_milo.h"
+#include "errors.hpp"
 
 void json_writer::json_adjust() {
 	if (state.size() == 0) {
@@ -62,7 +63,7 @@ void json_writer::json_adjust() {
 		state[state.size() - 1] = JSON_WRITE_ARRAY_ELEMENT;
 	} else {
 		fprintf(stderr, "Impossible JSON state\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 }
 
@@ -76,7 +77,7 @@ void json_writer::json_write_array() {
 void json_writer::json_end_array() {
 	if (state.size() == 0) {
 		fprintf(stderr, "End JSON array at top level\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 
 	json_write_tok tok = state[state.size() - 1];
@@ -90,7 +91,7 @@ void json_writer::json_end_array() {
 		addc(']');
 	} else {
 		fprintf(stderr, "End JSON array with unexpected state\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 }
 
@@ -104,7 +105,7 @@ void json_writer::json_write_hash() {
 void json_writer::json_end_hash() {
 	if (state.size() == 0) {
 		fprintf(stderr, "End JSON hash at top level\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 
 	json_write_tok tok = state[state.size() - 1];
@@ -124,7 +125,7 @@ void json_writer::json_end_hash() {
 		addc('}');
 	} else {
 		fprintf(stderr, "End JSON hash with unexpected state\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_JSON);
 	}
 }
 
@@ -207,7 +208,7 @@ void json_writer::aprintf(const char *format, ...) {
 	va_start(ap, format);
 	if (vasprintf(&tmp, format, ap) < 0) {
 		fprintf(stderr, "memory allocation failure\n");
-		exit(EXIT_FAILURE);
+		exit(EXIT_MEMORY);
 	}
 	va_end(ap);
 
@@ -247,7 +248,17 @@ struct lonlat {
 	}
 };
 
-void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state) {
+void write_coords(json_writer &state, lonlat const &ll, double scale) {
+	if (scale == 0) {
+		state.json_write_float(ll.lon);
+		state.json_write_float(ll.lat);
+	} else {
+		state.json_write_number(ll.x / scale);
+		state.json_write_number(ll.y / scale);
+	}
+}
+
+void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y, bool comma, bool name, bool zoom, bool dropped, unsigned long long index, long long sequence, long long extent, bool complain, json_writer &state, double scale) {
 	for (size_t f = 0; f < layer.features.size(); f++) {
 		mvt_feature const &feat = layer.features[f];
 
@@ -306,11 +317,11 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 		for (size_t t = 0; t + 1 < feat.tags.size(); t += 2) {
 			if (feat.tags[t] >= layer.keys.size()) {
 				fprintf(stderr, "Error: out of bounds feature key (%u in %zu)\n", feat.tags[t], layer.keys.size());
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 			if (feat.tags[t + 1] >= layer.values.size()) {
 				fprintf(stderr, "Error: out of bounds feature value (%u in %zu)\n", feat.tags[t + 1], layer.values.size());
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 
 			const char *key = layer.keys[feat.tags[t]].c_str();
@@ -342,7 +353,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_null();
 			} else {
 				fprintf(stderr, "Internal error: property with unknown type\n");
-				exit(EXIT_FAILURE);
+				exit(EXIT_IMPOSSIBLE);
 			}
 		}
 
@@ -359,9 +370,9 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 			long long py = feat.geometry[g].y;
 
 			if (op == VT_MOVETO || op == VT_LINETO) {
-				long long scale = 1LL << (32 - z);
-				long long wx = scale * x + (scale / layer.extent) * px;
-				long long wy = scale * y + (scale / layer.extent) * py;
+				long long wscale = 1LL << (32 - z);
+				long long wx = wscale * x + (wscale / layer.extent) * px;
+				long long wy = wscale * y + (wscale / layer.extent) * py;
 
 				double lat, lon;
 				projection->unproject(wx, wy, 32, &lon, &lat);
@@ -380,8 +391,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				state.json_write_string("coordinates");
 
 				state.json_write_array();
-				state.json_write_float(ops[0].lon);
-				state.json_write_float(ops[0].lat);
+				write_coords(state, ops[0], scale);
 				state.json_end_array();
 			} else {
 				state.json_write_string("type");
@@ -392,8 +402,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 				for (size_t i = 0; i < ops.size(); i++) {
 					state.json_write_array();
-					state.json_write_float(ops[i].lon);
-					state.json_write_float(ops[i].lat);
+					write_coords(state, ops[i], scale);
 					state.json_end_array();
 				}
 
@@ -416,8 +425,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 
 				for (size_t i = 0; i < ops.size(); i++) {
 					state.json_write_array();
-					state.json_write_float(ops[i].lon);
-					state.json_write_float(ops[i].lat);
+					write_coords(state, ops[i], scale);
 					state.json_end_array();
 				}
 
@@ -435,8 +443,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					if (ops[i].op == VT_MOVETO) {
 						if (sstate == 0) {
 							state.json_write_array();
-							state.json_write_float(ops[i].lon);
-							state.json_write_float(ops[i].lat);
+							write_coords(state, ops[i], scale);
 							state.json_end_array();
 
 							sstate = 1;
@@ -445,16 +452,14 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 							state.json_write_array();
 
 							state.json_write_array();
-							state.json_write_float(ops[i].lon);
-							state.json_write_float(ops[i].lat);
+							write_coords(state, ops[i], scale);
 							state.json_end_array();
 
 							sstate = 1;
 						}
 					} else {
 						state.json_write_array();
-						state.json_write_float(ops[i].lon);
-						state.json_write_float(ops[i].lat);
+						write_coords(state, ops[i], scale);
 						state.json_end_array();
 					}
 				}
@@ -488,7 +493,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 						if (!warned) {
 							fprintf(stderr, "Ring does not end with closepath (ends with %d)\n", ops[i].op);
 							if (complain) {
-								exit(EXIT_FAILURE);
+								exit(EXIT_IMPOSSIBLE);
 							}
 
 							warned = true;
@@ -542,7 +547,7 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 					if (!warned) {
 						fprintf(stderr, "Polygon begins with an inner ring\n");
 						if (complain) {
-							exit(EXIT_FAILURE);
+							exit(EXIT_IMPOSSIBLE);
 						}
 
 						warned = true;
@@ -570,13 +575,11 @@ void layer_to_geojson(mvt_layer const &layer, unsigned z, unsigned x, unsigned y
 				for (size_t j = 0; j < rings[i].size(); j++) {
 					if (rings[i][j].op != VT_CLOSEPATH) {
 						state.json_write_array();
-						state.json_write_float(rings[i][j].lon);
-						state.json_write_float(rings[i][j].lat);
+						write_coords(state, rings[i][j], scale);
 						state.json_end_array();
 					} else {
 						state.json_write_array();
-						state.json_write_float(rings[i][0].lon);
-						state.json_write_float(rings[i][0].lat);
+						write_coords(state, rings[i][j], scale);
 						state.json_end_array();
 					}
 				}
