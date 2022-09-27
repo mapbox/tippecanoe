@@ -601,7 +601,7 @@ void handle_strategies(const unsigned char *s, std::vector<strategy> *st) {
 					} else if (v->type != JSON_NUMBER) {
 						fprintf(stderr, "Value %zu of %zu is not a number: %s\n", j, i, s);
 					} else {
-						if (i <= st->size()) {
+						if (i >= st->size()) {
 							st->resize(i + 1);
 						}
 
