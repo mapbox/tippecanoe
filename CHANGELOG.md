@@ -1,3 +1,7 @@
+## 2.6.4
+
+* Update tests that should have been updated in 2.6.2
+
 ## 2.6.3
 
 * Fix crash in tile-join caused by wrong-way comparison
