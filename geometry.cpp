@@ -849,8 +849,19 @@ drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, 
 			geom[i].necessary = 1;
 			geom[j - 1].necessary = 1;
 
+			// empirical mapping from douglas-peucker simplifications
+			// to visvalingam simplifications that yield similar
+			// output sizes
+			double sim = simplification * (0.1596 * z + 0.878);
+			double scale = (res * sim) * (res * sim);
+			scale = exp(1.002 * log(scale) + 0.3043);
+
 			if (j - i > 1) {
-				douglas_peucker(geom, i, j - i, res * simplification, 2, retain);
+				if (additional[A_VISVALINGAM]) {
+					visvalingam(geom, i, j, scale, retain);
+				} else {
+					douglas_peucker(geom, i, j - i, res * simplification, 2, retain);
+				}
 			}
 			i = j - 1;
 		}

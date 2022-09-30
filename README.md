@@ -483,6 +483,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `-pn` or `--no-simplification-of-shared-nodes`: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use `--coalesce` or `--detect-shared-borders`.)
  * `-pt` or `--no-tiny-polygon-reduction`: Don't combine the area of very small polygons into small squares that represent their combined area.
  * `--tiny-polygon-size=`_size_: Use the specified _size_ for tiny polygons instead of the default 2. Anything above 6 or so will lead to visible artifacts with the default tile detail.
+ * `-av` or `--visvalingam`: Use Visvalingam's simplification algorithm rather than Douglas-Peucker's.
 
 ### Attempts to improve shared polygon boundaries
 

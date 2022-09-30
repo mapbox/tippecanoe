@@ -1,3 +1,7 @@
+## 2.7.0
+
+* Add the option to use the Visvalingam simplification algorithm
+
 ## 2.6.4
 
 * Update tests that should have been updated in 2.6.2

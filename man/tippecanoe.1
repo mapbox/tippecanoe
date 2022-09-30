@@ -35,7 +35,7 @@ For this fork you will need to build from the source repository:
 .PP
 .RS
 .nf
-$ git clone https://github.com/protomaps/tippecanoe.git
+$ git clone https://github.com/felt/tippecanoe.git
 $ cd tippecanoe
 $ make \-j
 $ make install
@@ -616,6 +616,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pt\fR or \fB\fC\-\-no\-tiny\-polygon\-reduction\fR: Don't combine the area of very small polygons into small squares that represent their combined area.
 .IP \(bu 2
 \fB\fC\-\-tiny\-polygon\-size=\fR\fIsize\fP: Use the specified \fIsize\fP for tiny polygons instead of the default 2. Anything above 6 or so will lead to visible artifacts with the default tile detail.
+.IP \(bu 2
+\fB\fC\-av\fR or \fB\fC\-\-visvalingam\fR: Use Visvalingam's simplification algorithm rather than Douglas\-Peucker's.
 .RE
 .SS Attempts to improve shared polygon boundaries
 .RS

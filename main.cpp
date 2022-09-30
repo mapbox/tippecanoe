@@ -2730,6 +2730,7 @@ int main(int argc, char **argv) {
 		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
 		{"tiny-polygon-size", required_argument, 0, '~'},
 		{"no-simplification-of-shared-nodes", no_argument, &prevent[P_SIMPLIFY_SHARED_NODES], 1},
+		{"visvalingam", no_argument, &additional[A_VISVALINGAM], 1},
 
 		{"Attempts to improve shared polygon boundaries", 0, 0, 0},
 		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
