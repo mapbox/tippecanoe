@@ -1,3 +1,7 @@
+## 2.8.0
+
+* Add the option to use a different simplification level at maxzoom
+
 ## 2.7.0
 
 * Add the option to use the Visvalingam simplification algorithm

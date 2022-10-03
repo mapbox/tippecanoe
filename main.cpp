@@ -76,6 +76,7 @@ double progress_interval = 0;
 std::atomic<double> last_progress(0);
 int geometry_scale = 0;
 double simplification = 1;
+double maxzoom_simplification = -1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
 int cluster_distance = 0;
@@ -2421,7 +2422,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
 	std::vector<strategy> strategies;
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter, strategies);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, maxzoom_simplification, layermaps, prefilter, postfilter, attribute_accum, filter, strategies);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2727,6 +2728,7 @@ int main(int argc, char **argv) {
 		{"simplification", required_argument, 0, 'S'},
 		{"no-line-simplification", no_argument, &prevent[P_SIMPLIFY], 1},
 		{"simplify-only-low-zooms", no_argument, &prevent[P_SIMPLIFY_LOW], 1},
+		{"simplification-at-maximum-zoom", required_argument, 0, '~'},
 		{"no-tiny-polygon-reduction", no_argument, &prevent[P_TINY_POLYGON_REDUCTION], 1},
 		{"tiny-polygon-size", required_argument, 0, '~'},
 		{"no-simplification-of-shared-nodes", no_argument, &prevent[P_SIMPLIFY_SHARED_NODES], 1},
@@ -2884,6 +2886,13 @@ int main(int argc, char **argv) {
 				order_by.push_back(order_field(optarg, false));
 			} else if (strcmp(opt, "order-descending-by") == 0) {
 				order_by.push_back(order_field(optarg, true));
+			} else if (strcmp(opt, "simplification-at-maximum-zoom") == 0) {
+				maxzoom_simplification = atof_require(optarg, "Mazoom simplification");
+				if (maxzoom_simplification <= 0) {
+					fprintf(stderr, "%s: --simplification-at-maximum-zoom must be > 0\n", argv[0]);
+					exit(EXIT_ARGS);
+				}
+				break;
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_ARGS);

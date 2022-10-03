@@ -611,6 +611,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 .IP \(bu 2
 \fB\fC\-pS\fR or \fB\fC\-\-simplify\-only\-low\-zooms\fR: Don't simplify lines and polygons at maxzoom (but do simplify at lower zooms)
 .IP \(bu 2
+\fB\fC\-\-simplification\-at\-maximum\-zoom=\fR\fIscale\fP: Use the specified \fIscale\fP at maxzoom instead of the standard simplification scale (which still applies at lower zooms)
+.IP \(bu 2
 \fB\fC\-pn\fR or \fB\fC\-\-no\-simplification\-of\-shared\-nodes\fR: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use \fB\fC\-\-coalesce\fR or \fB\fC\-\-detect\-shared\-borders\fR\&.)
 .IP \(bu 2
 \fB\fC\-pt\fR or \fB\fC\-\-no\-tiny\-polygon\-reduction\fR: Don't combine the area of very small polygons into small squares that represent their combined area.

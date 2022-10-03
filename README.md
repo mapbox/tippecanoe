@@ -480,6 +480,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
    the line or polygon within one tile unit of its proper location. You can probably go up to about 10 without too much visible difference.
  * `-ps` or `--no-line-simplification`: Don't simplify lines and polygons
  * `-pS` or `--simplify-only-low-zooms`: Don't simplify lines and polygons at maxzoom (but do simplify at lower zooms)
+ * `--simplification-at-maximum-zoom=`_scale_: Use the specified _scale_ at maxzoom instead of the standard simplification scale (which still applies at lower zooms)
  * `-pn` or `--no-simplification-of-shared-nodes`: Don't simplify away nodes that appear in more than one feature or are used multiple times within the same feature, so that the intersection node will not be lost from intersecting roads. (This will not be effective if you also use `--coalesce` or `--detect-shared-borders`.)
  * `-pt` or `--no-tiny-polygon-reduction`: Don't combine the area of very small polygons into small squares that represent their combined area.
  * `--tiny-polygon-size=`_size_: Use the specified _size_ for tiny polygons instead of the default 2. Anything above 6 or so will lead to visible artifacts with the default tile detail.
