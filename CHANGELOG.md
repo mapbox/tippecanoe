@@ -1,3 +1,7 @@
+## 2.8.1
+
+* Improve precision of polygon ring area calculations
+
 ## 2.8.0
 
 * Add the option to use a different simplification level at maxzoom

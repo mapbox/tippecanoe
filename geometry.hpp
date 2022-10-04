@@ -74,7 +74,7 @@ drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
 std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom);
-double get_area(drawvec &geom, size_t i, size_t j);
+double get_area(const drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
 
 drawvec simple_clip_poly(drawvec &geom, long long x1, long long y1, long long x2, long long y2);

@@ -160,13 +160,88 @@ drawvec remove_noop(drawvec geom, int type, int shift) {
 	return out;
 }
 
-double get_area(drawvec &geom, size_t i, size_t j) {
+double get_area_scaled(const drawvec &geom, size_t i, size_t j) {
+	const double max_exact_double = (double) ((1LL << 53) - 1);
+
+	// keep scaling the geometry down until we can calculate its area without overflow
+	for (long long scale = 2; scale < (1LL << 30); scale *= 2) {
+		long long bx = geom[i].x;
+		long long by = geom[i].y;
+		bool again = false;
+
+		// https://en.wikipedia.org/wiki/Shoelace_formula
+		double area = 0;
+		for (size_t k = i; k < j; k++) {
+			area += (double) ((geom[k].x - bx) / scale) * (double) ((geom[i + ((k - i + 1) % (j - i))].y - by) / scale);
+			if (std::fabs(area) >= max_exact_double) {
+				again = true;
+				break;
+			}
+			area -= (double) ((geom[k].y - by) / scale) * (double) ((geom[i + ((k - i + 1) % (j - i))].x - bx) / scale);
+			if (std::fabs(area) >= max_exact_double) {
+				again = true;
+				break;
+			}
+		}
+
+		if (again) {
+			continue;
+		} else {
+			area /= 2;
+			return area * scale * scale;
+		}
+	}
+
+	fprintf(stderr, "get_area_scaled: can't happen\n");
+	exit(EXIT_IMPOSSIBLE);
+}
+
+double get_area(const drawvec &geom, size_t i, size_t j) {
+	const double max_exact_double = (double) ((1LL << 53) - 1);
+
+	// Coordinates in `geom` are 40-bit integers, so there is no good way
+	// to multiply them without possible precision loss. Since they probably
+	// do not use the full precision, shift them nearer to the origin so
+	// their product is more likely to be exactly representable as a double.
+	//
+	// (In practice they are actually 34-bit integers: 32 bits for the
+	// Mercator world plane, plus another two bits so features can stick
+	// off either the left or right side. But that is still too many bits
+	// for the product to fit either in a 64-bit long long or in a
+	// double where the largest exact integer is 2^53.)
+	//
+	// If the intermediate calculation still exceeds 2^53, start trying to
+	// recalculate the area by scaling down the geometry. This will not
+	// produce as precise an area, but it will still be close, and the
+	// sign will be correct, which is more important, since the sign
+	// determines the winding order of the rings. We can then use that
+	// sign with this generally more precise area calculation.
+
+	long long bx = geom[i].x;
+	long long by = geom[i].y;
+
+	// https://en.wikipedia.org/wiki/Shoelace_formula
 	double area = 0;
+	bool overflow = false;
 	for (size_t k = i; k < j; k++) {
-		area += (long double) geom[k].x * (long double) geom[i + ((k - i + 1) % (j - i))].y;
-		area -= (long double) geom[k].y * (long double) geom[i + ((k - i + 1) % (j - i))].x;
+		area += (double) (geom[k].x - bx) * (double) (geom[i + ((k - i + 1) % (j - i))].y - by);
+		if (std::fabs(area) >= max_exact_double) {
+			overflow = true;
+		}
+		area -= (double) (geom[k].y - by) * (double) (geom[i + ((k - i + 1) % (j - i))].x - bx);
+		if (std::fabs(area) >= max_exact_double) {
+			overflow = true;
+		}
 	}
 	area /= 2;
+
+	if (overflow) {
+		double scaled_area = get_area_scaled(geom, i, j);
+		if ((area < 0 && scaled_area > 0) || (area > 0 && scaled_area < 0)) {
+			area = -area;
+		}
+	}
+
 	return area;
 }
 
@@ -518,7 +593,7 @@ drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
 
 drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
 	drawvec out;
-	const long long pixel = (1 << (32 - detail - z)) * tiny_polygon_size;
+	const double pixel = (1LL << (32 - detail - z)) * (double) tiny_polygon_size;
 
 	*reduced = true;
 	bool included_last_outer = false;

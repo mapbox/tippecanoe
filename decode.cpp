@@ -207,9 +207,9 @@ void handle(std::string message, int z, unsigned x, unsigned y, std::set<std::st
 		}
 
 		double scale = 0;
-		if (coordinate_mode == 1) { // fraction
+		if (coordinate_mode == 1) {  // fraction
 			scale = layer.extent;
-		} else if (coordinate_mode == 2) { // integer
+		} else if (coordinate_mode == 2) {  // integer
 			scale = 1;
 		}
 		layer_to_geojson(layer, z, x, y, !pipeline, pipeline, pipeline, false, 0, 0, 0, !force, state, scale);
