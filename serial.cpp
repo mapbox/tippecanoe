@@ -192,14 +192,25 @@ static void write_geometry(drawvec const &dv, std::atomic<long long> *fpos, FILE
 void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long> *geompos, const char *fname, long long wx, long long wy, bool include_minzoom) {
 	serialize_byte(geomfile, sf->t, geompos, fname);
 
+#define FLAG_LAYER 7
+
+#define FLAG_LABEL_POINT 6
+#define FLAG_SEQ 5
+#define FLAG_INDEX 4
+#define FLAG_EXTENT 3
+#define FLAG_ID 2
+#define FLAG_MINZOOM 1
+#define FLAG_MAXZOOM 0
+
 	long long layer = 0;
-	layer |= sf->layer << 6;
-	layer |= (sf->seq != 0) << 5;
-	layer |= (sf->index != 0) << 4;
-	layer |= (sf->extent != 0) << 3;
-	layer |= sf->has_id << 2;
-	layer |= sf->has_tippecanoe_minzoom << 1;
-	layer |= sf->has_tippecanoe_maxzoom << 0;
+	layer |= sf->layer << FLAG_LAYER;
+	layer |= (sf->label_point != 0) << FLAG_LABEL_POINT;
+	layer |= (sf->seq != 0) << FLAG_SEQ;
+	layer |= (sf->index != 0) << FLAG_INDEX;
+	layer |= (sf->extent != 0) << FLAG_EXTENT;
+	layer |= sf->has_id << FLAG_ID;
+	layer |= sf->has_tippecanoe_minzoom << FLAG_MINZOOM;
+	layer |= sf->has_tippecanoe_maxzoom << FLAG_MAXZOOM;
 
 	serialize_long_long(geomfile, layer, geompos, fname);
 	if (sf->seq != 0) {
@@ -221,6 +232,9 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long
 	serialize_byte(geomfile, VT_END, geompos, fname);
 	if (sf->index != 0) {
 		serialize_ulong_long(geomfile, sf->index, geompos, fname);
+	}
+	if (sf->label_point != 0) {
+		serialize_ulong_long(geomfile, sf->label_point, geompos, fname);
 	}
 	if (sf->extent != 0) {
 		serialize_long_long(geomfile, sf->extent, geompos, fname);
@@ -253,7 +267,7 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 	deserialize_long_long_io(geoms, &sf.layer, geompos_in);
 
 	sf.seq = 0;
-	if (sf.layer & (1 << 5)) {
+	if (sf.layer & (1 << FLAG_SEQ)) {
 		deserialize_long_long_io(geoms, &sf.seq, geompos_in);
 	}
 
@@ -261,13 +275,13 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 	sf.tippecanoe_maxzoom = -1;
 	sf.id = 0;
 	sf.has_id = false;
-	if (sf.layer & (1 << 1)) {
+	if (sf.layer & (1 << FLAG_MINZOOM)) {
 		deserialize_int_io(geoms, &sf.tippecanoe_minzoom, geompos_in);
 	}
-	if (sf.layer & (1 << 0)) {
+	if (sf.layer & (1 << FLAG_MAXZOOM)) {
 		deserialize_int_io(geoms, &sf.tippecanoe_maxzoom, geompos_in);
 	}
-	if (sf.layer & (1 << 2)) {
+	if (sf.layer & (1 << FLAG_ID)) {
 		sf.has_id = true;
 		deserialize_ulong_long_io(geoms, &sf.id, geompos_in);
 	}
@@ -275,17 +289,21 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 	deserialize_int_io(geoms, &sf.segment, geompos_in);
 
 	sf.index = 0;
+	sf.label_point = 0;
 	sf.extent = 0;
 
 	sf.geometry = decode_geometry(geoms, geompos_in, z, tx, ty, sf.bbox, initial_x[sf.segment], initial_y[sf.segment]);
-	if (sf.layer & (1 << 4)) {
+	if (sf.layer & (1 << FLAG_INDEX)) {
 		deserialize_ulong_long_io(geoms, &sf.index, geompos_in);
 	}
-	if (sf.layer & (1 << 3)) {
+	if (sf.layer & (1 << FLAG_LABEL_POINT)) {
+		deserialize_ulong_long_io(geoms, &sf.label_point, geompos_in);
+	}
+	if (sf.layer & (1 << FLAG_EXTENT)) {
 		deserialize_long_long_io(geoms, &sf.extent, geompos_in);
 	}
 
-	sf.layer >>= 6;
+	sf.layer >>= FLAG_LAYER;
 
 	sf.metapos = 0;
 	deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
@@ -408,22 +426,26 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	sf.bbox[1] = LLONG_MAX;
 	sf.bbox[2] = LLONG_MIN;
 	sf.bbox[3] = LLONG_MIN;
-	scale_geometry(sst, sf.bbox, sf.geometry);
+
+	// try to remind myself that the geometry in this function is in SCALED COORDINATES
+	drawvec scaled_geometry = sf.geometry;
+	sf.geometry.clear();
+	scale_geometry(sst, sf.bbox, scaled_geometry);
 
 	// This has to happen after scaling so that the wraparound detection has happened first.
 	// Otherwise the inner/outer calculation will be confused by bad geometries.
 	if (sf.t == VT_POLYGON) {
-		sf.geometry = fix_polygon(sf.geometry);
+		scaled_geometry = fix_polygon(scaled_geometry);
 	}
 
 	for (auto &c : clipbboxes) {
 		if (sf.t == VT_POLYGON) {
-			sf.geometry = simple_clip_poly(sf.geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
+			scaled_geometry = simple_clip_poly(scaled_geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
 		} else if (sf.t == VT_LINE) {
-			sf.geometry = clip_lines(sf.geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
-			sf.geometry = remove_noop(sf.geometry, sf.t, 0);
+			scaled_geometry = clip_lines(scaled_geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
+			scaled_geometry = remove_noop(scaled_geometry, sf.t, 0);
 		} else if (sf.t == VT_POINT) {
-			sf.geometry = clip_point(sf.geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
+			scaled_geometry = clip_point(scaled_geometry, SHIFT_RIGHT(c.minx), SHIFT_RIGHT(c.miny), SHIFT_RIGHT(c.maxx), SHIFT_RIGHT(c.maxy));
 		}
 
 		sf.bbox[0] = LLONG_MAX;
@@ -431,7 +453,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.bbox[2] = LLONG_MIN;
 		sf.bbox[3] = LLONG_MIN;
 
-		for (auto &g : sf.geometry) {
+		for (auto &g : scaled_geometry) {
 			long long x = SHIFT_LEFT(g.x);
 			long long y = SHIFT_LEFT(g.y);
 
@@ -450,7 +472,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	if (sf.geometry.size() == 0) {
+	if (scaled_geometry.size() == 0) {
 		// Feature was clipped away
 		return 1;
 	}
@@ -464,9 +486,9 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	if (sst->want_dist) {
 		std::vector<unsigned long long> locs;
-		for (size_t i = 0; i < sf.geometry.size(); i++) {
-			if (sf.geometry[i].op == VT_MOVETO || sf.geometry[i].op == VT_LINETO) {
-				locs.push_back(encode_index(SHIFT_LEFT(sf.geometry[i].x), SHIFT_LEFT(sf.geometry[i].y)));
+		for (size_t i = 0; i < scaled_geometry.size(); i++) {
+			if (scaled_geometry[i].op == VT_MOVETO || scaled_geometry[i].op == VT_LINETO) {
+				locs.push_back(encode_index(SHIFT_LEFT(scaled_geometry[i].x), SHIFT_LEFT(scaled_geometry[i].y)));
 			}
 		}
 		std::sort(locs.begin(), locs.end());
@@ -492,7 +514,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 
 	bool inline_meta = true;
 	// Don't inline metadata for features that will span several tiles at maxzoom
-	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
+	if (scaled_geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
 		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
 	}
 	if (sf.bbox[0] == LLONG_MAX) {
@@ -517,27 +539,27 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	double extent = 0;
-	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || order_by_size) {
 		if (sf.t == VT_POLYGON) {
-			for (size_t i = 0; i < sf.geometry.size(); i++) {
-				if (sf.geometry[i].op == VT_MOVETO) {
+			for (size_t i = 0; i < scaled_geometry.size(); i++) {
+				if (scaled_geometry[i].op == VT_MOVETO) {
 					size_t j;
-					for (j = i + 1; j < sf.geometry.size(); j++) {
-						if (sf.geometry[j].op != VT_LINETO) {
+					for (j = i + 1; j < scaled_geometry.size(); j++) {
+						if (scaled_geometry[j].op != VT_LINETO) {
 							break;
 						}
 					}
 
-					extent += get_area(sf.geometry, i, j);
+					extent += SHIFT_LEFT(SHIFT_LEFT(1LL)) * get_area(scaled_geometry, i, j);
 					i = j - 1;
 				}
 			}
 		} else if (sf.t == VT_LINE) {
 			double dist = 0;
-			for (size_t i = 1; i < sf.geometry.size(); i++) {
-				if (sf.geometry[i].op == VT_LINETO) {
-					double xd = sf.geometry[i].x - sf.geometry[i - 1].x;
-					double yd = sf.geometry[i].y - sf.geometry[i - 1].y;
+			for (size_t i = 1; i < scaled_geometry.size(); i++) {
+				if (scaled_geometry[i].op == VT_LINETO) {
+					double xd = SHIFT_LEFT(scaled_geometry[i].x - scaled_geometry[i - 1].x);
+					double yd = SHIFT_LEFT(scaled_geometry[i].y - scaled_geometry[i - 1].y);
 					dist += sqrt(xd * xd + yd * yd);
 				}
 			}
@@ -577,19 +599,28 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		// jitter between them, even though the geometries themselves are
 		// not very detailed.
 		size_t ix = 0;
-		for (size_t i = 0; i < sf.geometry.size(); i++) {
-			ix += sf.geometry[i].x + sf.geometry[i].y;
+		for (size_t i = 0; i < scaled_geometry.size(); i++) {
+			ix += scaled_geometry[i].x + scaled_geometry[i].y;
 		}
-		ix = ix % sf.geometry.size();
+		ix = ix % scaled_geometry.size();
 
 		// If off the edge of the plane, mask to bring it back into the addressable area
-		midx = sf.geometry[ix].x & ((1LL << 32) - 1);
-		midy = sf.geometry[ix].y & ((1LL << 32) - 1);
+		midx = SHIFT_LEFT(scaled_geometry[ix].x) & ((1LL << 32) - 1);
+		midy = SHIFT_LEFT(scaled_geometry[ix].y) & ((1LL << 32) - 1);
 	}
 
 	bbox_index = encode_index(midx, midy);
 
-	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || additional[A_INCREASE_GAMMA_AS_NEEDED] || sst->uses_gamma || cluster_distance != 0) {
+	if (sf.t == VT_POLYGON && additional[A_GENERATE_POLYGON_LABEL_POINTS]) {
+		drawvec dv = polygon_to_anchor(scaled_geometry);
+		if (dv.size() > 0) {
+			dv[0].x = SHIFT_LEFT(dv[0].x) & ((1LL << 32) - 1);
+			dv[0].y = SHIFT_LEFT(dv[0].y) & ((1LL << 32) - 1);
+			sf.label_point = encode_index(dv[0].x, dv[0].y);
+		}
+	}
+
+	if (additional[A_DROP_DENSEST_AS_NEEDED] || additional[A_COALESCE_DENSEST_AS_NEEDED] || additional[A_CLUSTER_DENSEST_AS_NEEDED] || additional[A_CALCULATE_FEATURE_DENSITY] || additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || additional[A_INCREASE_GAMMA_AS_NEEDED] || additional[A_GENERATE_POLYGON_LABEL_POINTS] || sst->uses_gamma || cluster_distance != 0) {
 		sf.index = bbox_index;
 	} else {
 		sf.index = 0;
@@ -706,6 +737,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	long long geomstart = r->geompos;
+	sf.geometry = scaled_geometry;
 	serialize_feature(r->geomfile, &sf, &r->geompos, sst->fname, SHIFT_RIGHT(*(sst->initial_x)), SHIFT_RIGHT(*(sst->initial_y)), false);
 
 	struct index index;

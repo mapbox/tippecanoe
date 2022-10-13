@@ -1,3 +1,9 @@
+## 2.9.0
+
+* Add an option to generate label points in place of polygons
+* Add --order-smallest-first and --order-largest-first options
+* When tiny polygons are being aggregated into dust, keep the attributes of the largest.
+
 ## 2.8.1
 
 * Improve precision of polygon ring area calculations

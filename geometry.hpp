@@ -56,6 +56,7 @@ struct draw {
 };
 
 typedef std::vector<draw> drawvec;
+struct serial_feature;
 
 drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y);
 void to_tile_scale(drawvec &geom, int z, int detail);
@@ -64,7 +65,7 @@ drawvec clip_point(drawvec &geom, int z, long long buffer);
 drawvec clean_or_clip_poly(drawvec &geom, int z, int buffer, bool clip);
 drawvec simple_clip_poly(drawvec &geom, int z, int buffer);
 drawvec close_poly(drawvec &geom);
-drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area);
+drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area, serial_feature *this_feature, serial_feature *tiny_feature);
 drawvec clip_lines(drawvec &geom, int z, long long buffer);
 drawvec stairstep(drawvec &geom, int z, int detail);
 bool point_within_tile(long long x, long long y, int z);
@@ -76,10 +77,13 @@ std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
 void check_polygon(drawvec &geom);
 double get_area(const drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
+drawvec polygon_to_anchor(const drawvec &geom);
+drawvec spiral_anchors(drawvec const &geom, int tx, int ty, int z, unsigned long long label_point);
 
 drawvec simple_clip_poly(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
 drawvec clip_lines(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
 drawvec clip_point(drawvec &geom, long long x1, long long y1, long long x2, long long y2);
 void visvalingam(drawvec &ls, size_t start, size_t end, double threshold, size_t retain);
+int pnpoly(const drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 
 #endif

@@ -86,6 +86,7 @@ std::string attribute_for_id = "";
 
 std::vector<order_field> order_by;
 bool order_reverse;
+bool order_by_size = false;
 
 int prevent[256];
 int additional[256];
@@ -2751,6 +2752,8 @@ int main(int argc, char **argv) {
 		{"hilbert", no_argument, &additional[A_HILBERT], 1},
 		{"order-by", required_argument, 0, '~'},
 		{"order-descending-by", required_argument, 0, '~'},
+		{"order-smallest-first", no_argument, 0, '~'},
+		{"order-largest-first", no_argument, 0, '~'},
 
 		{"Adding calculated attributes", 0, 0, 0},
 		{"calculate-feature-density", no_argument, &additional[A_CALCULATE_FEATURE_DENSITY], 1},
@@ -2761,6 +2764,7 @@ int main(int argc, char **argv) {
 		{"use-source-polygon-winding", no_argument, &prevent[P_USE_SOURCE_POLYGON_WINDING], 1},
 		{"reverse-source-polygon-winding", no_argument, &prevent[P_REVERSE_SOURCE_POLYGON_WINDING], 1},
 		{"clip-bounding-box", required_argument, 0, '~'},
+		{"convert-polygons-to-label-points", no_argument, &additional[A_GENERATE_POLYGON_LABEL_POINTS], 1},
 
 		{"Filtering tile contents", 0, 0, 0},
 		{"prefilter", required_argument, 0, 'C'},
@@ -2886,6 +2890,12 @@ int main(int argc, char **argv) {
 				order_by.push_back(order_field(optarg, false));
 			} else if (strcmp(opt, "order-descending-by") == 0) {
 				order_by.push_back(order_field(optarg, true));
+			} else if (strcmp(opt, "order-smallest-first") == 0) {
+				order_by.push_back(order_field(ORDER_BY_SIZE, false));
+				order_by_size = true;
+			} else if (strcmp(opt, "order-largest-first") == 0) {
+				order_by.push_back(order_field(ORDER_BY_SIZE, true));
+				order_by_size = true;
 			} else if (strcmp(opt, "simplification-at-maximum-zoom") == 0) {
 				maxzoom_simplification = atof_require(optarg, "Mazoom simplification");
 				if (maxzoom_simplification <= 0) {

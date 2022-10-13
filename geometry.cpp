@@ -22,7 +22,6 @@
 #include "options.hpp"
 #include "errors.hpp"
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy);
 static int clip(double *x0, double *y0, double *x1, double *y1, double xmin, double ymin, double xmax, double ymax);
 
 drawvec decode_geometry(FILE *meta, std::atomic<long long> *geompos, int z, unsigned tx, unsigned ty, long long *bbox, unsigned initial_x, unsigned initial_y) {
@@ -411,7 +410,7 @@ The name of W. Randolph Franklin may not be used to endorse or promote products 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-static int pnpoly(drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
+int pnpoly(const drawvec &vert, size_t start, size_t nvert, long long testx, long long testy) {
 	size_t i, j;
 	bool c = false;
 	for (i = 0, j = nvert - 1; i < nvert; j = i++) {
@@ -591,9 +590,11 @@ drawvec simple_clip_poly(drawvec &geom, int z, int buffer) {
 	return simple_clip_poly(geom, -clip_buffer, -clip_buffer, area + clip_buffer, area + clip_buffer);
 }
 
-drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area) {
+drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double *accum_area, serial_feature *this_feature, serial_feature *tiny_feature) {
 	drawvec out;
 	const double pixel = (1LL << (32 - detail - z)) * (double) tiny_polygon_size;
+	bool includes_real = false;
+	bool includes_dust = false;
 
 	*reduced = true;
 	bool included_last_outer = false;
@@ -637,6 +638,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2 + pixel, geom[i].y - pixel / 2 + pixel));
 						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2 + pixel));
 						out.push_back(draw(VT_LINETO, geom[i].x - pixel / 2, geom[i].y - pixel / 2));
+						includes_dust = true;
 
 						*accum_area -= pixel * pixel;
 					}
@@ -656,6 +658,7 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 					// which means that the overall polygon has a real geometry,
 					// which means that it gets to be simplified.
 					*reduced = false;
+					includes_real = true;
 
 					if (area > 0) {
 						included_last_outer = true;
@@ -673,6 +676,28 @@ drawvec reduce_tiny_poly(drawvec &geom, int z, int detail, bool *reduced, double
 			fprintf(stderr, "\n");
 
 			out.push_back(geom[i]);
+			includes_real = true;
+		}
+	}
+
+	if (!includes_real) {
+		if (includes_dust) {
+			// this geometry is just dust, so if there is another feature that
+			// contributed to the dust that is larger than this feature,
+			// keep its attributes instead of this one that just happened to be
+			// the one that hit the threshold of survival.
+
+			if (tiny_feature->extent > this_feature->extent) {
+				*this_feature = *tiny_feature;
+				tiny_feature->extent = 0;
+			}
+		} else {
+			// this is a feature that we are throwing away, so hang on to it
+			// attributes if it is bigger than the biggest one we threw away so far
+
+			if (this_feature->extent > tiny_feature->extent) {
+				*tiny_feature = *this_feature;
+			}
 		}
 	}
 
@@ -1360,6 +1385,307 @@ drawvec stairstep(drawvec &geom, int z, int detail) {
 	for (size_t i = 0; i < out.size(); i++) {
 		out[i].x *= 1 << (32 - detail - z);
 		out[i].y *= 1 << (32 - detail - z);
+	}
+
+	return out;
+}
+
+// https://github.com/Turfjs/turf/blob/master/packages/turf-center-of-mass/index.ts
+//
+// The MIT License (MIT)
+//
+// Copyright (c) 2019 Morgan Herlocker
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in
+// the Software without restriction, including without limitation the rights to
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+// the Software, and to permit persons to whom the Software is furnished to do so,
+// subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+// FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+draw centerOfMass(const drawvec &dv, size_t start, size_t end, draw centre) {
+	std::vector<draw> coords;
+	for (size_t i = start; i < end; i++) {
+		coords.push_back(dv[i]);
+	}
+
+	// First, we neutralize the feature (set it around coordinates [0,0]) to prevent rounding errors
+	// We take any point to translate all the points around 0
+	draw translation = centre;
+	double sx = 0;
+	double sy = 0;
+	double sArea = 0;
+	draw pi, pj;
+	double xi, xj, yi, yj, a;
+
+	std::vector<draw> neutralizedPoints;
+	for (size_t i = 0; i < coords.size(); i++) {
+		neutralizedPoints.push_back(draw(coords[i].op, coords[i].x - translation.x, coords[i].y - translation.y));
+	}
+
+	for (size_t i = 0; i < coords.size() - 1; i++) {
+		// pi is the current point
+		pi = neutralizedPoints[i];
+		xi = pi.x;
+		yi = pi.y;
+
+		// pj is the next point (pi+1)
+		pj = neutralizedPoints[i + 1];
+		xj = pj.x;
+		yj = pj.y;
+
+		// a is the common factor to compute the signed area and the final coordinates
+		a = xi * yj - xj * yi;
+
+		// sArea is the sum used to compute the signed area
+		sArea += a;
+
+		// sx and sy are the sums used to compute the final coordinates
+		sx += (xi + xj) * a;
+		sy += (yi + yj) * a;
+	}
+
+	// Shape has no area: fallback on turf.centroid
+	if (sArea == 0) {
+		return centre;
+	} else {
+		// Compute the signed area, and factorize 1/6A
+		double area = sArea * 0.5;
+		double areaFactor = 1 / (6 * area);
+
+		// Compute the final coordinates, adding back the values that have been neutralized
+		return draw(VT_MOVETO, translation.x + areaFactor * sx, translation.y + areaFactor * sy);
+	}
+}
+
+double label_goodness(const drawvec &dv, size_t start, size_t count, long long x, long long y) {
+	if (!pnpoly(dv, start, count, x, y)) {
+		return 0;  // outside the polygon is as bad as it gets
+	}
+
+	double closest = INFINITY;  // square of closest distance to the border
+
+	for (size_t i = start; i < start + count; i++) {
+		double dx = dv[i].x - x;
+		double dy = dv[i].y - y;
+		double squared = dx * dx + dy * dy;
+		if (squared < closest) {
+			closest = squared;
+		}
+	}
+
+	return sqrt(closest);
+}
+
+// Generate a label point for a polygon feature.
+//
+// A good label point will be near the center of the feature and far from any border.
+//
+// Polylabel is supposed to be able to do this optimally, but can be quite slow
+// and sometimes still produces some odd results.
+//
+// The centroid is often off-center because edges with many curves will be
+// weighted higher than edges with straight lines.
+//
+// Turf's center-of-mass algorithm generally does a good job, but can sometimes
+// find a point that is outside the bounds of the polygon or quite close to the edge.
+//
+// So prefer the center of mass, but if it produces something too close to the border
+// or outside the polygon, try a series of gridded points within the feature's bounding box
+// until something works well, or if nothing does after several iterations, use the
+// least-bad option.
+
+drawvec polygon_to_anchor(const drawvec &geom) {
+	size_t start = 0, end = 0;
+	size_t best_area = 0;
+
+	for (size_t i = 0; i < geom.size(); i++) {
+		if (geom[i].op == VT_MOVETO) {
+			size_t j;
+			for (j = i + 1; j < geom.size(); j++) {
+				if (geom[j].op != VT_LINETO) {
+					break;
+				}
+			}
+
+			double area = get_area(geom, i, j);
+			if (area > best_area) {
+				start = i;
+				end = j;
+				best_area = area;
+			}
+
+			i = j - 1;
+		}
+	}
+
+	if (best_area > 0) {
+		long long xsum = 0;
+		long long ysum = 0;
+		size_t count = 0;
+		long long xmin = LLONG_MAX, ymin = LLONG_MAX, xmax = LLONG_MIN, ymax = LLONG_MIN;
+
+		// Calculate centroid and bounding box.
+		// start + 1 to exclude the first point, which is duplicated as the last
+		for (size_t k = start + 1; k < end; k++) {
+			xsum += geom[k].x;
+			ysum += geom[k].y;
+			count++;
+
+			xmin = std::min(xmin, geom[k].x);
+			ymin = std::min(ymin, geom[k].y);
+			xmax = std::max(xmax, geom[k].x);
+			ymax = std::max(ymax, geom[k].y);
+		}
+
+		if (count > 0) {
+			draw centroid(VT_MOVETO, xsum / count, ysum / count);
+			draw d = centerOfMass(geom, start, end, centroid);
+
+			double radius = sqrt(best_area / M_PI);
+			double goodness_threshold = radius / 5;
+
+			double goodness = label_goodness(geom, start, end - start - 1, d.x, d.y);
+			if (goodness < goodness_threshold) {
+				// Label is too close to the border or outside it,
+				// so try some other possible points
+
+				for (long long sub = 2;
+				     sub < 32 && (xmax - xmin) > 2 * sub && (ymax - ymin) > 2 * sub;
+				     sub *= 2) {
+					for (long long x = 1; x < sub; x++) {
+						for (long long y = 1; y < sub; y++) {
+							draw maybe(VT_MOVETO,
+								   xmin + x * (xmax - xmin) / sub,
+								   ymin + y * (ymax - ymin) / sub);
+
+							double maybe_goodness = label_goodness(geom, start, end - start, maybe.x, maybe.y);
+							if (maybe_goodness > goodness) {
+								// better than the previous
+								d = maybe;
+								goodness = maybe_goodness;
+							}
+						}
+					}
+
+					if (goodness > goodness_threshold) {
+						break;
+					}
+				}
+
+				// There is nothing really good. Is the centroid maybe better?
+				// If not, we're stuck with whatever the best we found was.
+				if (label_goodness(geom, start, end - start, centroid.x, centroid.y) > goodness) {
+					d = centroid;
+				}
+			}
+
+			drawvec dv;
+			dv.push_back(d);
+			return dv;
+		}
+	}
+
+	return drawvec();
+}
+
+
+static double dist(long long x1, long long y1, long long x2, long long y2) {
+	double dx = x2 - x1;
+	double dy = y2 - y1;
+	return sqrt(dx * dx + dy * dy);
+}
+
+drawvec spiral_anchors(drawvec const &geom, int tx, int ty, int z, unsigned long long label_point) {
+	drawvec out;
+
+	// anchor point in world coordinates
+	unsigned wx, wy;
+	decode_index(label_point, &wx, &wy);
+
+	// upper left of tile in world coordinates
+	long long tx1 = 0, ty1 = 0;
+	// lower right of tile in world coordinates;
+	long long tx2 = 1LL << 32, ty2 = 1LL << 32;
+	if (z != 0) {
+		tx1 = (long long) tx << (32 - z);
+		ty1 = (long long) ty << (32 - z);
+
+		tx2 = (long long) (tx + 1) << (32 - z);
+		ty2 = (long long) (ty + 1) << (32 - z);
+	}
+
+	// min and max distance of corners of this tile from the label point
+	double min_radius, max_radius;
+	if (wx >= tx1 && wx <= tx2 && wy >= ty1 && wy <= ty2) {
+		// center is in this tile,
+		// so min is 0, max can't be more than sqrt(2) tiles
+		min_radius = 0;
+		max_radius = sqrt(2);
+	} else {
+		// center is elsewhere,
+		// so min is at most sqrt(2)/2 tiles short of the center of the tile
+		// and max is at most sqrt(2)/2 tiles past the center of the tile
+		min_radius = std::max(0.0, dist(wx, wy, (tx1 + tx2) / 2, (ty1 + ty2) / 2) / (1LL << (32 - z)) - sqrt(2) / 2);
+		max_radius = min_radius + sqrt(2);
+	}
+
+	// labels complete a circle every 0.4 tiles of radius
+	const double spiral_dist = 0.4;
+
+	size_t min_i = pow(min_radius / spiral_dist, 2);
+	size_t max_i = pow(max_radius / spiral_dist, 2);
+
+	// https://craftofcoding.wordpress.com/tag/sunflower-spiral/
+	double angle = M_PI * (3.0 - sqrt(5.0));  // 137.5 in radians
+
+	for (size_t i = min_i; i <= max_i; i++) {
+		double r = sqrt(i) * spiral_dist;
+		double theta = i * angle;
+		// Convert polar to cartesian
+		long long x = r * cos(theta) * (1LL << (32 - z)) + wx;
+		long long y = r * sin(theta) * (1LL << (32 - z)) + wy;
+
+		if (x >= tx1 && x <= tx2 && y >= ty1 && y <= ty2) {
+			// is it actually inside the bounding box of the feature? then keep it.
+
+			for (size_t a = 0; a < geom.size(); a++) {
+				if (geom[a].op == VT_MOVETO) {
+					size_t b;
+					for (b = a + 1; b < geom.size(); b++) {
+						if (geom[b].op != VT_LINETO) {
+							break;
+						}
+					}
+
+					// If it's the central label, it's the best we've got,
+					// so accept it in any case. If it's from the outer spiral,
+					// don't use it if it's too close to a border.
+					if (i == 0) {
+						out.push_back(draw(VT_MOVETO, x - tx1, y - ty1));
+						break;
+					} else {
+						double tilesize = 1LL << (32 - z);
+						double goodness_threshold = tilesize / 100;
+						if (label_goodness(geom, a, b - a, x - tx1, y - ty1) > goodness_threshold) {
+							out.push_back(draw(VT_MOVETO, x - tx1, y - ty1));
+							break;
+						}
+					}
+
+					a = b - 1;
+				}
+			}
+		}
 	}
 
 	return out;

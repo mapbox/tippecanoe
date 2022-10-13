@@ -653,6 +653,10 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-\-order\-by=\fR\fIattribute\fP: Order features by the specified \fIattribute\fP, in alphabetical or numerical order. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
 .IP \(bu 2
 \fB\fC\-\-order\-descending\-by=\fR\fIattribute\fP: Order features by the specified \fIattribute\fP, in reverse alphabetical or numerical order. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
+.IP \(bu 2
+\fB\fC\-\-order\-smallest\-first\fR: Order features so the smallest geometry comes first in each tile. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
+.IP \(bu 2
+\fB\fC\-\-order\-largest\-first\fR: Order features so the largest geometry comes first in each tile. Multiple \fB\fC\-\-order\-by\fR and \fB\fC\-\-order\-descending\-by\fR options may be specified, the first being the primary sort key.
 .RE
 .SS Adding calculated attributes
 .RS
@@ -671,6 +675,8 @@ the line or polygon within one tile unit of its proper location. You can probabl
 \fB\fC\-pW\fR or \fB\fC\-\-reverse\-source\-polygon\-winding\fR: Instead of respecting GeoJSON polygon ring order, use the opposite of the original polygon winding in the source data to distinguish inner (counterclockwise) and outer (clockwise) polygon rings.
 .IP \(bu 2
 \fB\fC\-\-clip\-bounding\-box=\fR\fIminlon\fP\fB\fC,\fR\fIminlat\fP\fB\fC,\fR\fImaxlon\fP\fB\fC,\fR\fImaxlat\fP: Clip all features to the specified bounding box.
+.IP \(bu 2
+\fB\fC\-aP\fR or \fB\fC\-\-convert\-polygons\-to\-label\-points\fR: Replace polygon geometries with a label point or points for the polygon in each tile it intersects.
 .RE
 .SS Setting or disabling tile size limits
 .RS
