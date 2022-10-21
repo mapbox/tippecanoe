@@ -447,9 +447,12 @@ struct partial {
 	long long layer = 0;
 	long long original_seq = 0;
 	unsigned long long index = 0;
+	unsigned long long label_point = 0;
 	int segment = 0;
 	bool reduced = 0;
 	int z = 0;
+	int tx = 0;
+	int ty = 0;
 	int line_detail = 0;
 	int extra_detail = 0;
 	int maxzoom = 0;
@@ -575,31 +578,37 @@ void *partial_feature_worker(void *v) {
 
 		to_tile_scale(geom, z, out_detail);
 
-		std::vector<drawvec> geoms;
-		geoms.push_back(geom);
-
 		if (t == VT_POLYGON) {
 			// Scaling may have made the polygon degenerate.
 			// Give Clipper a chance to try to fix it.
-			for (size_t g = 0; g < geoms.size(); g++) {
-				drawvec before = geoms[g];
-				geoms[g] = clean_or_clip_poly(geoms[g], 0, 0, false);
+			{
+				drawvec before = geom;
+				geom = clean_or_clip_poly(geom, 0, 0, false);
 				if (additional[A_DEBUG_POLYGON]) {
-					check_polygon(geoms[g]);
+					check_polygon(geom);
 				}
 
-				if (geoms[g].size() < 3) {
+				if (geom.size() < 3) {
 					if (area > 0) {
 						// area is in world coordinates, calculated before scaling down
-						geoms[g] = revive_polygon(before, area / geoms.size(), z, out_detail);
+						geom = revive_polygon(before, area, z, out_detail);
 					} else {
-						geoms[g].clear();
+						geom.clear();
 					}
 				}
 			}
 		}
 
+		if (t == VT_POLYGON && additional[A_GENERATE_POLYGON_LABEL_POINTS]) {
+			t = (*partials)[i].t = VT_POINT;
+			geom = spiral_anchors(from_tile_scale(geom, z, out_detail), (*partials)[i].tx, (*partials)[i].ty, z, (*partials)[i].label_point);
+			to_tile_scale(geom, z, out_detail);
+		}
+
 		(*partials)[i].index = i;
+
+		std::vector<drawvec> geoms;  // artifact of former polygon-splitting to reduce geometric complexity
+		geoms.push_back(geom);
 		(*partials)[i].geoms = geoms;
 	}
 
@@ -2087,11 +2096,6 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 			}
 
-			if (sf.t == VT_POLYGON && additional[A_GENERATE_POLYGON_LABEL_POINTS]) {
-				sf.t = VT_POINT;
-				sf.geometry = spiral_anchors(sf.geometry, tx, ty, z, sf.label_point);
-			}
-
 			if (sf.geometry.size() > 0) {
 				if (partials.size() > max_tile_size) {
 					// Even being maximally conservative, each feature is still going to be
@@ -2114,6 +2118,8 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					p.original_seq = sf.seq;
 					p.reduced = reduced;
 					p.z = z;
+					p.tx = tx;
+					p.ty = ty;
 					p.line_detail = line_detail;
 					p.extra_detail = line_detail;
 					p.maxzoom = maxzoom;
@@ -2126,6 +2132,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					p.id = sf.id;
 					p.has_id = sf.has_id;
 					p.index = sf.index;
+					p.label_point = sf.label_point;
 					p.renamed = -1;
 					p.extent = sf.extent;
 					p.clustered = 0;

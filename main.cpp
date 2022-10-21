@@ -2427,7 +2427,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
-			fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n\n\n", written);
+			fprintf(stderr, "\n\n\n*** NOTE TILES ONLY COMPLETE THROUGH ZOOM %d ***\n", written);
 			maxzoom = written;
 			ret = EXIT_INCOMPLETE;
 		} else {
