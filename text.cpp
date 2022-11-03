@@ -131,7 +131,7 @@ std::string truncate16(std::string const &s, size_t runes) {
 
 int integer_zoom(std::string where, std::string text) {
 	double d = atof(text.c_str());
-	if (!isfinite(d) || d != floor(d) || d < 0 || d > 32) {
+	if (!std::isfinite(d) || d != floor(d) || d < 0 || d > 32) {
 		fprintf(stderr, "%s: Expected integer zoom level in \"tippecanoe\" GeoJSON extension, not %s\n", where.c_str(), text.c_str());
 		exit(EXIT_JSON);
 	}
