@@ -71,19 +71,19 @@ drawvec readLinePart(const FlatGeobuf::Geometry *geometry) {
 
 drawvec readGeometry(const FlatGeobuf::Geometry *geometry, FlatGeobuf::GeometryType h_geometry_type) {
 	FlatGeobuf::GeometryType geometry_type = h_geometry_type;
-	if (h_geometry_type == FlatGeobuf::GeometryType::Unknown) geometry_type = geometry->type();
+	if (h_geometry_type == FlatGeobuf::GeometryType_Unknown) geometry_type = geometry->type();
 
-	if (geometry_type == FlatGeobuf::GeometryType::Point) {
+	if (geometry_type == FlatGeobuf::GeometryType_Point) {
 		return readPoints(geometry);
-	} if (geometry_type == FlatGeobuf::GeometryType::MultiPoint) {
+	} if (geometry_type == FlatGeobuf::GeometryType_MultiPoint) {
 		return readPoints(geometry);	
-	} if (geometry_type == FlatGeobuf::GeometryType::LineString) {
+	} if (geometry_type == FlatGeobuf::GeometryType_LineString) {
 		return readLinePart(geometry);
-	} else if (h_geometry_type == FlatGeobuf::GeometryType::MultiLineString) {
+	} else if (h_geometry_type == FlatGeobuf::GeometryType_MultiLineString) {
 		return readLinePart(geometry);
-	} if (geometry_type == FlatGeobuf::GeometryType::Polygon) {
+	} if (geometry_type == FlatGeobuf::GeometryType_Polygon) {
 		return readLinePart(geometry);
-	} else if (geometry_type == FlatGeobuf::GeometryType::MultiPolygon) {
+	} else if (geometry_type == FlatGeobuf::GeometryType_MultiPolygon) {
 	// if it is a GeometryCollection, parse Parts, ignore XY
 		drawvec dv;
 		for (size_t part = 0; part < geometry->parts()->size(); part++) {
@@ -106,23 +106,23 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 	int drawvec_type = -1;
 
 	FlatGeobuf::GeometryType geometry_type = h_geometry_type;
-	if (h_geometry_type == FlatGeobuf::GeometryType::Unknown) geometry_type = feature->geometry()->type();
+	if (h_geometry_type == FlatGeobuf::GeometryType_Unknown) geometry_type = feature->geometry()->type();
 
 	switch (geometry_type) {
-		case FlatGeobuf::GeometryType::Point :
-		case FlatGeobuf::GeometryType::MultiPoint :
+		case FlatGeobuf::GeometryType_Point :
+		case FlatGeobuf::GeometryType_MultiPoint :
 			drawvec_type = 1;
 			break;
-		case FlatGeobuf::GeometryType::LineString :
-		case FlatGeobuf::GeometryType::MultiLineString :
+		case FlatGeobuf::GeometryType_LineString :
+		case FlatGeobuf::GeometryType_MultiLineString :
 			drawvec_type = 2;
 			break;
-		case FlatGeobuf::GeometryType::Polygon :
-		case FlatGeobuf::GeometryType::MultiPolygon :
+		case FlatGeobuf::GeometryType_Polygon :
+		case FlatGeobuf::GeometryType_MultiPolygon :
 			drawvec_type = 3;
 			break;
-		case FlatGeobuf::GeometryType::Unknown :
-		case FlatGeobuf::GeometryType::GeometryCollection :
+		case FlatGeobuf::GeometryType_Unknown :
+		case FlatGeobuf::GeometryType_GeometryCollection :
 		default:
 			fprintf(stderr, "flatgeobuf has unsupported geometry type %u\n", (unsigned int)h_geometry_type);
 			exit(EXIT_IMPOSSIBLE);
@@ -161,73 +161,73 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 		FlatGeobuf::ColumnType col_type = h_column_types[col_idx];
 
 		serial_val sv;
-		if (col_type == FlatGeobuf::ColumnType::Byte) {
+		if (col_type == FlatGeobuf::ColumnType_Byte) {
 			sv.type = mvt_sint;
 			int8_t byte_val;
 			memcpy(&byte_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(byte_val));
 			sv.s = std::to_string(byte_val);
 			p_pos += sizeof(uint16_t) + sizeof(byte_val);
-		} else if (col_type == FlatGeobuf::ColumnType::UByte) {
+		} else if (col_type == FlatGeobuf::ColumnType_UByte) {
 			sv.type = mvt_uint;
 			uint8_t ubyte_val;
 			memcpy(&ubyte_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(ubyte_val));
 			sv.s = std::to_string(ubyte_val);
 			p_pos += sizeof(uint16_t) + sizeof(ubyte_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Bool) {
+		} else if (col_type == FlatGeobuf::ColumnType_Bool) {
 			sv.type = mvt_bool;
 			uint8_t bool_val;
 			memcpy(&bool_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(bool_val));
 			sv.s = std::to_string(bool_val);
 			p_pos += sizeof(uint16_t) + sizeof(bool_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Short) {
+		} else if (col_type == FlatGeobuf::ColumnType_Short) {
 			sv.type = mvt_sint;
 			int16_t short_val;
 			memcpy(&short_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(short_val));
 			sv.s = std::to_string(short_val);
 			p_pos += sizeof(uint16_t) + sizeof(short_val);
-		} else if (col_type == FlatGeobuf::ColumnType::UShort) {
+		} else if (col_type == FlatGeobuf::ColumnType_UShort) {
 			sv.type = mvt_uint;
 			uint16_t ushort_val;
 			memcpy(&ushort_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(ushort_val));
 			sv.s = std::to_string(ushort_val);
 			p_pos += sizeof(uint16_t) + sizeof(ushort_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Int) {
+		} else if (col_type == FlatGeobuf::ColumnType_Int) {
 			sv.type = mvt_sint;
 			int32_t int_val;
 			memcpy(&int_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(int_val));
 			sv.s = std::to_string(int_val);
 			p_pos += sizeof(uint16_t) + sizeof(int_val);
-		} else if (col_type == FlatGeobuf::ColumnType::UInt) {
+		} else if (col_type == FlatGeobuf::ColumnType_UInt) {
 			sv.type = mvt_uint;
 			uint32_t uint_val;
 			memcpy(&uint_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(uint_val));
 			sv.s = std::to_string(uint_val);
 			p_pos += sizeof(uint16_t) + sizeof(uint_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Long) {
+		} else if (col_type == FlatGeobuf::ColumnType_Long) {
 			sv.type = mvt_sint;
 			int64_t long_val;
 			memcpy(&long_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(long_val));
 			sv.s = std::to_string(long_val);
 			p_pos += sizeof(uint16_t) + sizeof(long_val);
-		} else if (col_type == FlatGeobuf::ColumnType::ULong) {
+		} else if (col_type == FlatGeobuf::ColumnType_ULong) {
 			sv.type = mvt_uint;
 			int64_t ulong_val;
 			memcpy(&ulong_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(ulong_val));
 			sv.s = std::to_string(ulong_val);
 			p_pos += sizeof(uint16_t) + sizeof(ulong_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Float) {
+		} else if (col_type == FlatGeobuf::ColumnType_Float) {
 			sv.type = mvt_float;
 			float float_val;
 			memcpy(&float_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(float_val));
 			sv.s = milo::dtoa_milo(float_val);
 			p_pos += sizeof(uint16_t) + sizeof(float_val);
-		} else if (col_type == FlatGeobuf::ColumnType::Double) {
+		} else if (col_type == FlatGeobuf::ColumnType_Double) {
 			sv.type = mvt_double;
 			double double_val;
 			memcpy(&double_val, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(double_val));
 			sv.s = milo::dtoa_milo(double_val);
 			p_pos += sizeof(uint16_t) + sizeof(double_val);
-		} else if (col_type == FlatGeobuf::ColumnType::String || col_type == FlatGeobuf::ColumnType::Json || col_type == FlatGeobuf::ColumnType::DateTime) {
+		} else if (col_type == FlatGeobuf::ColumnType_String || col_type == FlatGeobuf::ColumnType_Json || col_type == FlatGeobuf::ColumnType_DateTime) {
 			sv.type = mvt_string;
 			uint32_t val_len;
 			memcpy(&val_len, feature->properties()->data() + p_pos + sizeof(uint16_t), sizeof(val_len));
@@ -252,7 +252,7 @@ void readFeature(const FlatGeobuf::Feature *feature, long long feature_sequence_
 struct fgb_queued_feature {
 	const FlatGeobuf::Feature *feature = NULL;
 	long long feature_sequence_id = -1;
-	FlatGeobuf::GeometryType h_geometry_type = FlatGeobuf::GeometryType::Unknown;
+	FlatGeobuf::GeometryType h_geometry_type = FlatGeobuf::GeometryType_Unknown;
 	const std::vector<std::string> *h_column_names = NULL;
 	const std::vector<FlatGeobuf::ColumnType> *h_column_types = NULL;
 	std::vector<struct serialization_state> *sst = NULL;

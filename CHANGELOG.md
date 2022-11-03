@@ -1,3 +1,7 @@
+## 2.10.1
+
+* Upgrade flatbuffers version
+
 ## 2.9.1
 
 * Do label generation after simplification, not before.
