@@ -6,6 +6,13 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+// Ensure the included flatbuffers.h is the same version as when this file was
+// generated, otherwise it may not be compatible.
+static_assert(FLATBUFFERS_VERSION_MAJOR == 22 &&
+              FLATBUFFERS_VERSION_MINOR == 9 &&
+              FLATBUFFERS_VERSION_REVISION == 29,
+             "Non-compatible flatbuffers version included");
+
 #include "header_generated.h"
 
 namespace FlatGeobuf {
@@ -66,7 +73,7 @@ struct Geometry FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVector(t()) &&
            VerifyOffset(verifier, VT_TM) &&
            verifier.VerifyVector(tm()) &&
-           VerifyField<uint8_t>(verifier, VT_TYPE) &&
+           VerifyField<uint8_t>(verifier, VT_TYPE, 1) &&
            VerifyOffset(verifier, VT_PARTS) &&
            verifier.VerifyVector(parts()) &&
            verifier.VerifyVectorOfTables(parts()) &&
@@ -121,7 +128,7 @@ inline flatbuffers::Offset<Geometry> CreateGeometry(
     flatbuffers::Offset<flatbuffers::Vector<double>> m = 0,
     flatbuffers::Offset<flatbuffers::Vector<double>> t = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint64_t>> tm = 0,
-    FlatGeobuf::GeometryType type = FlatGeobuf::GeometryType::Unknown,
+    FlatGeobuf::GeometryType type = FlatGeobuf::GeometryType_Unknown,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<FlatGeobuf::Geometry>>> parts = 0) {
   GeometryBuilder builder_(_fbb);
   builder_.add_parts(parts);
@@ -143,7 +150,7 @@ inline flatbuffers::Offset<Geometry> CreateGeometryDirect(
     const std::vector<double> *m = nullptr,
     const std::vector<double> *t = nullptr,
     const std::vector<uint64_t> *tm = nullptr,
-    FlatGeobuf::GeometryType type = FlatGeobuf::GeometryType::Unknown,
+    FlatGeobuf::GeometryType type = FlatGeobuf::GeometryType_Unknown,
     const std::vector<flatbuffers::Offset<FlatGeobuf::Geometry>> *parts = nullptr) {
   auto ends__ = ends ? _fbb.CreateVector<uint32_t>(*ends) : 0;
   auto xy__ = xy ? _fbb.CreateVector<double>(*xy) : 0;

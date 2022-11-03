@@ -6,6 +6,13 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+// Ensure the included flatbuffers.h is the same version as when this file was
+// generated, otherwise it may not be compatible.
+static_assert(FLATBUFFERS_VERSION_MAJOR == 22 &&
+              FLATBUFFERS_VERSION_MINOR == 9 &&
+              FLATBUFFERS_VERSION_REVISION == 29,
+             "Non-compatible flatbuffers version included");
+
 namespace FlatGeobuf {
 
 struct Column;
@@ -17,49 +24,49 @@ struct CrsBuilder;
 struct Header;
 struct HeaderBuilder;
 
-enum class GeometryType : uint8_t {
-  Unknown = 0,
-  Point = 1,
-  LineString = 2,
-  Polygon = 3,
-  MultiPoint = 4,
-  MultiLineString = 5,
-  MultiPolygon = 6,
-  GeometryCollection = 7,
-  CircularString = 8,
-  CompoundCurve = 9,
-  CurvePolygon = 10,
-  MultiCurve = 11,
-  MultiSurface = 12,
-  Curve = 13,
-  Surface = 14,
-  PolyhedralSurface = 15,
-  TIN = 16,
-  Triangle = 17,
-  MIN = Unknown,
-  MAX = Triangle
+enum GeometryType : uint8_t {
+  GeometryType_Unknown = 0,
+  GeometryType_Point = 1,
+  GeometryType_LineString = 2,
+  GeometryType_Polygon = 3,
+  GeometryType_MultiPoint = 4,
+  GeometryType_MultiLineString = 5,
+  GeometryType_MultiPolygon = 6,
+  GeometryType_GeometryCollection = 7,
+  GeometryType_CircularString = 8,
+  GeometryType_CompoundCurve = 9,
+  GeometryType_CurvePolygon = 10,
+  GeometryType_MultiCurve = 11,
+  GeometryType_MultiSurface = 12,
+  GeometryType_Curve = 13,
+  GeometryType_Surface = 14,
+  GeometryType_PolyhedralSurface = 15,
+  GeometryType_TIN = 16,
+  GeometryType_Triangle = 17,
+  GeometryType_MIN = GeometryType_Unknown,
+  GeometryType_MAX = GeometryType_Triangle
 };
 
 inline const GeometryType (&EnumValuesGeometryType())[18] {
   static const GeometryType values[] = {
-    GeometryType::Unknown,
-    GeometryType::Point,
-    GeometryType::LineString,
-    GeometryType::Polygon,
-    GeometryType::MultiPoint,
-    GeometryType::MultiLineString,
-    GeometryType::MultiPolygon,
-    GeometryType::GeometryCollection,
-    GeometryType::CircularString,
-    GeometryType::CompoundCurve,
-    GeometryType::CurvePolygon,
-    GeometryType::MultiCurve,
-    GeometryType::MultiSurface,
-    GeometryType::Curve,
-    GeometryType::Surface,
-    GeometryType::PolyhedralSurface,
-    GeometryType::TIN,
-    GeometryType::Triangle
+    GeometryType_Unknown,
+    GeometryType_Point,
+    GeometryType_LineString,
+    GeometryType_Polygon,
+    GeometryType_MultiPoint,
+    GeometryType_MultiLineString,
+    GeometryType_MultiPolygon,
+    GeometryType_GeometryCollection,
+    GeometryType_CircularString,
+    GeometryType_CompoundCurve,
+    GeometryType_CurvePolygon,
+    GeometryType_MultiCurve,
+    GeometryType_MultiSurface,
+    GeometryType_Curve,
+    GeometryType_Surface,
+    GeometryType_PolyhedralSurface,
+    GeometryType_TIN,
+    GeometryType_Triangle
   };
   return values;
 }
@@ -90,48 +97,48 @@ inline const char * const *EnumNamesGeometryType() {
 }
 
 inline const char *EnumNameGeometryType(GeometryType e) {
-  if (flatbuffers::IsOutRange(e, GeometryType::Unknown, GeometryType::Triangle)) return "";
+  if (flatbuffers::IsOutRange(e, GeometryType_Unknown, GeometryType_Triangle)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesGeometryType()[index];
 }
 
-enum class ColumnType : uint8_t {
-  Byte = 0,
-  UByte = 1,
-  Bool = 2,
-  Short = 3,
-  UShort = 4,
-  Int = 5,
-  UInt = 6,
-  Long = 7,
-  ULong = 8,
-  Float = 9,
-  Double = 10,
-  String = 11,
-  Json = 12,
-  DateTime = 13,
-  Binary = 14,
-  MIN = Byte,
-  MAX = Binary
+enum ColumnType : uint8_t {
+  ColumnType_Byte = 0,
+  ColumnType_UByte = 1,
+  ColumnType_Bool = 2,
+  ColumnType_Short = 3,
+  ColumnType_UShort = 4,
+  ColumnType_Int = 5,
+  ColumnType_UInt = 6,
+  ColumnType_Long = 7,
+  ColumnType_ULong = 8,
+  ColumnType_Float = 9,
+  ColumnType_Double = 10,
+  ColumnType_String = 11,
+  ColumnType_Json = 12,
+  ColumnType_DateTime = 13,
+  ColumnType_Binary = 14,
+  ColumnType_MIN = ColumnType_Byte,
+  ColumnType_MAX = ColumnType_Binary
 };
 
 inline const ColumnType (&EnumValuesColumnType())[15] {
   static const ColumnType values[] = {
-    ColumnType::Byte,
-    ColumnType::UByte,
-    ColumnType::Bool,
-    ColumnType::Short,
-    ColumnType::UShort,
-    ColumnType::Int,
-    ColumnType::UInt,
-    ColumnType::Long,
-    ColumnType::ULong,
-    ColumnType::Float,
-    ColumnType::Double,
-    ColumnType::String,
-    ColumnType::Json,
-    ColumnType::DateTime,
-    ColumnType::Binary
+    ColumnType_Byte,
+    ColumnType_UByte,
+    ColumnType_Bool,
+    ColumnType_Short,
+    ColumnType_UShort,
+    ColumnType_Int,
+    ColumnType_UInt,
+    ColumnType_Long,
+    ColumnType_ULong,
+    ColumnType_Float,
+    ColumnType_Double,
+    ColumnType_String,
+    ColumnType_Json,
+    ColumnType_DateTime,
+    ColumnType_Binary
   };
   return values;
 }
@@ -159,7 +166,7 @@ inline const char * const *EnumNamesColumnType() {
 }
 
 inline const char *EnumNameColumnType(ColumnType e) {
-  if (flatbuffers::IsOutRange(e, ColumnType::Byte, ColumnType::Binary)) return "";
+  if (flatbuffers::IsOutRange(e, ColumnType_Byte, ColumnType_Binary)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesColumnType()[index];
 }
@@ -216,17 +223,17 @@ struct Column FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffsetRequired(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
-           VerifyField<uint8_t>(verifier, VT_TYPE) &&
+           VerifyField<uint8_t>(verifier, VT_TYPE, 1) &&
            VerifyOffset(verifier, VT_TITLE) &&
            verifier.VerifyString(title()) &&
            VerifyOffset(verifier, VT_DESCRIPTION) &&
            verifier.VerifyString(description()) &&
-           VerifyField<int32_t>(verifier, VT_WIDTH) &&
-           VerifyField<int32_t>(verifier, VT_PRECISION) &&
-           VerifyField<int32_t>(verifier, VT_SCALE) &&
-           VerifyField<uint8_t>(verifier, VT_NULLABLE) &&
-           VerifyField<uint8_t>(verifier, VT_UNIQUE) &&
-           VerifyField<uint8_t>(verifier, VT_PRIMARY_KEY) &&
+           VerifyField<int32_t>(verifier, VT_WIDTH, 4) &&
+           VerifyField<int32_t>(verifier, VT_PRECISION, 4) &&
+           VerifyField<int32_t>(verifier, VT_SCALE, 4) &&
+           VerifyField<uint8_t>(verifier, VT_NULLABLE, 1) &&
+           VerifyField<uint8_t>(verifier, VT_UNIQUE, 1) &&
+           VerifyField<uint8_t>(verifier, VT_PRIMARY_KEY, 1) &&
            VerifyOffset(verifier, VT_METADATA) &&
            verifier.VerifyString(metadata()) &&
            verifier.EndTable();
@@ -285,7 +292,7 @@ struct ColumnBuilder {
 inline flatbuffers::Offset<Column> CreateColumn(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> name = 0,
-    FlatGeobuf::ColumnType type = FlatGeobuf::ColumnType::Byte,
+    FlatGeobuf::ColumnType type = FlatGeobuf::ColumnType_Byte,
     flatbuffers::Offset<flatbuffers::String> title = 0,
     flatbuffers::Offset<flatbuffers::String> description = 0,
     int32_t width = -1,
@@ -313,7 +320,7 @@ inline flatbuffers::Offset<Column> CreateColumn(
 inline flatbuffers::Offset<Column> CreateColumnDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    FlatGeobuf::ColumnType type = FlatGeobuf::ColumnType::Byte,
+    FlatGeobuf::ColumnType type = FlatGeobuf::ColumnType_Byte,
     const char *title = nullptr,
     const char *description = nullptr,
     int32_t width = -1,
@@ -374,7 +381,7 @@ struct Crs FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_ORG) &&
            verifier.VerifyString(org()) &&
-           VerifyField<int32_t>(verifier, VT_CODE) &&
+           VerifyField<int32_t>(verifier, VT_CODE, 4) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_DESCRIPTION) &&
@@ -527,16 +534,16 @@ struct Header FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyString(name()) &&
            VerifyOffset(verifier, VT_ENVELOPE) &&
            verifier.VerifyVector(envelope()) &&
-           VerifyField<uint8_t>(verifier, VT_GEOMETRY_TYPE) &&
-           VerifyField<uint8_t>(verifier, VT_HAS_Z) &&
-           VerifyField<uint8_t>(verifier, VT_HAS_M) &&
-           VerifyField<uint8_t>(verifier, VT_HAS_T) &&
-           VerifyField<uint8_t>(verifier, VT_HAS_TM) &&
+           VerifyField<uint8_t>(verifier, VT_GEOMETRY_TYPE, 1) &&
+           VerifyField<uint8_t>(verifier, VT_HAS_Z, 1) &&
+           VerifyField<uint8_t>(verifier, VT_HAS_M, 1) &&
+           VerifyField<uint8_t>(verifier, VT_HAS_T, 1) &&
+           VerifyField<uint8_t>(verifier, VT_HAS_TM, 1) &&
            VerifyOffset(verifier, VT_COLUMNS) &&
            verifier.VerifyVector(columns()) &&
            verifier.VerifyVectorOfTables(columns()) &&
-           VerifyField<uint64_t>(verifier, VT_FEATURES_COUNT) &&
-           VerifyField<uint16_t>(verifier, VT_INDEX_NODE_SIZE) &&
+           VerifyField<uint64_t>(verifier, VT_FEATURES_COUNT, 8) &&
+           VerifyField<uint16_t>(verifier, VT_INDEX_NODE_SIZE, 2) &&
            VerifyOffset(verifier, VT_CRS) &&
            verifier.VerifyTable(crs()) &&
            VerifyOffset(verifier, VT_TITLE) &&
@@ -610,7 +617,7 @@ inline flatbuffers::Offset<Header> CreateHeader(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> name = 0,
     flatbuffers::Offset<flatbuffers::Vector<double>> envelope = 0,
-    FlatGeobuf::GeometryType geometry_type = FlatGeobuf::GeometryType::Unknown,
+    FlatGeobuf::GeometryType geometry_type = FlatGeobuf::GeometryType_Unknown,
     bool has_z = false,
     bool has_m = false,
     bool has_t = false,
@@ -644,7 +651,7 @@ inline flatbuffers::Offset<Header> CreateHeaderDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
     const std::vector<double> *envelope = nullptr,
-    FlatGeobuf::GeometryType geometry_type = FlatGeobuf::GeometryType::Unknown,
+    FlatGeobuf::GeometryType geometry_type = FlatGeobuf::GeometryType_Unknown,
     bool has_z = false,
     bool has_m = false,
     bool has_t = false,
