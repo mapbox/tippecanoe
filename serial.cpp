@@ -539,7 +539,7 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 	}
 
 	double extent = 0;
-	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || order_by_size) {
+	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED] || order_by_size || sst->want_dist) {
 		if (sf.t == VT_POLYGON) {
 			for (size_t i = 0; i < scaled_geometry.size(); i++) {
 				if (scaled_geometry[i].op == VT_MOVETO) {
@@ -574,6 +574,10 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		sf.extent = (long long) extent;
 	} else {
 		sf.extent = LLONG_MAX;
+	}
+
+	if (sst->want_dist && sf.t == VT_POLYGON) {
+		*(sst->area_sum) += extent;
 	}
 
 	if (!prevent[P_INPUT_ORDER]) {

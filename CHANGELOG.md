@@ -1,4 +1,9 @@
-## 2.10.1
+## 2.11.0
+
+* Change sqlite3 schema to deduplicate identical tiles
+* Limit guessed maxzoom to avoid spending too many tiles on polygon fill
+
+## 2.10.0
 
 * Upgrade flatbuffers version
 

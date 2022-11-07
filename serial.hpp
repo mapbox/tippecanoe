@@ -150,6 +150,7 @@ struct serialization_state {
 
 	double *dist_sum = NULL;  // running tally for calculation of resolution within features
 	size_t *dist_count = NULL;
+	double *area_sum = NULL;
 	bool want_dist = false;
 
 	int maxzoom = 0;

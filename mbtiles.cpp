@@ -52,20 +52,45 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 			exit(EXIT_EXISTS);
 		}
 	}
-	if (sqlite3_exec(outdb, "CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: create tiles table: %s\n", argv[0], err);
-		if (!forcetable) {
-			exit(EXIT_EXISTS);
-		}
-	}
 	if (sqlite3_exec(outdb, "create unique index name on metadata (name);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: index metadata: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_EXISTS);
 		}
 	}
-	if (sqlite3_exec(outdb, "create unique index tile_index on tiles (zoom_level, tile_column, tile_row);", NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "%s: index tiles: %s\n", argv[0], err);
+
+	// "map" maps z/x/y coordinates to a content hash
+	if (sqlite3_exec(outdb, "CREATE TABLE map (zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_id TEXT);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create map table: %s\n", argv[0], err);
+		if (!forcetable) {
+			exit(EXIT_EXISTS);
+		}
+	}
+	if (sqlite3_exec(outdb, "CREATE UNIQUE INDEX map_index ON map (zoom_level, tile_column, tile_row);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create map index: %s\n", argv[0], err);
+		if (!forcetable) {
+			exit(EXIT_EXISTS);
+		}
+	}
+
+	// "images" maps a content hash to tile contents
+	if (sqlite3_exec(outdb, "CREATE TABLE images (tile_data blob, tile_id text);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create images table: %s\n", argv[0], err);
+		if (!forcetable) {
+			exit(EXIT_EXISTS);
+		}
+	}
+	if (sqlite3_exec(outdb, "CREATE UNIQUE INDEX images_id ON images (tile_id);", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create images index: %s\n", argv[0], err);
+		if (!forcetable) {
+			exit(EXIT_EXISTS);
+		}
+	}
+
+	// "tiles" is a view that retrieves content from "images"
+	// via the content hash looked up from "map".
+	if (sqlite3_exec(outdb, "CREATE VIEW tiles AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, images.tile_data AS tile_data FROM map JOIN images ON images.tile_id = map.tile_id;", NULL, NULL, &err) != SQLITE_OK) {
+		fprintf(stderr, "%s: create tiles view: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_EXISTS);
 		}
@@ -75,23 +100,51 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 }
 
 void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size) {
+	// Store tiles by a hash of their contents. node-mbtiles uses MD5,
+	// but I am resisting adding the dependency, so instead here is
+	// everybody's first hash function. It is the same as Java's String.hashCode(),
+	// https://docs.oracle.com/javase/6/docs/api/java/lang/String.html#hashCode()
+	unsigned long long h = 0;
+	for (int i = 0; i < size; i++) {
+		h = h * 31 + data[i];
+	}
+	std::string hash = std::to_string(h);
+
+	// following https://github.com/mapbox/node-mbtiles/blob/master/lib/mbtiles.js
+
 	sqlite3_stmt *stmt;
-	const char *query = "insert into tiles (zoom_level, tile_column, tile_row, tile_data) values (?, ?, ?, ?)";
-	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
-		fprintf(stderr, "sqlite3 insert prep failed\n");
+	const char *images = "replace into images (tile_id, tile_data) values (?, ?)";
+	if (sqlite3_prepare_v2(outdb, images, -1, &stmt, NULL) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 images prep failed\n");
+		exit(EXIT_SQLITE);
+	}
+
+	sqlite3_bind_blob(stmt, 1, hash.c_str(), hash.size(), NULL);
+	sqlite3_bind_blob(stmt, 2, data, size, NULL);
+
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		fprintf(stderr, "sqlite3 images insert failed: %s\n", sqlite3_errmsg(outdb));
+	}
+	if (sqlite3_finalize(stmt) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 images finalize failed: %s\n", sqlite3_errmsg(outdb));
+	}
+
+	const char *map = "insert into map (zoom_level, tile_column, tile_row, tile_id) values (?, ?, ?, ?)";
+	if (sqlite3_prepare_v2(outdb, map, -1, &stmt, NULL) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 map prep failed\n");
 		exit(EXIT_SQLITE);
 	}
 
 	sqlite3_bind_int(stmt, 1, z);
 	sqlite3_bind_int(stmt, 2, tx);
 	sqlite3_bind_int(stmt, 3, (1 << z) - 1 - ty);
-	sqlite3_bind_blob(stmt, 4, data, size, NULL);
+	sqlite3_bind_blob(stmt, 4, hash.c_str(), hash.size(), NULL);
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
-		fprintf(stderr, "sqlite3 insert failed: %s\n", sqlite3_errmsg(outdb));
+		fprintf(stderr, "sqlite3 map insert failed: %s\n", sqlite3_errmsg(outdb));
 	}
 	if (sqlite3_finalize(stmt) != SQLITE_OK) {
-		fprintf(stderr, "sqlite3 finalize failed: %s\n", sqlite3_errmsg(outdb));
+		fprintf(stderr, "sqlite3 map finalize failed: %s\n", sqlite3_errmsg(outdb));
 	}
 }
 
