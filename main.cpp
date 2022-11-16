@@ -83,6 +83,7 @@ int cluster_distance = 0;
 int tiny_polygon_size = 2;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
+unsigned int drop_denser = 0;
 
 std::vector<order_field> order_by;
 bool order_reverse;
@@ -269,11 +270,17 @@ struct drop_state {
 	double gap;
 	unsigned long long previndex;
 	double interval;
-	double scale;
 	double seq;
-	long long included;
-	unsigned x;
-	unsigned y;
+};
+
+struct drop_densest {
+	unsigned long long gap;
+	size_t seq;
+
+	bool operator<(const drop_densest &o) const {
+		// largest gap sorts first
+		return gap > o.gap;
+	}
 };
 
 int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, double gamma) {
@@ -290,7 +297,6 @@ int calc_feature_minzoom(struct index *ix, struct drop_state *ds, int maxzoom, d
 		for (ssize_t i = maxzoom; i >= 0; i--) {
 			if (ds[i].seq >= 0) {
 				ds[i].seq -= ds[i].interval;
-				ds[i].included++;
 			} else {
 				feature_minzoom = i + 1;
 				break;
@@ -1015,11 +1021,7 @@ void prep_drop_states(struct drop_state *ds, int maxzoom, int basezoom, double d
 			ds[i].interval = std::exp(std::log(droprate) * (basezoom - i));
 		}
 
-		ds[i].scale = (double) (1LL << (64 - 2 * (i + 8)));
 		ds[i].seq = 0;
-		ds[i].included = 0;
-		ds[i].x = 0;
-		ds[i].y = 0;
 	}
 }
 
@@ -2400,7 +2402,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		fix_dropping = true;
 	}
 
-	if (fix_dropping) {
+	if (fix_dropping || drop_denser > 0) {
 		// Fix up the minzooms for features, now that we really know the base zoom
 		// and drop rate.
 
@@ -2420,12 +2422,50 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		struct drop_state ds[maxzoom + 1];
 		prep_drop_states(ds, maxzoom, basezoom, droprate);
 
-		for (long long ip = 0; ip < indices; ip++) {
-			if (ip > 0 && map[ip].start != map[ip - 1].end) {
-				fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+		if (drop_denser > 0) {
+			std::vector<drop_densest> ddv;
+			unsigned long long previndex = 0;
+
+			for (long long ip = 0; ip < indices; ip++) {
+				if (map[ip].t == VT_POINT ||
+				    (additional[A_LINE_DROP] && map[ip].t == VT_LINE) ||
+				    (additional[A_POLYGON_DROP] && map[ip].t == VT_POLYGON)) {
+					if (map[ip].ix % 100 < drop_denser) {
+						drop_densest dd;
+						dd.gap = map[ip].ix - previndex;
+						dd.seq = ip;
+						ddv.push_back(dd);
+
+						previndex = map[ip].ix;
+					} else {
+						int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
+						geom[map[ip].end - 1] = feature_minzoom;
+					}
+				}
 			}
-			int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
-			geom[map[ip].end - 1] = feature_minzoom;
+
+			std::sort(ddv.begin(), ddv.end());
+
+			size_t i = 0;
+			for (int z = 0; z <= basezoom; z++) {
+				double keep_fraction = 1.0 / std::exp(std::log(droprate) * (basezoom - z));
+				size_t keep_count = ddv.size() * keep_fraction;
+
+				for (; i < keep_count && i < ddv.size(); i++) {
+					geom[map[ddv[i].seq].end - 1] = z;
+				}
+			}
+			for (; i < ddv.size(); i++) {
+				geom[map[ddv[i].seq].end - 1] = basezoom;
+			}
+		} else {
+			for (long long ip = 0; ip < indices; ip++) {
+				if (ip > 0 && map[ip].start != map[ip - 1].end) {
+					fprintf(stderr, "Mismatched index at %lld: %lld vs %lld\n", ip, map[ip].start, map[ip].end);
+				}
+				int feature_minzoom = calc_feature_minzoom(&map[ip], ds, maxzoom, gamma);
+				geom[map[ip].end - 1] = feature_minzoom;
+			}
 		}
 
 		munmap(geom, geomst.st_size);
@@ -2743,6 +2783,7 @@ int main(int argc, char **argv) {
 		{"Dropping a fixed fraction of features by zoom level", 0, 0, 0},
 		{"drop-rate", required_argument, 0, 'r'},
 		{"base-zoom", required_argument, 0, 'B'},
+		{"drop-denser", required_argument, 0, '~'},
 		{"limit-base-zoom-to-maximum-zoom", no_argument, &prevent[P_BASEZOOM_ABOVE_MAXZOOM], 1},
 		{"drop-lines", no_argument, &additional[A_LINE_DROP], 1},
 		{"drop-polygons", no_argument, &additional[A_POLYGON_DROP], 1},
@@ -2940,6 +2981,12 @@ int main(int argc, char **argv) {
 					exit(EXIT_ARGS);
 				}
 				break;
+			} else if (strcmp(opt, "drop-denser") == 0) {
+				drop_denser = atoi_require(optarg, "Drop denser rate");
+				if (drop_denser > 100) {
+					fprintf(stderr, "%s: --drop-denser can be at most 100\n", argv[0]);
+					exit(EXIT_ARGS);
+				}
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_ARGS);

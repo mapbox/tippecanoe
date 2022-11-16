@@ -1609,7 +1609,6 @@ drawvec polygon_to_anchor(const drawvec &geom) {
 	return drawvec();
 }
 
-
 static double dist(long long x1, long long y1, long long x2, long long y2) {
 	double dx = x2 - x1;
 	double dy = y2 - y1;

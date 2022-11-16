@@ -1,3 +1,8 @@
+## 2.12.0
+
+* Add `--drop-denser` option to drop points in dense clusters in preference
+  to those in sparse areas.
+
 ## 2.11.0
 
 * Change sqlite3 schema to deduplicate identical tiles

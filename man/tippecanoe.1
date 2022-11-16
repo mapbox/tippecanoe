@@ -567,6 +567,9 @@ If you use \fB\fC\-Bg\fR, it will guess a zoom level that will keep at most 50,0
 You can also specify a marker\-width with \fB\fC\-Bg\fR\fIwidth\fP to allow fewer features in the densest tile to
 compensate for the larger marker, or \fB\fC\-Bf\fR\fInumber\fP to allow at most \fInumber\fP features in the densest tile.
 .IP \(bu 2
+\fB\fC\-\-drop\-denser=\fR\fIpercentage\fP: When dropping dots at zoom levels below the base zoom, give the specified \fIpercentage\fP
+preference to retaining points in sparse areas and dropping points in dense areas.
+.IP \(bu 2
 \fB\fC\-\-limit\-base\-zoom\-to\-maximum\-zoom\fR or \fB\fC\-Pb\fR: Limit the guessed base zoom not to exceed the maxzoom, even if this would put more than the requested number of features in a base zoom tile.
 .IP \(bu 2
 \fB\fC\-al\fR or \fB\fC\-\-drop\-lines\fR: Let "dot" dropping at lower zooms apply to lines too
