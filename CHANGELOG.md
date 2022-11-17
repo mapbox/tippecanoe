@@ -1,3 +1,9 @@
+## 2.13.0
+
+* Add --limit-tile-feature-count and --limit-tile-feature-count-at-maximum-zoom
+* Coalesce small features only onto other small features with `--coalesce-smallest-as-needed`, never to large features
+* Clean coalesced-as-needed features before simplifying them, to improve simplification quality
+
 ## 2.12.0
 
 * Add `--drop-denser` option to drop points in dense clusters in preference

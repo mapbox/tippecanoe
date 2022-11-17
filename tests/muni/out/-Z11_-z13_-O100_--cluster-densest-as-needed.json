@@ -8,7 +8,7 @@
 "maxzoom": "13",
 "minzoom": "11",
 "name": "tests/muni/out/-Z11_-z13_-O100_--cluster-densest-as-needed.json.check.mbtiles",
-"strategies": "[ {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, { \"dropped_by_rate\": 4080, \"coalesced_as_needed\": 662 }, { \"dropped_by_rate\": 2973, \"coalesced_as_needed\": 1747 }, { \"coalesced_as_needed\": 4342 } ]",
+"strategies": "[ {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, {  }, { \"dropped_by_rate\": 4080, \"coalesced_as_needed\": 662, \"feature_count_desired\": 687 }, { \"dropped_by_rate\": 2973, \"coalesced_as_needed\": 1747, \"feature_count_desired\": 755 }, { \"coalesced_as_needed\": 4342, \"feature_count_desired\": 856 } ]",
 "type": "overlay",
 "version": "2"
 }, "features": [

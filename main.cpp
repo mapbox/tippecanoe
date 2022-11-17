@@ -83,6 +83,8 @@ int cluster_distance = 0;
 int tiny_polygon_size = 2;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
+size_t limit_tile_feature_count = 0;
+size_t limit_tile_feature_count_at_maxzoom = 0;
 unsigned int drop_denser = 0;
 
 std::vector<order_field> order_by;
@@ -2851,6 +2853,8 @@ int main(int argc, char **argv) {
 		{"Setting or disabling tile size limits", 0, 0, 0},
 		{"maximum-tile-bytes", required_argument, 0, 'M'},
 		{"maximum-tile-features", required_argument, 0, 'O'},
+		{"limit-tile-feature-count", required_argument, 0, '~'},
+		{"limit-tile-feature-count-at-maximum-zoom", required_argument, 0, '~'},
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
@@ -2981,6 +2985,10 @@ int main(int argc, char **argv) {
 					exit(EXIT_ARGS);
 				}
 				break;
+			} else if (strcmp(opt, "limit-tile-feature-count") == 0) {
+				limit_tile_feature_count = atoll_require(optarg, "Limit tile feature count");
+			} else if (strcmp(opt, "limit-tile-feature-count-at-maximum-zoom") == 0) {
+				limit_tile_feature_count_at_maxzoom = atoll_require(optarg, "Limit tile feature count at maxzoom");
 			} else if (strcmp(opt, "drop-denser") == 0) {
 				drop_denser = atoi_require(optarg, "Drop denser rate");
 				if (drop_denser > 100) {

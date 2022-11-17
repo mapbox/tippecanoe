@@ -619,6 +619,8 @@ void handle_strategies(const unsigned char *s, std::vector<strategy> *st) {
 							(*st)[i].tiny_polygons += v->value.number.number;
 						} else if (strcmp(k->value.string.string, "tile_size_desired") == 0) {
 							(*st)[i].tile_size += v->value.number.number;
+						} else if (strcmp(k->value.string.string, "feature_count_desired") == 0) {
+							(*st)[i].feature_count += v->value.number.number;
 						}
 					}
 				}
