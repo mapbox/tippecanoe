@@ -517,73 +517,84 @@ drawvec revive_polygon(drawvec &geom, double area, int z, int detail) {
 	}
 }
 
+double simplify_partial(partial *p, drawvec &shared_nodes) {
+	drawvec geom;
+
+	for (size_t j = 0; j < p->geoms.size(); j++) {
+		for (size_t k = 0; k < p->geoms[j].size(); k++) {
+			geom.push_back(p->geoms[j][k]);
+		}
+	}
+
+	p->geoms.clear();  // avoid keeping two copies in memory
+	signed char t = p->t;
+	int z = p->z;
+	int line_detail = p->line_detail;
+	int maxzoom = p->maxzoom;
+
+	if (additional[A_GRID_LOW_ZOOMS] && z < maxzoom) {
+		geom = stairstep(geom, z, line_detail);
+	}
+
+	double area = 0;
+	if (t == VT_POLYGON) {
+		area = get_mp_area(geom);
+	}
+
+	if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
+		// Now I finally remember why it doesn't simplify if the feature was reduced:
+		// because it makes square placeholders look like weird triangular placeholders.
+		// Only matters if simplification is set higher than the tiny polygon size.
+		// Tiny polygons that are part of a tiny multipolygon will still get simplified.
+		if (!p->reduced) {
+			if (t == VT_LINE) {
+				// continues to deduplicate to line_detail even if we have extra detail
+				geom = remove_noop(geom, t, 32 - z - line_detail);
+			}
+
+			bool already_marked = false;
+			if (additional[A_DETECT_SHARED_BORDERS] && t == VT_POLYGON) {
+				already_marked = true;
+			}
+
+			if (!already_marked) {
+				if (p->coalesced && t == VT_POLYGON) {
+					// clean coalesced polygons before simplification to avoid
+					// introducing shards between shapes that otherwise would have
+					// unioned exactly
+					geom = clean_or_clip_poly(geom, 0, 0, false);
+				}
+
+				// continues to simplify to line_detail even if we have extra detail
+				drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), p->simplification, t == VT_POLYGON ? 4 : 0, shared_nodes);
+
+				if (t != VT_POLYGON || ngeom.size() >= 3) {
+					geom = ngeom;
+				}
+			}
+		}
+	}
+
+	if (t == VT_LINE && additional[A_REVERSE]) {
+		geom = reorder_lines(geom);
+	}
+
+	p->geoms.push_back(geom);
+	return area;
+}
+
 void *partial_feature_worker(void *v) {
 	struct partial_arg *a = (struct partial_arg *) v;
 	std::vector<struct partial> *partials = a->partials;
 
 	for (size_t i = a->task; i < (*partials).size(); i += a->tasks) {
-		drawvec geom;
+		double area = simplify_partial(&((*partials)[i]), *(a->shared_nodes));
 
-		for (size_t j = 0; j < (*partials)[i].geoms.size(); j++) {
-			for (size_t k = 0; k < (*partials)[i].geoms[j].size(); k++) {
-				geom.push_back((*partials)[i].geoms[j][k]);
-			}
-		}
-
-		(*partials)[i].geoms.clear();  // avoid keeping two copies in memory
 		signed char t = (*partials)[i].t;
 		int z = (*partials)[i].z;
-		int line_detail = (*partials)[i].line_detail;
 		int out_detail = (*partials)[i].extra_detail;
-		int maxzoom = (*partials)[i].maxzoom;
 
-		if (additional[A_GRID_LOW_ZOOMS] && z < maxzoom) {
-			geom = stairstep(geom, z, line_detail);
-		}
-
-		double area = 0;
-		if (t == VT_POLYGON) {
-			area = get_mp_area(geom);
-		}
-
-		if ((t == VT_LINE || t == VT_POLYGON) && !(prevent[P_SIMPLIFY] || (z == maxzoom && prevent[P_SIMPLIFY_LOW]) || (z < maxzoom && additional[A_GRID_LOW_ZOOMS]))) {
-			// Now I finally remember why it doesn't simplify if the feature was reduced:
-			// because it makes square placeholders look like weird triangular placeholders.
-			// Only matters if simplification is set higher than the tiny polygon size.
-			// Tiny polygons that are part of a tiny multipolygon will still get simplified.
-			if (!(*partials)[i].reduced) {
-				if (t == VT_LINE) {
-					// continues to deduplicate to line_detail even if we have extra detail
-					geom = remove_noop(geom, t, 32 - z - line_detail);
-				}
-
-				bool already_marked = false;
-				if (additional[A_DETECT_SHARED_BORDERS] && t == VT_POLYGON) {
-					already_marked = true;
-				}
-
-				if (!already_marked) {
-					if ((*partials)[i].coalesced && t == VT_POLYGON) {
-						// clean coalesced polygons before simplification to avoid
-						// introducing shards between shapes that otherwise would have
-						// unioned exactly
-						geom = clean_or_clip_poly(geom, 0, 0, false);
-					}
-
-					// continues to simplify to line_detail even if we have extra detail
-					drawvec ngeom = simplify_lines(geom, z, line_detail, !(prevent[P_CLIPPING] || prevent[P_DUPLICATION]), (*partials)[i].simplification, t == VT_POLYGON ? 4 : 0, *(a->shared_nodes));
-
-					if (t != VT_POLYGON || ngeom.size() >= 3) {
-						geom = ngeom;
-					}
-				}
-			}
-		}
-
-		if (t == VT_LINE && additional[A_REVERSE]) {
-			geom = reorder_lines(geom);
-		}
-
+		drawvec geom = (*partials)[i].geoms[0];
 		to_tile_scale(geom, z, out_detail);
 
 		if (t == VT_POLYGON) {
@@ -1877,6 +1888,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 		size_t skipped = 0;
 		size_t kept = 0;
 
+		size_t unsimplified_geometry_size = 0;
+		size_t simplified_geometry_through = 0;
+
 		int within[child_shards];
 		std::atomic<long long> geompos[child_shards];
 		for (size_t i = 0; i < (size_t) child_shards; i++) {
@@ -2158,6 +2172,23 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					}
 
 					partials.push_back(p);
+
+					unsimplified_geometry_size += sf.geometry.size() * sizeof(draw);
+					if (unsimplified_geometry_size > 10 * 1024 * 1024 && !additional[A_DETECT_SHARED_BORDERS]) {
+						drawvec dv;
+
+						for (; simplified_geometry_through < partials.size(); simplified_geometry_through++) {
+							simplify_partial(&partials[simplified_geometry_through], dv);
+
+							for (auto &g : partials[simplified_geometry_through].geoms) {
+								if (partials[simplified_geometry_through].t == VT_POLYGON) {
+									g = clean_or_clip_poly(g, 0, 0, false);
+								}
+							}
+						}
+
+						unsimplified_geometry_size = 0;
+					}
 				}
 			}
 

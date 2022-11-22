@@ -1,3 +1,7 @@
+## 2.13.1
+
+* Simplify geometry earlier when the in-memory representation of a tile gets large, to reduce peak memory usage
+
 ## 2.13.0
 
 * Add --limit-tile-feature-count and --limit-tile-feature-count-at-maximum-zoom
