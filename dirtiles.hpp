@@ -6,6 +6,7 @@
 #define DIRTILES_HPP
 
 void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf);
+void dir_erase_zoom(const char *outdir, int z);
 
 void check_dir(const char *d, char **argv, bool force, bool forcetable);
 

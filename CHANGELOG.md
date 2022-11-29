@@ -1,3 +1,7 @@
+## 2.14.0
+
+* Don't preflight each zoom level if one of the as-needed options is specified. Instead, go ahead and write out the tiles, and then clear out the zoom level for another try if necessary.
+
 ## 2.13.1
 
 * Simplify geometry earlier when the in-memory representation of a tile gets large, to reduce peak memory usage

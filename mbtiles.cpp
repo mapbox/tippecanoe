@@ -73,14 +73,14 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 		}
 	}
 
-	// "images" maps a content hash to tile contents
-	if (sqlite3_exec(outdb, "CREATE TABLE images (tile_data blob, tile_id text);", NULL, NULL, &err) != SQLITE_OK) {
+	// "images" maps a content hash to tile contents, per zoom level
+	if (sqlite3_exec(outdb, "CREATE TABLE images (zoom_level integer, tile_data blob, tile_id text);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create images table: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_EXISTS);
 		}
 	}
-	if (sqlite3_exec(outdb, "CREATE UNIQUE INDEX images_id ON images (tile_id);", NULL, NULL, &err) != SQLITE_OK) {
+	if (sqlite3_exec(outdb, "CREATE UNIQUE INDEX images_id ON images (zoom_level, tile_id);", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create images index: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_EXISTS);
@@ -89,7 +89,7 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable) {
 
 	// "tiles" is a view that retrieves content from "images"
 	// via the content hash looked up from "map".
-	if (sqlite3_exec(outdb, "CREATE VIEW tiles AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, images.tile_data AS tile_data FROM map JOIN images ON images.tile_id = map.tile_id;", NULL, NULL, &err) != SQLITE_OK) {
+	if (sqlite3_exec(outdb, "CREATE VIEW tiles AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, images.tile_data AS tile_data FROM map JOIN images ON images.tile_id = map.tile_id and images.zoom_level = map.zoom_level;", NULL, NULL, &err) != SQLITE_OK) {
 		fprintf(stderr, "%s: create tiles view: %s\n", argv[0], err);
 		if (!forcetable) {
 			exit(EXIT_EXISTS);
@@ -113,20 +113,23 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 	// following https://github.com/mapbox/node-mbtiles/blob/master/lib/mbtiles.js
 
 	sqlite3_stmt *stmt;
-	const char *images = "replace into images (tile_id, tile_data) values (?, ?)";
+	const char *images = "replace into images (zoom_level, tile_id, tile_data) values (?, ?, ?)";
 	if (sqlite3_prepare_v2(outdb, images, -1, &stmt, NULL) != SQLITE_OK) {
 		fprintf(stderr, "sqlite3 images prep failed\n");
 		exit(EXIT_SQLITE);
 	}
 
-	sqlite3_bind_blob(stmt, 1, hash.c_str(), hash.size(), NULL);
-	sqlite3_bind_blob(stmt, 2, data, size, NULL);
+	sqlite3_bind_int(stmt, 1, z);
+	sqlite3_bind_blob(stmt, 2, hash.c_str(), hash.size(), NULL);
+	sqlite3_bind_blob(stmt, 3, data, size, NULL);
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		fprintf(stderr, "sqlite3 images insert failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_finalize(stmt) != SQLITE_OK) {
 		fprintf(stderr, "sqlite3 images finalize failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
 	}
 
 	const char *map = "insert into map (zoom_level, tile_column, tile_row, tile_id) values (?, ?, ?, ?)";
@@ -142,9 +145,47 @@ void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data,
 
 	if (sqlite3_step(stmt) != SQLITE_DONE) {
 		fprintf(stderr, "sqlite3 map insert failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
 	}
 	if (sqlite3_finalize(stmt) != SQLITE_OK) {
-		fprintf(stderr, "sqlite3 map finalize failed: %s\n", sqlite3_errmsg(outdb));
+		fprintf(stderr, "sqlite3 finalize failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
+	}
+}
+
+void mbtiles_erase_zoom(sqlite3 *outdb, int z) {
+	sqlite3_stmt *stmt;
+
+	const char *query = "delete from map where zoom_level = ?";
+	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 delete map prep failed\n");
+		exit(EXIT_SQLITE);
+	}
+
+	sqlite3_bind_int(stmt, 1, z);
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		fprintf(stderr, "sqlite3 delete map failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
+	}
+	if (sqlite3_finalize(stmt) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 delete map finalize failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
+	}
+
+	query = "delete from images where zoom_level = ?";
+	if (sqlite3_prepare_v2(outdb, query, -1, &stmt, NULL) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 delete images prep failed\n");
+		exit(EXIT_SQLITE);
+	}
+
+	sqlite3_bind_int(stmt, 1, z);
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		fprintf(stderr, "sqlite3 delete images failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
+	}
+	if (sqlite3_finalize(stmt) != SQLITE_OK) {
+		fprintf(stderr, "sqlite3 delete images finalize failed: %s\n", sqlite3_errmsg(outdb));
+		exit(EXIT_SQLITE);
 	}
 }
 
