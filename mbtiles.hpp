@@ -41,6 +41,28 @@ struct layermap_entry {
 	}
 };
 
+struct metadata {
+	std::string name;
+	std::string description;
+	int version;
+	int minzoom;
+	int maxzoom;
+	double center_lon, center_lat;
+	int center_z;
+	double minlat, minlon, maxlat, maxlon;
+	std::string type;
+	std::string format;
+	std::string generator;
+	std::string generator_options;
+
+	// Should be std::optional if I weren't trying to live in the past
+	std::set<std::string> attribution;
+	std::set<std::string> strategies_json;
+
+	std::string vector_layers_json;
+	std::string tilestats_json;
+};
+
 #include "tile.hpp"
 
 sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);

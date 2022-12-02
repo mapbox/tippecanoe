@@ -430,7 +430,121 @@ std::string stringify_strategies(std::vector<strategy> const &strategies) {
 	}
 }
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
+void mbtiles_write_metadata(sqlite3 *outdb, const metadata &m, bool forcetable) {
+
+}
+
+void dirtiles_write_metadata(const char *outdir, const metadata &m, bool forcetable) {
+
+}
+
+metadata make_metadata(const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
+	metadata m;
+
+	m.minzoom = minzoom;
+	m.maxzoom = maxzoom;
+
+	m.minlat = minlat;
+	m.minlon = minlon;
+	m.maxlat = maxlat;
+	m.maxlon = maxlon;
+
+	m.center_lat = midlat;
+	m.center_lon = midlon;
+	m.center_z = maxzoom;
+
+	if (attribution != NULL) {
+		m.attribution.insert(attribution);
+	}
+
+	if (vector) {
+		{
+			json_writer state(&m.vector_layers_json);
+
+			state.json_write_array();
+
+			std::vector<std::string> lnames;
+			for (auto ai = layermap.begin(); ai != layermap.end(); ++ai) {
+				lnames.push_back(ai->first);
+			}
+
+			for (size_t i = 0; i < lnames.size(); i++) {
+				auto fk = layermap.find(lnames[i]);
+				state.json_write_hash();
+
+				state.json_write_string("id");
+				state.json_write_string(lnames[i]);
+
+				state.json_write_string("description");
+				state.json_write_string(fk->second.description);
+
+				state.json_write_string("minzoom");
+				state.json_write_signed(fk->second.minzoom);
+
+				state.json_write_string("maxzoom");
+				state.json_write_signed(fk->second.maxzoom);
+
+				state.json_write_string("fields");
+				state.json_write_hash();
+				state.nospace = true;
+
+				bool first = true;
+				size_t attribute_count = 0;
+				for (auto j = fk->second.file_keys.begin(); j != fk->second.file_keys.end(); ++j) {
+					if (first) {
+						first = false;
+					}
+
+					state.json_write_string(j->first);
+
+					auto f = attribute_descriptions.find(j->first);
+					if (f == attribute_descriptions.end()) {
+						int type = 0;
+						for (auto s : j->second.sample_values) {
+							type |= (1 << s.type);
+						}
+
+						if (type == (1 << mvt_double)) {
+							state.json_write_string("Number");
+						} else if (type == (1 << mvt_bool)) {
+							state.json_write_string("Boolean");
+						} else if (type == (1 << mvt_string)) {
+							state.json_write_string("String");
+						} else {
+							state.json_write_string("Mixed");
+						}
+					} else {
+						state.json_write_string(f->second);
+					}
+
+					attribute_count++;
+					if (attribute_count >= max_tilestats_attributes) {
+						break;
+					}
+				}
+
+				state.nospace = true;
+				state.json_end_hash();
+				state.json_end_hash();
+			}
+
+			state.json_end_array();
+		}
+
+		{
+			size_t elements = max_tilestats_values;
+			json_writer state(&m.tilestats_json);
+
+			if (do_tilestats && elements > 0) {
+				tilestats(layermap, elements, state);
+			}
+		}
+	}
+
+	return m;
+}
+
+void old_mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
 	char *sql, *err;
 
 	sqlite3 *db = outdb;
