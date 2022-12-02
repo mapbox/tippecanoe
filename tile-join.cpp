@@ -1209,7 +1209,7 @@ int main(int argc, char **argv) {
 	if (outdb != NULL) {
 		mbtiles_write_metadata(outdb, m, true);
 	} else {
-		dir_write_metadata(out_dir, m, true);
+		dir_write_metadata(out_dir, m);
 	}
 
 	if (outdb != NULL) {

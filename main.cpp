@@ -2568,7 +2568,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 	if (outdb != NULL) {
 		mbtiles_write_metadata(outdb, m, forcetable);
 	} else {
-		dir_write_metadata(outdir, m, forcetable);
+		dir_write_metadata(outdir, m);
 	}
 
 	return ret;

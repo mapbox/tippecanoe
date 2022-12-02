@@ -14,6 +14,7 @@
 #include "mbtiles.hpp"
 #include "dirtiles.hpp"
 #include "errors.hpp"
+#include "write_json.hpp"
 
 std::string dir_read_tile(std::string base, struct zxy tile) {
 	std::ifstream pbfFile(base + "/" + tile.path(), std::ios::in | std::ios::binary);
@@ -276,4 +277,74 @@ sqlite3 *dirmeta2tmp(const char *fname) {
 	}
 
 	return db;
+}
+
+static void out(json_writer &state, std::string k, std::string v) {
+	state.json_comma_newline();
+	state.json_write_string(k);
+	state.json_write_string(v);
+}
+
+void dir_write_metadata(const char *outdir, const metadata &m) {
+	std::string metadata = std::string(outdir) + "/metadata.json";
+
+	struct stat st;
+	if (stat(metadata.c_str(), &st) == 0) {
+		// Leave existing metadata in place with --allow-existing
+	} else {
+		FILE *fp = fopen(metadata.c_str(), "w");
+		if (fp == NULL) {
+			perror(metadata.c_str());
+			exit(EXIT_OPEN);
+		}
+
+		json_writer state(fp);
+
+		state.json_write_hash();
+		state.json_write_newline();
+
+		out(state, "name", m.name);
+		out(state, "description", m.description);
+		out(state, "version", std::to_string(m.version));
+		out(state, "minzoom", std::to_string(m.minzoom));
+		out(state, "maxzoom", std::to_string(m.maxzoom));
+		out(state, "center", std::to_string(m.center_lon) + "," + std::to_string(m.center_lat) + "," + std::to_string(m.center_z));
+		out(state, "bounds", std::to_string(m.minlon) + "," + std::to_string(m.minlat) + "," +
+                                     std::to_string(m.maxlon) + "," + std::to_string(m.maxlat));
+		out(state, "type", m.type);
+		if (m.attribution.size() > 0) {
+			out(state, "attribution", m.attribution);
+		}
+		if (m.strategies_json.size() > 0) {
+			out(state, "strategies", m.strategies_json);
+		}
+		out(state, "format", m.format);
+		out(state, "generator", m.generator);
+		out(state, "generator_options", m.generator_options);
+
+		if (m.vector_layers_json.size() > 0 || m.tilestats_json.size() > 0) {
+			std::string json = "{";
+
+			if (m.vector_layers_json.size() > 0) {
+				json += "\"vector_layers\": " + m.vector_layers_json;
+
+				if (m.tilestats_json.size() > 0) {
+					json += ",\"tilestats\": " + m.tilestats_json;
+				}
+			} else {
+				if (m.tilestats_json.size() > 0) {
+					json += "\"tilestats\": " + m.tilestats_json;
+				}
+			}
+
+			json += "}";
+
+			out(state, "json", json);
+		}
+
+		state.json_write_newline();
+		state.json_end_hash();
+		state.json_write_newline();
+		fclose(fp);
+	}
 }

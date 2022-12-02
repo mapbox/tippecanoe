@@ -525,9 +525,9 @@ void mbtiles_write_metadata(sqlite3 *db, const metadata &m, bool forcetable) {
 	}
 	sqlite3_free(sql);
 
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator', %Q);", std::to_string(m.version).c_str());
+	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator', %Q);", m.generator.c_str());
 	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set version: %s\n", err);
+		fprintf(stderr, "set generator: %s\n", err);
 		if (!forcetable) {
 			exit(EXIT_SQLITE);
 		}
@@ -580,10 +580,6 @@ void mbtiles_write_metadata(sqlite3 *db, const metadata &m, bool forcetable) {
 		}
 		sqlite3_free(sql);
 	}
-}
-
-void dir_write_metadata(const char *outdir, const metadata &m, bool forcetable) {
-
 }
 
 metadata make_metadata(const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
@@ -702,209 +698,6 @@ metadata make_metadata(const char *fname, int minzoom, int maxzoom, double minla
 
 	return m;
 }
-
-#if 0
-void old_mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies) {
-	char *sql, *err;
-
-	sqlite3 *db = outdb;
-	if (outdb == NULL) {
-		if (sqlite3_open("", &db) != SQLITE_OK) {
-			fprintf(stderr, "Temporary db: %s\n", sqlite3_errmsg(db));
-			exit(EXIT_OPEN);
-		}
-		if (sqlite3_exec(db, "CREATE TABLE metadata (name text, value text);", NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "Create metadata table: %s\n", err);
-			exit(EXIT_SQLITE);
-		}
-	}
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('name', %Q);", fname);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set name in metadata: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('description', %Q);", description != NULL ? description : fname);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set description in metadata: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('version', %d);", 2);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set version : %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('minzoom', %d);", minzoom);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set minzoom: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('maxzoom', %d);", maxzoom);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set maxzoom: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('center', '%f,%f,%d');", midlon, midlat, maxzoom);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set center: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('bounds', '%f,%f,%f,%f');", minlon, minlat, maxlon, maxlat);
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set bounds: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('type', %Q);", "overlay");
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set type: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	if (attribution != NULL) {
-		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('attribution', %Q);", attribution);
-		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set type: %s\n", err);
-			if (!forcetable) {
-				exit(EXIT_SQLITE);
-			}
-		}
-		sqlite3_free(sql);
-	}
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('format', %Q);", vector ? "pbf" : "png");
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set format: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	std::string version = program + " " + VERSION;
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator', %Q);", version.c_str());
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set version: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('generator_options', %Q);", commandline.c_str());
-	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-		fprintf(stderr, "set commandline: %s\n", err);
-		if (!forcetable) {
-			exit(EXIT_SQLITE);
-		}
-	}
-	sqlite3_free(sql);
-
-	std::string strat = stringify_strategies(strategies);
-	if (strat.size() > 0) {
-		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('strategies', %Q);", strat.c_str());
-		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set strategies: %s\n", err);
-			if (!forcetable) {
-				exit(EXIT_SQLITE);
-			}
-		}
-		sqlite3_free(sql);
-	}
-
-	if (vector) {
-		sql = sqlite3_mprintf("INSERT INTO metadata (name, value) VALUES ('json', %Q);", buf.c_str());
-		if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-			fprintf(stderr, "set json: %s\n", err);
-			if (!forcetable) {
-				exit(EXIT_SQLITE);
-			}
-		}
-		sqlite3_free(sql);
-	}
-
-	if (outdir != NULL) {
-		std::string metadata = std::string(outdir) + "/metadata.json";
-
-		struct stat st;
-		if (stat(metadata.c_str(), &st) == 0) {
-			// Leave existing metadata in place with --allow-existing
-		} else {
-			FILE *fp = fopen(metadata.c_str(), "w");
-			if (fp == NULL) {
-				perror(metadata.c_str());
-				exit(EXIT_OPEN);
-			}
-
-			json_writer state(fp);
-
-			state.json_write_hash();
-			state.json_write_newline();
-
-			sqlite3_stmt *stmt;
-			if (sqlite3_prepare_v2(db, "SELECT name, value from metadata;", -1, &stmt, NULL) == SQLITE_OK) {
-				while (sqlite3_step(stmt) == SQLITE_ROW) {
-					std::string key, value;
-
-					const char *k = (const char *) sqlite3_column_text(stmt, 0);
-					const char *v = (const char *) sqlite3_column_text(stmt, 1);
-					if (k == NULL || v == NULL) {
-						fprintf(stderr, "Corrupt mbtiles file: null metadata\n");
-						exit(EXIT_SQLITE);
-					}
-
-					state.json_comma_newline();
-					state.json_write_string(k);
-					state.json_write_string(v);
-				}
-				sqlite3_finalize(stmt);
-			}
-
-			state.json_write_newline();
-			state.json_end_hash();
-			state.json_write_newline();
-			fclose(fp);
-		}
-	}
-
-	if (outdb == NULL) {
-		if (sqlite3_close(db) != SQLITE_OK) {
-			fprintf(stderr, "Could not close temp database: %s\n", sqlite3_errmsg(db));
-			exit(EXIT_CLOSE);
-		}
-	}
-}
-#endif
 
 void mbtiles_close(sqlite3 *outdb, const char *pgm) {
 	char *err;
