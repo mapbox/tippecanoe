@@ -21,6 +21,7 @@
 #include "geometry.hpp"
 #include "write_json.hpp"
 #include "jsonpull/jsonpull.h"
+#include "mbtiles.hpp"
 #include "dirtiles.hpp"
 #include "errors.hpp"
 

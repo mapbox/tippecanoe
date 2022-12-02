@@ -45,19 +45,23 @@ struct metadata {
 	std::string name;
 	std::string description;
 	int version;
-	int minzoom;
-	int maxzoom;
-	double center_lon, center_lat;
-	int center_z;
-	double minlat, minlon, maxlat, maxlon;
 	std::string type;
 	std::string format;
+
+	int minzoom;
+	int maxzoom;
+
+	double minlat, minlon, maxlat, maxlon;
+
+	double center_lon, center_lat;
+	int center_z;
+
+	std::string attribution; // not written if empty
+
 	std::string generator;
 	std::string generator_options;
 
-	// Should be std::optional if I weren't trying to live in the past
-	std::set<std::string> attribution;
-	std::set<std::string> strategies_json;
+	std::string strategies_json; // not written if empty
 
 	std::string vector_layers_json;
 	std::string tilestats_json;
@@ -70,7 +74,8 @@ sqlite3 *mbtiles_open(char *dbname, char **argv, int forcetable);
 void mbtiles_write_tile(sqlite3 *outdb, int z, int tx, int ty, const char *data, int size);
 void mbtiles_erase_zoom(sqlite3 *outdb, int z);
 
-void mbtiles_write_metadata(sqlite3 *outdb, const char *outdir, const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, int forcetable, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies);
+metadata make_metadata(const char *fname, int minzoom, int maxzoom, double minlat, double minlon, double maxlat, double maxlon, double midlat, double midlon, const char *attribution, std::map<std::string, layermap_entry> const &layermap, bool vector, const char *description, bool do_tilestats, std::map<std::string, std::string> const &attribute_descriptions, std::string const &program, std::string const &commandline, std::vector<strategy> const &strategies);
+void mbtiles_write_metadata(sqlite3 *db, const metadata &m, bool forcetable);
 
 void mbtiles_close(sqlite3 *outdb, const char *pgm);
 

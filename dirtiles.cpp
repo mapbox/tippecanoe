@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <sqlite3.h>
 #include "jsonpull/jsonpull.h"
+#include "mbtiles.hpp"
 #include "dirtiles.hpp"
 #include "errors.hpp"
 

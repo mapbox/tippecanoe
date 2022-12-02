@@ -7,6 +7,7 @@
 
 void dir_write_tile(const char *outdir, int z, int tx, int ty, std::string const &pbf);
 void dir_erase_zoom(const char *outdir, int z);
+void dir_write_metadata(const char *outdir, const metadata &m, bool forcetable);
 
 void check_dir(const char *d, char **argv, bool force, bool forcetable);
 
