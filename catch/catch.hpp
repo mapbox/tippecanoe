@@ -6472,10 +6472,11 @@ namespace Catch {
 #endif
         template<typename V>
         static void shuffle( V& vector ) {
-            RandomNumberGenerator rng;
+
 #ifdef CATCH_CPP14_OR_GREATER
-            std::shuffle( vector.begin(), vector.end(), rng );
+            std::shuffle( vector.begin(), vector.end(), std::default_random_engine{std::random_device{}()} );
 #else
+            RandomNumberGenerator rng;
             std::random_shuffle( vector.begin(), vector.end(), rng );
 #endif
         }
