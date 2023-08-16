@@ -48,11 +48,8 @@ significant travel corridor.
 Installation
 ------------
 
-The easiest way to install tippecanoe on OSX is with [Homebrew](http://brew.sh/):
-
-```sh
-$ brew install tippecanoe
-```
+> NOTE: Homebrew no longer points to this project as of 2022-Oct-17 and has
+>  switched to the felt/tippecanoe repository that is actively maintained
 
 On Ubuntu it will usually be easiest to build from the source repository:
 
