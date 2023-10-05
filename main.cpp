@@ -2392,12 +2392,16 @@ void set_attribute_accum(std::map<std::string, attribute_op> &attribute_accum, c
 		t = op_max;
 	} else if (type == "min") {
 		t = op_min;
+	} else if (type == "or") {
+		t = op_or;
+	} else if (type == "and") {
+		t = op_and;
 	} else if (type == "concat") {
 		t = op_concat;
 	} else if (type == "comma") {
 		t = op_comma;
 	} else {
-		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, max, min, concat, or comma\n", type.c_str());
+		fprintf(stderr, "Attribute method (%s) must be sum, product, mean, max, min, or, and, concat, or comma\n", type.c_str());
 		exit(EXIT_FAILURE);
 	}
 

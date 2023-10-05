@@ -1566,6 +1566,32 @@ void add_tilestats(std::string const &layername, int z, std::vector<std::map<std
 	add_to_file_keys(fk->second.file_keys, key, attrib);
 }
 
+// parse boolean values
+// "true" -> true
+// "false" -> false
+// Anything else is parsed as numeric value using atof;
+//  - if it is not 0 -> true
+//  - if it is 0 (including somethign not parsable, e.g. "foo" or "True") -> false
+bool atob(const char* str) {
+	if (0 == strcmp(str, "true")) {
+		return true;
+	}
+	if (0 == strcmp(str, "false")) {
+		return false;
+	}
+	const double floating_point_value = atof(str);
+	return floating_point_value != 0;
+}
+
+std::string btoa(bool value) {
+	if (value) {
+		return "true";
+	}
+	else {
+		return "false";
+	}
+}
+
 void preserve_attribute(attribute_op op, serial_feature &, char *stringpool, long long *pool_off, std::string &key, serial_val &val, partial &p) {
 	if (p.need_tilestats.count(key) == 0) {
 		p.need_tilestats.insert(key);
@@ -1622,6 +1648,16 @@ void preserve_attribute(attribute_op op, serial_feature &, char *stringpool, lon
 				}
 				break;
 			}
+
+			case op_or:
+				p.full_values[i].s = btoa(atob(p.full_values[i].s.c_str()) || atob(val.s.c_str()));
+				p.full_values[i].type = mvt_bool;
+				break;
+
+			case op_and:
+				p.full_values[i].s = btoa(atob(p.full_values[i].s.c_str()) && atob(val.s.c_str()));
+				p.full_values[i].type = mvt_bool;
+				break;
 
 			case op_mean: {
 				auto state = p.attribute_accum_state.find(key);
