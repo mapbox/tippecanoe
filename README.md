@@ -65,6 +65,16 @@ $ make -j
 $ make install
 ```
 
+On OpenBSD 
+```sh
+$ export CC=/usr/bin/clang
+$ export CXX=/usr/bin/clang++
+$ git clone https://github.com/mapbox/tippecanoe.git
+$ cd tippecanoe
+$ gmake
+$ doas gmake install
+```
+
 See [Development](#development) below for how to upgrade your
 C++ compiler or install prerequisite packages if you get
 compiler errors.

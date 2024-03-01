@@ -39,7 +39,13 @@
 #include <sys/sysctl.h>
 #include <sys/param.h>
 #include <sys/mount.h>
-#else
+#endif
+#ifdef __OpenBSD__
+#include <sys/types.h>
+#include <sys/mount.h>
+#endif
+
+#if !defined(__APPLE__) && !defined(__OpenBSD__) 
 #include <sys/statfs.h>
 #endif
 
@@ -85,7 +91,7 @@ struct source {
 	std::string layer = "";
 	std::string file = "";
 	std::string description = "";
-	std::string format = "";
+  std::string format = "";
 };
 
 size_t CPUS;
