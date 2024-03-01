@@ -1,6 +1,8 @@
 tippecanoe
 ==========
 
+**Note**: there is an active fork of this project over at https://github.com/felt/tippecanoe
+
 Builds [vector tilesets](https://www.mapbox.com/developers/vector-tiles/) from large (or small) collections of [GeoJSON](http://geojson.org/), [Geobuf](https://github.com/mapbox/geobuf), or [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) features,
 [like these](MADE_WITH.md).
 
