@@ -690,7 +690,7 @@ uses md2man (`gem install md2man`).
 
 Linux:
 
-    sudo apt-get install build-essential libsqlite3-dev zlib1g-dev
+    sudo apt-get install gcc g++ make libsqlite3-dev zlib1g-dev
 
 Then build:
 
