@@ -385,6 +385,7 @@ struct partial {
 	long long clustered = 0;
 	std::set<std::string> need_tilestats;
 	std::map<std::string, accum_state> attribute_accum_state;
+	std::vector<partial> clustered_features = std::vector<partial>();
 };
 
 struct partial_arg {
@@ -1715,6 +1716,32 @@ static bool line_is_too_small(drawvec const &geometry, int z, int detail) {
 	return true;
 }
 
+partial create_partial(serial_feature sf, bool reduced, int z, int line_detail, int maxzoom, double spacing, double simplification) {
+	partial p;
+	p.geoms.push_back(sf.geometry);
+	p.layer = sf.layer;
+	p.t = sf.t;
+	p.segment = sf.segment;
+	p.original_seq = sf.seq;
+	p.reduced = reduced;
+	p.z = z;
+	p.line_detail = line_detail;
+	p.maxzoom = maxzoom;
+	p.keys = sf.keys;
+	p.values = sf.values;
+	p.full_keys = sf.full_keys;
+	p.full_values = sf.full_values;
+	p.spacing = spacing;
+	p.simplification = simplification;
+	p.id = sf.id;
+	p.has_id = sf.has_id;
+	p.index = sf.index;
+	p.renamed = -1;
+	p.extent = sf.extent;
+	p.clustered = 0;
+	return p;
+}
+
 long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, char *stringpool, int z, unsigned tx, unsigned ty, int detail, int min_detail, sqlite3 *outdb, const char *outdir, int buffer, const char *fname, FILE **geomfile, int minzoom, int maxzoom, double todo, std::atomic<long long> *along, long long alongminus, double gamma, int child_shards, long long *meta_off, long long *pool_off, unsigned *initial_x, unsigned *initial_y, std::atomic<int> *running, double simplification, std::vector<std::map<std::string, layermap_entry>> *layermaps, std::vector<std::vector<std::string>> *layer_unmaps, size_t tiling_seg, size_t pass, size_t passes, unsigned long long mingap, long long minextent, double fraction, const char *prefilter, const char *postfilter, struct json_object *filter, write_tile_args *arg) {
 	int line_detail;
 	double merge_fraction = 1;
@@ -1890,6 +1917,24 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					    partials[which_partial].geoms.size() == 1 &&
 					    partials[which_partial].geoms[0].size() == 1 &&
 					    sf.geometry.size() == 1) {
+						if (min_cluster_features > 0) {
+							if (partials[which_partial].clustered + 1 < (long long int)min_cluster_features) {
+								if (partials[which_partial].clustered_features.empty()) {
+									// First feature being added to the cluster, add a copy of the original partial geom location
+									partial copy;
+									copy.geoms.push_back(partials[which_partial].geoms[0]);
+									partials[which_partial].clustered_features.push_back(copy);
+								}
+								// Save the feature that was added to the cluster until it passes the minimum number of features
+								partial p = create_partial(sf, false, z, line_detail, maxzoom, spacing, simplification);
+								partials[which_partial].clustered_features.push_back(p);
+							} else {
+								// Clear out any saved features as the cluster will not be backed out
+								if (!partials[which_partial].clustered_features.empty()) {
+									partials[which_partial].clustered_features.clear();
+								}
+							}
+						}
 						double x = (double) partials[which_partial].geoms[0][0].x * partials[which_partial].clustered;
 						double y = (double) partials[which_partial].geoms[0][0].y * partials[which_partial].clustered;
 						x += sf.geometry[0].x;
@@ -1974,28 +2019,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					}
 				}
 
-				partial p;
-				p.geoms.push_back(sf.geometry);
-				p.layer = sf.layer;
-				p.t = sf.t;
-				p.segment = sf.segment;
-				p.original_seq = sf.seq;
-				p.reduced = reduced;
-				p.z = z;
-				p.line_detail = line_detail;
-				p.maxzoom = maxzoom;
-				p.keys = sf.keys;
-				p.values = sf.values;
-				p.full_keys = sf.full_keys;
-				p.full_values = sf.full_values;
-				p.spacing = spacing;
-				p.simplification = simplification;
-				p.id = sf.id;
-				p.has_id = sf.has_id;
-				p.index = sf.index;
-				p.renamed = -1;
-				p.extent = sf.extent;
-				p.clustered = 0;
+				partial p = create_partial(sf, reduced, z, line_detail, maxzoom, spacing, simplification);
 				partials.push_back(p);
 			}
 
@@ -2020,6 +2044,33 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 			}
 
 			shared_nodes = just_shared_nodes;
+		}
+
+		{
+			std::vector<struct partial> backed_out_partials;
+			for (size_t i = 0; i < partials.size(); i++) {
+				partial &p = partials[i];
+
+				if (p.clustered > 0 && p.clustered+1 < (long long int)min_cluster_features) {
+					// Not enough features, back out the cluster
+					for (size_t j = 0; j < p.clustered_features.size(); j++) {
+						partial copy = p.clustered_features[j];
+						if (j == 0 && 
+							p.t == VT_POINT &&
+							p.geoms.size() == 1 &&
+							p.geoms[0].size() == 1) {
+							// The copy with the location for this feature, restore it's location
+							p.geoms.clear();
+							p.geoms.push_back(p.clustered_features.front().geoms.front());
+							p.clustered = 0;
+						} else {
+							// One of the features clustered into this feature, restore it
+							backed_out_partials.push_back(copy);
+						}
+					}
+				}
+			}
+			partials.insert( partials.end(), backed_out_partials.begin(), backed_out_partials.end());
 		}
 
 		for (size_t i = 0; i < partials.size(); i++) {

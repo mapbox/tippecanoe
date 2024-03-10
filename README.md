@@ -539,6 +539,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
  * `--tile-stats-attributes-limit=`*count*: Include `tilestats` information about at most *count* attributes instead of the default 1000.
  * `--tile-stats-sample-values-limit=`*count*: Calculate `tilestats` attribute statistics based on *count* values instead of the default 1000.
  * `--tile-stats-values-limit=`*count*: Report *count* unique attribute values in `tilestats` instead of the default 100.
+ * `-i` __features_ or `--minimum-cluster-features=`_features_: Clusters with less than specified number of _features_ will be backed out and the features restored.
 
 ### Temporary storage
 
