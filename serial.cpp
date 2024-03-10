@@ -225,15 +225,11 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long
 		serialize_long_long(geomfile, sf->extent, geompos, fname);
 	}
 
-	serialize_long_long(geomfile, sf->metapos, geompos, fname);
+	serialize_long_long(geomfile, sf->keys.size(), geompos, fname);
 
-	if (sf->metapos < 0) {
-		serialize_long_long(geomfile, sf->keys.size(), geompos, fname);
-
-		for (size_t i = 0; i < sf->keys.size(); i++) {
-			serialize_long_long(geomfile, sf->keys[i], geompos, fname);
-			serialize_long_long(geomfile, sf->values[i], geompos, fname);
-		}
+	for (size_t i = 0; i < sf->keys.size(); i++) {
+		serialize_long_long(geomfile, sf->keys[i], geompos, fname);
+		serialize_long_long(geomfile, sf->values[i], geompos, fname);
 	}
 
 	if (include_minzoom) {
@@ -241,7 +237,7 @@ void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long
 	}
 }
 
-serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
+serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y) {
 	serial_feature sf;
 
 	deserialize_byte_io(geoms, &sf.t, geompos_in);
@@ -286,32 +282,15 @@ serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_
 
 	sf.layer >>= 6;
 
-	sf.metapos = 0;
-	deserialize_long_long_io(geoms, &sf.metapos, geompos_in);
+	long long count;
+	deserialize_long_long_io(geoms, &count, geompos_in);
 
-	if (sf.metapos >= 0) {
-		char *meta = metabase + sf.metapos + meta_off[sf.segment];
-		long long count;
-		deserialize_long_long(&meta, &count);
-
-		for (long long i = 0; i < count; i++) {
-			long long k, v;
-			deserialize_long_long(&meta, &k);
-			deserialize_long_long(&meta, &v);
-			sf.keys.push_back(k);
-			sf.values.push_back(v);
-		}
-	} else {
-		long long count;
-		deserialize_long_long_io(geoms, &count, geompos_in);
-
-		for (long long i = 0; i < count; i++) {
-			long long k, v;
-			deserialize_long_long_io(geoms, &k, geompos_in);
-			deserialize_long_long_io(geoms, &v, geompos_in);
-			sf.keys.push_back(k);
-			sf.values.push_back(v);
-		}
+	for (long long i = 0; i < count; i++) {
+		long long k, v;
+		deserialize_long_long_io(geoms, &k, geompos_in);
+		deserialize_long_long_io(geoms, &v, geompos_in);
+		sf.keys.push_back(k);
+		sf.values.push_back(v);
 	}
 
 	deserialize_byte_io(geoms, &sf.feature_minzoom, geompos_in);
@@ -488,32 +467,6 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		locs.clear();
 	}
 
-	bool inline_meta = true;
-	// Don't inline metadata for features that will span several tiles at maxzoom
-	if (sf.geometry.size() > 0 && (sf.bbox[2] < sf.bbox[0] || sf.bbox[3] < sf.bbox[1])) {
-		fprintf(stderr, "Internal error: impossible feature bounding box %llx,%llx,%llx,%llx\n", sf.bbox[0], sf.bbox[1], sf.bbox[2], sf.bbox[3]);
-	}
-	if (sf.bbox[0] == LLONG_MAX) {
-		// No bounding box (empty geometry)
-		// Shouldn't happen, but avoid arithmetic overflow below
-	} else if (sf.bbox[2] - sf.bbox[0] > (2LL << (32 - sst->maxzoom)) || sf.bbox[3] - sf.bbox[1] > (2LL << (32 - sst->maxzoom))) {
-		inline_meta = false;
-
-		if (prevent[P_CLIPPING]) {
-			static std::atomic<long long> warned(0);
-			long long extent = ((sf.bbox[2] - sf.bbox[0]) / ((1LL << (32 - sst->maxzoom)) + 1)) * ((sf.bbox[3] - sf.bbox[1]) / ((1LL << (32 - sst->maxzoom)) + 1));
-			if (extent > warned) {
-				fprintf(stderr, "Warning: %s:%d: Large unclipped (-pc) feature may be duplicated across %lld tiles\n", sst->fname, sst->line, extent);
-				warned = extent;
-
-				if (extent > 10000) {
-					fprintf(stderr, "Exiting because this can't be right.\n");
-					exit(EXIT_FAILURE);
-				}
-			}
-		}
-	}
-
 	double extent = 0;
 	if (additional[A_DROP_SMALLEST_AS_NEEDED] || additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 		if (sf.t == VT_POLYGON) {
@@ -651,19 +604,9 @@ int serialize_feature(struct serialization_state *sst, serial_feature &sf) {
 		}
 	}
 
-	if (inline_meta) {
-		sf.metapos = -1;
-		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
-			sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
-		}
-	} else {
-		sf.metapos = r->metapos;
-		serialize_long_long(r->metafile, sf.full_keys.size(), &r->metapos, sst->fname);
-		for (size_t i = 0; i < sf.full_keys.size(); i++) {
-			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string), &r->metapos, sst->fname);
-			serialize_long_long(r->metafile, addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type), &r->metapos, sst->fname);
-		}
+	for (size_t i = 0; i < sf.full_keys.size(); i++) {
+		sf.keys.push_back(addpool(r->poolfile, r->treefile, sf.full_keys[i].c_str(), mvt_string));
+		sf.values.push_back(addpool(r->poolfile, r->treefile, sf.full_values[i].s.c_str(), sf.full_values[i].type));
 	}
 
 	long long geomstart = r->geompos;
