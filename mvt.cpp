@@ -124,23 +124,79 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 		was_compressed = false;
 	}
 
+	reader_overhead = 0;
+	reader_overhead_count = 0;
+	layer_read_overhead = 0;
+	layer_read_overhead_count = 0;
+	layer_names = 0;
+	layer_names_count = 0;
+	layer_keys = 0;
+	layer_keys_count = 0;
+	value_overhead = 0;
+	value_overhead_count = 0;
+	string_values = 0;
+	string_values_count = 0;
+	float_values = 0;
+	float_values_count = 0;
+	double_values = 0;
+	double_values_count = 0;
+	int_values = 0;
+	int_values_count = 0;
+	bool_values = 0;
+	bool_values_count = 0;
+	layer_extents = 0;
+	layer_extents_count = 0;
+	layer_versions = 0;
+	layer_versions_count = 0;
+	feature_reader_overhead = 0;
+	feature_reader_overhead_count = 0;
+	ids = 0;
+	ids_count = 0;
+	attribute_refs = 0;
+	attribute_refs_count = 0;
+	feature_types = 0;
+	feature_types_count = 0;
+	feature_geometries = 0;
+	feature_geometries_count = 0;
+	feature_geometries_nodes = 0;
+
 	protozero::pbf_reader reader(src);
 
-	while (reader.next()) {
+	while (1) {
+		reader_overhead += reader.length();
+		if (!reader.next()) {
+			break;
+		}
+		reader_overhead -= reader.length();
+		reader_overhead_count++;
+
 		switch (reader.tag()) {
 		case 3: /* layer */
 		{
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
 
-			while (layer_reader.next()) {
+			while (1) {
+				layer_read_overhead += layer_reader.length();
+				if (!layer_reader.next()) {
+					break;
+				}
+				layer_read_overhead -= layer_reader.length();
+				layer_read_overhead_count++;
+
 				switch (layer_reader.tag()) {
 				case 1: /* name */
+					layer_names += layer_reader.length();
 					layer.name = layer_reader.get_string();
+					layer_names -= layer_reader.length();
+					layer_names_count++;
 					break;
 
 				case 3: /* key */
+					layer_keys += layer_reader.length();
 					layer.keys.push_back(layer_reader.get_string());
+					layer_keys -= layer_reader.length();
+					layer_keys_count++;
 					break;
 
 				case 4: /* value */
@@ -151,45 +207,75 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					value.type = mvt_null;
 					value.numeric_value.null_value = 0;
 
-					while (value_reader.next()) {
+					while (1) {
+						value_overhead += value_reader.length();
+						if (!value_reader.next()) {
+							break;
+						}
+						value_overhead -= value_reader.length();
+						value_overhead_count++;
+
 						switch (value_reader.tag()) {
 						case 1: /* string */
 							value.type = mvt_string;
+							string_values += value_reader.length();
 							value.string_value = value_reader.get_string();
+							string_values -= value_reader.length();
+							string_values_count++;
 							break;
 
 						case 2: /* float */
 							value.type = mvt_float;
+							float_values += value_reader.length();
 							value.numeric_value.float_value = value_reader.get_float();
+							float_values -= value_reader.length();
+							float_values_count++;
 							break;
 
 						case 3: /* double */
 							value.type = mvt_double;
+							double_values += value_reader.length();
 							value.numeric_value.double_value = value_reader.get_double();
+							double_values -= value_reader.length();
+							double_values_count++;
 							break;
 
 						case 4: /* int */
 							value.type = mvt_int;
+							int_values += value_reader.length();
 							value.numeric_value.int_value = value_reader.get_int64();
+							int_values -= value_reader.length();
+							int_values_count++;
 							break;
 
 						case 5: /* uint */
 							value.type = mvt_uint;
+							int_values += value_reader.length();
 							value.numeric_value.uint_value = value_reader.get_uint64();
+							int_values -= value_reader.length();
+							int_values_count++;
 							break;
 
 						case 6: /* sint */
 							value.type = mvt_sint;
+							int_values += value_reader.length();
 							value.numeric_value.sint_value = value_reader.get_sint64();
+							int_values -= value_reader.length();
+							int_values_count++;
 							break;
 
 						case 7: /* bool */
 							value.type = mvt_bool;
+							bool_values += value_reader.length();
 							value.numeric_value.bool_value = value_reader.get_bool();
+							bool_values -= value_reader.length();
+							bool_values_count++;
 							break;
 
 						default:
+							value_overhead += value_reader.length();
 							value_reader.skip();
+							value_overhead -= value_reader.length();
 							break;
 						}
 					}
@@ -199,11 +285,17 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 				}
 
 				case 5: /* extent */
+					layer_extents += layer_reader.length();
 					layer.extent = layer_reader.get_uint32();
+					layer_extents -= layer_reader.length();
+					layer_extents_count++;
 					break;
 
 				case 15: /* version */
+					layer_versions += layer_reader.length();
 					layer.version = layer_reader.get_uint32();
+					layer_versions -= layer_reader.length();
+					layer_versions_count++;
 					break;
 
 				case 2: /* feature */
@@ -212,16 +304,30 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 					mvt_feature feature;
 					std::vector<uint32_t> geoms;
 
-					while (feature_reader.next()) {
+					while (1) {
+						feature_reader_overhead += feature_reader.length();
+						if (!feature_reader.next()) {
+							break;
+						}
+						feature_reader_overhead -= feature_reader.length();
+						feature_reader_overhead_count++;
+
 						switch (feature_reader.tag()) {
 						case 1: /* id */
+							ids += feature_reader.length();
 							feature.id = feature_reader.get_uint64();
+							ids -= feature_reader.length();
+							ids_count++;
 							feature.has_id = true;
 							break;
 
 						case 2: /* tag */
 						{
+							attribute_refs += feature_reader.length();
 							auto pi = feature_reader.get_packed_uint32();
+							attribute_refs -= feature_reader.length();
+							attribute_refs_count++;
+
 							for (auto it = pi.first; it != pi.second; ++it) {
 								feature.tags.push_back(*it);
 							}
@@ -229,12 +335,19 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 
 						case 3: /* feature type */
+							feature_types += feature_reader.length();
 							feature.type = feature_reader.get_enum();
+							feature_types -= feature_reader.length();
+							feature_types_count++;
 							break;
 
 						case 4: /* geometry */
 						{
+							feature_geometries += feature_reader.length();
 							auto pi = feature_reader.get_packed_uint32();
+							feature_geometries -= feature_reader.length();
+							feature_geometries_count++;
+
 							for (auto it = pi.first; it != pi.second; ++it) {
 								geoms.push_back(*it);
 							}
@@ -242,7 +355,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 
 						default:
+							feature_reader_overhead += feature_reader.length();
 							feature_reader.skip();
+							feature_reader_overhead -= feature_reader.length();
 							break;
 						}
 					}
@@ -266,6 +381,7 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 						}
 					}
 
+					feature_geometries_nodes += feature.geometry.size();
 					layer.features.push_back(feature);
 					break;
 				}
@@ -288,7 +404,9 @@ bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 		}
 
 		default:
+			reader_overhead += reader.length();
 			reader.skip();
+			reader_overhead -= reader.length();
 			break;
 		}
 	}
