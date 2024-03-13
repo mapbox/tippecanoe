@@ -1901,13 +1901,15 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
-			} else if (additional[A_DROP_DENSEST_AS_NEEDED]) {
+			}
+			if (additional[A_DROP_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
-			} else if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
+			}
+			if (additional[A_COALESCE_DENSEST_AS_NEEDED]) {
 				indices.push_back(sf.index);
 				if (sf.index - merge_previndex < mingap && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
@@ -1915,13 +1917,15 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
-			} else if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
+			}
+			if (additional[A_DROP_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && sf.t != VT_POINT && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					preserve_attributes(arg->attribute_accum, sf, stringpool, pool_off, partials[which_partial]);
 					continue;
 				}
-			} else if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
+			}
+			if (additional[A_COALESCE_SMALLEST_AS_NEEDED]) {
 				extents.push_back(sf.extent);
 				if (sf.extent + coalesced_area <= minextent && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].geoms.push_back(sf.geometry);
@@ -2429,7 +2433,35 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 					fprintf(stderr, "tile %d/%u/%u size is %lld with detail %d, >%zu    \n", z, tx, ty, (long long) compressed.size(), line_detail, max_tile_size);
 				}
 
-				if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
+				if (additional[A_COALESCE_DENSEST_AS_NEEDED] && additional[A_COALESCE_FRACTION_AS_NEEDED]) {
+					mingap_fraction = mingap_fraction * max_tile_size / compressed.size() * 0.90;
+					unsigned long long mg = choose_mingap(indices, mingap_fraction);
+					if (mg <= mingap) {
+						mg = mingap * 1.5;
+					}
+					mingap = mg;
+					if (mingap > arg->mingap_out) {
+						arg->mingap_out = mingap;
+						arg->still_dropping = true;
+					}
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping the sparsest %0.2f%% of the features to make it fit\n", mingap_fraction * 100.0);
+					}
+
+					// The 95% is a guess to avoid too many retries
+					// and probably actually varies based on how much duplicated metadata there is
+
+					fraction = fraction * max_tile_size / compressed.size() * 0.95;
+					if (!quiet) {
+						fprintf(stderr, "Going to try keeping %0.2f%% of the features to make it fit\n", fraction * 100);
+					}
+					if ((additional[A_DROP_FRACTION_AS_NEEDED] || additional[A_COALESCE_FRACTION_AS_NEEDED]) && fraction < arg->fraction_out) {
+						arg->fraction_out = fraction;
+						arg->still_dropping = true;
+					}
+
+					line_detail++;
+				} else if (has_polygons && additional[A_MERGE_POLYGONS_AS_NEEDED] && merge_fraction > .05 && merge_successful) {
 					merge_fraction = merge_fraction * max_tile_size / compressed.size() * 0.95;
 					if (!quiet) {
 						fprintf(stderr, "Going to try merging %0.2f%% of the polygons to make it fit\n", 100 - merge_fraction * 100);
