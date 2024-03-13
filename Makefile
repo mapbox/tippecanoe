@@ -44,26 +44,26 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
-LIBS = -L/usr/local/lib
+INCLUDES = -I/usr/local/include -I/usr/include -I.
+LIBS = -L/usr/local/lib -L/usr/lib -L.
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o dirtiles.o plugin.o read_json.o write_json.o geobuf.o evaluator.o geocsv.o csv.o geojson-loop.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread -ldeflate
 
 tippecanoe-enumerate: enumerate.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o jsonpull/jsonpull.o dirtiles.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -ldeflate
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o write_json.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread -ldeflate
 
 tippecanoe-json-tool: jsontool.o jsonpull/jsonpull.o csv.o text.o geojson-loop.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 unit: unit.o text.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
 
 -include $(wildcard *.d)
 
@@ -338,6 +338,7 @@ layer-json-test:
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
+#
 
 prep-test: $(TESTS)
 
