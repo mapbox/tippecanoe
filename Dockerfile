@@ -10,6 +10,7 @@ RUN apt-get update \
 RUN mkdir -p /tmp/tippecanoe-src
 WORKDIR /tmp/tippecanoe-src
 COPY . /tmp/tippecanoe-src
+ENV LD_LIBRARY_PATH LD_LIBRARY_PATH:libdeflate
 
 # Build tippecanoe
 RUN make \

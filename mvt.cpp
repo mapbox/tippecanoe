@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <zlib.h>
 #include <errno.h>
 #include <limits.h>
 #include <ctype.h>
+#include <libdeflate.h>
 #include "mvt.hpp"
 #include "geometry.hpp"
 #include "protozero/varint.hpp"
@@ -22,114 +22,89 @@ mvt_geometry::mvt_geometry(int nop, long long nx, long long ny) {
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 bool is_compressed(std::string const &data) {
-	return data.size() > 2 && (((uint8_t) data[0] == 0x78 && (uint8_t) data[1] == 0x9C) || ((uint8_t) data[0] == 0x1F && (uint8_t) data[1] == 0x8B));
+	return data.size() > 2 && (((uint8_t) data[0] & 0x60) == 0x4 || ((uint8_t) data[0] & 0x60) == 0x20);
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int decompress(std::string const &input, std::string &output) {
-	z_stream inflate_s;
-	inflate_s.zalloc = Z_NULL;
-	inflate_s.zfree = Z_NULL;
-	inflate_s.opaque = Z_NULL;
-	inflate_s.avail_in = 0;
-	inflate_s.next_in = Z_NULL;
-	if (inflateInit2(&inflate_s, 32 + 15) != Z_OK) {
-		fprintf(stderr, "Decompression error: %s\n", inflate_s.msg);
+	size_t avail_in = 8192;
+	size_t avail_out = 8192;
+	long unsigned int actual_output = 0;
+	long unsigned int actual_input = 0;
+	long unsigned int actual_out = 0;
+	long unsigned int actual_in = 0;
+	output.resize(avail_out);
+	void *current_out = (void *) output.data();
+	void *current_in = (void *) input.data();
+
+	struct libdeflate_decompressor *decompressor = libdeflate_alloc_decompressor();
+decompress:
+	int ret = libdeflate_deflate_decompress_ex(decompressor,
+						   current_in, avail_in,
+						   current_out, avail_out,
+						   &actual_input,
+						   &actual_output);
+	actual_in += actual_input;
+	actual_out += actual_output;
+	if (ret == LIBDEFLATE_SHORT_OUTPUT) {
+		output.resize(actual_out + avail_out);
+		current_out = (void *) ((long) output.data() + actual_out);
+		current_in = (void *) ((long) input.data() + actual_in);
+		goto decompress;
 	}
-	inflate_s.next_in = (Bytef *) input.data();
-	inflate_s.avail_in = input.size();
-	inflate_s.next_out = (Bytef *) output.data();
-	inflate_s.avail_out = output.size();
+	libdeflate_free_decompressor(decompressor);
 
-	while (true) {
-		size_t existing_output = inflate_s.next_out - (Bytef *) output.data();
-
-		output.resize(existing_output + 2 * inflate_s.avail_in + 100);
-		inflate_s.next_out = (Bytef *) output.data() + existing_output;
-		inflate_s.avail_out = output.size() - existing_output;
-
-		int ret = inflate(&inflate_s, 0);
-		if (ret < 0) {
+	if (ret != LIBDEFLATE_SUCCESS) {
+		if (ret == LIBDEFLATE_BAD_DATA) {
+			fprintf(stderr, "data not compressed");
+		} else {
 			fprintf(stderr, "Decompression error: ");
-			if (ret == Z_DATA_ERROR) {
-				fprintf(stderr, "data error");
-			}
-			if (ret == Z_STREAM_ERROR) {
-				fprintf(stderr, "stream error");
-			}
-			if (ret == Z_MEM_ERROR) {
+			if (ret == LIBDEFLATE_INSUFFICIENT_SPACE) {
 				fprintf(stderr, "out of memory");
 			}
-			if (ret == Z_BUF_ERROR) {
-				fprintf(stderr, "no data in buffer");
-			}
-			fprintf(stderr, "\n");
-			return 0;
 		}
-
-		if (ret == Z_STREAM_END) {
-			break;
-		}
-
-		// ret must be Z_OK or Z_NEED_DICT;
-		// continue decompresing
+		fprintf(stderr, "\n");
+		return -ret;
 	}
 
-	output.resize(inflate_s.next_out - (Bytef *) output.data());
-	inflateEnd(&inflate_s);
-	return 1;
+	output.resize(actual_out);
+	return 0;
 }
 
 // https://github.com/mapbox/mapnik-vector-tile/blob/master/src/vector_tile_compression.hpp
 int compress(std::string const &input, std::string &output) {
-	z_stream deflate_s;
-	deflate_s.zalloc = Z_NULL;
-	deflate_s.zfree = Z_NULL;
-	deflate_s.opaque = Z_NULL;
-	deflate_s.avail_in = 0;
-	deflate_s.next_in = Z_NULL;
-	deflateInit2(&deflate_s, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
-	deflate_s.next_in = (Bytef *) input.data();
-	deflate_s.avail_in = input.size();
-	size_t length = 0;
-	do {
-		size_t increase = input.size() / 2 + 1024;
-		output.resize(length + increase);
-		deflate_s.avail_out = increase;
-		deflate_s.next_out = (Bytef *) (output.data() + length);
-		int ret = deflate(&deflate_s, Z_FINISH);
-		if (ret != Z_STREAM_END && ret != Z_OK && ret != Z_BUF_ERROR) {
-			return -1;
-		}
-		length += (increase - deflate_s.avail_out);
-	} while (deflate_s.avail_out == 0);
-	deflateEnd(&deflate_s);
-	output.resize(length);
-	return 0;
+	size_t avail_in = input.size();
+	size_t avail_out = avail_in * 8;
+	output.resize(avail_out);
+	struct libdeflate_compressor *deflate_s = libdeflate_alloc_compressor(9);
+	int ret = libdeflate_deflate_compress(deflate_s,
+					      (void *) input.data(), avail_in,
+					      (void *) output.data(), avail_out);
+	libdeflate_free_compressor(deflate_s);
+	if (ret == 0) {
+		return -1;
+	}
+	output.resize(ret);
+	return 1;
 }
 
 bool mvt_tile::decode(std::string &message, bool &was_compressed) {
 	layers.clear();
 	std::string src;
+	std::string uncompressed;
 
-	if (is_compressed(message)) {
-		std::string uncompressed;
-		if (decompress(message, uncompressed) == 0) {
-			exit(EXIT_FAILURE);
-		}
+	was_compressed = false;
+	src = message;
+	if (decompress(message, uncompressed) == 0) {
 		src = uncompressed;
 		was_compressed = true;
-	} else {
-		src = message;
-		was_compressed = false;
 	}
 
 	protozero::pbf_reader reader(src);
 
 	while (reader.next()) {
 		switch (reader.tag()) {
-		case 3: /* layer */
-		{
+		case 3: /* layer */ {
 			protozero::pbf_reader layer_reader(reader.get_message());
 			mvt_layer layer;
 

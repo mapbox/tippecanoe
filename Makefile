@@ -19,11 +19,11 @@ else
 	FINAL_FLAGS := -g $(WARNING_FLAGS) $(DEBUG_FLAGS)
 endif
 
-all: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit tippecanoe-json-tool
+all: deflate tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join unit tippecanoe-json-tool
 
 docs: man/tippecanoe.1
 
-install: tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join tippecanoe-json-tool
+install: deflate tippecanoe tippecanoe-enumerate tippecanoe-decode tile-join tippecanoe-json-tool
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(MANDIR)
 	cp tippecanoe $(PREFIX)/bin/tippecanoe
@@ -44,20 +44,21 @@ PG=
 H = $(wildcard *.h) $(wildcard *.hpp)
 C = $(wildcard *.c) $(wildcard *.cpp)
 
-INCLUDES = -I/usr/local/include -I.
-LIBS = -L/usr/local/lib
+INCLUDES = -I/usr/local/include -I. -Ilibdeflate
+LIBS = -L/usr/local/lib -L$(PWD)/libdeflate -L$(PWD)
+LD_LIBRARY_PATH := /usr/local/lib:$(PWD)/libdeflate:$(PWD)
 
 tippecanoe: geojson.o jsonpull/jsonpull.o tile.o pool.o mbtiles.o geometry.o projection.o memfile.o mvt.o serial.o main.o text.o dirtiles.o plugin.o read_json.o write_json.o geobuf.o evaluator.o geocsv.o csv.o geojson-loop.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread libdeflate/libdeflate.a
 
 tippecanoe-enumerate: enumerate.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lsqlite3
 
 tippecanoe-decode: decode.o projection.o mvt.o write_json.o text.o jsonpull/jsonpull.o dirtiles.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 libdeflate/libdeflate.a
 
 tile-join: tile-join.o projection.o pool.o mbtiles.o mvt.o memfile.o dirtiles.o jsonpull/jsonpull.o text.o evaluator.o csv.o write_json.o
-	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
+	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread libdeflate/libdeflate.a
 
 tippecanoe-json-tool: jsontool.o jsonpull/jsonpull.o csv.o text.o geojson-loop.o
 	$(CXX) $(PG) $(LIBS) $(FINAL_FLAGS) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -lm -lz -lsqlite3 -lpthread
@@ -73,7 +74,7 @@ unit: unit.o text.o
 %.o: %.cpp
 	$(CXX) -MMD $(PG) $(INCLUDES) $(FINAL_FLAGS) $(CXXFLAGS) -c -o $@ $<
 
-clean:
+clean: deflate-clean
 	rm -f ./tippecanoe ./tippecanoe-* ./tile-join ./unit *.o *.d */*.o */*.d tests/**/*.mbtiles tests/**/*.check
 
 indent:
@@ -338,6 +339,7 @@ layer-json-test:
 
 # Use this target to regenerate the standards that the tests are compared against
 # after making a change that legitimately changes their output
+#
 
 prep-test: $(TESTS)
 
@@ -346,3 +348,9 @@ tests/%.json: Makefile tippecanoe tippecanoe-decode
 	./tippecanoe-decode -x generator $@.check.mbtiles > $@
 	cmp $(patsubst %.check,%,$@) $@
 	rm $@.check.mbtiles
+
+deflate: deflate-clean
+	cd libdeflate && make BUILDTYPE=$(BUILDTYPE) libdeflate.a
+
+deflate-clean:
+	cd libdeflate && make realclean
