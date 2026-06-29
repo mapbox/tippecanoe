@@ -1,5 +1,5 @@
 # Start from ubuntu
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 # Update repos and install dependencies
 RUN apt-get update \
