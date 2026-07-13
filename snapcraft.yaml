@@ -1,0 +1,30 @@
+name: tippecanoe
+version: master
+summary: Build vector tilesets from large collections of GeoJSON features.
+description: |
+  The goal of Tippecanoe is to enable making a scale-independent view of your
+  data, so that at any level from the entire world to a single building, you
+  can see the density and texture of the data rather than a simplification from
+  dropping supposedly unimportant features or clustering or aggregating them.
+
+grade: devel
+confinement: strict
+
+apps:
+  tippecanoe:
+    command: tippecanoe
+    plugs: [home]
+  ennumerate:
+    command: tippecanoe-enumerate
+  decode:
+    command: tippecanoe-decode
+  tile-join:
+    command: tile-join
+    plugs: [home]
+
+parts:
+  tippecanoe:
+    source: .
+    plugin: make
+    make-install-var: PREFIX
+    build-packages: [g++, libsqlite3-dev, zlib1g-dev]
