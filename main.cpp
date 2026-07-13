@@ -95,6 +95,7 @@ static long long diskfree;
 char **av;
 
 std::vector<clipbbox> clipbboxes;
+std::set<std::string> zoom_elements;
 
 void checkdisk(std::vector<struct reader> *r) {
 	long long used = 0;
@@ -2538,6 +2539,7 @@ int main(int argc, char **argv) {
 		{"empty-csv-columns-are-null", no_argument, &prevent[P_EMPTY_CSV_COLUMNS], 1},
 		{"convert-stringified-ids-to-numbers", no_argument, &additional[A_CONVERT_NUMERIC_IDS], 1},
 		{"use-attribute-for-id", required_argument, 0, '~'},
+		{"zoom-element", required_argument, 0, '~'},
 
 		{"Filtering features by attributes", 0, 0, 0},
 		{"feature-filter-file", required_argument, 0, 'J'},
@@ -2697,6 +2699,8 @@ int main(int argc, char **argv) {
 				}
 			} else if (strcmp(opt, "use-attribute-for-id") == 0) {
 				attribute_for_id = optarg;
+			} else if (strcmp(opt, "zoom-element") == 0) {
+				zoom_elements.insert(optarg);
 			} else {
 				fprintf(stderr, "%s: Unrecognized option --%s\n", argv[0], opt);
 				exit(EXIT_FAILURE);

@@ -1,0 +1,2 @@
+{ "type": "Feature", "properties": { "yes": true, "no": false, "extract": [ 5, 4, 3, 2, 1, 0 ], "another": [ true, false, { "boo": "eek" }, [ 1, 2, 3 ], "yes", "no" ], "list": [ 1, 2, 3], "compound": { "one": "two" } }, "geometry": { "type": "Point", "coordinates": [ 1,1 ]} }
+{ "type": "Feature", "properties": {  }, "geometry": { "type": "Point", "coordinates": [ 2,2 ]} }

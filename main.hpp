@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <atomic>
 #include <string>
+#include <set>
 
 struct index {
 	long long start = 0;
@@ -32,6 +33,7 @@ struct clipbbox {
 };
 
 extern std::vector<clipbbox> clipbboxes;
+extern std::set<std::string> zoom_elements;
 
 void checkdisk(std::vector<struct reader> *r);
 

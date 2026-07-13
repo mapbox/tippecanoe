@@ -429,6 +429,7 @@ resolution is obtained than by using a smaller _maxzoom_ or _detail_.
  * `-pe` or `--empty-csv-columns-are-null`: Treat empty CSV columns as nulls rather than as empty strings.
  * `-aI` or `--convert-stringified-ids-to-numbers`: If a feature ID is the string representation of a number, convert it to a plain number to use as the feature ID.
  * `--use-attribute-for-id=`*name*: Use the attribute with the specified *name* as if it were specified as the feature ID. (If this attribute is a stringified number, you must also use `-aI` to convert it to a number.)
+ * `--zoom-element=`*name*: If the attribute with the specified *name* is a JSON list, when producing zoom level *z*, use the *z*'th element of the array as the attribute value.
 
 ### Filtering features by attributes
 
