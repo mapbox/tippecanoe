@@ -77,6 +77,7 @@ size_t max_tile_features = 200000;
 int cluster_distance = 0;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
+int fillzoom = -1;
 
 int prevent[256];
 int additional[256];
@@ -2267,7 +2268,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 
 	std::atomic<unsigned> midx(0);
 	std::atomic<unsigned> midy(0);
-	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter);
+	int written = traverse_zooms(fd, size, meta, stringpool, &midx, &midy, maxzoom, minzoom, outdb, outdir, buffer, fname, tmpdir, gamma, full_detail, low_detail, min_detail, meta_off, pool_off, initial_x, initial_y, simplification, layermaps, prefilter, postfilter, attribute_accum, filter, &fillzoom);
 
 	if (maxzoom != written) {
 		if (written > minzoom) {
@@ -2329,7 +2330,7 @@ int read_input(std::vector<source> &sources, char *fname, int maxzoom, int minzo
 		ai->second.maxzoom = maxzoom;
 	}
 
-	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS], attribute_descriptions, "tippecanoe", commandline);
+	mbtiles_write_metadata(outdb, outdir, fname, minzoom, maxzoom, fillzoom, minlat, minlon, maxlat, maxlon, midlat, midlon, forcetable, attribution, merged_lm, true, description, !prevent[P_TILE_STATS], attribute_descriptions, "tippecanoe", commandline);
 
 	return ret;
 }
@@ -2579,6 +2580,7 @@ int main(int argc, char **argv) {
 		{"buffer", required_argument, 0, 'b'},
 		{"no-clipping", no_argument, &prevent[P_CLIPPING], 1},
 		{"no-duplication", no_argument, &prevent[P_DUPLICATION], 1},
+		{"remove-filled", no_argument, &prevent[P_FILLED], 1},
 
 		{"Reordering features within each tile", 0, 0, 0},
 		{"preserve-input-order", no_argument, &prevent[P_INPUT_ORDER], 1},
