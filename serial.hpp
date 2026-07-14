@@ -60,8 +60,6 @@ struct serial_feature {
 
 	std::vector<long long> keys{};
 	std::vector<long long> values{};
-	// If >= 0, metadata is external
-	long long metapos = 0;
 
 	// XXX This isn't serialized. Should it be here?
 	long long bbox[4] = {0, 0, 0, 0};
@@ -72,22 +70,19 @@ struct serial_feature {
 };
 
 void serialize_feature(FILE *geomfile, serial_feature *sf, std::atomic<long long> *geompos, const char *fname, long long wx, long long wy, bool include_minzoom);
-serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, char *metabase, long long *meta_off, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
+serial_feature deserialize_feature(FILE *geoms, std::atomic<long long> *geompos_in, unsigned z, unsigned tx, unsigned ty, unsigned *initial_x, unsigned *initial_y);
 
 struct reader {
-	int metafd = -1;
 	int poolfd = -1;
 	int treefd = -1;
 	int geomfd = -1;
 	int indexfd = -1;
 
-	FILE *metafile = NULL;
 	struct memfile *poolfile = NULL;
 	struct memfile *treefile = NULL;
 	FILE *geomfile = NULL;
 	FILE *indexfile = NULL;
 
-	std::atomic<long long> metapos;
 	std::atomic<long long> geompos;
 	std::atomic<long long> indexpos;
 
@@ -99,26 +94,21 @@ struct reader {
 	char *geom_map = NULL;
 
 	reader()
-	    : metapos(0), geompos(0), indexpos(0) {
+	    : geompos(0), indexpos(0) {
 	}
 
 	reader(reader const &r) {
-		metafd = r.metafd;
 		poolfd = r.poolfd;
 		treefd = r.treefd;
 		geomfd = r.geomfd;
 		indexfd = r.indexfd;
 
-		metafile = r.metafile;
 		poolfile = r.poolfile;
 		treefile = r.treefile;
 		geomfile = r.geomfile;
 		indexfile = r.indexfile;
 
-		long long p = r.metapos;
-		metapos = p;
-
-		p = r.geompos;
+		long long p = r.geompos;
 		geompos = p;
 
 		p = r.indexpos;
