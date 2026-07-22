@@ -79,7 +79,117 @@ void do_stats(mvt_tile &tile, size_t size, bool compressed, int z, unsigned x, u
 		state.json_end_hash();
 	}
 
-	state.json_end_hash();
+	state.json_end_hash(); // layers
+
+	state.json_write_string("encoding");
+	state.json_write_hash();
+
+	state.json_write_string("wrapper_overhead_bytes");
+	state.json_write_unsigned(tile.reader_overhead);
+
+	state.json_write_string("wrapper_overhead_count");
+	state.json_write_unsigned(tile.reader_overhead_count);
+
+	state.json_write_string("layer_overhead_bytes");
+	state.json_write_unsigned(tile.layer_read_overhead);
+
+	state.json_write_string("layer_overhead_count");
+	state.json_write_unsigned(tile.layer_read_overhead_count);
+
+	state.json_write_string("layer_name_bytes");
+	state.json_write_unsigned(tile.layer_names);
+
+	state.json_write_string("layer_name_count");
+	state.json_write_unsigned(tile.layer_names_count);
+
+	state.json_write_string("attribute_name_bytes");
+	state.json_write_unsigned(tile.layer_keys);
+
+	state.json_write_string("attribute_name_count");
+	state.json_write_unsigned(tile.layer_keys_count);
+
+	state.json_write_string("attribute_value_overhead_bytes");
+	state.json_write_unsigned(tile.value_overhead);
+
+	state.json_write_string("attribute_value_overhead_count");
+	state.json_write_unsigned(tile.value_overhead_count);
+
+	state.json_write_string("attribute_string_value_bytes");
+	state.json_write_unsigned(tile.string_values);
+
+	state.json_write_string("attribute_string_value_count");
+	state.json_write_unsigned(tile.string_values_count);
+
+	state.json_write_string("attribute_float_value_bytes");
+	state.json_write_unsigned(tile.float_values);
+
+	state.json_write_string("attribute_float_value_count");
+	state.json_write_unsigned(tile.float_values_count);
+
+	state.json_write_string("attribute_double_value_bytes");
+	state.json_write_unsigned(tile.double_values);
+
+	state.json_write_string("attribute_double_value_count");
+	state.json_write_unsigned(tile.double_values_count);
+
+	state.json_write_string("attribute_int_value_bytes");
+	state.json_write_unsigned(tile.int_values);
+
+	state.json_write_string("attribute_int_value_count");
+	state.json_write_unsigned(tile.int_values_count);
+
+	state.json_write_string("attribute_bool_value_bytes");
+	state.json_write_unsigned(tile.bool_values);
+
+	state.json_write_string("attribute_bool_value_count");
+	state.json_write_unsigned(tile.bool_values_count);
+
+	state.json_write_string("layer_extent_bytes");
+	state.json_write_unsigned(tile.layer_extents);
+
+	state.json_write_string("layer_extent_count");
+	state.json_write_unsigned(tile.layer_extents_count);
+
+	state.json_write_string("layer_version_bytes");
+	state.json_write_unsigned(tile.layer_versions);
+
+	state.json_write_string("layer_version_count");
+	state.json_write_unsigned(tile.layer_versions_count);
+
+	state.json_write_string("feature_overhead_bytes");
+	state.json_write_unsigned(tile.feature_reader_overhead);
+
+	state.json_write_string("feature_overhead_count");
+	state.json_write_unsigned(tile.feature_reader_overhead_count);
+
+	state.json_write_string("feature_id_bytes");
+	state.json_write_unsigned(tile.ids);
+
+	state.json_write_string("feature_id_count");
+	state.json_write_unsigned(tile.ids_count);
+
+	state.json_write_string("feature_attribute_references_bytes");
+	state.json_write_unsigned(tile.attribute_refs);
+
+	state.json_write_string("feature_attribute_references_count");
+	state.json_write_unsigned(tile.attribute_refs_count);
+
+	state.json_write_string("feature_type_bytes");
+	state.json_write_unsigned(tile.feature_types);
+
+	state.json_write_string("feature_type_count");
+	state.json_write_unsigned(tile.feature_types_count);
+
+	state.json_write_string("feature_geometry_bytes");
+	state.json_write_unsigned(tile.feature_geometries);
+
+	state.json_write_string("feature_geometry_count");
+	state.json_write_unsigned(tile.feature_geometries_count);
+
+	state.json_write_string("feature_geometry_nodes");
+	state.json_write_unsigned(tile.feature_geometries_nodes);
+
+	state.json_end_hash(); // encoding
 	state.json_end_hash();
 
 	state.json_write_newline();
