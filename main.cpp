@@ -2573,6 +2573,7 @@ int main(int argc, char **argv) {
 
 		{"Attempts to improve shared polygon boundaries", 0, 0, 0},
 		{"detect-shared-borders", no_argument, &additional[A_DETECT_SHARED_BORDERS], 1},
+		{"extract-borders", no_argument, &additional[A_EXTRACT_BORDERS], 1},
 		{"grid-low-zooms", no_argument, &additional[A_GRID_LOW_ZOOMS], 1},
 
 		{"Controlling clipping to tile boundaries", 0, 0, 0},

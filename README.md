@@ -500,6 +500,7 @@ the same layer, enclose them in an `all` expression so they will all be evaluate
 ### Attempts to improve shared polygon boundaries
 
  * `-ab` or `--detect-shared-borders`: In the manner of [TopoJSON](https://github.com/mbostock/topojson/wiki/Introduction), detect borders that are shared between multiple polygons and simplify them identically in each polygon. This takes more time and memory than considering each polygon individually.
+ * `-aB` or `--extract-borders`: Detect borders that are shared between multiple polygons and turn them into new features. The original polygons and their attributes, and even which layer they come from, are lost.
  * `-aL` or `--grid-low-zooms`: At all zoom levels below _maxzoom_, snap all lines and polygons to a stairstep grid instead of allowing diagonals. You will also want to specify a tile resolution, probably `-D8`. This option provides a way to display continuous parcel, gridded, or binned data at low zooms without overwhelming the tiles with tiny polygons, since features will either get stretched out to the grid unit or lost entirely, depending on how they happened to be aligned in the original data. You probably don't want to use this.
 
 ### Controlling clipping to tile boundaries

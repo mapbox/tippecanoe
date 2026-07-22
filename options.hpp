@@ -8,6 +8,7 @@
 #define A_DEBUG_POLYGON ((int) '@')
 #define A_POLYGON_DROP ((int) 'p')
 #define A_DETECT_SHARED_BORDERS ((int) 'b')
+#define A_EXTRACT_BORDERS ((int) 'B')
 #define A_PREFER_RADIX_SORT ((int) 'R')
 #define A_CALCULATE_FEATURE_DENSITY ((int) 'g')
 #define A_INCREASE_GAMMA_AS_NEEDED ((int) 'G')
