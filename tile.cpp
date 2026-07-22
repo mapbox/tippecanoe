@@ -2027,7 +2027,9 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 			if (p.clustered > 0) {
 				std::string layername = (*layer_unmaps)[p.segment][p.layer];
-				serial_val sv, sv2, sv3;
+				serial_val sv, sv2, sv3, sv4;
+				long long point_count = p.clustered + 1;
+				char abbrev[17]; // to_string(LLONG_MAX).length() / 1000 + 1;
 
 				p.full_keys.push_back("clustered");
 				sv.type = mvt_bool;
@@ -2038,17 +2040,31 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 
 				p.full_keys.push_back("point_count");
 				sv2.type = mvt_double;
-				sv2.s = std::to_string(p.clustered + 1);
+				sv2.s = std::to_string(point_count);
 				p.full_values.push_back(sv2);
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count", sv2);
 
 				p.full_keys.push_back("sqrt_point_count");
 				sv3.type = mvt_double;
-				sv3.s = std::to_string(round(100 * sqrt(p.clustered + 1)) / 100.0);
+				sv3.s = std::to_string(round(100 * sqrt(point_count)) / 100.0);
 				p.full_values.push_back(sv3);
 
 				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "sqrt_point_count", sv3);
+
+				p.full_keys.push_back("point_count_abbreviated");
+				sv4.type = mvt_string;
+				if (point_count >= 10000) {
+					sprintf(abbrev, "%.0fk", point_count / 1000.0);
+				} else if (point_count >= 1000) {
+					sprintf(abbrev, "%.1fk", point_count / 1000.0);
+				} else {
+					sprintf(abbrev, "%lld", point_count);
+				}
+				sv4.s = abbrev;
+				p.full_values.push_back(sv4);
+
+				add_tilestats(layername, z, layermaps, tiling_seg, layer_unmaps, "point_count_abbreviated", sv4);
 			}
 
 			if (p.need_tilestats.size() > 0) {
