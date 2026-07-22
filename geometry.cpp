@@ -975,16 +975,16 @@ drawvec fix_polygon(drawvec &geom) {
 	return out;
 }
 
-std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms) {
+std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms, size_t n) {
 	while (1) {
 		bool again = false;
 		std::vector<drawvec> out;
 
 		for (size_t i = 0; i < geoms.size(); i++) {
-			if (geoms[i].size() > 700) {
+			if (geoms[i].size() > n) {
 				static bool warned = false;
 				if (!warned) {
-					fprintf(stderr, "Warning: splitting up polygon with more than 700 sides\n");
+					fprintf(stderr, "Warning: splitting up polygon with more than %zu sides\n", n);
 					warned = true;
 				}
 

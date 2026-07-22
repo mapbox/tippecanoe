@@ -77,6 +77,7 @@ size_t max_tile_features = 200000;
 int cluster_distance = 0;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
+size_t polygon_split = 0;
 
 int prevent[256];
 int additional[256];
@@ -2596,6 +2597,7 @@ int main(int argc, char **argv) {
 		{"use-source-polygon-winding", no_argument, &prevent[P_USE_SOURCE_POLYGON_WINDING], 1},
 		{"reverse-source-polygon-winding", no_argument, &prevent[P_REVERSE_SOURCE_POLYGON_WINDING], 1},
 		{"clip-bounding-box", required_argument, 0, '~'},
+		{"split-complex-polygons", required_argument, 0, '~'},
 
 		{"Filtering tile contents", 0, 0, 0},
 		{"prefilter", required_argument, 0, 'C'},
@@ -2695,6 +2697,8 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s: Can't parse bounding box --%s=%s\n", argv[0], opt, optarg);
 					exit(EXIT_FAILURE);
 				}
+			} else if (strcmp(opt, "split-complex-polygons") == 0) {
+				polygon_split = atoi(optarg);
 			} else if (strcmp(opt, "use-attribute-for-id") == 0) {
 				attribute_for_id = optarg;
 			} else {

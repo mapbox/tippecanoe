@@ -71,7 +71,7 @@ int quick_check(long long *bbox, int z, long long buffer);
 drawvec simplify_lines(drawvec &geom, int z, int detail, bool mark_tile_bounds, double simplification, size_t retain, drawvec const &shared_nodes);
 drawvec reorder_lines(drawvec &geom);
 drawvec fix_polygon(drawvec &geom);
-std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms);
+std::vector<drawvec> chop_polygon(std::vector<drawvec> &geoms, size_t n);
 void check_polygon(drawvec &geom);
 double get_area(drawvec &geom, size_t i, size_t j);
 double get_mp_area(drawvec &geom);
