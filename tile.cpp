@@ -1881,7 +1881,7 @@ long long write_tile(FILE *geoms, std::atomic<long long> *geompos_in, char *meta
 				}
 			}
 
-			if (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0) {
+			if (z <= cluster_maxzoom && (additional[A_CLUSTER_DENSEST_AS_NEEDED] || cluster_distance != 0)) {
 				indices.push_back(sf.index);
 				if ((sf.index < merge_previndex || sf.index - merge_previndex < mingap) && find_partial(partials, sf, which_partial, layer_unmaps)) {
 					partials[which_partial].clustered++;
