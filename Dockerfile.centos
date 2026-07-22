@@ -1,0 +1,27 @@
+ARG CENTOS_VERSION=8
+
+# Start from centos
+FROM centos:${CENTOS_VERSION} as builder
+
+# Intall dependencies
+RUN yum install -y make sqlite-devel zlib-devel gcc-c++ diffutils perl
+
+# Copy in all files
+WORKDIR /tmp/tippecanoe-src
+COPY . /tmp/tippecanoe-src
+
+# Build tippecanoe
+RUN make \
+  && make install
+
+# Run the tests
+CMD make test
+
+# Build final image
+FROM centos:${CENTOS_VERSION}
+
+# Install runtime dependencies
+RUN yum install -y sqlite-libs zlib
+
+# Copy built files into final image
+COPY --from=builder /usr/local/ /usr/local/

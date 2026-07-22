@@ -1,13 +1,14 @@
+# Allow setting version as an argument
+ARG UBUNTU_VERSION=20.04
+
 # Start from ubuntu
-FROM ubuntu:16.04
+FROM ubuntu:${UBUNTU_VERSION} as builder
 
 # Update repos and install dependencies
 RUN apt-get update \
-  && apt-get -y upgrade \
-  && apt-get -y install build-essential libsqlite3-dev zlib1g-dev
+  && apt-get -y install make gcc g++ libsqlite3-dev zlib1g-dev
 
-# Create a directory and copy in all files
-RUN mkdir -p /tmp/tippecanoe-src
+# Copy in all files
 WORKDIR /tmp/tippecanoe-src
 COPY . /tmp/tippecanoe-src
 
@@ -17,3 +18,15 @@ RUN make \
 
 # Run the tests
 CMD make test
+
+# Build final image
+FROM ubuntu:${UBUNTU_VERSION}
+
+# Install runtime dependencies
+RUN apt-get update \
+  && apt-get install -y libsqlite3-0 zlib1g \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy built files into final image
+COPY --from=builder /usr/local/ /usr/local/

@@ -6,32 +6,40 @@ sudo: false
 
 matrix:
   include:
-    # test on docker+centos7
+    # test on docker+centos
     - os: linux
       compiler: clang
       services:
        - docker
       sudo: true
-      dist: trusty
-      env: DOCKERFILE=Dockerfile.centos7
+      dist: bionic
+      env: DOCKERFILE=Dockerfile.centos
       before_install: []
+      # build the builder image separately to run the tests
       install:
+        - docker build -t tippecanoe-image-builder -f ${DOCKERFILE} . --target=builder
         - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      # run tippecanoe --help to make sure runtime libs are correct
       script:
-        - docker run -it tippecanoe-image
+        - docker run -it tippecanoe-image-builder
+        - docker run -it tippecanoe-image tippecanoe --help
     # test on docker+ubuntu
     - os: linux
       compiler: clang
       services:
        - docker
       sudo: true
-      dist: trusty
+      dist: bionic
       env: DOCKERFILE=Dockerfile
       before_install: []
+      # build the builder image separately to run the tests
       install:
+        - docker build -t tippecanoe-image-builder -f ${DOCKERFILE} . --target=builder
         - docker build -t tippecanoe-image -f ${DOCKERFILE} .
+      # run tippecanoe --help to make sure runtime libs are correct
       script:
-        - docker run -it tippecanoe-image
+        - docker run -it tippecanoe-image-builder
+        - docker run -it tippecanoe-image tippecanoe --help
     # debug+integer-santizer build
     - os: linux
       compiler: clang
