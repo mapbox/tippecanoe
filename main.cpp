@@ -74,6 +74,7 @@ int geometry_scale = 0;
 double simplification = 1;
 size_t max_tile_size = 500000;
 size_t max_tile_features = 200000;
+size_t min_cluster_features = 0;
 int cluster_distance = 0;
 long justx = -1, justy = -1;
 std::string attribute_for_id = "";
@@ -2605,6 +2606,7 @@ int main(int argc, char **argv) {
 		{"maximum-tile-bytes", required_argument, 0, 'M'},
 		{"maximum-tile-features", required_argument, 0, 'O'},
 		{"no-feature-limit", no_argument, &prevent[P_FEATURE_LIMIT], 1},
+		{"minimum-cluster-features", required_argument, 0, 'i'},
 		{"no-tile-size-limit", no_argument, &prevent[P_KILOBYTE_LIMIT], 1},
 		{"no-tile-compression", no_argument, &prevent[P_TILE_COMPRESSION], 1},
 		{"no-tile-stats", no_argument, &prevent[P_TILE_STATS], 1},
@@ -2988,6 +2990,10 @@ int main(int argc, char **argv) {
 
 		case 'O':
 			max_tile_features = atoll_require(optarg, "Max tile features");
+			break;
+
+		case 'i':
+			min_cluster_features = atoll_require(optarg, "Min cluster features");
 			break;
 
 		case 'c':
